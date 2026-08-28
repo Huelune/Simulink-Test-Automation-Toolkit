@@ -295,6 +295,25 @@ cfg.RerunAfterExpectedUpdate = true;
 
 
 %% ============================================================
+% Coverage and integrated reporting
+%% ============================================================
+
+% Decision includes Block Execution coverage. Test Manager stores the
+% equivalent legacy metric setting in the Test File for R2025b support.
+cfg.CoverageStructuralLevel = 'Decision';
+cfg.CoverageMetricSettings = 'dwe';
+cfg.CoverageIncludeReferencedModels = false;
+
+cfg.GenerateTestReport = true;
+cfg.TestRunRootDir = ...
+    fullfile(rootDir, 'result', 'runs');
+cfg.LatestReportPointer = ...
+    fullfile(rootDir, 'result', 'latest.json');
+cfg.LatestSummaryFile = ...
+    fullfile(rootDir, 'result', 'TestSummary.xlsx');
+
+
+%% ============================================================
 % Execution
 %% ============================================================
 

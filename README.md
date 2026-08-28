@@ -328,6 +328,51 @@ Assessment symbol
 
 실제값과 RHS가 다를 때만 수정하며 지원 값은 real numeric scalar와 logical scalar입니다. 하나 이상의 값이 갱신되고 `RerunAfterExpectedUpdate`가 true이면 Test File을 다시 실행합니다.
 
+## Integrated test and coverage report
+
+테스트 실행 시 Test File Coverage를
+[`Decision`](https://www.mathworks.com/help/slcoverage/ref/structuralcoveragelevel.html)으로
+설정하며, Decision 설정에 포함되는 Block Execution을 같이
+수집합니다.
+기대값 갱신 전 최초 결과와 갱신 후 최종 결과를 둘 다 보존합니다.
+
+```matlab
+cfg.CoverageStructuralLevel = 'Decision';
+cfg.CoverageMetricSettings = 'dwe';
+cfg.GenerateTestReport = true;
+```
+
+각 실행은 다음 bundle을 생성합니다.
+
+```text
+result/runs/{timestamp}_{run-id}/
+├── TestSummary.xlsx
+├── manifest.json
+├── official/
+│   ├── InitialTestResults.pdf
+│   └── FinalTestResults.pdf
+├── coverage/
+│   └── {coverage-root}.html
+└── raw/
+    ├── InitialResults.mldatx
+    └── FinalResults.mldatx
+```
+
+`TestSummary.xlsx`는 `Overview`, `Targets`, `Iterations`, `Coverage`,
+`ExpectedUpdates`, `Workflow`, `Metadata` Sheet를 포함합니다.
+Coverage는 전체, CUT, Test Case, Iteration 수준에서 Decision과
+Execution을 보고하며 분모가 0인 경우 `N/A`로 표시합니다.
+Justified outcome은 별도 열에 기록하고, 같은 CUT의 checksum이
+다르면 해당 값을 전체 합계에 더하지 않습니다. 전체 coverage는
+호환되는 CUT의 outcome 가중 합계입니다.
+
+Coverage 미달은 보고 항목이며 현재 버전에서 Test 실패로
+변경하지 않습니다. 일부 산출물이 실패하면 성공한 파일은
+남겨 두고 `manifest.json`에 `PARTIAL`로 기록합니다.
+`result/latest.json`과 `result/TestSummary.xlsx`는 가장 최근 실행을
+가리킵니다. 보고서는 로컬 내부용이며 Notion이나 외부
+저장소로 자동 전송하지 않습니다.
+
 ## Repository artifact policy
 
 | 종류 | Git 정책 | 이유 |
@@ -378,6 +423,8 @@ st_diagnose_excel_access(true)
 - expected-value 갱신 후 재실행
 - SLDV FILE/GENERATE end-to-end 생성과 다중 Iteration 실행
 - 정확히 `Tmax`인 StopTime에서 Assessment verify가 tested 상태가 되는지 확인
+- Decision·Execution CUT 매핑과 PDF·HTML·Excel·MLDATX bundle 생성
+- 두 번째 실행의 증분 준비 캐시 재사용
 
 단위 테스트를 실행할 수 있는 MATLAB 환경에서는 다음 순서를 사용합니다.
 

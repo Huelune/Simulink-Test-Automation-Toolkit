@@ -35,6 +35,8 @@ This file records decisions that are intentionally not presented as implemented 
 
 - [x] Add target-level incremental preparation checkpoints with non-destructive
   `AUTO` and `FORCE` execution policies.
+- [x] Add local run bundles with initial/final results, Decision and Execution
+  coverage, Excel summary, official PDF, HTML, and MLDATX artifacts.
 
 - [ ] Select the next release version after MATLAB validation; current changes remain under `Unreleased`.
 - [ ] Decide whether machine-readable reports use JSON, JUnit XML, or both in addition to current INI reports.

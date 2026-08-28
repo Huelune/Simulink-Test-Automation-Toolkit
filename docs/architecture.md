@@ -68,6 +68,14 @@ After MATLAB regression validation, a small `+simtest` package can be introduced
 - Validation must complete before Harness, model, Test File, or expected values are modified.
 - Expected-value generation and approval are separate responsibilities; only explicit `APPLY` behavior mutates values.
 - Reports are reproducible outputs and are not inputs for the next run.
+- Each test execution owns an immutable directory under `result/runs`.
+  Initial and final Test Manager ResultSets remain distinct, while
+  `result/latest.json` and the latest workbook are replaceable pointers.
+- Coverage aggregation is outcome-weighted only across compatible CUT
+  checksums. Coverage thresholds are report-only and do not alter test
+  outcomes.
+- Report bundles are local artifacts and have no Notion or repository
+  publishing side effect.
 - Incremental workflow state is an operational cache under `result/state`.
   It is never a source of truth: missing, corrupt, or mismatched state widens
   execution to the earliest safe preparation stage.

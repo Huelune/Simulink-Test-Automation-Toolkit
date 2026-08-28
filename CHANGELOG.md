@@ -8,6 +8,13 @@
   with call option, row, and global configuration precedence.
 - Added cross-run SLDV manifest profile reuse while preserving direct no-arg
   behavior for each existing `st_*` preparation command.
+- Added per-run integrated report bundles with initial/final Test Manager
+  results, official PDF, raw MLDATX, coverage HTML, manifest, and Excel summary.
+- Added Decision and Block Execution coverage extraction at overall CUT,
+  Test Case, and Iteration levels, including justified outcomes, `N/A` for a
+  zero denominator, and checksum-safe weighted aggregation.
+- Added `result/latest.json` and latest Excel summary updates without external
+  publishing or coverage-threshold failure enforcement.
 
 - Connected the project to the `Huelune/Simulink-Test-Automation-Toolkit` repository while preserving its initial MIT license commit.
 - Added explicit expected-value policy with `cfg.ExpectedUpdateMode = 'APPLY'` as the project default.

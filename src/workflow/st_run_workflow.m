@@ -1,4 +1,4 @@
-function [resultObj, updateResult, workflowResult] = ...
+function [resultObj, updateResult, workflowResult, reportInfo] = ...
     st_run_workflow(workflowKind, varargin)
 %ST_RUN_WORKFLOW Execute the shared incremental preparation pipeline.
 
@@ -17,6 +17,8 @@ st_write_result('WorkflowPlanResult', plan);
 resultObj = [];
 updateResult = table();
 workflowResult = table();
+reportInfo = struct();
+runContext = struct();
 totalTimer = tic;
 
 fprintf('\n============================================\n');
@@ -81,7 +83,7 @@ for s = 1:numel(stageNames)
 end
 
 if cfg.RunGeneratedTests
-    [resultObj, updateResult] = execute_timed_step( ...
+    [resultObj, updateResult, runContext] = execute_timed_step( ...
         'Run Generated Tests', @() st_run_generated_tests());
 else
     fprintf('\nRun Generated Tests: SKIP (cfg.RunGeneratedTests=false)\n');
@@ -102,6 +104,16 @@ for s = 1:numel(stageNames)
 end
 workflowResult = table(Stage, RunCount, CachedCount, FailCount);
 st_write_result('WorkflowResult', workflowResult);
+
+if cfg.RunGeneratedTests && cfg.GenerateTestReport
+    reportInfo = execute_timed_step( ...
+        'Generate Integrated Test Report', ...
+        @() st_generate_test_report( ...
+            runContext, workflowResult, plan));
+elseif cfg.RunGeneratedTests
+    fprintf(['\nGenerate Integrated Test Report: SKIP ' ...
+        '(cfg.GenerateTestReport=false)\n']);
+end
 
 fprintf('\n============================================\n');
 fprintf('Automation Complete\n');
