@@ -7,6 +7,8 @@
 - Added optional per-row `ExpectedUpdateMode` values (`DEFAULT`, `OFF`, `APPLY`) to the `Targets` sheet.
 - Limited expected-value logging preparation and mutation to rows resolved to `APPLY`.
 - Documented the repository artifact policy, target package structure, and deferred decisions.
+- Reorganized MATLAB sources by responsibility under `src/`, moved diagnostics and unit tests to dedicated folders, and preserved historical handoff files under `docs/archive/`.
+- Added a root resolver so configuration and diagnostic paths remain stable after source files move.
 
 ## v0.9.6 Candidate
 

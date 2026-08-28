@@ -2,7 +2,7 @@ function cfg = st_config()
 %ST_CONFIG Common settings for Simulink Test automation.
 % Edit this file first.
 
-rootDir = fileparts(mfilename('fullpath'));
+rootDir = st_project_root();
 
 
 %% ============================================================

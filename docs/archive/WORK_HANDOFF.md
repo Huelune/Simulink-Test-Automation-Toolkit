@@ -1,5 +1,7 @@
 # Simulink Test Automation - Work Handoff
 
+> Archived historical handoff. File paths in this document refer to the former root-level layout. Use `README.md` and `docs/architecture.md` for the current structure.
+
 ## Repository baseline
 
 Repository:

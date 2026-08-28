@@ -21,8 +21,9 @@ This file records decisions that are intentionally not presented as implemented 
 - [ ] Introduce the `src/+simtest` public API described in `docs/architecture.md`.
 - [ ] Define the compatibility period for the current root `st_*` entry points.
 - [ ] Split the large Signal Editor, SLDV preparation, path finder, and expected-value updater files by responsibility.
-- [ ] Decide whether diagnostic utilities remain public APIs or move under `tools/`.
-- [ ] Consolidate `WORK_HANDOFF.md`, `PATCH_NOTES.txt`, and `README_REPLACEMENT_FILES.txt` after confirming that no migration evidence is lost.
+- [x] Keep diagnostic utilities as public `st_*` commands under `diagnostics/matlab`.
+- [x] Preserve `WORK_HANDOFF.md`, `PATCH_NOTES.txt`, and `README_REPLACEMENT_FILES.txt` under `docs/archive`.
+- [ ] Consolidate useful archive content into current documentation before removing any archived file.
 
 ## Compatibility and validation
 

@@ -1,71 +1,70 @@
-# Target Architecture
+# Repository Architecture
 
-## Decision
+## Current structure
 
-The current root-level functions remain in place until the MATLAB workflow can be regression-tested. Moving approximately fifty public functions in the same change as behavior updates would make failures difficult to isolate.
-
-The target structure is a MATLAB package with a small public API, domain-oriented internal modules, separate test levels, anonymized examples, and supporting tools.
+The repository now uses a transitional domain-based layout. Existing `st_*` names remain unchanged, and `st_setup.m` registers the source and MATLAB diagnostic folders.
 
 ```text
 Simulink-Test-Automation-Toolkit/
+├── st_setup.m
 ├── src/
-│   └── +simtest/
-│       ├── setup.m
-│       ├── selectModel.m
-│       ├── validate.m
-│       ├── generate.m
-│       ├── run.m
-│       └── +internal/
-│           ├── +config/
-│           ├── +targets/
-│           ├── +harness/
-│           ├── +sldv/
-│           ├── +scenarios/
-│           ├── +assessment/
-│           ├── +testmanager/
-│           ├── +execution/
-│           └── +reporting/
+│   ├── workflow/
+│   ├── config/
+│   ├── targets/
+│   ├── harness/
+│   ├── sldv/
+│   ├── signal_editor/
+│   ├── assessment/
+│   ├── test_manager/
+│   ├── execution/
+│   ├── reporting/
+│   ├── scenarios/
+│   └── shared/
+├── diagnostics/
+│   ├── matlab/
+│   └── python/
 ├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── fixtures/
+│   └── unit/
 ├── examples/
-├── docs/
-└── tools/
+└── docs/
+    └── archive/
 ```
 
-## Public workflow
-
-| API | Responsibility |
+| Area | Responsibility |
 | --- | --- |
-| `simtest.setup` | Add the package path and verify runtime prerequisites |
-| `simtest.selectModel` | Select and persist one runtime Top Model |
-| `simtest.validate` | Validate workbook schema, CUT paths, Harness mappings, and configuration without mutation |
-| `simtest.generate` | Create or update Harness, scenarios, Assessment, and Test Manager content |
-| `simtest.run` | Execute selected tests and apply the configured expected-value policy |
+| `workflow` | Full and existing-Harness orchestration entry points |
+| `config`, `targets` | Project settings, workbook parsing, model/CUT discovery and validation |
+| `harness`, `sldv`, `signal_editor` | Expensive model preparation and scenario data generation |
+| `assessment`, `test_manager` | Verification logic, Test Case, Iteration, and alignment management |
+| `execution` | Test execution and expected-value update |
+| `reporting`, `shared`, `scenarios` | Cross-domain result, path, lifecycle, and naming helpers |
+
+## Path and compatibility rules
+
+- `st_setup.m` stays at the repository root and is the only MATLAB bootstrap file there.
+- `st_project_root()` resolves the root through `st_setup.m`; source files must not assume their own folder is the project root.
+- Existing `st_*` public commands remain callable after `st_setup` and are not renamed during this migration.
+- Diagnostics remain public commands but live outside production source code.
+- Archived handoff documents preserve historical evidence and are not current implementation instructions.
 
 ## Configuration precedence
 
 ```text
-safe built-in default
-    -> st_config global project option
+built-in project default
+    -> st_config global option
         -> Targets row override
 ```
 
-Only explicitly documented row-level options override global settings. Invalid values fail before the model or Test File is changed.
+Only documented row-level options override global settings. Invalid values fail before the model or Test File is changed.
 
-## Migration stages
+## Future package target
 
-1. Stabilize current behavior and add tests around pure functions and configuration parsing.
-2. Introduce `src/+simtest` entry points while retaining root `st_*` compatibility wrappers.
-3. Move one domain at a time, starting with config/targets/reporting and then the Simulink-dependent modules.
-4. Run the full MATLAB fixture regression after each domain move.
-5. Remove compatibility wrappers only in a separately announced major release.
+After MATLAB regression validation, a small `+simtest` package can be introduced for `setup`, `selectModel`, `validate`, `generate`, and `run`. Existing `st_*` functions should remain compatibility wrappers until a separately announced major release.
 
 ## Boundaries
 
 - Excel and configuration parsing must not call Simulink mutation APIs.
 - Validation must complete before Harness, model, Test File, or expected values are modified.
-- Expected-value generation and approval are separate responsibilities; only the existing explicit `APPLY` mode mutates values today.
-- Reports must be reproducible outputs and must not be required as inputs for the next run.
+- Expected-value generation and approval are separate responsibilities; only explicit `APPLY` behavior mutates values.
+- Reports are reproducible outputs and are not inputs for the next run.
 - Real models, workbooks, MAT files, and generated results are not repository fixtures.

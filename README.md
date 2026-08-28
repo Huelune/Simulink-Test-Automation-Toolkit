@@ -40,6 +40,21 @@ MATLAB/Simulink Test 자동화 도구입니다. Excel에서 CUT, Harness, Test C
 
 모든 CUT는 한 번의 실행에서 선택한 동일한 Top Model을 사용합니다. `ModelName` 열은 추가하지 않습니다.
 
+## Repository layout
+
+| 경로 | 역할 |
+| --- | --- |
+| `st_setup.m` | 프로젝트 루트 bootstrap과 MATLAB 경로 등록 |
+| `src/` | workflow, config, Harness, SLDV, Assessment, Test Manager 등 실행 코드 |
+| `diagnostics/matlab/` | 사용자가 직접 호출할 수 있는 읽기·진단 명령 |
+| `diagnostics/python/` | Excel 접근 진단 보조 스크립트 |
+| `tests/unit/` | Simulink 실행 없이 확인 가능한 단위 테스트 중심 |
+| `docs/` | 현재 아키텍처와 TODO |
+| `docs/archive/` | 이전 전달 자료와 패치 기록 보존 |
+| `examples/` | 향후 익명화된 workbook과 모델 예제 |
+
+기존 `st_*` 함수명과 호출 방식은 유지됩니다. `st_setup`이 `src` 전체와 MATLAB 진단 폴더를 경로에 추가하므로 MATLAB을 새로 시작한 뒤에는 먼저 `st_setup`을 실행해야 합니다.
+
 ## Recommended workflow
 
 MATLAB에서 이 폴더를 Current Folder로 연 뒤 실행합니다.
@@ -333,3 +348,10 @@ st_diagnose_excel_access(true)
 - expected-value 갱신 후 재실행
 - SLDV FILE/GENERATE end-to-end 생성과 다중 Iteration 실행
 - 정확히 `Tmax`인 StopTime에서 Assessment verify가 tested 상태가 되는지 확인
+
+단위 테스트를 실행할 수 있는 MATLAB 환경에서는 다음 순서를 사용합니다.
+
+```matlab
+st_setup
+results = runtests(fullfile(st_project_root(), 'tests', 'unit'));
+```
