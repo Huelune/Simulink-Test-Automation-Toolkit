@@ -1,0 +1,29 @@
+# Local runtime selection and project management data
+runtime_target.mat
+TestManagement.xlsx
+*.xlsx
+*.xlsm
+*.mat
+
+# Simulink Test and workflow outputs
+result/
+*.mldatx
+
+# MATLAB / Simulink generated files
+slprj/
+codegen/
+*_grt_rtw/
+*_ert_rtw/
+*.slxc
+*.mex*
+*.asv
+*.autosave
+
+# Python and operating-system files
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Future anonymized examples may be explicitly included here.
+!examples/*.example.xlsx
+!examples/**/*.example.mat

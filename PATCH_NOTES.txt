@@ -1,0 +1,43 @@
+Scenario alignment validation patch
+
+New file:
+- st_validate_scenario_alignment.m
+
+Updated workflow entry points:
+- st_run_from_harness.m
+- st_run_after_harness.m
+
+New validation stage runs after Test Manager creation and before test execution.
+
+For SLDV FILE / GENERATE targets it requires exact one-to-one scenario sets:
+
+    profile.ScenarioNames
+        == Signal Editor scenario options
+        == Test Assessment scenarios
+        == Test Manager table iteration names
+
+Example for three SLDV TestCases:
+
+    UT_REQ_<CUT>_001
+    UT_REQ_<CUT>_002
+    UT_REQ_<CUT>_003
+
+must exist exactly three times in each generated layer.
+
+OFF mode is skipped to preserve legacy behavior.
+
+Test execution / expected-value update:
+The current repository already handles SLDV scenarios individually:
+- Test Manager creates one table iteration per profile.ScenarioNames entry.
+- st_run_generated_tests runs those table iterations and validates verify
+  results per scenario.
+- st_update_expected_from_results expands work per profile.ScenarioNames,
+  finds the matching TestSequenceScenario result, updates that scenario's
+  `<scenario>.step2`, and samples at profile.Tmax for FILE/GENERATE.
+
+Therefore this patch does not rewrite the expected-value update algorithm.
+It adds the missing pre-run structural guard so wrong scenario counts/names
+fail before a long test run starts.
+
+Assessment timing remains unchanged:
+    after(profile.Tmax, sec)
