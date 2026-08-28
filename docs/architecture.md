@@ -50,9 +50,10 @@ Simulink-Test-Automation-Toolkit/
 ## Configuration precedence
 
 ```text
-built-in project default
+project default
     -> st_config global option
         -> Targets row override
+            -> one-run call option
 ```
 
 Only documented row-level options override global settings. Invalid values fail before the model or Test File is changed.
@@ -67,4 +68,10 @@ After MATLAB regression validation, a small `+simtest` package can be introduced
 - Validation must complete before Harness, model, Test File, or expected values are modified.
 - Expected-value generation and approval are separate responsibilities; only explicit `APPLY` behavior mutates values.
 - Reports are reproducible outputs and are not inputs for the next run.
+- Incremental workflow state is an operational cache under `result/state`.
+  It is never a source of truth: missing, corrupt, or mismatched state widens
+  execution to the earliest safe preparation stage.
+- Workflow entry points build a per-target stage plan. Domain functions keep
+  their direct no-argument behavior and accept an internal optional row
+  selection only when invoked by the workflow coordinator.
 - Real models, workbooks, MAT files, and generated results are not repository fixtures.

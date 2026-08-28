@@ -37,6 +37,8 @@ MATLAB/Simulink Test 자동화 도구입니다. Excel에서 CUT, Harness, Test C
 | `SldvMode` | 아니요 | `OFF` | `OFF`, `FILE`, `GENERATE` |
 | `SldvDataFile` | 조건부 | 빈 값 | `FILE`일 때 필수. 절대 경로 또는 workbook 기준 상대 경로 |
 | `ExpectedUpdateMode` | 아니요 | `DEFAULT` | `DEFAULT`, `OFF`, `APPLY`. 행별 기대값 갱신 정책 |
+| `PreparationMode` | 아니요 | `DEFAULT` | `DEFAULT`, `AUTO`, `FORCE`. 행별 준비 단계 재사용 정책 |
+| `PreparationFromStage` | 아니요 | `DEFAULT` | `FORCE` 실행을 시작할 준비 단계 |
 
 모든 CUT는 한 번의 실행에서 선택한 동일한 Top Model을 사용합니다. `ModelName` 열은 추가하지 않습니다.
 
@@ -110,6 +112,34 @@ st_run_after_harness
 8. 설정에 따른 Test 실행 및 expected-value 갱신
 
 `st_run_after_harness`는 기존 Harness 존재 여부를 검증한 뒤 SLDV 준비 단계부터 실행합니다.
+
+### Incremental preparation
+
+두 workflow는 기본적으로 대상별 준비 상태를 `result/state`에 저장합니다.
+같은 Excel 행, 모델, Test File, SLDV 입력과 관련 설정이 유지되면
+SLDV부터 Scenario 정렬 검증까지 완료된 단계를 재사용합니다. Harness
+존재 여부와 CUT 매핑은 항상 다시 확인하고, 기존 Harness는 자동으로
+삭제하거나 재생성하지 않습니다.
+
+```matlab
+cfg.PreparationMode = 'AUTO';
+cfg.PreparationFromStage = 'START';
+```
+
+일회성 강제 실행은 호출 옵션으로 지정할 수 있습니다.
+
+```matlab
+st_run_from_harness( ...
+    'PreparationMode', 'FORCE', ...
+    'FromStage', 'SLDV')
+```
+
+`Targets`에는 선택적으로 `PreparationMode`(`DEFAULT`, `AUTO`, `FORCE`)와
+`PreparationFromStage`(`DEFAULT`, `START`, `HARNESS`, `SLDV`,
+`HARNESS_CONFIG`, `SIGNAL_EDITOR`, `ASSESSMENT`, `TEST_MANAGER`,
+`ALIGNMENT`) 열을 둘 수 있습니다. 우선순위는 호출 옵션, Excel 행,
+전역 설정 순입니다. 준비 단계가 모두 캐시되어도 `RunGeneratedTests=true`이면
+선택된 테스트는 다시 실행합니다.
 
 일반 workflow는 `TestManagement.xlsx`를 결과로 수정하지 않습니다. 결과 저장은 `cfg.SaveResultFiles`로 선택하며, 기본값 `true`에서는 `result/reports`에 단계별 INI 파일로 기록합니다. `false`이면 결과 파일을 생성하지 않습니다.
 

@@ -248,6 +248,28 @@ cfg.RunGeneratedTests = true;
 
 
 %% ============================================================
+% Incremental preparation
+%% ============================================================
+
+% AUTO:
+%   Reuse successful preparation stages while their inputs and artifacts
+%   still match the last checkpoint.
+% FORCE:
+%   Reapply the selected stage and all downstream preparation stages.
+cfg.PreparationMode = 'AUTO';
+
+% Earliest stage used by FORCE. START resolves to HARNESS for the full
+% workflow and SLDV for the existing-Harness workflow.
+cfg.PreparationFromStage = 'START';
+
+cfg.WorkflowStateFile = ...
+    fullfile(rootDir, 'result', 'state', 'workflow_state.mat');
+
+cfg.WorkflowStateSummaryFile = ...
+    fullfile(rootDir, 'result', 'state', 'workflow_state.json');
+
+
+%% ============================================================
 % Expected value update
 %% ============================================================
 

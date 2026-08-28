@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added target-level incremental preparation with `AUTO`/`FORCE` policies,
+  stage checkpoints, input fingerprints, and atomic MAT/JSON state files.
+- Added optional `PreparationMode` and `PreparationFromStage` Excel columns
+  with call option, row, and global configuration precedence.
+- Added cross-run SLDV manifest profile reuse while preserving direct no-arg
+  behavior for each existing `st_*` preparation command.
+
 - Connected the project to the `Huelune/Simulink-Test-Automation-Toolkit` repository while preserving its initial MIT license commit.
 - Added explicit expected-value policy with `cfg.ExpectedUpdateMode = 'APPLY'` as the project default.
 - Added optional per-row `ExpectedUpdateMode` values (`DEFAULT`, `OFF`, `APPLY`) to the `Targets` sheet.
