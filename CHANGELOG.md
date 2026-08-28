@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Connected the project to the `Huelune/Simulink-Test-Automation-Toolkit` repository while preserving its initial MIT license commit.
-- Replaced the default-on expected-value mutation with safe `cfg.ExpectedUpdateMode = 'OFF'` behavior.
+- Added explicit expected-value policy with `cfg.ExpectedUpdateMode = 'APPLY'` as the project default.
 - Added optional per-row `ExpectedUpdateMode` values (`DEFAULT`, `OFF`, `APPLY`) to the `Targets` sheet.
 - Limited expected-value logging preparation and mutation to rows resolved to `APPLY`.
 - Documented the repository artifact policy, target package structure, and deferred decisions.

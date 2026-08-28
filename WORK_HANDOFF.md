@@ -162,7 +162,7 @@ The verify builder supports scalar, numeric array, Bus, and nested Bus expressio
 
 ```matlab
 cfg.RunGeneratedTests = true;
-cfg.ExpectedUpdateMode = 'OFF';
+cfg.ExpectedUpdateMode = 'APPLY';
 cfg.ExpectedValueSampleTime = 0.01;
 cfg.RerunAfterExpectedUpdate = true;
 cfg.VerboseLogging = true;

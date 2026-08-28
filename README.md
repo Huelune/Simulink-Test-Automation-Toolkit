@@ -253,12 +253,12 @@ MATLAB R2025b의 `Iteration.TestParams` 표시에서는 `SignalEditorScenario`�
 
 ```matlab
 cfg.RunGeneratedTests = true;
-cfg.ExpectedUpdateMode = 'OFF';
+cfg.ExpectedUpdateMode = 'APPLY';
 cfg.ExpectedValueSampleTime = 0.01;
 cfg.RerunAfterExpectedUpdate = true;
 ```
 
-기대값 갱신 정책은 안전한 기본값인 `OFF`에서 시작합니다.
+기대값 갱신 정책은 기본적으로 `APPLY`입니다. Excel에서 빈 값 또는 `DEFAULT`를 사용하면 이 전역 설정을 따르며, 갱신하지 않을 행은 `OFF`로 명시합니다.
 
 | Excel `ExpectedUpdateMode` | 실제 동작 |
 | --- | --- |

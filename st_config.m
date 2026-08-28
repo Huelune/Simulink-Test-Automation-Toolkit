@@ -263,7 +263,7 @@ cfg.RunGeneratedTests = true;
 %
 % The optional Targets.ExpectedUpdateMode column can override this value
 % per row with DEFAULT, OFF, or APPLY. DEFAULT uses this global setting.
-cfg.ExpectedUpdateMode = 'OFF';
+cfg.ExpectedUpdateMode = 'APPLY';
 
 % Simulation time used as the expected-value sample point [sec].
 cfg.ExpectedValueSampleTime = 0.01;
