@@ -33,6 +33,9 @@ This file records decisions that are intentionally not presented as implemented 
   source-isolated runtime checks, and Excel/JSON/JUnit result writers.
 - [ ] Run and preserve the first MATLAB R2025b `CERTIFY + BOTH` result. The
   current non-MATLAB development environment cannot provide runtime evidence.
+- [ ] After the first R2025b smoke result establishes real stage timing, add
+  certification-level resume and failed-only retry without recreating valid
+  Harness or SLDV preparation work.
 - [ ] Connect the normalized JUnit output to CI after the first R2025b result
   establishes runtime duration and license behavior.
 
@@ -57,4 +60,8 @@ This file records decisions that are intentionally not presented as implemented 
 - [ ] Select the next release version after MATLAB validation; current changes remain under `Unreleased`.
 - [x] Use both JSON and JUnit XML, with Excel as the human-readable verification summary.
 - [ ] Define redaction rules for model paths, CUT names, and diagnostic errors before reports can be shared.
+- [ ] Generate and pre-validate manual evidence JSON from the current target
+  fingerprint, required manual CheckIds, and evidence paths.
+- [ ] Compare two verification runs by check status, duration, environment,
+  coverage, and artifact checksum.
 - [ ] Decide whether project registration and development history will be maintained in the configured development portfolio after the repository baseline is verified.

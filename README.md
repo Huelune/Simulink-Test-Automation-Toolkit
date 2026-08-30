@@ -8,11 +8,13 @@ MATLAB/Simulink Test 자동화 도구입니다. Excel에서 CUT, Harness, Test C
 | --- | --- |
 | 버전 | v0.9.6 candidate 기반 `Unreleased` |
 | 기본 브랜치 | `main` |
-| 개발 상태 | 기능 후보, 실제 MATLAB end-to-end 재검증 필요 |
+| 개발 상태 | 기능 브랜치 구현 후보, 실제 MATLAB end-to-end 재검증 필요 |
 | 확인된 근거 | 코드 정적 검토, 생성된 Harness의 Assessment 입력 순서 수동 확인 |
 | 미확인 범위 | MATLAB R2025b 전체 workflow와 SLDV FILE/GENERATE 실행 |
 
-현재 `main`의 코드를 기준으로 설명합니다. 검증하지 않은 workflow를 완료된 기능으로 간주하지 않습니다.
+이 README는 현재 체크아웃한 브랜치의 코드를 설명합니다. 기능 브랜치의 내용은
+병합되기 전까지 `main`의 현재 제공 기능으로 간주하지 않으며, 검증하지 않은
+workflow도 완료된 기능으로 기록하지 않습니다.
 
 ## Requirements
 
@@ -182,6 +184,10 @@ Excel은 `Overview`, `Features`, `Checks`, `Environment`, `ManualEvidence`,
 [종합 검증 사용자 매뉴얼](docs/user-manual.md)에서 단계별로 확인할 수 있습니다.
 API와 판정 기준은 [전체 기능 검증 기술 문서](docs/verification.md)를
 참조하십시오.
+
+다른 PC의 MATLAB과 Codex에서 작업을 이어가려면
+[다른 PC에서 이어서 작업하기](docs/cross-machine-handoff.md)의 기준 브랜치,
+동기화 규칙, R2025b 실행 순서와 인수인계 기록을 먼저 확인하십시오.
 
 ## Recommended workflow
 
