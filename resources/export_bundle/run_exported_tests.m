@@ -75,8 +75,13 @@ write_json(fullfile(executionRoot, 'execution.json'), info);
 fprintf('\nExported bundle test completed\n');
 fprintf('Execution : %s\n', executionRoot);
 fprintf('Report    : %s\n', reportInfo.RunDirectory);
-fprintf('Reference : %s\n', ...
-    fullfile(bundleRoot, char(manifest.ReferenceReport)));
+if isfield(manifest, 'ReferenceReport') && ...
+        ~isempty(char(manifest.ReferenceReport))
+    fprintf('Reference : %s\n', ...
+        fullfile(bundleRoot, char(manifest.ReferenceReport)));
+else
+    fprintf('Reference : NONE (verification snapshot)\n');
+end
 end
 
 function validate_release(manifest, allowMismatch)

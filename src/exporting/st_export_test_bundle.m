@@ -11,6 +11,10 @@ function info = st_export_test_bundle(varargin)
 %     Destination   Parent folder for the bundle.
 %     RunId         'LATEST' or an existing result/runs folder name.
 %     CreateArchive Create a ZIP beside the bundle folder (default true).
+%     IncludeReferenceReport
+%                   Include the selected integrated report (default true).
+%                   Verification snapshots set this false so an existing
+%                   report is not required before an isolated runtime run.
 
 %   The source model and Test File must be saved before export. Missing
 %   model dependencies stop the export instead of creating a partial
@@ -26,6 +30,8 @@ addParameter(p, 'Destination', '', @(x) ischar(x) || isstring(x));
 addParameter(p, 'RunId', 'LATEST', @(x) ischar(x) || isstring(x));
 addParameter(p, 'CreateArchive', true, ...
     @(x) islogical(x) && isscalar(x));
+addParameter(p, 'IncludeReferenceReport', true, ...
+    @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 
 cfg = st_require_runtime_target();
@@ -35,6 +41,7 @@ if isempty(destination)
 end
 runId = strtrim(char(string(p.Results.RunId)));
 createArchive = p.Results.CreateArchive;
+includeReferenceReport = p.Results.IncludeReferenceReport;
 
 requiredFiles = {cfg.ModelFile, cfg.TestFile, cfg.ManagementExcel};
 requiredLabels = {'model', 'Test File', 'management Excel'};
@@ -59,8 +66,13 @@ if ~isempty(missingDependencies)
 end
 assert_saved_dependency_models(dependencyFiles);
 
-[referenceRunId, referenceRunDirectory] = ...
-    resolve_reference_run(cfg, runId);
+if includeReferenceReport
+    [referenceRunId, referenceRunDirectory] = ...
+        resolve_reference_run(cfg, runId);
+else
+    referenceRunId = 'NONE';
+    referenceRunDirectory = '';
+end
 
 if ~isfolder(destination)
     mkdir(destination);
@@ -123,9 +135,11 @@ if isfile(cfg.SldvManifestFile)
         bundle_path(stagingDirectory, sldvManifestOutput);
 end
 
-referenceOutput = fullfile( ...
-    stagingDirectory, 'reference-report', referenceRunId);
-copyfile_checked(referenceRunDirectory, referenceOutput);
+if includeReferenceReport
+    referenceOutput = fullfile( ...
+        stagingDirectory, 'reference-report', referenceRunId);
+    copyfile_checked(referenceRunDirectory, referenceOutput);
+end
 
 resourceDirectory = fullfile(projectRoot, 'resources', 'export_bundle');
 runnerOutput = fullfile(stagingDirectory, 'run_exported_tests.m');
@@ -145,8 +159,12 @@ manifest.TestFile = ['template/' testFileName];
 manifest.ManagementExcel = 'template/TestManagement.xlsx';
 manifest.SldvManifest = sldvManifestBundlePath;
 manifest.ReferenceRunId = referenceRunId;
-manifest.ReferenceReport = ...
-    ['reference-report/' portable_path(referenceRunId)];
+if includeReferenceReport
+    manifest.ReferenceReport = ...
+        ['reference-report/' portable_path(referenceRunId)];
+else
+    manifest.ReferenceReport = '';
+end
 manifest.Dependencies = dependencyInventory;
 manifest.Targets = targetInventory;
 manifest.RequiredProducts = products;
@@ -155,7 +173,8 @@ manifest.Policy = struct( ...
     'TemplateImmutable', true, ...
     'FreshWorkspacePerRun', true, ...
     'ExactMATLABReleaseRequiredByDefault', true, ...
-    'PreparationWorkflowIncluded', false);
+    'PreparationWorkflowIncluded', false, ...
+    'ReferenceReportIncluded', logical(includeReferenceReport));
 
 readmeTemplate = fileread( ...
     fullfile(resourceDirectory, 'README.bundle.ko.md'));

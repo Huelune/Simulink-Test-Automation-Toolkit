@@ -73,3 +73,14 @@ verifyTrue(testCase, contains(text, 'copyfile(templateRoot, workRoot)'));
 verifyTrue(testCase, contains(text, 'validate_files'));
 verifyTrue(testCase, contains(text, 'prepare_existing_session'));
 end
+
+function testVerificationSnapshotCanOmitReferenceReport(testCase)
+root = st_project_root();
+exportText = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_test_bundle.m'));
+snapshotText = fileread(fullfile(root, 'src', 'verification', ...
+    'st_create_verification_snapshot.m'));
+verifyTrue(testCase, contains(exportText, 'IncludeReferenceReport'));
+verifyTrue(testCase, contains(snapshotText, ...
+    "'IncludeReferenceReport', false"));
+end

@@ -317,6 +317,11 @@ cfg.LatestSummaryFile = ...
 cfg.ExportRootDir = ...
     fullfile(rootDir, 'result', 'exports');
 
+% Standalone verification runs and latest pointers are stored separately
+% from normal workflow reports. QUICK inspections never write elsewhere.
+cfg.VerificationRootDir = ...
+    fullfile(rootDir, 'result', 'verification');
+
 
 %% ============================================================
 % Execution
