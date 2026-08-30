@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a step-by-step Korean user manual for verification setup, recommended
+  QUICK/RUNTIME/CERTIFY operation, manual evidence, result interpretation,
+  troubleshooting, and final R2025b certification.
 - Added `st_verify_all` with `QUICK`, `RUNTIME`, and `CERTIFY` profiles,
   normalized PASS/FAIL/BLOCKED/SKIP/WARN results, feature-catalog coverage,
   manual evidence validation, and Excel/JSON/JUnit output.

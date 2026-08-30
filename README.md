@@ -179,7 +179,9 @@ Excel은 `Overview`, `Features`, `Checks`, `Environment`, `ManualEvidence`,
 실행 workspace에서만 생성되고 Git에 저장되지 않습니다.
 
 상세 상태 해석, 수동 증거 작성법과 R2025b 최초 인증 절차는
-[전체 기능 검증 문서](docs/verification.md)를 참조하십시오.
+[종합 검증 사용자 매뉴얼](docs/user-manual.md)에서 단계별로 확인할 수 있습니다.
+API와 판정 기준은 [전체 기능 검증 기술 문서](docs/verification.md)를
+참조하십시오.
 
 ## Recommended workflow
 
