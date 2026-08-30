@@ -18,13 +18,16 @@ Simulink-Test-Automation-Toolkit/
 │   ├── test_manager/
 │   ├── execution/
 │   ├── reporting/
+│   ├── exporting/
+│   ├── verification/
 │   ├── scenarios/
 │   └── shared/
 ├── diagnostics/
 │   ├── matlab/
 │   └── python/
 ├── tests/
-│   └── unit/
+│   ├── unit/
+│   └── fixtures/
 ├── examples/
 └── docs/
     └── archive/
@@ -37,6 +40,8 @@ Simulink-Test-Automation-Toolkit/
 | `harness`, `sldv`, `signal_editor` | Expensive model preparation and scenario data generation |
 | `assessment`, `test_manager` | Verification logic, Test Case, Iteration, and alignment management |
 | `execution` | Test execution and expected-value update |
+| `exporting` | Immutable template bundle, dependency and input collection |
+| `verification` | QUICK/RUNTIME/CERTIFY orchestration, status aggregation, manual evidence and Excel/JSON/JUnit writers |
 | `reporting`, `shared`, `scenarios` | Cross-domain result, path, lifecycle, and naming helpers |
 
 ## Path and compatibility rules
@@ -83,3 +88,10 @@ After MATLAB regression validation, a small `+simtest` package can be introduced
   their direct no-argument behavior and accept an internal optional row
   selection only when invoked by the workflow coordinator.
 - Real models, workbooks, MAT files, and generated results are not repository fixtures.
+- Verification fixtures are MATLAB builders. Generated SLX/XLSX/MAT/MLDATX
+  files exist only under the run workspace.
+- QUICK may write only under `result/verification`; it records and restores
+  model/Test File session state and does not run simulations.
+- RUNTIME and CERTIFY execute actual project inputs through an isolated export
+  snapshot. Source model, Test File, Excel, dependencies, Signal Editor and
+  SLDV input checksums must remain unchanged.

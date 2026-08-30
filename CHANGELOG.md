@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Added `st_verify_all` with `QUICK`, `RUNTIME`, and `CERTIFY` profiles,
+  normalized PASS/FAIL/BLOCKED/SKIP/WARN results, feature-catalog coverage,
+  manual evidence validation, and Excel/JSON/JUnit output.
+- Added execution-local fixture generation for scalar, numeric array, nested
+  Bus, Bus array, no-Inport, and SLDV branch targets without tracking binary
+  fixtures in Git.
+- Added isolated current-model verification that reuses the export collector,
+  hashes source dependencies and inputs, and runs only fresh workspace copies.
+- Added certification checks for expected-value APPLY/OFF, SLDV GENERATE/FILE,
+  cache reuse, corrupt-state recovery, preparation failure isolation, integrated
+  reports, coverage, bundle checksums, template immutability, and repeat runs.
+
 - Added standalone reproducible test bundle export with saved internal Harness
   models, analyzed dependencies, target inputs, Test File definitions, reference
   reports, SHA-256 inventory, and an optional ZIP archive.

@@ -29,7 +29,12 @@ This file records decisions that are intentionally not presented as implemented 
 
 - [ ] Decide the supported MATLAB release range, including whether R2024a is supported or only accepted as a model source version.
 - [ ] Run the documented MATLAB R2025b end-to-end validation on an approved machine.
-- [ ] CI, expanded automated testing, and runtime fixture validation are intentionally deferred in the current task.
+- [x] Add QUICK/RUNTIME/CERTIFY verification code, generated fixture builders,
+  source-isolated runtime checks, and Excel/JSON/JUnit result writers.
+- [ ] Run and preserve the first MATLAB R2025b `CERTIFY + BOTH` result. The
+  current non-MATLAB development environment cannot provide runtime evidence.
+- [ ] Connect the normalized JUnit output to CI after the first R2025b result
+  establishes runtime duration and license behavior.
 
 ## Reporting and operations
 
@@ -50,6 +55,6 @@ This file records decisions that are intentionally not presented as implemented 
   discovered and packaged in addition to toolkit-managed inputs.
 
 - [ ] Select the next release version after MATLAB validation; current changes remain under `Unreleased`.
-- [ ] Decide whether machine-readable reports use JSON, JUnit XML, or both in addition to current INI reports.
+- [x] Use both JSON and JUnit XML, with Excel as the human-readable verification summary.
 - [ ] Define redaction rules for model paths, CUT names, and diagnostic errors before reports can be shared.
 - [ ] Decide whether project registration and development history will be maintained in the configured development portfolio after the repository baseline is verified.

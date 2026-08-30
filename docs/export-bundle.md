@@ -64,6 +64,12 @@ result/exports/{timestamp}_{id}/
 5. `st_run_generated_tests`로 Test File을 실행합니다.
 6. `st_generate_test_report`로 새 Excel/PDF/HTML/MLDATX 결과를 만듭니다.
 
+일반 사용자의 `st_export_test_bundle`은 기본적으로 reference report를
+포함합니다. `st_verify_all`의 격리 snapshot은 아직 실행 결과가 없는 상태도
+검증할 수 있도록 같은 수집기를 `IncludeReferenceReport=false`로 호출합니다.
+이 내부 snapshot도 모델, Test File, Excel, dependency와 입력 checksum 검사를
+동일하게 적용하지만 비교용 reference-report 폴더만 생략합니다.
+
 기대값 `APPLY` 정책도 작업 사본에서 기존 실행 함수가 동일하게 처리합니다.
 재실행은 준비 workflow를 실행하지 않습니다.
 

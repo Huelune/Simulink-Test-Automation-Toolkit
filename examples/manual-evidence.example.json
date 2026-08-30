@@ -1,0 +1,58 @@
+{
+  "Checks": [
+    {
+      "CheckId": "MANUAL.SUBSYSTEM_EXCEL_INDENT",
+      "Status": "PASS",
+      "VerifiedBy": "reviewer-id",
+      "VerifiedAt": "2026-08-30T15:00:00+09:00",
+      "TargetFingerprint": "replace-with-current-fingerprint",
+      "Notes": "Excel native indentation and FullPath values checked",
+      "EvidencePaths": ["evidence/subsystem-indent.png"]
+    },
+    {
+      "CheckId": "MANUAL.DUPLICATE_CUT_SELECTION",
+      "Status": "PASS",
+      "VerifiedBy": "reviewer-id",
+      "VerifiedAt": "2026-08-30T15:00:00+09:00",
+      "TargetFingerprint": "replace-with-current-fingerprint",
+      "Notes": "Candidate ordering and selected CUT checked",
+      "EvidencePaths": ["evidence/duplicate-cut.png"]
+    },
+    {
+      "CheckId": "MANUAL.REPORT_VISUAL",
+      "Status": "PASS",
+      "VerifiedBy": "reviewer-id",
+      "VerifiedAt": "2026-08-30T15:00:00+09:00",
+      "TargetFingerprint": "replace-with-current-fingerprint",
+      "Notes": "PDF, HTML, and Excel layouts checked",
+      "EvidencePaths": ["evidence/report.png"]
+    },
+    {
+      "CheckId": "MANUAL.EXCEL_APPLICATION",
+      "Status": "PASS",
+      "VerifiedBy": "reviewer-id",
+      "VerifiedAt": "2026-08-30T15:00:00+09:00",
+      "TargetFingerprint": "replace-with-current-fingerprint",
+      "Notes": "Workbook opened and required sheets were readable",
+      "EvidencePaths": ["evidence/excel-application.png"]
+    },
+    {
+      "CheckId": "MANUAL.MODEL_SELECTION",
+      "Status": "PASS",
+      "VerifiedBy": "reviewer-id",
+      "VerifiedAt": "2026-08-30T15:00:00+09:00",
+      "TargetFingerprint": "replace-with-current-fingerprint",
+      "Notes": "Model selection dialog checked",
+      "EvidencePaths": ["evidence/model-selection.png"]
+    },
+    {
+      "CheckId": "MANUAL.CUT_HIGHLIGHT",
+      "Status": "PASS",
+      "VerifiedBy": "reviewer-id",
+      "VerifiedAt": "2026-08-30T15:00:00+09:00",
+      "TargetFingerprint": "replace-with-current-fingerprint",
+      "Notes": "Selected CUT highlight checked",
+      "EvidencePaths": ["evidence/cut-highlight.png"]
+    }
+  ]
+}

@@ -51,11 +51,31 @@ MATLAB/Simulink Test 자동화 도구입니다. Excel에서 CUT, Harness, Test C
 | `diagnostics/matlab/` | 사용자가 직접 호출할 수 있는 읽기·진단 명령 |
 | `diagnostics/python/` | Excel 접근 진단 보조 스크립트 |
 | `tests/unit/` | Simulink 실행 없이 확인 가능한 단위 테스트 중심 |
+| `tests/fixtures/` | 실행별 SLX/XLSX/MAT fixture를 만드는 MATLAB builder |
+| `src/verification/` | QUICK/RUNTIME/CERTIFY 실행기, 상태 집계와 결과 writer |
 | `docs/` | 현재 아키텍처와 TODO |
 | `docs/archive/` | 이전 전달 자료와 패치 기록 보존 |
 | `examples/` | 향후 익명화된 workbook과 모델 예제 |
 
 기존 `st_*` 함수명과 호출 방식은 유지됩니다. `st_setup`이 `src` 전체와 MATLAB 진단 폴더를 경로에 추가하므로 MATLAB을 새로 시작한 뒤에는 먼저 `st_setup`을 실행해야 합니다.
+
+## 전체 기능 상태 검증
+
+원본을 저장하지 않는 기본 상태 점검은 다음과 같습니다.
+
+```matlab
+summary = st_verify_all( ...
+    'Profile', 'QUICK', ...
+    'Target', 'CURRENT', ...
+    'FailOnNonPass', true);
+```
+
+장시간 실제 실행은 `RUNTIME`, 자동 fixture·캐시·복구·보고서·내보내기와
+재실행까지 포함한 전체 인증은 `CERTIFY`를 사용합니다. 실제 업무 모델은
+격리 snapshot에서만 실행하며, fixture 바이너리는 Git에 저장하지 않습니다.
+결과는 실행별 Excel, JSON, JUnit XML로 `result/verification/runs`에 남습니다.
+상세 명령, 상태 해석, 수동 증거 형식과 R2025b 인증 절차는
+[전체 기능 검증 문서](docs/verification.md)를 참조하십시오.
 
 ## Recommended workflow
 
