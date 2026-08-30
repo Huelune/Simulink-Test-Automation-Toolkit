@@ -61,7 +61,20 @@ MATLAB/Simulink Test 자동화 도구입니다. Excel에서 CUT, Harness, Test C
 
 ## 전체 기능 상태 검증
 
-원본을 저장하지 않는 기본 상태 점검은 다음과 같습니다.
+### 시작 전 준비
+
+MATLAB R2025b에서 저장소를 Current Folder로 연 뒤 경로와 실제 업무 모델을
+선택합니다. `RUNTIME`과 `CERTIFY` 전에 모델, Test File과 관리 Excel의 변경을
+먼저 저장해야 합니다.
+
+```matlab
+st_setup
+st_select_target_model
+```
+
+기본 `QUICK + CURRENT`는 시뮬레이션하거나 원본을 저장하지 않고 환경, 설정,
+Excel, CUT/Harness, Signal Editor, Assessment, Test File, 캐시와 최신 산출물을
+점검합니다.
 
 ```matlab
 summary = st_verify_all( ...
@@ -70,11 +83,102 @@ summary = st_verify_all( ...
     'FailOnNonPass', true);
 ```
 
-장시간 실제 실행은 `RUNTIME`, 자동 fixture·캐시·복구·보고서·내보내기와
-재실행까지 포함한 전체 인증은 `CERTIFY`를 사용합니다. 실제 업무 모델은
-격리 snapshot에서만 실행하며, fixture 바이너리는 Git에 저장하지 않습니다.
-결과는 실행별 Excel, JSON, JUnit XML로 `result/verification/runs`에 남습니다.
-상세 명령, 상태 해석, 수동 증거 형식과 R2025b 인증 절차는
+결과를 먼저 확인하고 MATLAB 오류를 발생시키지 않으려면 다음처럼 실행합니다.
+
+```matlab
+summary = st_verify_all('FailOnNonPass', false);
+disp(summary.Status)
+disp(summary.RunDirectory)
+```
+
+### 프로필과 대상
+
+| 옵션 | 값 | 사용 목적 |
+| --- | --- | --- |
+| `Profile` | `QUICK` | 단위 테스트와 읽기 전용 상태 점검. 시뮬레이션하지 않음 |
+|  | `RUNTIME` | QUICK 이후 실제 업무 모델의 격리 사본에서 기존 Test File 실행 |
+|  | `CERTIFY` | fixture 전체 workflow, SLDV, 캐시·복구, 보고서, 내보내기와 반복 실행 인증 |
+| `Target` | `CURRENT` | 현재 `runtime_target.mat`이 가리키는 업무 모델 |
+|  | `FIXTURE` | 실행 시 자동으로 생성되는 익명 검증 모델 |
+|  | `BOTH` | 현재 업무 모델과 fixture 모두 |
+
+장시간 실제 업무 모델 실행과 보고서 생성을 확인하려면:
+
+```matlab
+summary = st_verify_all( ...
+    'Profile', 'RUNTIME', ...
+    'Target', 'CURRENT', ...
+    'KeepWorkspace', 'ON_FAILURE', ...
+    'FailOnNonPass', true);
+```
+
+업무 모델과 분리하여 자동 fixture만 전체 인증하려면 수동 증거가 필요하지
+않습니다.
+
+```matlab
+summary = st_verify_all( ...
+    'Profile', 'CERTIFY', ...
+    'Target', 'FIXTURE', ...
+    'KeepWorkspace', 'ON_FAILURE', ...
+    'FailOnNonPass', true);
+```
+
+업무 모델과 fixture를 함께 최초 인증하려면 현재 fingerprint로 작성한 수동
+증거 JSON을 전달합니다. 형식은
+[`examples/manual-evidence.example.json`](examples/manual-evidence.example.json)을
+복사해 사용합니다.
+
+```matlab
+cfg = st_require_runtime_target();
+fingerprint = st_verification_target_fingerprint(cfg)
+
+summary = st_verify_all( ...
+    'Profile', 'CERTIFY', ...
+    'Target', 'BOTH', ...
+    'ManualEvidence', 'manual-evidence.json', ...
+    'KeepWorkspace', 'ON_FAILURE', ...
+    'FailOnNonPass', true);
+```
+
+### 실행 옵션
+
+| 옵션 | 기본값 | 설명 |
+| --- | --- | --- |
+| `Profile` | `QUICK` | `QUICK`, `RUNTIME`, `CERTIFY` |
+| `Target` | `CURRENT` | `CURRENT`, `FIXTURE`, `BOTH` |
+| `ManualEvidence` | 빈 값 | `CERTIFY + CURRENT/BOTH` 수동 검사 JSON 경로 |
+| `KeepWorkspace` | `ON_FAILURE` | `ALWAYS`, `ON_FAILURE`, `NEVER` |
+| `FailOnNonPass` | `true` | 결과 기록 후 `FAIL` 또는 `BLOCKED`에서 오류 발생 |
+
+검사 상태는 `PASS`, `FAIL`, `BLOCKED`, `SKIP`, `WARN`이며 전체 우선순위는
+`FAIL > BLOCKED > PASS_WITH_WARNINGS > PASS`입니다. 제품·라이선스·필수
+입력·수동 증거가 없으면 성공으로 처리하지 않고 `BLOCKED`로 남깁니다.
+
+### 결과 확인
+
+모든 실행은 다음 폴더에 독립적으로 보관됩니다.
+
+```text
+result/verification/
+├── latest.json
+└── runs/{timestamp}_{run-id}/
+    ├── VerificationSummary.xlsx
+    ├── verification.json
+    ├── junit.xml
+    ├── environment.json
+    ├── manifest.json
+    ├── logs/
+    ├── evidence/
+    └── workspace/       # ALWAYS 또는 실패/차단 시 기본 보존
+```
+
+Excel은 `Overview`, `Features`, `Checks`, `Environment`, `ManualEvidence`,
+`Artifacts` 시트를 포함합니다. 실제 업무 모델은 내보내기 수집기를 재사용한
+격리 snapshot에서만 실행하며 원본 모델, Test File, Excel, dependency와 입력
+파일의 checksum을 실행 전후 비교합니다. fixture의 SLX/XLSX/MAT/MLDATX는
+실행 workspace에서만 생성되고 Git에 저장되지 않습니다.
+
+상세 상태 해석, 수동 증거 작성법과 R2025b 최초 인증 절차는
 [전체 기능 검증 문서](docs/verification.md)를 참조하십시오.
 
 ## Recommended workflow
