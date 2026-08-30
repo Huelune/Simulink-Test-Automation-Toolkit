@@ -37,6 +37,17 @@ This file records decisions that are intentionally not presented as implemented 
   `AUTO` and `FORCE` execution policies.
 - [x] Add local run bundles with initial/final results, Decision and Execution
   coverage, Excel summary, official PDF, HTML, and MLDATX artifacts.
+- [x] Add a standalone, non-destructive export command that packages the saved
+  internal Harness model, inputs, Test File, dependencies, and reference report
+  and creates a fresh workspace for every recipient rerun.
+- [ ] Validate the exported bundle end-to-end on MATLAB R2025b: internal Harness
+  preservation, dependency completeness, Signal Editor/SLDV path rewriting,
+  repeated runs, and reference-result comparison.
+- [ ] Define policy for external resources that dependency analysis cannot copy,
+  such as environment variables, private services, and licensed custom code.
+- [ ] Decide whether export requires a MATLAB Project so user-added Test File
+  baseline, callback, requirement, and custom-criteria dependencies can be
+  discovered and packaged in addition to toolkit-managed inputs.
 
 - [ ] Select the next release version after MATLAB validation; current changes remain under `Unreleased`.
 - [ ] Decide whether machine-readable reports use JSON, JUnit XML, or both in addition to current INI reports.

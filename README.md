@@ -373,6 +373,39 @@ Coverage 미달은 보고 항목이며 현재 버전에서 Test 실패로
 가리킵니다. 보고서는 로컬 내부용이며 Notion이나 외부
 저장소로 자동 전송하지 않습니다.
 
+## 재실행 가능한 테스트 번들 내보내기
+
+테스트 준비와 실행이 끝난 뒤 다음 독립 명령으로 현재 저장 상태를
+다른 컴퓨터에 전달할 수 있는 번들로 내보낼 수 있습니다.
+
+```matlab
+st_export_test_bundle
+```
+
+기본 출력은 `result/exports/{timestamp}_{id}/`와 같은 이름의 ZIP입니다.
+번들에는 내부 Test Harness가 저장된 모델, 분석된 모델 의존 파일,
+Signal Editor·SLDV 입력, Test File의 Test Case와 Iteration, 관리 Excel,
+비교용 최신 통합 보고서, 자동화 코드와 파일 checksum manifest가 들어갑니다.
+
+내보내기는 기존 workflow에서 자동 실행되지 않습니다. 원본 모델·Test File을
+수정하거나 내부 Harness 연결을 끊지 않으며, 받는 사람이
+`run_exported_tests`를 실행할 때마다 번들의 `template/`에서 별도의
+`executions/` 작업 사본을 생성합니다. 따라서 원본 프로젝트와 내보낸
+템플릿을 그대로 둔 채 같은 시작 상태로 반복 시험할 수 있습니다.
+
+특정 보고서 실행을 기준으로 내보내거나 ZIP 생성을 끄려면 다음처럼
+호출합니다.
+
+```matlab
+st_export_test_bundle('RunId', '20260830_120000_example')
+st_export_test_bundle('CreateArchive', false)
+```
+
+모델이나 Test File에 저장하지 않은 변경이 있거나 모델 의존 파일이
+누락되었으면 불완전한 번들을 만들지 않고 중단합니다. 받는 사람의
+실행 절차, 폴더별 의미와 문제 해결 방법은 번들 안의 초보자용
+`README.md`와 [내보내기 설계 문서](docs/export-bundle.md)를 참고하십시오.
+
 ## Repository artifact policy
 
 | 종류 | Git 정책 | 이유 |

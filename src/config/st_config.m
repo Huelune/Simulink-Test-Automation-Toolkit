@@ -312,6 +312,11 @@ cfg.LatestReportPointer = ...
 cfg.LatestSummaryFile = ...
     fullfile(rootDir, 'result', 'TestSummary.xlsx');
 
+% Standalone command st_export_test_bundle writes reproducible bundles here.
+% This setting is not used by either normal workflow entry point.
+cfg.ExportRootDir = ...
+    fullfile(rootDir, 'result', 'exports');
+
 
 %% ============================================================
 % Execution

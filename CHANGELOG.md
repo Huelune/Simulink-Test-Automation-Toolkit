@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added standalone reproducible test bundle export with saved internal Harness
+  models, analyzed dependencies, target inputs, Test File definitions, reference
+  reports, SHA-256 inventory, and an optional ZIP archive.
+- Added an exported runner that validates the bundle and creates a fresh mutable
+  workspace for each rerun while preserving the source project and bundle
+  template, plus a beginner-oriented Korean bundle README.
+
 - Added target-level incremental preparation with `AUTO`/`FORCE` policies,
   stage checkpoints, input fingerprints, and atomic MAT/JSON state files.
 - Added optional `PreparationMode` and `PreparationFromStage` Excel columns
