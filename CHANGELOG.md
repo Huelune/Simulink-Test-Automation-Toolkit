@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Changed CUT path discovery to enforce one-to-one subsystem assignment,
+  remove already claimed paths from later recommendations, reject duplicate
+  existing ownership, and update the management workbook only after every
+  selected path passes final validation. Excel row context no longer
+  hard-filters candidates.
 - Added one-to-one Signal Editor template mapping for existing multi-scenario
   MAT files such as `TestCase_1`, `TestCase_2`, preserving each scenario's
   Harness-only inputs while importing matching SLDV test cases.

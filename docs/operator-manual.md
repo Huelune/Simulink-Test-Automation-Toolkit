@@ -175,7 +175,9 @@ cfg = st_select_target_model(true);
 
 - `CUTName`과 같은 이름의 Subsystem 후보를 모델에서 찾습니다.
 - 주변에 이미 확정된 CUT와 Excel 행 문맥을 이용해 후보 순위를 계산합니다.
-- 선택한 경로를 `Targets.CUTPath`에 기록합니다.
+- 한 행에서 확정된 Subsystem을 이후 행의 후보에서 제외합니다.
+- 모든 행이 해결되고 경로의 존재·타입·이름·고유성 검증을 통과한 경우에만
+  선택한 경로를 `Targets.CUTPath`에 한 번에 기록합니다.
 
 사용:
 
@@ -183,7 +185,10 @@ cfg = st_select_target_model(true);
 R = st_find_target_paths();
 ```
 
-Excel을 변경하는 명령이므로 실행 전 workbook 백업과 저장 상태를 확인합니다.
+기존의 유효한 `CUTPath`가 여러 enabled 행에 중복되어 있거나 선택을
+취소하면 관리 Excel은 변경되지 않습니다. indent와 행 순서는 추천 점수에만
+사용되며 후보를 강제로 제외하지 않습니다. Excel을 변경할 수 있는 명령이므로
+실행 전 workbook 백업과 저장 상태를 확인합니다.
 
 ### 5.3 `st_export_subsystem_paths`
 

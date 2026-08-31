@@ -233,7 +233,7 @@ Harness가 이미 존재하면:
 st_run_after_harness
 ```
 
-`st_find_target_paths`는 모델을 선택하고 같은 이름의 Subsystem 후보를 주변의 확정된 경로와 Excel 행 문맥으로 순위화하여 `CUTPath`를 채우는 대체 workflow입니다.
+`st_find_target_paths`는 모델을 선택하고 같은 이름의 Subsystem 후보를 주변의 확정된 경로와 Excel 행 문맥으로 순위화하여 `CUTPath`를 채우는 대체 workflow입니다. 기존의 유효한 `CUTPath`와 새로 확정한 경로는 해당 Excel 행이 단독으로 점유합니다. 이미 다른 행이 점유한 Subsystem은 이후 추천 목록에서 제외되며, 기존 Excel에 동일한 유효 경로가 중복되어 있거나 해결하지 못한 행이 하나라도 있으면 `Targets.CUTPath`를 변경하지 않습니다. indent와 행 순서는 추천 점수에만 사용하고 후보를 강제로 제거하지 않습니다.
 
 ## Full workflow
 

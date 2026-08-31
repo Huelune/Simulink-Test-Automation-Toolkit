@@ -6,23 +6,21 @@ function R = st_find_target_paths()
 %   2. Let the user select exactly one target model.
 %   3. Load the selected model.
 %   4. Search the selected model for every CUTName in TestManagement.xlsx.
-%   5. Resolve easy anchors first:
-%        - existing valid CUTPath
-%        - CUTName with exactly one matching subsystem
-%   6. For duplicated CUTName values:
-%        - exclude candidates located under confidently resolved later CUTs
-%        - derive a stable context from multiple nearby resolved CUT paths
-%        - rank the remaining candidates by structural/context support
-%   7. Show nearby Excel rows in the selection dialog so the user can see
+%   5. Reserve every existing valid CUTPath and reject duplicate ownership.
+%   6. Remove reserved paths from every later row's candidate list.
+%   7. Resolve a single unused candidate automatically.
+%   8. For duplicated CUTName values, rank remaining candidates by nearby
+%      confirmed paths and require explicit user confirmation.
+%   9. Show nearby Excel rows in the selection dialog so the user can see
 %      which logical section of the sheet is currently being resolved.
-%   8. A selected ambiguous path immediately becomes a new anchor.
-%   9. Write resolved paths to the existing CUTPath column.
-%  10. Save the selected model to runtime_target.mat.
+%  10. A selected path is immediately reserved for that Excel row.
+%  11. Write the CUTPath column only after every row passes validation.
+%  12. Save the selected model to runtime_target.mat.
 %
 % Important:
-%   Excel depth/indent is not used. Row order is only a context hint.
-%   A later confidently resolved CUT is never allowed to become an ancestor
-%   of the current CUT candidate.
+%   Excel depth/indent is not used. Row order is only a scoring/context hint.
+%   It never removes a candidate. One physical subsystem can be assigned to
+%   only one enabled Excel row.
 %
 % Excel does not need a ModelName column. One selected model is shared by
 % every CUT in the current automation run.
@@ -226,10 +224,11 @@ items = struct( ...
     'Resolution', {}, ...
     'Message', {}, ...
     'RecommendationScore', {}, ...
-    'FilteredCount', {}, ...
+    'ClaimedCandidateCount', {}, ...
     'ContextRoot', {}, ...
     'BestAnchor', {}, ...
-    'BestRelation', {});
+    'BestRelation', {}, ...
+    'ClaimedByRows', {});
 
 for dataRow = 1:rowCount
 
@@ -279,17 +278,18 @@ for dataRow = 1:rowCount
     item.Resolution = '';
     item.Message = '';
     item.RecommendationScore = NaN;
-    item.FilteredCount = 0;
+    item.ClaimedCandidateCount = 0;
     item.ContextRoot = '';
     item.BestAnchor = '';
     item.BestRelation = '';
+    item.ClaimedByRows = '';
 
     items(end+1) = item; %#ok<AGROW>
 end
 
 
 %% ============================================================
-% First pass: resolve hard anchors before asking any question
+% First pass: reserve existing valid CUT paths
 %% ============================================================
 
 for i = 1:numel(items)
@@ -354,29 +354,72 @@ for i = 1:numel(items)
     end
 
 
-    %% --------------------------------------------------------
-    % Unique match becomes an anchor automatically
-    %% --------------------------------------------------------
+end
 
-    if numel(matches) == 1
 
-        items(i).SelectedPath = matches{1};
+%% ============================================================
+% Reject duplicate existing ownership before any recommendation
+%% ============================================================
+
+claims = st_build_anchor_table(items);
+st_assert_unique_path_claims(claims);
+
+
+%% ============================================================
+% Second pass: resolve every currently unique unused candidate
+%% ============================================================
+
+for i = 1:numel(items)
+
+    if ~strcmp(items(i).Status, 'PENDING')
+        continue;
+    end
+
+    [availablePaths, claimedCandidates] = ...
+        st_partition_claimed_path_candidates( ...
+            items(i).Candidates, ...
+            claims);
+
+    items(i).ClaimedCandidateCount = height(claimedCandidates);
+    items(i).ClaimedByRows = ...
+        st_claimed_rows_text(claimedCandidates);
+
+    if isempty(availablePaths)
+
+        items(i) = ...
+            st_mark_no_unused_candidate( ...
+                items(i), ...
+                claimedCandidates);
+
+        continue;
+    end
+
+    if numel(availablePaths) == 1
+
+        items(i).SelectedPath = availablePaths{1};
         items(i).Status = 'OK';
-        items(i).Resolution = 'UNIQUE_MATCH';
-        items(i).Message = 'Resolved automatically';
+        items(i).Resolution = 'UNIQUE_UNUSED_MATCH';
+        items(i).Message = 'Only one unassigned CUT path remains';
+
+        claims = ...
+            st_append_anchor( ...
+                claims, ...
+                items(i).ExcelRow, ...
+                items(i).CUTName, ...
+                items(i).SelectedPath);
     end
 end
 
 
 %% ============================================================
-% Build initial anchors from existing / unique paths
+% Build recommendation anchors from every deterministic assignment
 %% ============================================================
 
-anchors = st_build_anchor_table(items);
+anchors = claims;
 
 
 %% ============================================================
-% Second pass: resolve ambiguous CUTs in Excel order
+% Third pass: resolve ambiguous CUTs in Excel order
 %% ============================================================
 
 for i = 1:numel(items)
@@ -386,9 +429,49 @@ for i = 1:numel(items)
     end
 
     cutName = items(i).CUTName;
-    matches = items(i).Candidates;
+    [matches, claimedCandidates] = ...
+        st_partition_claimed_path_candidates( ...
+            items(i).Candidates, ...
+            claims);
 
-    [ranking, excluded] = ...
+    items(i).ClaimedCandidateCount = height(claimedCandidates);
+    items(i).ClaimedByRows = ...
+        st_claimed_rows_text(claimedCandidates);
+
+    st_print_claimed_candidates( ...
+        items(i), ...
+        claimedCandidates, ...
+        modelName);
+
+    if isempty(matches)
+
+        items(i) = ...
+            st_mark_no_unused_candidate( ...
+                items(i), ...
+                claimedCandidates);
+
+        continue;
+    end
+
+    if numel(matches) == 1
+
+        items(i).SelectedPath = matches{1};
+        items(i).Status = 'OK';
+        items(i).Resolution = 'UNIQUE_UNUSED_MATCH';
+        items(i).Message = 'Only one unassigned CUT path remains';
+
+        claims = ...
+            st_append_anchor( ...
+                claims, ...
+                items(i).ExcelRow, ...
+                items(i).CUTName, ...
+                items(i).SelectedPath);
+
+        anchors = claims;
+        continue;
+    end
+
+    [ranking, ~] = ...
         st_score_path_candidates( ...
             matches, ...
             items(i).ExcelRow, ...
@@ -396,39 +479,14 @@ for i = 1:numel(items)
             modelName, ...
             cfg.PathFinderAnchorCount);
 
-    items(i).FilteredCount = ...
-        height(excluded);
-
-    if ~isempty(excluded)
-
-        fprintf( ...
-            '[%d] %s : hard-filtered %d candidate(s)\n', ...
-            items(i).ExcelRow, ...
-            cutName, ...
-            height(excluded));
-
-        for e = 1:height(excluded)
-
-            fprintf( ...
-                '    EXCLUDE %s | later CUT %s (row %d) at %s\n', ...
-                char(excluded.RelativePath(e)), ...
-                char(excluded.LaterCUT(e)), ...
-                excluded.LaterExcelRow(e), ...
-                char(excluded.LaterCUTPath(e)));
-        end
-    end
-
     if isempty(ranking)
 
         items(i).Status = 'FAIL';
-        items(i).Resolution = 'ALL_CANDIDATES_HARD_FILTERED';
-        items(i).Message = sprintf( ...
-            ['All %d duplicated candidates were excluded because they are ' ...
-             'under a later confidently resolved CUT.'], ...
-            numel(matches));
+        items(i).Resolution = 'NO_RANKED_CANDIDATE';
+        items(i).Message = 'No candidate was available for ranking';
 
         fprintf( ...
-            '[%d] FAIL %s : all candidates hard-filtered\n', ...
+            '[%d] FAIL %s : no ranked candidate\n', ...
             items(i).ExcelRow, ...
             cutName);
 
@@ -458,7 +516,7 @@ for i = 1:numel(items)
             modelName, ...
             cfg.PathFinderHighlightSelection, ...
             contextLines, ...
-            excluded);
+            claimedCandidates);
 
     if ~selectionOk
 
@@ -490,43 +548,15 @@ for i = 1:numel(items)
 
     % The manually confirmed path immediately becomes an anchor for the
     % next ambiguous CUT.
-    anchors = ...
+    claims = ...
         st_append_anchor( ...
-            anchors, ...
+            claims, ...
             items(i).ExcelRow, ...
             items(i).CUTName, ...
             items(i).SelectedPath);
+
+    anchors = claims;
 end
-
-
-%% ============================================================
-% Update CUTPath column in memory
-%% ============================================================
-
-for i = 1:numel(items)
-
-    if strcmp(items(i).Status, 'OK')
-
-        cutPathColumn{items(i).DataRow} = ...
-            items(i).SelectedPath;
-    end
-end
-
-
-%% ============================================================
-% Write CUTPath column only
-%% ============================================================
-
-startCell = ...
-    sprintf( ...
-        '%s2', ...
-        st_excel_column_name(idxCUTPath));
-
-writecell( ...
-    cutPathColumn, ...
-    cfg.ManagementExcel, ...
-    'Sheet', cfg.ManagementSheet, ...
-    'Range', startCell);
 
 
 %% ============================================================
@@ -542,10 +572,11 @@ SelectedCUTPath = strings(n,1);
 Status = strings(n,1);
 Resolution = strings(n,1);
 RecommendationScore = nan(n,1);
-FilteredCount = zeros(n,1);
+ClaimedCandidateCount = zeros(n,1);
 ContextRoot = strings(n,1);
 BestAnchor = strings(n,1);
 BestRelation = strings(n,1);
+ClaimedByRows = strings(n,1);
 Message = strings(n,1);
 Timestamp = strings(n,1);
 
@@ -558,10 +589,11 @@ for i = 1:n
     Status(i) = string(items(i).Status);
     Resolution(i) = string(items(i).Resolution);
     RecommendationScore(i) = items(i).RecommendationScore;
-    FilteredCount(i) = items(i).FilteredCount;
+    ClaimedCandidateCount(i) = items(i).ClaimedCandidateCount;
     ContextRoot(i) = string(items(i).ContextRoot);
     BestAnchor(i) = string(items(i).BestAnchor);
     BestRelation(i) = string(items(i).BestRelation);
+    ClaimedByRows(i) = string(items(i).ClaimedByRows);
     Message(i) = string(items(i).Message);
     Timestamp(i) = string(datetime( ...
         'now', ...
@@ -594,17 +626,13 @@ R = table( ...
     Status, ...
     Resolution, ...
     RecommendationScore, ...
-    FilteredCount, ...
+    ClaimedCandidateCount, ...
     ContextRoot, ...
     BestAnchor, ...
     BestRelation, ...
+    ClaimedByRows, ...
     Message, ...
     Timestamp);
-
-st_write_result( ...
-    'PathFinderResult', ...
-    R);
-
 
 fprintf('\n');
 fprintf('============================================\n');
@@ -614,8 +642,222 @@ fprintf('OK   : %d\n', sum(Status == 'OK'));
 fprintf('FAIL : %d\n', sum(Status == 'FAIL'));
 fprintf('Total: %d\n', height(R));
 fprintf('============================================\n');
+
+if any(Status == 'FAIL')
+
+    st_write_result( ...
+        'PathFinderResult', ...
+        R);
+
+    error( ...
+        'st_find_target_paths:ResolutionFailed', ...
+        ['One or more CUT paths could not be resolved. ' ...
+         'The management Excel CUTPath column was not changed.']);
+end
+
+
+%% ============================================================
+% Final validation before changing the management Excel
+%% ============================================================
+
+st_validate_final_assignments(items, modelName);
+
+
+%% ============================================================
+% Update and write the CUTPath column once
+%% ============================================================
+
+for i = 1:numel(items)
+
+    cutPathColumn{items(i).DataRow} = ...
+        items(i).SelectedPath;
+end
+
+startCell = ...
+    sprintf( ...
+        '%s2', ...
+        st_excel_column_name(idxCUTPath));
+
+writecell( ...
+    cutPathColumn, ...
+    cfg.ManagementExcel, ...
+    'Sheet', cfg.ManagementSheet, ...
+    'Range', startCell);
+
+st_write_result( ...
+    'PathFinderResult', ...
+    R);
+
 fprintf('Runtime target saved: %s\n', cfg.RuntimeTargetFile);
 fprintf('============================================\n');
+
+end
+
+
+%% ============================================================
+% Single-assignment helpers
+%% ============================================================
+
+function item = ...
+    st_mark_no_unused_candidate(item, claimedCandidates)
+
+item.Status = 'FAIL';
+item.Resolution = 'NO_UNUSED_CANDIDATE';
+
+if isempty(claimedCandidates)
+
+    item.Message = 'No unassigned CUT path candidate remains';
+
+else
+
+    assignments = cell(height(claimedCandidates),1);
+
+    for i = 1:height(claimedCandidates)
+
+        assignments{i} = sprintf( ...
+            '%s <- row %d (%s)', ...
+            char(claimedCandidates.CandidatePath(i)), ...
+            double(claimedCandidates.ClaimedExcelRow(i)), ...
+            char(claimedCandidates.ClaimedCUTName(i)));
+    end
+
+    item.Message = sprintf( ...
+        'All matching CUT paths are already assigned: %s', ...
+        strjoin(assignments, '; '));
+end
+
+fprintf( ...
+    '[%d] FAIL %s : %s\n', ...
+    item.ExcelRow, ...
+    item.CUTName, ...
+    item.Message);
+
+end
+
+
+function text = st_claimed_rows_text(claimedCandidates)
+
+if isempty(claimedCandidates)
+
+    text = '';
+    return;
+end
+
+owners = cell(height(claimedCandidates),1);
+
+for i = 1:height(claimedCandidates)
+
+    owners{i} = sprintf( ...
+        '%d:%s', ...
+        double(claimedCandidates.ClaimedExcelRow(i)), ...
+        char(claimedCandidates.ClaimedCUTName(i)));
+end
+
+text = strjoin(owners, ', ');
+
+end
+
+
+function st_print_claimed_candidates(item, claimedCandidates, modelName)
+
+if isempty(claimedCandidates)
+    return;
+end
+
+fprintf( ...
+    '[%d] %s : removed %d already assigned candidate(s)\n', ...
+    item.ExcelRow, ...
+    item.CUTName, ...
+    height(claimedCandidates));
+
+for i = 1:height(claimedCandidates)
+
+    fprintf( ...
+        '    ASSIGNED %s | row %d (%s)\n', ...
+        st_relative_simulink_path( ...
+            char(claimedCandidates.CandidatePath(i)), ...
+            modelName), ...
+        double(claimedCandidates.ClaimedExcelRow(i)), ...
+        char(claimedCandidates.ClaimedCUTName(i)));
+end
+
+end
+
+
+function st_validate_final_assignments(items, modelName)
+
+selectedPaths = strings(numel(items),1);
+
+for i = 1:numel(items)
+
+    selectedPath = items(i).SelectedPath;
+
+    if isempty(selectedPath)
+
+        error( ...
+            'st_find_target_paths:FinalValidationFailed', ...
+            'Excel row %d has no selected CUTPath.', ...
+            items(i).ExcelRow);
+    end
+
+    modelPrefix = [char(modelName) '/'];
+
+    if length(selectedPath) < length(modelPrefix) || ...
+            ~strncmp(selectedPath, modelPrefix, length(modelPrefix))
+
+        error( ...
+            'st_find_target_paths:FinalValidationFailed', ...
+            'CUTPath is outside selected Top Model at Excel row %d: %s', ...
+            items(i).ExcelRow, ...
+            selectedPath);
+    end
+
+    try
+
+        blockType = get_param(selectedPath, 'BlockType');
+        blockName = get_param(selectedPath, 'Name');
+
+    catch ME
+
+        error( ...
+            'st_find_target_paths:FinalValidationFailed', ...
+            'CUTPath does not exist at Excel row %d: %s (%s)', ...
+            items(i).ExcelRow, ...
+            selectedPath, ...
+            ME.message);
+    end
+
+    if ~strcmp(blockType, 'SubSystem')
+
+        error( ...
+            'st_find_target_paths:FinalValidationFailed', ...
+            'CUTPath is not a SubSystem at Excel row %d: %s', ...
+            items(i).ExcelRow, ...
+            selectedPath);
+    end
+
+    if ~strcmp(blockName, items(i).CUTName)
+
+        error( ...
+            'st_find_target_paths:FinalValidationFailed', ...
+            ['CUTName does not match the selected subsystem at Excel ' ...
+             'row %d: expected=%s, actual=%s'], ...
+            items(i).ExcelRow, ...
+            items(i).CUTName, ...
+            blockName);
+    end
+
+    selectedPaths(i) = string(selectedPath);
+end
+
+
+if numel(unique(selectedPaths)) ~= numel(selectedPaths)
+
+    error( ...
+        'st_find_target_paths:FinalValidationFailed', ...
+        ['Final CUTPath assignments are not unique. ' ...
+         'The management Excel CUTPath column was not changed.']);
+end
 
 end
 
@@ -632,7 +874,7 @@ function [selectedPath, selectedRow, ok] = ...
         modelName, ...
         highlightSelection, ...
         contextLines, ...
-        excluded)
+        claimedCandidates)
 
 selectedPath = '';
 selectedRow = [];
@@ -659,7 +901,8 @@ while true
         contextLines(:); ...
         {' '}; ...
         {sprintf('Recommended context : %s', st_display_context_root(ranking))}; ...
-        {sprintf('Hard-filtered candidates : %d', height(excluded))}; ...
+        {sprintf('Already assigned candidates : %d', ...
+            height(claimedCandidates))}; ...
         {'Candidates below are sorted by recommendation score.'}];
 
     [index, listOk] = ...
