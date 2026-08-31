@@ -55,11 +55,16 @@ workflow도 완료된 기능으로 기록하지 않습니다.
 | `tests/unit/` | Simulink 실행 없이 확인 가능한 단위 테스트 중심 |
 | `tests/fixtures/` | 실행별 SLX/XLSX/MAT fixture를 만드는 MATLAB builder |
 | `src/verification/` | QUICK/RUNTIME/CERTIFY 실행기, 상태 집계와 결과 writer |
+| `src/maintenance/` | 생성 결과의 dry-run 및 범위별 정리 명령 |
 | `docs/` | 현재 아키텍처와 TODO |
 | `docs/archive/` | 이전 전달 자료와 패치 기록 보존 |
 | `examples/` | 향후 익명화된 workbook과 모델 예제 |
 
 기존 `st_*` 함수명과 호출 방식은 유지됩니다. `st_setup`이 `src` 전체와 MATLAB 진단 폴더를 경로에 추가하므로 MATLAB을 새로 시작한 뒤에는 먼저 `st_setup`을 실행해야 합니다.
+
+설정, 경로 준비, Harness/SLDV/Test Case 생성, 실행, 검증, 내보내기와
+결과 정리를 사용자 명령별로 확인하려면
+[운영자 매뉴얼](docs/operator-manual.md)을 사용합니다.
 
 ## 전체 기능 상태 검증
 

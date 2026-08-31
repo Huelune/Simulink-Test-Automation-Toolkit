@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added the dry-run-first `st_cleanup_results` operator command for scoped
+  cleanup of known generated artifacts below `result/`.
+- Added a start-to-cleanup operator manual covering public commands,
+  prerequisites, side effects, outputs, recovery, and result retention.
 - Added `cfg.CheckSharedSignalEditorDataFile = false` as the default so SLDV
   preparation skips the potentially slow all-Harness Signal Editor MAT
   ownership scan, while retaining an explicit opt-in safety check.

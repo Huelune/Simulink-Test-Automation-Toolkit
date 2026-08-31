@@ -20,6 +20,7 @@ Simulink-Test-Automation-Toolkit/
 │   ├── reporting/
 │   ├── exporting/
 │   ├── verification/
+│   ├── maintenance/
 │   ├── scenarios/
 │   └── shared/
 ├── diagnostics/
@@ -42,6 +43,7 @@ Simulink-Test-Automation-Toolkit/
 | `execution` | Test execution and expected-value update |
 | `exporting` | Immutable template bundle, dependency and input collection |
 | `verification` | QUICK/RUNTIME/CERTIFY orchestration, status aggregation, manual evidence and Excel/JSON/JUnit writers |
+| `maintenance` | Dry-run-first cleanup of known generated result artifacts |
 | `reporting`, `shared`, `scenarios` | Cross-domain result, path, lifecycle, and naming helpers |
 
 ## Path and compatibility rules

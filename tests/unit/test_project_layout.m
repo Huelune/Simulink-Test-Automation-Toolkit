@@ -36,3 +36,11 @@ required = { ...
     'st_build_verification_fixture.m')};
 verifyTrue(testCase, all(cellfun(@isfile, required)));
 end
+
+
+function testMaintenanceEntryPointExists(testCase)
+rootDir = st_project_root();
+
+verifyTrue(testCase, isfile(fullfile(rootDir, 'src', 'maintenance', ...
+    'st_cleanup_results.m')));
+end
