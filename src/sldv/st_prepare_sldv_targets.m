@@ -101,6 +101,7 @@ for i = 1:n
                 cfg, ownerPath, profile.HarnessName);
 
             profile.HarnessScenarioName = harnessInput.ScenarioName;
+            profile.SignalEditorDataFile = harnessInput.DataFile;
             profile.HarnessInputNames = harnessInput.Names;
             profile.HarnessInputTypes = harnessInput.Types;
             profile.HarnessInputDimensions = harnessInput.Dimensions;
@@ -249,7 +250,13 @@ end
 
 % Signal Editor MAT ownership is checked only after every target data file
 % has passed its source-side validation. This stage does not modify models.
-if ~any(Status == 'FAIL') && any(~strcmp(T.SldvMode, 'OFF'))
+checkSharedSignalEditorDataFile = ...
+    isfield(cfg, 'CheckSharedSignalEditorDataFile') && ...
+    logical(cfg.CheckSharedSignalEditorDataFile);
+
+if ~any(Status == 'FAIL') && ...
+        any(~strcmp(T.SldvMode, 'OFF')) && ...
+        checkSharedSignalEditorDataFile
     usersReady = false;
 
     try
@@ -307,6 +314,11 @@ if ~any(Status == 'FAIL') && any(~strcmp(T.SldvMode, 'OFF'))
             end
         end
     end
+
+elseif ~any(Status == 'FAIL') && any(~strcmp(T.SldvMode, 'OFF'))
+    st_log(cfg, 'INFO', ...
+        ['Signal Editor MAT sharing check skipped ' ...
+         '(cfg.CheckSharedSignalEditorDataFile=false)']);
 end
 
 manifest = struct();

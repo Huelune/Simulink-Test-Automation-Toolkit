@@ -151,6 +151,17 @@ cfg.SldvTmaxResolution = 0.01;
 %   Require the CUT to already have TreatAsAtomicUnit=on.
 cfg.AutoEnableAtomicForSldvGenerate = true;
 
+% true:
+%   Open every registered Harness before SLDV configuration and fail when
+%   multiple Harnesses use the same Signal Editor MAT file.
+%
+% false (default):
+%   Skip the repository-wide ownership scan. This avoids loading and
+%   closing every Harness, which can be slow with SyncOnOpenAndClose.
+%   Enable the check when Signal Editor MAT files may be shared between
+%   Harnesses; otherwise later SLDV scenario writes can conflict.
+cfg.CheckSharedSignalEditorDataFile = false;
+
 
 %% ============================================================
 % Harness

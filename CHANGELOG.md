@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added `cfg.CheckSharedSignalEditorDataFile = false` as the default so SLDV
+  preparation skips the potentially slow all-Harness Signal Editor MAT
+  ownership scan, while retaining an explicit opt-in safety check.
+
 - Connected the project to the `Huelune/Simulink-Test-Automation-Toolkit` repository while preserving its initial MIT license commit.
 - Added explicit expected-value policy with `cfg.ExpectedUpdateMode = 'APPLY'` as the project default.
 - Added optional per-row `ExpectedUpdateMode` values (`DEFAULT`, `OFF`, `APPLY`) to the `Targets` sheet.

@@ -150,7 +150,9 @@ UT_REQ_{CUTName}_001
 result/sldv/{No}_{CUTName}/latest_sldvdata.mat
 ```
 
-SLDV 데이터의 subsystem 경로, 유효한 TestCase, 시간값, Dataset 인터페이스 및 Iteration에 적용할 파라미터 metadata를 실제 Harness 변경 전에 검증합니다. SLDV 입력은 Harness `ActiveScenario` 입력의 부분집합이어야 하며, 공통 신호의 자료형·차원이 일치해야 합니다. Harness에만 있는 외부 입력은 원래 시나리오 값으로 유지하고, Harness에 없는 SLDV 신호는 실패 처리합니다. 파라미터 source가 반환되면 그대로 사용하고, 생략된 경우에는 Test Manager의 기본 source 해석을 사용합니다. 모든 입력의 `dataNoEffect`가 true인 TestCase는 제외합니다. SLDV Signal Editor MAT 파일을 다른 Harness가 공유하면 변경하지 않고 실패합니다.
+SLDV 데이터의 subsystem 경로, 유효한 TestCase, 시간값, Dataset 인터페이스 및 Iteration에 적용할 파라미터 metadata를 실제 Harness 변경 전에 검증합니다. SLDV 입력은 Harness `ActiveScenario` 입력의 부분집합이어야 하며, 공통 신호의 자료형·차원이 일치해야 합니다. Harness에만 있는 외부 입력은 원래 시나리오 값으로 유지하고, Harness에 없는 SLDV 신호는 실패 처리합니다. 파라미터 source가 반환되면 그대로 사용하고, 생략된 경우에는 Test Manager의 기본 source 해석을 사용합니다. 모든 입력의 `dataNoEffect`가 true인 TestCase는 제외합니다.
+
+기본 `cfg.CheckSharedSignalEditorDataFile = false`는 SLDV 준비 중 전체 Harness를 열고 닫는 Signal Editor MAT 공유 검사를 생략합니다. Harness가 많거나 `SyncOnOpenAndClose` 동기화가 느린 환경에서 준비 시간을 줄일 수 있습니다. 여러 Harness가 같은 Signal Editor MAT를 사용할 가능성이 있으면 이 옵션을 `true`로 설정해야 하며, 이때 공유가 확인되면 변경 전에 실패합니다. 검사를 끈 상태에서 실제 공유 파일을 사용하면 이후 SLDV Scenario 파일 쓰기가 서로 충돌할 수 있습니다.
 
 `SldvGenerationResult`에는 mode, source/effective 파일, `sldvrun` status·실행 시간, `Tmax`와 실패 사유를 기록하고, `SldvScenarioResult`에는 원본 TestCase 번호·이름, 생성 Scenario, 원래 종료 시간, `Tmax`, parameter override 수를 기록합니다.
 

@@ -10,6 +10,13 @@ verifyTrue(testCase, cfg.AutoEnableAtomicForSldvGenerate);
 end
 
 
+function testSharedSignalEditorDataFileCheckIsDisabledByDefault(testCase)
+cfg = st_config();
+
+verifyFalse(testCase, cfg.CheckSharedSignalEditorDataFile);
+end
+
+
 function testExpectedUpdateIsAppliedByDefault(testCase)
 cfg = st_config();
 
