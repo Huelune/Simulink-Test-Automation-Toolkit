@@ -31,6 +31,11 @@ for targetIndex = 1:height(T)
         TestCaseName(row,1) = string(T.TestCaseName(targetIndex));
         ScenarioName(row,1) = string(scenario);
 
+        % Keep result-table row counts aligned even when validation fails
+        % before verify counts can be collected.
+        VerifyCount(row,1) = NaN;
+        UntestedCount(row,1) = NaN;
+
         try
             if isempty(tcResult)
                 error('Test Case Result not found.');
@@ -75,17 +80,22 @@ function [count, untested] = scenario_verify_summary(iterResult, scenarioName)
 count = 0;
 untested = 0;
 verifyRuns = getVerifyRuns(iterResult);
+
 for runIndex = 1:numel(verifyRuns)
-    signals = getAllSignals(verifyRuns(runIndex));
-    if isempty(signals)
+    % Export the whole Verify Run. Exporting a single SDI signal can return
+    % a timeseries, which does not provide Dataset numElements semantics.
+    dataset = export(verifyRuns(runIndex));
+
+    if isempty(dataset)
         continue;
     end
-    dataset = export(signals);
-    for elementIndex = 1:dataset.numElements
+
+    for elementIndex = 1:numElements(dataset)
         assessment = dataset{elementIndex};
         if ~assessment_belongs_to_scenario(assessment, scenarioName)
             continue;
         end
+
         count = count + 1;
         resultText = char(string(assessment.Result));
         if isequal(assessment.Result, slTestResult.Untested) || ...

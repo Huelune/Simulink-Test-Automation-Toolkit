@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed SLDV verify-result validation to export each complete Verify Run as
+  a Dataset and to keep result-table columns aligned when a scenario fails
+  before verify counts are available.
 - Changed SLDV target preparation so both `FILE` and `GENERATE` modes convert
   non-atomic CUTs to persistent Atomic Subsystems by default, controlled by
   `cfg.AutoConvertSldvTargetsToAtomic`, with the action recorded in results.
