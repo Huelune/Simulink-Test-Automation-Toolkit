@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed incremental SLDV cache reuse so `CACHED` remains a report-only
+  status, successful manifest profiles stay `OK`, and manifests written by
+  the previous behavior are recovered automatically.
 - Fixed SLDV verify-result validation to export each complete Verify Run as
   a Dataset and to keep result-table columns aligned when a scenario fails
   before verify counts are available.

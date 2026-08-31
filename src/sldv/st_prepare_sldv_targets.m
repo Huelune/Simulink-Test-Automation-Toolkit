@@ -135,8 +135,13 @@ for i = 1:n
             profile.ErrorMessage = char(Message(i));
         end
 
-        profile.Status = char(Status(i));
-        profile.Message = char(Message(i));
+        % CACHED is a stage-reporting state, not a runtime-profile state.
+        % Keep the reusable manifest profile successful. Only cache lookup
+        % failures are written back as failed profiles.
+        if ~strcmp(Status(i), 'CACHED')
+            profile.Status = char(Status(i));
+            profile.Message = char(Message(i));
+        end
         profiles(i) = profile;
         ElapsedSec(i) = toc(timerValue);
         Timestamp(i) = current_timestamp();

@@ -57,7 +57,12 @@ end
 if ~matched
     error('No matching target row exists in the SLDV manifest.');
 end
-if ~strcmp(profile.Status, 'OK')
+% Older incremental runs could persist the reporting-only CACHED state in
+% the runtime manifest. Treat it as a successful reusable profile and
+% normalize it so the next manifest write repairs the stored state.
+if strcmp(profile.Status, 'CACHED')
+    profile.Status = 'OK';
+elseif ~strcmp(profile.Status, 'OK')
     error('SLDV target preparation was not successful: %s', profile.Message);
 end
 if isempty(profile.EffectiveDataFile) || ~isfile(profile.EffectiveDataFile)
