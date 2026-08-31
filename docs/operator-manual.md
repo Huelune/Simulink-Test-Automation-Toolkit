@@ -360,6 +360,13 @@ SldvDataFile=sldv_data/Controller_sldvdata.mat
 MAT는 일반 Signal Editor MAT가 아니라 Design Verifier가 생성한 `sldvData`
 구조체 파일이어야 합니다. 자동화가 Dataset Scenario로 변환합니다.
 
+Harness의 기존 Signal Editor MAT에 `TestCase_1`, `TestCase_2`, ...처럼 여러
+Scenario가 이미 있으면 SLDV 원본 TestCase 번호와 일대일 대응해 각각의
+템플릿으로 사용합니다. 따라서 SLDV가 구동하지 않는 Harness 외부 입력도 각
+Scenario의 기존 값으로 보존됩니다. 번호 기반 대응이 불가능할 때만
+`ActiveScenario`, `InputScenario`, 유일한 Dataset 순으로 단일 템플릿을
+선택하며, 둘 이상이 모호하게 남으면 임의 선택하지 않고 실패합니다.
+
 `FILE`과 `GENERATE` 대상은 모두 Atomic Subsystem이어야 합니다. 기본 설정인
 `cfg.AutoConvertSldvTargetsToAtomic=true`에서는 `TreatAsAtomicUnit=off`인 CUT을
 SLDV 준비 전에 `on`으로 바꾸고 되돌리지 않습니다. 전체 workflow를 실행하면

@@ -331,7 +331,7 @@ UT_REQ_{CUTName}_002
 ...
 ```
 
-SLDV Scenario MAT는 Harness에 연결하기 전에 별도 임시 파일로 완성한다. 각 `UT_REQ_*`는 scalar `Simulink.SimulationData.Dataset` MAT 변수로 일반 저장되며, 저장 직후 다시 불러와 Dataset 클래스·요소 수·요소 값 형식(timeseries 또는 MATLAB struct)을 검증한다. 검증에 실패하면 Harness의 `Filename`과 기존 SLDV MAT는 변경하지 않는다. 검증 성공 후에만 대상 MAT를 교체하고 Harness를 재개방해 `options@ActiveScenario`와 `NumberOfScenarios`를 기록·검증한다. 이전에 실패한 실행이 `_sldv.mat`를 남겼더라도 원본 MAT의 실제 Dataset(우선 `InputScenario`)을 템플릿으로 자동 선택해 복구한다.
+SLDV Scenario MAT는 Harness에 연결하기 전에 별도 임시 파일로 완성한다. 각 `UT_REQ_*`는 scalar `Simulink.SimulationData.Dataset` MAT 변수로 일반 저장되며, 저장 직후 다시 불러와 Dataset 클래스·요소 수·요소 값 형식(timeseries 또는 MATLAB struct)을 검증한다. 검증에 실패하면 Harness의 `Filename`과 기존 SLDV MAT는 변경하지 않는다. 검증 성공 후에만 대상 MAT를 교체하고 Harness를 재개방해 `options@ActiveScenario`와 `NumberOfScenarios`를 기록·검증한다. 이전에 실패한 실행이 `_sldv.mat`를 남겼더라도 원본 MAT의 실제 Dataset을 템플릿으로 자동 선택해 복구한다. 원본에 `TestCase_1`, `TestCase_2`, ...가 있으면 SLDV source index별로 일대일 대응하고, 그렇지 않으면 `ActiveScenario`, `InputScenario`, 유일한 Dataset 순으로 단일 템플릿을 선택한다.
 
 해당 CUT의 최장 TestCase 종료 시각을 `Tmax`로 사용합니다. 기본 `cfg.SldvTmaxResolution = 0.01`은 원본 최장 시간보다 작아지지 않도록 0.01초 단위로 올림합니다. 따라서 `1.06`은 그대로 `1.06`이고 `1.060000001`은 `1.07`이 됩니다. 결과에는 원본 `RawTmax`와 적용된 `Tmax`를 함께 기록합니다. `[]`로 설정하면 올림을 끌 수 있습니다.
 
@@ -342,7 +342,7 @@ SLDV Scenario MAT는 Harness에 연결하기 전에 별도 임시 파일로 완�
 - Signal Editor `OutputAfterFinalValue = Holding final value`
 - TestCase마다 같은 이름의 Signal Editor Scenario, Assessment Scenario 및 Table Iteration 생성
 - SLDV parameter value를 해당 Iteration의 variable override로 적용
-- SLDV에 없는 Harness 외부 입력은 원래 `ActiveScenario` 요소·시계열을 각 Scenario에 유지
+- SLDV에 없는 Harness 외부 입력은 대응하는 `TestCase_N` 템플릿의 요소·시계열을 Scenario별로 유지하고, 단일 템플릿만 있으면 그 값을 모든 Scenario에 유지
 
 따라서 종료 시간이 각각 `10.1`, `1.0`초인 경우 StopTime과 전이는 `10.1`초이며, 짧은 입력은 `1.0~10.1`초 구간에서 마지막 값을 유지합니다. `OFF`는 기존 단일 `_001` workflow를 그대로 사용합니다.
 

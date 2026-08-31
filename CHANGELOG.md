@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added one-to-one Signal Editor template mapping for existing multi-scenario
+  MAT files such as `TestCase_1`, `TestCase_2`, preserving each scenario's
+  Harness-only inputs while importing matching SLDV test cases.
 - Fixed incremental SLDV cache reuse so `CACHED` remains a report-only
   status, successful manifest profiles stay `OK`, and manifests written by
   the previous behavior are recovered automatically.
