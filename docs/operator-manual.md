@@ -360,6 +360,15 @@ SldvDataFile=sldv_data/Controller_sldvdata.mat
 MAT는 일반 Signal Editor MAT가 아니라 Design Verifier가 생성한 `sldvData`
 구조체 파일이어야 합니다. 자동화가 Dataset Scenario로 변환합니다.
 
+`FILE`과 `GENERATE` 대상은 모두 Atomic Subsystem이어야 합니다. 기본 설정인
+`cfg.AutoConvertSldvTargetsToAtomic=true`에서는 `TreatAsAtomicUnit=off`인 CUT을
+SLDV 준비 전에 `on`으로 바꾸고 되돌리지 않습니다. 전체 workflow를 실행하면
+뒤의 Harness 구성 단계가 모델을 저장합니다. `st_prepare_sldv_targets`만 단독으로
+호출했다면 모델이 Dirty 상태로 남으므로 검토 후 직접 저장해야 합니다.
+자동 변경을 금지하려면 이 설정을 `false`로 바꾸며, 이 경우 비-Atomic CUT은
+명확한 오류로 중단됩니다. 처리 결과는 `SldvGenerationResult`의
+`AtomicAction` 열에서 확인합니다.
+
 ### 9.3 `GENERATE`
 
 Top Model의 현재 Design Verifier 설정을 복사해 CUT에 TestGeneration을

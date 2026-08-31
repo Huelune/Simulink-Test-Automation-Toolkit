@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Changed SLDV target preparation so both `FILE` and `GENERATE` modes convert
+  non-atomic CUTs to persistent Atomic Subsystems by default, controlled by
+  `cfg.AutoConvertSldvTargetsToAtomic`, with the action recorded in results.
 - Added the dry-run-first `st_cleanup_results` operator command for scoped
   cleanup of known generated artifacts below `result/`.
 - Added a start-to-cleanup operator manual covering public commands,

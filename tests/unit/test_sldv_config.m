@@ -3,10 +3,10 @@ tests = functiontests(localfunctions);
 end
 
 
-function testGenerateAutoAtomicIsEnabledByDefault(testCase)
+function testSldvTargetAtomicConversionIsEnabledByDefault(testCase)
 cfg = st_config();
 
-verifyTrue(testCase, cfg.AutoEnableAtomicForSldvGenerate);
+verifyTrue(testCase, cfg.AutoConvertSldvTargetsToAtomic);
 end
 
 

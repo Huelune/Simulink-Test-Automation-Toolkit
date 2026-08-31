@@ -208,7 +208,7 @@ sldv.SldvMode = char(row.SldvMode);
 sldv.SldvDataFile = char(row.SldvDataFile);
 sldv.SldvDataSignature = sldv_source_signature(row, cfg);
 sldv.TmaxResolution = cfg.SldvTmaxResolution;
-sldv.AutoEnableAtomic = cfg.AutoEnableAtomicForSldvGenerate;
+sldv.AutoConvertAtomic = cfg.AutoConvertSldvTargetsToAtomic;
 signatures.SLDV = st_hash_value(sldv);
 
 harnessConfig = struct('Upstream', signatures.SLDV, ...

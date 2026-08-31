@@ -311,7 +311,7 @@ UT_REQ_{CUTName}_001
 
 ## SLDV scenario workflow
 
-`SldvMode=FILE`은 지정된 SLDV MAT 파일을 읽고, `GENERATE`는 Top Model의 현재 Design Verifier 설정을 복사해 해당 CUT에 `TestGeneration`을 실행합니다. 기본 `cfg.AutoEnableAtomicForSldvGenerate = true`이므로 CUT의 `TreatAsAtomicUnit`이 `off`이면 `sldvrun` 동안만 임시로 `on`으로 설정하고, 성공 또는 오류 뒤 원래 설정과 모델 Dirty 상태를 복원합니다. 이 옵션을 `false`로 두면 기존처럼 atomic CUT만 허용합니다. 생성 모드에서는 Harness/Report 생성을 끄고 성공한 데이터만 다음 위치의 latest 파일로 교체합니다.
+`SldvMode=FILE`은 지정된 SLDV MAT 파일을 읽고, `GENERATE`는 Top Model의 현재 Design Verifier 설정을 복사해 해당 CUT에 `TestGeneration`을 실행합니다. 기본 `cfg.AutoConvertSldvTargetsToAtomic = true`이므로 두 모드 모두 CUT의 `TreatAsAtomicUnit`이 `off`이면 SLDV 준비 전에 `on`으로 바꾸고 그 모델 변경을 유지합니다. 표준 workflow에서는 뒤의 Harness 구성 단계에서 모델을 저장합니다. 이 옵션을 `false`로 두면 이미 atomic인 CUT만 허용합니다. `SldvGenerationResult.AtomicAction`에는 `ALREADY_ATOMIC` 또는 `CONVERTED`가 기록됩니다. 생성 모드에서는 Harness/Report 생성을 끄고 성공한 데이터만 다음 위치의 latest 파일로 교체합니다.
 
 ```text
 result/sldv/{No}_{CUTName}/latest_sldvdata.mat
