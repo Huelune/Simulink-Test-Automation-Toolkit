@@ -1,4 +1,4 @@
-function [R, ScenarioR] = st_prepare_sldv_targets()
+function [R, ScenarioR] = st_prepare_sldv_targets(stageSelection)
 %ST_PREPARE_SLDV_TARGETS Generate or validate per-target SLDV test data.
 % The resulting manifest is consumed by all later workflow stages.
 %
@@ -9,6 +9,10 @@ function [R, ScenarioR] = st_prepare_sldv_targets()
 
 cfg = st_require_runtime_target();
 T = st_load_targets(cfg.OnlyEnabled);
+if nargin < 1
+    stageSelection = [];
+end
+selection = st_normalize_stage_selection(T, stageSelection);
 
 if ~isfolder(cfg.SldvDir)
     mkdir(cfg.SldvDir);
@@ -39,6 +43,8 @@ Status = strings(n,1);
 Message = strings(n,1);
 ElapsedSec = zeros(n,1);
 Timestamp = strings(n,1);
+PreparationAction = selection.Action;
+PreparationReason = selection.Reason;
 
 scenarioTargetRow = zeros(0,1);
 scenarioNo = zeros(0,1);
@@ -74,6 +80,65 @@ for i = 1:n
     profile.Mode = mode;
     profile.RequestedDataFile = char(T.SldvDataFile(i));
     profile.SourceDataFile = char(T.SldvDataFile(i));
+
+    if ~selection.Run(i)
+        try
+            profile = st_get_sldv_profile(T(i,:), cfg);
+            SourceDataFile(i) = string(profile_field( ...
+                profile, 'SourceDataFile', ''));
+            EffectiveDataFile(i) = string(profile_field( ...
+                profile, 'EffectiveDataFile', ''));
+            SldvRunStatus(i) = profile_field( ...
+                profile, 'SldvRunStatus', NaN);
+            SldvRunMessage(i) = string(profile_field( ...
+                profile, 'SldvRunMessage', ''));
+            SldvRunElapsedSec(i) = profile_field( ...
+                profile, 'SldvRunElapsedSec', NaN);
+            ScenarioCount(i) = numel(profile.ScenarioNames);
+            RawTmax(i) = profile_field(profile, 'RawTmax', NaN);
+            Tmax(i) = profile_field(profile, 'Tmax', NaN);
+            parameterCounts = profile_field( ...
+                profile, 'ParameterCounts', []);
+            ParameterCount(i) = sum(parameterCounts);
+            drivenNames = profile_field( ...
+                profile, 'SldvDrivenInputNames', {});
+            preservedNames = profile_field( ...
+                profile, 'PreservedHarnessInputNames', {});
+            SldvDrivenInputs(i) = string(strjoin(drivenNames, ', '));
+            PreservedHarnessInputs(i) = ...
+                string(strjoin(preservedNames, ', '));
+            SldvDrivenInputCount(i) = numel(drivenNames);
+            PreservedHarnessInputCount(i) = numel(preservedNames);
+            Status(i) = 'CACHED';
+            Message(i) = selection.Reason(i);
+
+            [scenarioTargetRow, scenarioNo, scenarioCUTName, ...
+                scenarioMode, scenarioSourceIndex, scenarioOriginalName, ...
+                scenarioName, scenarioEndTime, scenarioTmax, ...
+                scenarioParamCount, scenarioStatus, scenarioMessage] = ...
+                append_cached_scenarios(profile, i, T(i,:), ...
+                    scenarioTargetRow, scenarioNo, scenarioCUTName, ...
+                    scenarioMode, scenarioSourceIndex, ...
+                    scenarioOriginalName, scenarioName, scenarioEndTime, ...
+                    scenarioTmax, scenarioParamCount, scenarioStatus, ...
+                    scenarioMessage);
+        catch ME
+            Status(i) = 'FAIL';
+            Message(i) = "Cached SLDV profile is invalid: " + ...
+                string(ME.message);
+            profile.ErrorMessage = char(Message(i));
+        end
+
+        profile.Status = char(Status(i));
+        profile.Message = char(Message(i));
+        profiles(i) = profile;
+        ElapsedSec(i) = toc(timerValue);
+        Timestamp(i) = current_timestamp();
+        fprintf('[%d/%d] %-6s %s | Mode=%s | %s\n', ...
+            i, n, char(Status(i)), char(T.CUTName(i)), mode, ...
+            char(Message(i)));
+        continue;
+    end
 
     try
         if ~ismember(mode, {'OFF','FILE','GENERATE'})
@@ -254,8 +319,9 @@ checkSharedSignalEditorDataFile = ...
     isfield(cfg, 'CheckSharedSignalEditorDataFile') && ...
     logical(cfg.CheckSharedSignalEditorDataFile);
 
+executedSldvRows = selection.Run & ~strcmp(T.SldvMode, 'OFF');
 if ~any(Status == 'FAIL') && ...
-        any(~strcmp(T.SldvMode, 'OFF')) && ...
+        any(executedSldvRows) && ...
         checkSharedSignalEditorDataFile
     usersReady = false;
 
@@ -265,7 +331,7 @@ if ~any(Status == 'FAIL') && ...
 
     catch ME
         users = [];
-        affected = find(~strcmp(T.SldvMode, 'OFF'));
+        affected = find(executedSldvRows);
 
         for j = affected(:).'
             [Status, Message, profiles, scenarioStatus, scenarioMessage] = ...
@@ -282,7 +348,7 @@ if ~any(Status == 'FAIL') && ...
     end
 
     if usersReady
-        for i = find(~strcmp(T.SldvMode, 'OFF')).'
+        for i = find(executedSldvRows).'
             try
                 [matPath, matchingUsers] = ...
                     target_signal_editor_data_file( ...
@@ -315,19 +381,19 @@ if ~any(Status == 'FAIL') && ...
         end
     end
 
-elseif ~any(Status == 'FAIL') && any(~strcmp(T.SldvMode, 'OFF'))
+elseif ~any(Status == 'FAIL') && any(executedSldvRows)
     st_log(cfg, 'INFO', ...
         ['Signal Editor MAT sharing check skipped ' ...
          '(cfg.CheckSharedSignalEditorDataFile=false)']);
 end
 
 manifest = struct();
-manifest.Version = 1;
+manifest.Version = 2;
 manifest.TopModel = cfg.TopModel;
 manifest.ManagementExcel = cfg.ManagementExcel;
 manifest.CreatedAt = char(current_timestamp());
 manifest.Profiles = profiles;
-save(cfg.SldvManifestFile, 'manifest');
+save_manifest_atomic(cfg.SldvManifestFile, manifest);
 
 R = table( ...
     T.No, ...
@@ -349,6 +415,8 @@ R = table( ...
     PreservedHarnessInputs, ...
     SldvDrivenInputCount, ...
     PreservedHarnessInputCount, ...
+    PreparationAction, ...
+    PreparationReason, ...
     Status, ...
     Message, ...
     ElapsedSec, ...
@@ -373,6 +441,8 @@ R = table( ...
         'PreservedHarnessInputs', ...
         'SldvDrivenInputCount', ...
         'PreservedHarnessInputCount', ...
+        'PreparationAction', ...
+        'PreparationReason', ...
         'Status', ...
         'Message', ...
         'ElapsedSec', ...
@@ -1587,5 +1657,101 @@ value = ...
             'now', ...
             'Format', ...
             'yyyy-MM-dd HH:mm:ss'));
+
+end
+
+
+function value = profile_field(profile, field, defaultValue)
+
+if isfield(profile, field)
+    value = profile.(field);
+else
+    value = defaultValue;
+end
+
+end
+
+
+function save_manifest_atomic(filePath, manifest)
+
+folder = fileparts(filePath);
+if ~isfolder(folder)
+    mkdir(folder);
+end
+temporaryPath = [tempname(folder) '.mat'];
+cleanupFile = onCleanup(@() delete_file_quiet(temporaryPath)); %#ok<NASGU>
+save(temporaryPath, 'manifest');
+[ok, message] = movefile(temporaryPath, filePath, 'f');
+if ~ok
+    error('simtest:SldvManifestWriteFailed', ...
+        'Cannot replace SLDV manifest %s: %s', filePath, message);
+end
+end
+
+
+function delete_file_quiet(filePath)
+
+if isfile(filePath)
+    delete(filePath);
+end
+end
+
+
+function [targetRows, nos, cutNames, modes, sourceIndices, ...
+        originalNames, scenarioNames, endTimes, tmaxValues, ...
+        parameterCounts, statuses, messages] = ...
+    append_cached_scenarios(profile, targetRow, target, ...
+        targetRows, nos, cutNames, modes, sourceIndices, ...
+        originalNames, scenarioNames, endTimes, tmaxValues, ...
+        parameterCounts, statuses, messages)
+
+names = profile_field(profile, 'ScenarioNames', {});
+sources = profile_field(profile, 'SourceIndices', []);
+originals = profile_field(profile, 'OriginalNames', {});
+times = profile_field(profile, 'EndTimes', []);
+counts = profile_field(profile, 'ParameterCounts', []);
+tmax = profile_field(profile, 'Tmax', NaN);
+mode = profile_field(profile, 'Mode', char(target.SldvMode));
+
+for k = 1:numel(names)
+    targetRows(end+1,1) = targetRow; %#ok<AGROW>
+    nos(end+1,1) = double(target.No); %#ok<AGROW>
+    cutNames(end+1,1) = string(target.CUTName); %#ok<AGROW>
+    modes(end+1,1) = string(mode); %#ok<AGROW>
+    sourceIndices(end+1,1) = numeric_at(sources, k, k); %#ok<AGROW>
+    originalNames(end+1,1) = string(cell_at(originals, k, names{k})); %#ok<AGROW>
+    scenarioNames(end+1,1) = string(names{k}); %#ok<AGROW>
+    endTimes(end+1,1) = numeric_at(times, k, NaN); %#ok<AGROW>
+    tmaxValues(end+1,1) = tmax; %#ok<AGROW>
+    parameterCounts(end+1,1) = numeric_at(counts, k, 0); %#ok<AGROW>
+    statuses(end+1,1) = "CACHED"; %#ok<AGROW>
+    messages(end+1,1) = "Reused from SLDV manifest"; %#ok<AGROW>
+end
+
+end
+
+
+function value = numeric_at(values, index, defaultValue)
+
+if numel(values) >= index
+    value = double(values(index));
+else
+    value = defaultValue;
+end
+
+end
+
+
+function value = cell_at(values, index, defaultValue)
+
+if numel(values) >= index
+    if iscell(values)
+        value = values{index};
+    else
+        value = values(index);
+    end
+else
+    value = defaultValue;
+end
 
 end

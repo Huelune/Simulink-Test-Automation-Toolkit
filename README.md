@@ -8,11 +8,13 @@ MATLAB/Simulink Test 자동화 도구입니다. Excel에서 CUT, Harness, Test C
 | --- | --- |
 | 버전 | v0.9.6 candidate 기반 `Unreleased` |
 | 기본 브랜치 | `main` |
-| 개발 상태 | 기능 후보, 실제 MATLAB end-to-end 재검증 필요 |
+| 개발 상태 | 기능 브랜치 구현 후보, 실제 MATLAB end-to-end 재검증 필요 |
 | 확인된 근거 | 코드 정적 검토, 생성된 Harness의 Assessment 입력 순서 수동 확인 |
 | 미확인 범위 | MATLAB R2025b 전체 workflow와 SLDV FILE/GENERATE 실행 |
 
-현재 `main`의 코드를 기준으로 설명합니다. 검증하지 않은 workflow를 완료된 기능으로 간주하지 않습니다.
+이 README는 현재 체크아웃한 브랜치의 코드를 설명합니다. 기능 브랜치의 내용은
+병합되기 전까지 `main`의 현재 제공 기능으로 간주하지 않으며, 검증하지 않은
+workflow도 완료된 기능으로 기록하지 않습니다.
 
 ## Requirements
 
@@ -37,6 +39,8 @@ MATLAB/Simulink Test 자동화 도구입니다. Excel에서 CUT, Harness, Test C
 | `SldvMode` | 아니요 | `OFF` | `OFF`, `FILE`, `GENERATE` |
 | `SldvDataFile` | 조건부 | 빈 값 | `FILE`일 때 필수. 절대 경로 또는 workbook 기준 상대 경로 |
 | `ExpectedUpdateMode` | 아니요 | `DEFAULT` | `DEFAULT`, `OFF`, `APPLY`. 행별 기대값 갱신 정책 |
+| `PreparationMode` | 아니요 | `DEFAULT` | `DEFAULT`, `AUTO`, `FORCE`. 행별 준비 단계 재사용 정책 |
+| `PreparationFromStage` | 아니요 | `DEFAULT` | `FORCE` 실행을 시작할 준비 단계 |
 
 모든 CUT는 한 번의 실행에서 선택한 동일한 Top Model을 사용합니다. `ModelName` 열은 추가하지 않습니다.
 
@@ -49,11 +53,141 @@ MATLAB/Simulink Test 자동화 도구입니다. Excel에서 CUT, Harness, Test C
 | `diagnostics/matlab/` | 사용자가 직접 호출할 수 있는 읽기·진단 명령 |
 | `diagnostics/python/` | Excel 접근 진단 보조 스크립트 |
 | `tests/unit/` | Simulink 실행 없이 확인 가능한 단위 테스트 중심 |
+| `tests/fixtures/` | 실행별 SLX/XLSX/MAT fixture를 만드는 MATLAB builder |
+| `src/verification/` | QUICK/RUNTIME/CERTIFY 실행기, 상태 집계와 결과 writer |
 | `docs/` | 현재 아키텍처와 TODO |
 | `docs/archive/` | 이전 전달 자료와 패치 기록 보존 |
 | `examples/` | 향후 익명화된 workbook과 모델 예제 |
 
 기존 `st_*` 함수명과 호출 방식은 유지됩니다. `st_setup`이 `src` 전체와 MATLAB 진단 폴더를 경로에 추가하므로 MATLAB을 새로 시작한 뒤에는 먼저 `st_setup`을 실행해야 합니다.
+
+## 전체 기능 상태 검증
+
+### 시작 전 준비
+
+MATLAB R2025b에서 저장소를 Current Folder로 연 뒤 경로와 실제 업무 모델을
+선택합니다. `RUNTIME`과 `CERTIFY` 전에 모델, Test File과 관리 Excel의 변경을
+먼저 저장해야 합니다.
+
+```matlab
+st_setup
+st_select_target_model
+```
+
+기본 `QUICK + CURRENT`는 시뮬레이션하거나 원본을 저장하지 않고 환경, 설정,
+Excel, CUT/Harness, Signal Editor, Assessment, Test File, 캐시와 최신 산출물을
+점검합니다.
+
+```matlab
+summary = st_verify_all( ...
+    'Profile', 'QUICK', ...
+    'Target', 'CURRENT', ...
+    'FailOnNonPass', true);
+```
+
+결과를 먼저 확인하고 MATLAB 오류를 발생시키지 않으려면 다음처럼 실행합니다.
+
+```matlab
+summary = st_verify_all('FailOnNonPass', false);
+disp(summary.Status)
+disp(summary.RunDirectory)
+```
+
+### 프로필과 대상
+
+| 옵션 | 값 | 사용 목적 |
+| --- | --- | --- |
+| `Profile` | `QUICK` | 단위 테스트와 읽기 전용 상태 점검. 시뮬레이션하지 않음 |
+|  | `RUNTIME` | QUICK 이후 실제 업무 모델의 격리 사본에서 기존 Test File 실행 |
+|  | `CERTIFY` | fixture 전체 workflow, SLDV, 캐시·복구, 보고서, 내보내기와 반복 실행 인증 |
+| `Target` | `CURRENT` | 현재 `runtime_target.mat`이 가리키는 업무 모델 |
+|  | `FIXTURE` | 실행 시 자동으로 생성되는 익명 검증 모델 |
+|  | `BOTH` | 현재 업무 모델과 fixture 모두 |
+
+장시간 실제 업무 모델 실행과 보고서 생성을 확인하려면:
+
+```matlab
+summary = st_verify_all( ...
+    'Profile', 'RUNTIME', ...
+    'Target', 'CURRENT', ...
+    'KeepWorkspace', 'ON_FAILURE', ...
+    'FailOnNonPass', true);
+```
+
+업무 모델과 분리하여 자동 fixture만 전체 인증하려면 수동 증거가 필요하지
+않습니다.
+
+```matlab
+summary = st_verify_all( ...
+    'Profile', 'CERTIFY', ...
+    'Target', 'FIXTURE', ...
+    'KeepWorkspace', 'ON_FAILURE', ...
+    'FailOnNonPass', true);
+```
+
+업무 모델과 fixture를 함께 최초 인증하려면 현재 fingerprint로 작성한 수동
+증거 JSON을 전달합니다. 형식은
+[`examples/manual-evidence.example.json`](examples/manual-evidence.example.json)을
+복사해 사용합니다.
+
+```matlab
+cfg = st_require_runtime_target();
+fingerprint = st_verification_target_fingerprint(cfg)
+
+summary = st_verify_all( ...
+    'Profile', 'CERTIFY', ...
+    'Target', 'BOTH', ...
+    'ManualEvidence', 'manual-evidence.json', ...
+    'KeepWorkspace', 'ON_FAILURE', ...
+    'FailOnNonPass', true);
+```
+
+### 실행 옵션
+
+| 옵션 | 기본값 | 설명 |
+| --- | --- | --- |
+| `Profile` | `QUICK` | `QUICK`, `RUNTIME`, `CERTIFY` |
+| `Target` | `CURRENT` | `CURRENT`, `FIXTURE`, `BOTH` |
+| `ManualEvidence` | 빈 값 | `CERTIFY + CURRENT/BOTH` 수동 검사 JSON 경로 |
+| `KeepWorkspace` | `ON_FAILURE` | `ALWAYS`, `ON_FAILURE`, `NEVER` |
+| `FailOnNonPass` | `true` | 결과 기록 후 `FAIL` 또는 `BLOCKED`에서 오류 발생 |
+
+검사 상태는 `PASS`, `FAIL`, `BLOCKED`, `SKIP`, `WARN`이며 전체 우선순위는
+`FAIL > BLOCKED > PASS_WITH_WARNINGS > PASS`입니다. 제품·라이선스·필수
+입력·수동 증거가 없으면 성공으로 처리하지 않고 `BLOCKED`로 남깁니다.
+
+### 결과 확인
+
+모든 실행은 다음 폴더에 독립적으로 보관됩니다.
+
+```text
+result/verification/
+├── latest.json
+└── runs/{timestamp}_{run-id}/
+    ├── VerificationSummary.xlsx
+    ├── verification.json
+    ├── junit.xml
+    ├── environment.json
+    ├── manifest.json
+    ├── logs/
+    ├── evidence/
+    └── workspace/       # ALWAYS 또는 실패/차단 시 기본 보존
+```
+
+Excel은 `Overview`, `Features`, `Checks`, `Environment`, `ManualEvidence`,
+`Artifacts` 시트를 포함합니다. 실제 업무 모델은 내보내기 수집기를 재사용한
+격리 snapshot에서만 실행하며 원본 모델, Test File, Excel, dependency와 입력
+파일의 checksum을 실행 전후 비교합니다. fixture의 SLX/XLSX/MAT/MLDATX는
+실행 workspace에서만 생성되고 Git에 저장되지 않습니다.
+
+상세 상태 해석, 수동 증거 작성법과 R2025b 최초 인증 절차는
+[종합 검증 사용자 매뉴얼](docs/user-manual.md)에서 단계별로 확인할 수 있습니다.
+API와 판정 기준은 [전체 기능 검증 기술 문서](docs/verification.md)를
+참조하십시오.
+
+다른 PC의 MATLAB과 Codex에서 작업을 이어가려면
+[다른 PC에서 이어서 작업하기](docs/cross-machine-handoff.md)의 기준 브랜치,
+동기화 규칙, R2025b 실행 순서와 인수인계 기록을 먼저 확인하십시오.
 
 ## Recommended workflow
 
@@ -110,6 +244,34 @@ st_run_after_harness
 8. 설정에 따른 Test 실행 및 expected-value 갱신
 
 `st_run_after_harness`는 기존 Harness 존재 여부를 검증한 뒤 SLDV 준비 단계부터 실행합니다.
+
+### Incremental preparation
+
+두 workflow는 기본적으로 대상별 준비 상태를 `result/state`에 저장합니다.
+같은 Excel 행, 모델, Test File, SLDV 입력과 관련 설정이 유지되면
+SLDV부터 Scenario 정렬 검증까지 완료된 단계를 재사용합니다. Harness
+존재 여부와 CUT 매핑은 항상 다시 확인하고, 기존 Harness는 자동으로
+삭제하거나 재생성하지 않습니다.
+
+```matlab
+cfg.PreparationMode = 'AUTO';
+cfg.PreparationFromStage = 'START';
+```
+
+일회성 강제 실행은 호출 옵션으로 지정할 수 있습니다.
+
+```matlab
+st_run_from_harness( ...
+    'PreparationMode', 'FORCE', ...
+    'FromStage', 'SLDV')
+```
+
+`Targets`에는 선택적으로 `PreparationMode`(`DEFAULT`, `AUTO`, `FORCE`)와
+`PreparationFromStage`(`DEFAULT`, `START`, `HARNESS`, `SLDV`,
+`HARNESS_CONFIG`, `SIGNAL_EDITOR`, `ASSESSMENT`, `TEST_MANAGER`,
+`ALIGNMENT`) 열을 둘 수 있습니다. 우선순위는 호출 옵션, Excel 행,
+전역 설정 순입니다. 준비 단계가 모두 캐시되어도 `RunGeneratedTests=true`이면
+선택된 테스트는 다시 실행합니다.
 
 일반 workflow는 `TestManagement.xlsx`를 결과로 수정하지 않습니다. 결과 저장은 `cfg.SaveResultFiles`로 선택하며, 기본값 `true`에서는 `result/reports`에 단계별 INI 파일로 기록합니다. `false`이면 결과 파일을 생성하지 않습니다.
 
@@ -300,6 +462,84 @@ Assessment symbol
 
 실제값과 RHS가 다를 때만 수정하며 지원 값은 real numeric scalar와 logical scalar입니다. 하나 이상의 값이 갱신되고 `RerunAfterExpectedUpdate`가 true이면 Test File을 다시 실행합니다.
 
+## Integrated test and coverage report
+
+테스트 실행 시 Test File Coverage를
+[`Decision`](https://www.mathworks.com/help/slcoverage/ref/structuralcoveragelevel.html)으로
+설정하며, Decision 설정에 포함되는 Block Execution을 같이
+수집합니다.
+기대값 갱신 전 최초 결과와 갱신 후 최종 결과를 둘 다 보존합니다.
+
+```matlab
+cfg.CoverageStructuralLevel = 'Decision';
+cfg.CoverageMetricSettings = 'dwe';
+cfg.GenerateTestReport = true;
+```
+
+각 실행은 다음 bundle을 생성합니다.
+
+```text
+result/runs/{timestamp}_{run-id}/
+├── TestSummary.xlsx
+├── manifest.json
+├── official/
+│   ├── InitialTestResults.pdf
+│   └── FinalTestResults.pdf
+├── coverage/
+│   └── {coverage-root}.html
+└── raw/
+    ├── InitialResults.mldatx
+    └── FinalResults.mldatx
+```
+
+`TestSummary.xlsx`는 `Overview`, `Targets`, `Iterations`, `Coverage`,
+`ExpectedUpdates`, `Workflow`, `Metadata` Sheet를 포함합니다.
+Coverage는 전체, CUT, Test Case, Iteration 수준에서 Decision과
+Execution을 보고하며 분모가 0인 경우 `N/A`로 표시합니다.
+Justified outcome은 별도 열에 기록하고, 같은 CUT의 checksum이
+다르면 해당 값을 전체 합계에 더하지 않습니다. 전체 coverage는
+호환되는 CUT의 outcome 가중 합계입니다.
+
+Coverage 미달은 보고 항목이며 현재 버전에서 Test 실패로
+변경하지 않습니다. 일부 산출물이 실패하면 성공한 파일은
+남겨 두고 `manifest.json`에 `PARTIAL`로 기록합니다.
+`result/latest.json`과 `result/TestSummary.xlsx`는 가장 최근 실행을
+가리킵니다. 보고서는 로컬 내부용이며 Notion이나 외부
+저장소로 자동 전송하지 않습니다.
+
+## 재실행 가능한 테스트 번들 내보내기
+
+테스트 준비와 실행이 끝난 뒤 다음 독립 명령으로 현재 저장 상태를
+다른 컴퓨터에 전달할 수 있는 번들로 내보낼 수 있습니다.
+
+```matlab
+st_export_test_bundle
+```
+
+기본 출력은 `result/exports/{timestamp}_{id}/`와 같은 이름의 ZIP입니다.
+번들에는 내부 Test Harness가 저장된 모델, 분석된 모델 의존 파일,
+Signal Editor·SLDV 입력, Test File의 Test Case와 Iteration, 관리 Excel,
+비교용 최신 통합 보고서, 자동화 코드와 파일 checksum manifest가 들어갑니다.
+
+내보내기는 기존 workflow에서 자동 실행되지 않습니다. 원본 모델·Test File을
+수정하거나 내부 Harness 연결을 끊지 않으며, 받는 사람이
+`run_exported_tests`를 실행할 때마다 번들의 `template/`에서 별도의
+`executions/` 작업 사본을 생성합니다. 따라서 원본 프로젝트와 내보낸
+템플릿을 그대로 둔 채 같은 시작 상태로 반복 시험할 수 있습니다.
+
+특정 보고서 실행을 기준으로 내보내거나 ZIP 생성을 끄려면 다음처럼
+호출합니다.
+
+```matlab
+st_export_test_bundle('RunId', '20260830_120000_example')
+st_export_test_bundle('CreateArchive', false)
+```
+
+모델이나 Test File에 저장하지 않은 변경이 있거나 모델 의존 파일이
+누락되었으면 불완전한 번들을 만들지 않고 중단합니다. 받는 사람의
+실행 절차, 폴더별 의미와 문제 해결 방법은 번들 안의 초보자용
+`README.md`와 [내보내기 설계 문서](docs/export-bundle.md)를 참고하십시오.
+
 ## Repository artifact policy
 
 | 종류 | Git 정책 | 이유 |
@@ -350,6 +590,8 @@ st_diagnose_excel_access(true)
 - expected-value 갱신 후 재실행
 - SLDV FILE/GENERATE end-to-end 생성과 다중 Iteration 실행
 - 정확히 `Tmax`인 StopTime에서 Assessment verify가 tested 상태가 되는지 확인
+- Decision·Execution CUT 매핑과 PDF·HTML·Excel·MLDATX bundle 생성
+- 두 번째 실행의 증분 준비 캐시 재사용
 
 단위 테스트를 실행할 수 있는 MATLAB 환경에서는 다음 순서를 사용합니다.
 

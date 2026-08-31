@@ -5,6 +5,41 @@
 - Added `cfg.CheckSharedSignalEditorDataFile = false` as the default so SLDV
   preparation skips the potentially slow all-Harness Signal Editor MAT
   ownership scan, while retaining an explicit opt-in safety check.
+- Added a step-by-step Korean user manual for verification setup, recommended
+  QUICK/RUNTIME/CERTIFY operation, manual evidence, result interpretation,
+  troubleshooting, and final R2025b certification.
+- Added `st_verify_all` with `QUICK`, `RUNTIME`, and `CERTIFY` profiles,
+  normalized PASS/FAIL/BLOCKED/SKIP/WARN results, feature-catalog coverage,
+  manual evidence validation, and Excel/JSON/JUnit output.
+- Added execution-local fixture generation for scalar, numeric array, nested
+  Bus, Bus array, no-Inport, and SLDV branch targets without tracking binary
+  fixtures in Git.
+- Added isolated current-model verification that reuses the export collector,
+  hashes source dependencies and inputs, and runs only fresh workspace copies.
+- Added certification checks for expected-value APPLY/OFF, SLDV GENERATE/FILE,
+  cache reuse, corrupt-state recovery, preparation failure isolation, integrated
+  reports, coverage, bundle checksums, template immutability, and repeat runs.
+
+- Added standalone reproducible test bundle export with saved internal Harness
+  models, analyzed dependencies, target inputs, Test File definitions, reference
+  reports, SHA-256 inventory, and an optional ZIP archive.
+- Added an exported runner that validates the bundle and creates a fresh mutable
+  workspace for each rerun while preserving the source project and bundle
+  template, plus a beginner-oriented Korean bundle README.
+
+- Added target-level incremental preparation with `AUTO`/`FORCE` policies,
+  stage checkpoints, input fingerprints, and atomic MAT/JSON state files.
+- Added optional `PreparationMode` and `PreparationFromStage` Excel columns
+  with call option, row, and global configuration precedence.
+- Added cross-run SLDV manifest profile reuse while preserving direct no-arg
+  behavior for each existing `st_*` preparation command.
+- Added per-run integrated report bundles with initial/final Test Manager
+  results, official PDF, raw MLDATX, coverage HTML, manifest, and Excel summary.
+- Added Decision and Block Execution coverage extraction at overall CUT,
+  Test Case, and Iteration levels, including justified outcomes, `N/A` for a
+  zero denominator, and checksum-safe weighted aggregation.
+- Added `result/latest.json` and latest Excel summary updates without external
+  publishing or coverage-threshold failure enforcement.
 
 - Connected the project to the `Huelune/Simulink-Test-Automation-Toolkit` repository while preserving its initial MIT license commit.
 - Added explicit expected-value policy with `cfg.ExpectedUpdateMode = 'APPLY'` as the project default.

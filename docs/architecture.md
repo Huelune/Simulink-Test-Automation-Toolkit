@@ -18,13 +18,16 @@ Simulink-Test-Automation-Toolkit/
 │   ├── test_manager/
 │   ├── execution/
 │   ├── reporting/
+│   ├── exporting/
+│   ├── verification/
 │   ├── scenarios/
 │   └── shared/
 ├── diagnostics/
 │   ├── matlab/
 │   └── python/
 ├── tests/
-│   └── unit/
+│   ├── unit/
+│   └── fixtures/
 ├── examples/
 └── docs/
     └── archive/
@@ -37,6 +40,8 @@ Simulink-Test-Automation-Toolkit/
 | `harness`, `sldv`, `signal_editor` | Expensive model preparation and scenario data generation |
 | `assessment`, `test_manager` | Verification logic, Test Case, Iteration, and alignment management |
 | `execution` | Test execution and expected-value update |
+| `exporting` | Immutable template bundle, dependency and input collection |
+| `verification` | QUICK/RUNTIME/CERTIFY orchestration, status aggregation, manual evidence and Excel/JSON/JUnit writers |
 | `reporting`, `shared`, `scenarios` | Cross-domain result, path, lifecycle, and naming helpers |
 
 ## Path and compatibility rules
@@ -50,9 +55,10 @@ Simulink-Test-Automation-Toolkit/
 ## Configuration precedence
 
 ```text
-built-in project default
+project default
     -> st_config global option
         -> Targets row override
+            -> one-run call option
 ```
 
 Only documented row-level options override global settings. Invalid values fail before the model or Test File is changed.
@@ -67,4 +73,25 @@ After MATLAB regression validation, a small `+simtest` package can be introduced
 - Validation must complete before Harness, model, Test File, or expected values are modified.
 - Expected-value generation and approval are separate responsibilities; only explicit `APPLY` behavior mutates values.
 - Reports are reproducible outputs and are not inputs for the next run.
+- Each test execution owns an immutable directory under `result/runs`.
+  Initial and final Test Manager ResultSets remain distinct, while
+  `result/latest.json` and the latest workbook are replaceable pointers.
+- Coverage aggregation is outcome-weighted only across compatible CUT
+  checksums. Coverage thresholds are report-only and do not alter test
+  outcomes.
+- Report bundles are local artifacts and have no Notion or repository
+  publishing side effect.
+- Incremental workflow state is an operational cache under `result/state`.
+  It is never a source of truth: missing, corrupt, or mismatched state widens
+  execution to the earliest safe preparation stage.
+- Workflow entry points build a per-target stage plan. Domain functions keep
+  their direct no-argument behavior and accept an internal optional row
+  selection only when invoked by the workflow coordinator.
 - Real models, workbooks, MAT files, and generated results are not repository fixtures.
+- Verification fixtures are MATLAB builders. Generated SLX/XLSX/MAT/MLDATX
+  files exist only under the run workspace.
+- QUICK may write only under `result/verification`; it records and restores
+  model/Test File session state and does not run simulations.
+- RUNTIME and CERTIFY execute actual project inputs through an isolated export
+  snapshot. Source model, Test File, Excel, dependencies, Signal Editor and
+  SLDV input checksums must remain unchanged.

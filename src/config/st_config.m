@@ -259,6 +259,28 @@ cfg.RunGeneratedTests = true;
 
 
 %% ============================================================
+% Incremental preparation
+%% ============================================================
+
+% AUTO:
+%   Reuse successful preparation stages while their inputs and artifacts
+%   still match the last checkpoint.
+% FORCE:
+%   Reapply the selected stage and all downstream preparation stages.
+cfg.PreparationMode = 'AUTO';
+
+% Earliest stage used by FORCE. START resolves to HARNESS for the full
+% workflow and SLDV for the existing-Harness workflow.
+cfg.PreparationFromStage = 'START';
+
+cfg.WorkflowStateFile = ...
+    fullfile(rootDir, 'result', 'state', 'workflow_state.mat');
+
+cfg.WorkflowStateSummaryFile = ...
+    fullfile(rootDir, 'result', 'state', 'workflow_state.json');
+
+
+%% ============================================================
 % Expected value update
 %% ============================================================
 
@@ -281,6 +303,35 @@ cfg.ExpectedValueSampleTime = 0.01;
 
 % Run the Test File again after APPLY updates at least one expected value.
 cfg.RerunAfterExpectedUpdate = true;
+
+
+%% ============================================================
+% Coverage and integrated reporting
+%% ============================================================
+
+% Decision includes Block Execution coverage. Test Manager stores the
+% equivalent legacy metric setting in the Test File for R2025b support.
+cfg.CoverageStructuralLevel = 'Decision';
+cfg.CoverageMetricSettings = 'dwe';
+cfg.CoverageIncludeReferencedModels = false;
+
+cfg.GenerateTestReport = true;
+cfg.TestRunRootDir = ...
+    fullfile(rootDir, 'result', 'runs');
+cfg.LatestReportPointer = ...
+    fullfile(rootDir, 'result', 'latest.json');
+cfg.LatestSummaryFile = ...
+    fullfile(rootDir, 'result', 'TestSummary.xlsx');
+
+% Standalone command st_export_test_bundle writes reproducible bundles here.
+% This setting is not used by either normal workflow entry point.
+cfg.ExportRootDir = ...
+    fullfile(rootDir, 'result', 'exports');
+
+% Standalone verification runs and latest pointers are stored separately
+% from normal workflow reports. QUICK inspections never write elsewhere.
+cfg.VerificationRootDir = ...
+    fullfile(rootDir, 'result', 'verification');
 
 
 %% ============================================================
