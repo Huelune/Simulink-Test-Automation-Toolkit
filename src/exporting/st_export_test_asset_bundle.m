@@ -3,27 +3,40 @@ function info = st_export_test_asset_bundle(varargin)
 %
 %   st_export_test_asset_bundle('ResultSet', resultSet)
 %   st_export_test_asset_bundle('RunId', 'LATEST')
+%   st_export_test_asset_bundle('SelectResult', true)
 %
-% ResultSet and an explicitly supplied RunId are mutually exclusive.
+% SelectResult opens a single-selection dialog containing current Test
+% Manager ResultSets and saved toolkit runs. It is mutually exclusive with
+% ResultSet and an explicitly supplied RunId.
 
 p = inputParser;
 p.FunctionName = mfilename;
 addParameter(p, 'Destination', '', @is_text_scalar);
 addParameter(p, 'RunId', 'LATEST', @is_text_scalar);
 addParameter(p, 'ResultSet', []);
+addParameter(p, 'SelectResult', false, ...
+    @(x) islogical(x) && isscalar(x));
 addParameter(p, 'CreateArchive', false, ...
     @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 
 resultObj = p.Results.ResultSet;
+selectResult = p.Results.SelectResult;
 runIdExplicit = ~any(strcmp(p.UsingDefaults, 'RunId'));
-if ~isempty(resultObj) && runIdExplicit
+if (~isempty(resultObj) && runIdExplicit) || ...
+        (selectResult && (~isempty(resultObj) || runIdExplicit))
     error('simtest:AssetResultSelectionConflict', ...
-        'ResultSet and RunId cannot be specified together.');
+        ['SelectResult, ResultSet, and an explicitly supplied RunId ' ...
+         'are mutually exclusive.']);
 end
 validate_result_set(resultObj);
 
 cfg = st_require_runtime_target();
+requestedRun = char(string(p.Results.RunId));
+if selectResult
+    [resultObj, requestedRun] = select_result_interactively(cfg);
+    validate_result_set(resultObj);
+end
 destination = strtrim(char(string(p.Results.Destination)));
 if isempty(destination)
     destination = fullfile(cfg.ExportRootDir, 'assets');
@@ -52,7 +65,7 @@ stageTimer = start_step(cfg, currentStage);
 try
     allTargets = st_load_targets(false);
     selection = resolve_result_selection( ...
-        resultObj, char(string(p.Results.RunId)), cfg, allTargets);
+        resultObj, requestedRun, cfg, allTargets);
     selectedTargets = st_select_asset_targets( ...
         allTargets, selection.TestCaseNames);
     fprintf('Result Source : %s\n', selection.Type);
@@ -259,6 +272,158 @@ if numel(resultObj) ~= 1 || ...
         ~isvalid(resultObj)
     error('simtest:InvalidAssetResultSet', ...
         'ResultSet must be one valid sltest.testmanager.ResultSet object.');
+end
+end
+
+function [resultObj, runId] = select_result_interactively(cfg)
+if ~usejava('desktop')
+    error('simtest:AssetResultSelectionUiUnavailable', ...
+        ['SelectResult requires MATLAB Desktop. Use ResultSet or RunId ' ...
+         'for noninteractive execution.']);
+end
+
+labels = cell(0,1);
+kinds = strings(0,1);
+values = cell(0,1);
+resultSetFailure = '';
+try
+    resultSets = sltest.testmanager.getResultSets;
+catch ME
+    resultSets = [];
+    resultSetFailure = ME.message;
+end
+
+for i = 1:numel(resultSets)
+    labels{end+1,1} = result_set_choice_label(resultSets(i), i); %#ok<AGROW>
+    kinds(end+1,1) = "ResultSet"; %#ok<AGROW>
+    values{end+1,1} = resultSets(i); %#ok<AGROW>
+end
+
+runs = list_toolkit_run_choices(cfg);
+for i = 1:numel(runs)
+    labels{end+1,1} = runs(i).Label; %#ok<AGROW>
+    kinds(end+1,1) = "RunId"; %#ok<AGROW>
+    values{end+1,1} = runs(i).RunId; %#ok<AGROW>
+end
+
+if isempty(labels)
+    message = ['No Test Manager ResultSets or toolkit runs with ' ...
+        'TestSummary.xlsx are available.'];
+    if ~isempty(resultSetFailure)
+        message = sprintf('%s Test Manager query failed: %s', ...
+            message, resultSetFailure);
+    end
+    error('simtest:AssetResultChoicesMissing', '%s', message);
+end
+
+[selected, accepted] = listdlg( ...
+    'Name', 'Select Test Result', ...
+    'PromptString', '내보낼 테스트 결과를 선택하세요.', ...
+    'ListString', labels, ...
+    'SelectionMode', 'single', ...
+    'InitialValue', 1, ...
+    'ListSize', [760 360]);
+if ~accepted || isempty(selected)
+    error('simtest:AssetResultSelectionCancelled', ...
+        'Test result selection was cancelled.');
+end
+
+if kinds(selected) == "ResultSet"
+    resultObj = values{selected};
+    runId = 'LATEST';
+else
+    resultObj = [];
+    runId = char(values{selected});
+end
+end
+
+function label = result_set_choice_label(resultObj, index)
+name = choice_text(safe_property(resultObj, 'Name', ''));
+if isempty(name), name = sprintf('ResultSet %d', index); end
+outcome = choice_text(safe_property(resultObj, 'Outcome', ''));
+created = first_choice_property(resultObj, ...
+    {'StartTime','DateCreated','CreationTime'});
+testCount = choice_text(safe_property(resultObj, 'NumTotal', ''));
+if ~isempty(testCount), testCount = [testCount ' tests']; end
+details = nonempty_details({outcome, testCount, created});
+label = sprintf('[Test Manager] %02d | %s%s', ...
+    index, name, details);
+end
+
+function runs = list_toolkit_run_choices(cfg)
+runs = repmat(struct('RunId', '', 'Label', ''), 0, 1);
+if ~isfolder(cfg.TestRunRootDir), return; end
+listing = dir(cfg.TestRunRootDir);
+listing = listing([listing.isdir]);
+listing = listing(~ismember({listing.name}, {'.','..'}));
+if isempty(listing), return; end
+[~, order] = sort([listing.datenum], 'descend');
+listing = listing(order);
+
+latestRunId = '';
+try
+    latest = jsondecode(fileread(cfg.LatestReportPointer));
+    latestRunId = char(string(latest.RunId));
+catch
+end
+
+for i = 1:numel(listing)
+    runId = listing(i).name;
+    runDirectory = fullfile(listing(i).folder, runId);
+    if ~isfile(fullfile(runDirectory, 'TestSummary.xlsx')), continue; end
+    status = run_manifest_status(runDirectory);
+    modified = char(datetime(listing(i).datenum, ...
+        'ConvertFrom', 'datenum', 'Format', 'yyyy-MM-dd HH:mm:ss'));
+    latestText = '';
+    if strcmp(runId, latestRunId), latestText = ' | LATEST'; end
+    label = sprintf('[Toolkit Run] %s | %s | %s%s', ...
+        runId, status, modified, latestText);
+    runs(end+1,1) = struct('RunId', runId, 'Label', label); %#ok<AGROW>
+end
+end
+
+function status = run_manifest_status(runDirectory)
+status = 'UNKNOWN';
+try
+    manifest = jsondecode(fileread(fullfile(runDirectory, 'manifest.json')));
+    if isfield(manifest, 'Status')
+        status = choice_text(manifest.Status);
+    end
+catch
+end
+if isempty(status), status = 'UNKNOWN'; end
+end
+
+function value = first_choice_property(object, properties)
+value = '';
+for i = 1:numel(properties)
+    value = choice_text(safe_property(object, properties{i}, ''));
+    if ~isempty(value), return; end
+end
+end
+
+function value = choice_text(raw)
+value = '';
+if isempty(raw), return; end
+try
+    if isdatetime(raw)
+        raw.Format = 'yyyy-MM-dd HH:mm:ss';
+    end
+    text = string(raw);
+    text = text(~ismissing(text) & strlength(strtrim(text)) > 0);
+    if ~isempty(text)
+        value = regexprep(char(text(1)), '[\r\n]+', ' ');
+    end
+catch
+end
+end
+
+function suffix = nonempty_details(values)
+values = values(~cellfun(@isempty, values));
+if isempty(values)
+    suffix = '';
+else
+    suffix = [' | ' strjoin(values, ' | ')];
 end
 end
 

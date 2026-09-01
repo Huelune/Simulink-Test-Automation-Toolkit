@@ -519,9 +519,12 @@ Harness, Harness 입력과 Coverage를 한 폴더에서 관리하려면 테스�
 사용합니다.
 
 ```matlab
-rs = sltest.testmanager.getResultSets;
-st_export_test_asset_bundle('ResultSet', rs(3))
+info = st_export_test_asset_bundle('SelectResult', true);
 ```
+
+선택창에는 현재 Test Manager Results pane의 ResultSet과
+`result/runs/`에 저장된 toolkit Run이 이름·상태·시간과 함께 표시됩니다.
+따라서 일반 사용자는 ResultSet 객체나 Run ID를 미리 알 필요가 없습니다.
 
 기본 출력은 `result/exports/assets/{timestamp}_{id}/`입니다. ResultSet을 직접
 지정하지 않으면 `RunId='LATEST'`가 가리키는 toolkit 보고서를 사용합니다.
@@ -536,11 +539,14 @@ Excel/PDF/HTML/MLDATX·Coverage를 함께 보관합니다.
 ZIP이 필요하거나 특정 결과를 선택하려면 다음처럼 실행합니다.
 
 ```matlab
+rs = sltest.testmanager.getResultSets;
+st_export_test_asset_bundle('ResultSet', rs(3))
 st_export_test_asset_bundle('CreateArchive', true)
 st_export_test_asset_bundle('RunId', '20260901_120000_example')
 ```
 
-`ResultSet`과 명시적 `RunId`는 동시에 지정할 수 없습니다. 선택 결과에
+`SelectResult`, `ResultSet`, 명시적 `RunId`는 동시에 지정할 수 없습니다.
+선택 결과에
 Coverage가 없거나 일부 보고서 생성이 실패하면 가능한 자산을 보존하고
 manifest 상태를 `PARTIAL`로 기록합니다.
 반환값과 manifest에는 `ResultSource`, `ResultName`, `Status`,

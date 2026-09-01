@@ -464,6 +464,16 @@ Harness, Signal Editor·SLDV 입력, 관리 Excel과 Coverage 결과를 함께
 생략하며 ZIP도 기본적으로 만들지 않습니다.
 
 ```matlab
+info = st_export_test_asset_bundle('SelectResult', true);
+```
+
+선택창은 현재 Test Manager ResultSet과 저장된 toolkit Run을 한 목록에
+표시합니다. 각 항목의 결과 이름, 상태, 실행 또는 수정 시간을 확인하고 하나를
+선택할 수 있으므로 Run ID를 직접 입력할 필요가 없습니다.
+
+스크립트에서 ResultSet을 직접 지정:
+
+```matlab
 rs = sltest.testmanager.getResultSets;
 info = st_export_test_asset_bundle('ResultSet', rs(3));
 ```

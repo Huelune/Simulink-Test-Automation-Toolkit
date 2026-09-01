@@ -6,9 +6,12 @@
 한 폴더에서 관리하려면 다음 명령을 사용합니다.
 
 ```matlab
-rs = sltest.testmanager.getResultSets;
-st_export_test_asset_bundle('ResultSet', rs(3))
+st_export_test_asset_bundle('SelectResult', true)
 ```
+
+선택창에는 Test Manager ResultSet과 기존 toolkit Run이 함께 표시됩니다.
+자동화 스크립트에서는 기존처럼 `ResultSet` 객체나 `RunId`를 직접 지정할 수
+있습니다.
 
 이 명령은 `result/exports/assets/`에 내부 Harness가 유지된 모델 사본,
 선택 결과와 매핑되는 독립 Harness `.slx`, Test Manager 파일, 관리 Excel,
