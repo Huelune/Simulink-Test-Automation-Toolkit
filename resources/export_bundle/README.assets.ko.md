@@ -21,6 +21,13 @@
 | `results/{selected-result}/` | 선택 결과의 Excel/PDF/HTML/MLDATX와 Coverage |
 | `manifest.json` | 결과 선택, Target별 자산 경로, 상태와 파일 목록 |
 
+현재 Test Manager ResultSet에서 직접 만든 `TestSummary.xlsx`의 Coverage sheet는
+`OVERALL`과 `CUT` 수준 요약입니다. Test Case·Iteration별 상세 Coverage는
+`raw/SelectedResults.mldatx`에 보존됩니다. `CoverageReportMode=SUMMARY`이면
+`coverage/CoverageSummary.html`이, `FULL`이면 공식 상세 Coverage HTML이
+생성됩니다. `manifest.json`의 `CoverageDetail`과 `CoverageReportMode`가 이
+범위를 기록합니다.
+
 standalone Harness는 원본 모델 사본에서 다시 복사한 임시 모델을 대상으로
 생성했습니다. 따라서 원본 모델과 `models/`의 모델에는 내부 Harness가 그대로
 남아 있습니다.

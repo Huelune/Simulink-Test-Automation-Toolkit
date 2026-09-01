@@ -500,6 +500,14 @@ info = st_export_test_asset_bundle( ...
 격리 사본은 내부 Harness owner 경로가 바뀌지 않도록 원본과 같은 모델명을
 사용합니다. 따라서 export 단계에서 원본 모델과 열려 있던 Harness를 잠시
 닫고, standalone Harness 생성이 끝나거나 실패하면 원본 세션을 복원합니다.
+ResultSet을 직접 선택한 경우 Excel Coverage 요약은 `OVERALL`과 `CUT` 수준만
+생성합니다. 기본 `CoverageReportMode='SUMMARY'`는 Coverage 없는 공식 PDF와
+경량 `CoverageSummary.html`을 만들며, 전체 Coverage 원본은 선택 결과 MLDATX에
+보존합니다. 공식 PDF Coverage와 `cvhtml` 상세 보고서가 꼭 필요할 때만
+`CoverageReportMode='FULL'`을 지정하십시오. Coverage 객체 메타데이터가 CUT와
+정확히 매핑되지 않으면 전체 객체를 교차 조회하지 않고 해당 행과 번들을
+`PARTIAL`로 기록합니다. 명령창에는 결과 계층, MLDATX, CUT Coverage, PDF,
+HTML, Excel의 6단계 진행 상태와 경과 시간이 출력됩니다.
 `info.ResultSource`는 `ResultSet` 또는 `RunId`이며, `info.Status`가
 `PARTIAL`이면 `info.ArtifactFailures`와 manifest의 `ResultArtifacts`에서
 누락된 보고서 또는 Coverage를 확인할 수 있습니다.

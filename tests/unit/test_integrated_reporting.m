@@ -37,6 +37,47 @@ verifyEqual(testCase, st_report_status(["OK"; "SKIP"]), "OK");
 verifyEqual(testCase, st_report_status(["OK"; "FAIL"]), "PARTIAL");
 end
 
+function testCoverageDescriptorMatchesExactHarnessOwner(testCase)
+descriptors = coverage_descriptors( ...
+    ["Top"; "HarnessRoot"; "Other"], ...
+    ["Top"; "Top"; "Top"], ...
+    [""; "Top/CUT_A"; "Top/CUT_B"], ...
+    ["Top"; "HarnessA"; "HarnessB"]);
+
+indices = st_match_coverage_descriptors(descriptors, 'Top/CUT_A');
+verifyEqual(testCase, indices, 2);
+end
+
+function testCoverageDescriptorDoesNotCrossScanOwnerModel(testCase)
+descriptors = coverage_descriptors( ...
+    ["HarnessA"; "HarnessB"], ["Top"; "Top"], ...
+    ["Top/CUT_A"; "Top/CUT_B"], ["HarnessA"; "HarnessB"]);
+
+indices = st_match_coverage_descriptors(descriptors, 'Top/CUT_C');
+verifyEmpty(testCase, indices);
+end
+
+function testCoverageDescriptorUsesRootThenTopModelFallback(testCase)
+rootMatch = coverage_descriptors( ...
+    "Top/CUT_A", "Top", "", "HarnessA");
+verifyEqual(testCase, ...
+    st_match_coverage_descriptors(rootMatch, 'Top/CUT_A'), 1);
+
+modelMatch = coverage_descriptors("", "Top", "", "");
+verifyEqual(testCase, ...
+    st_match_coverage_descriptors(modelMatch, 'Top'), 1);
+end
+
+function testCoverageDescriptorPrefersAggregatedResult(testCase)
+descriptors = coverage_descriptors( ...
+    ["HarnessA"; "HarnessA"], ["Top"; "Top"], ...
+    ["Top/CUT_A"; "Top/CUT_A"], ["HarnessA"; "HarnessA"]);
+descriptors.DataType = ["TEST_DATA"; "DERIVED_DATA"];
+
+verifyEqual(testCase, ...
+    st_match_coverage_descriptors(descriptors, 'Top/CUT_A'), 2);
+end
+
 function testInitialAndFinalResultsAreLinked(testCase)
 context = struct( ...
     'InitialResult', 1, ...
@@ -57,4 +98,12 @@ verifyEqual(testCase, cfg.CoverageStructuralLevel, 'Decision');
 verifyEqual(testCase, cfg.CoverageMetricSettings, 'dwe');
 verifyFalse(testCase, cfg.CoverageIncludeReferencedModels);
 verifyTrue(testCase, cfg.GenerateTestReport);
+end
+
+function descriptors = coverage_descriptors( ...
+        Root, OwnerModel, OwnerBlock, AnalyzedModel)
+descriptors = table(string(Root(:)), string(OwnerModel(:)), ...
+    string(OwnerBlock(:)), string(AnalyzedModel(:)), ...
+    'VariableNames', ...
+    {'Root','OwnerModel','OwnerBlock','AnalyzedModel'});
 end

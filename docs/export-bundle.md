@@ -13,6 +13,12 @@ st_export_test_asset_bundle('SelectResult', true)
 자동화 스크립트에서는 기존처럼 `ResultSet` 객체나 `RunId`를 직접 지정할 수
 있습니다.
 
+대용량 ResultSet은 기본 `CoverageReportMode='SUMMARY'`로 처리합니다. CUT
+Coverage Excel/HTML과 전체 결과 MLDATX를 보존하면서 Coverage 포함 PDF와
+`cvhtml` 상세 보고서의 중복 생성을 피합니다. 상세 보고서가 반드시 필요하면
+`st_export_test_asset_bundle('SelectResult',true,'CoverageReportMode','FULL')`을
+사용합니다.
+
 이 명령은 `result/exports/assets/`에 내부 Harness가 유지된 모델 사본,
 선택 결과와 매핑되는 독립 Harness `.slx`, Test Manager 파일, 관리 Excel,
 Signal Editor·SLDV 입력과 결과 보고서·Coverage를 복사합니다. 독립 Harness는

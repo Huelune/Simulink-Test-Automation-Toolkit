@@ -534,6 +534,15 @@ Test Manager `.mldatx`, 내부 Harness가 유지된 모델, 결과에 대응하�
 Harness `.slx`, 대상별 Signal Editor·SLDV 입력과 선택 결과의
 Excel/PDF/HTML/MLDATX·Coverage를 함께 보관합니다.
 
+현재 ResultSet의 Excel Coverage 요약은 결과 전체와 각 CUT 수준만 수집합니다.
+기본 `CoverageReportMode='SUMMARY'`는 Coverage를 포함하지 않은 공식 PDF와
+경량 `CoverageSummary.html`을 생성하고, 전체 Coverage 원본은
+`SelectedResults.mldatx`에 보존합니다. Coverage 객체는 `ownerBlock`,
+`analyzedModel`, `rootPath`로 CUT에 먼저 매핑하며, 관련 없는 전체 객체를 각
+CUT마다 반복 조회하지 않습니다.
+보고서 생성 중에는 결과 계층, MLDATX, CUT Coverage, PDF, HTML, Excel의 단계와
+진행 수, 경과 시간이 명령창에 표시됩니다.
+
 독립 Harness는 원본 모델의 임시 사본에서 생성하므로 원본 Harness를 제거하지
 않습니다. 전체 모델 dependency, Toolbox와 전체 파일 checksum은 분석하지
 않으며 ZIP도 기본적으로 생성하지 않습니다.
@@ -548,14 +557,20 @@ rs = sltest.testmanager.getResultSets;
 st_export_test_asset_bundle('ResultSet', rs(3))
 st_export_test_asset_bundle('CreateArchive', true)
 st_export_test_asset_bundle('RunId', '20260901_120000_example')
+st_export_test_asset_bundle('SelectResult', true, ...
+    'CoverageReportMode', 'FULL')
 ```
+
+`FULL`은 공식 PDF에 Coverage를 포함하고 `cvhtml` 상세 보고서를 생성하므로 큰
+ResultSet에서는 오래 걸릴 수 있습니다. 일반 자산 보관에는 기본 `SUMMARY`를
+권장합니다.
 
 `SelectResult`, `ResultSet`, 명시적 `RunId`는 동시에 지정할 수 없습니다.
 선택 결과에
 Coverage가 없거나 일부 보고서 생성이 실패하면 가능한 자산을 보존하고
 manifest 상태를 `PARTIAL`로 기록합니다.
 반환값과 manifest에는 `ResultSource`, `ResultName`, `Status`,
-`HarnessCount`, `ArtifactFailures`가 기록됩니다.
+`CoverageDetail`, `HarnessCount`, `ArtifactFailures`가 기록됩니다.
 
 완전한 재실행 번들이 필요할 때만 아래 명령을 사용합니다.
 
