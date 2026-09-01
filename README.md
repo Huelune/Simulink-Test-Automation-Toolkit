@@ -514,26 +514,37 @@ Coverage 미달은 보고 항목이며 현재 버전에서 Test 실패로
 
 ## 테스트 자산 통합 관리와 재실행 번들 내보내기
 
-Test Manager 파일, 내부 Harness, Harness 입력과 Coverage 결과를 한 폴더에서
-관리하려면 테스트 자산 번들을 사용합니다.
+사용자가 선택한 Test Manager 결과, 그 결과의 Test Case와 매핑되는 standalone
+Harness, Harness 입력과 Coverage를 한 폴더에서 관리하려면 테스트 자산 번들을
+사용합니다.
 
 ```matlab
-st_export_test_asset_bundle
+rs = sltest.testmanager.getResultSets;
+st_export_test_asset_bundle('ResultSet', rs(3))
 ```
 
-기본 출력은 `result/exports/assets/{timestamp}_{id}/`입니다. 최상위 모델에
-저장된 내부 Harness, Test Manager `.mldatx`, 대상별 Signal Editor·SLDV 입력,
-관리 Excel과 최신 Excel/PDF/HTML/MLDATX·Coverage 결과를 함께 복사합니다.
-전체 모델 dependency, Toolbox와 파일 checksum은 분석하지 않으며 ZIP도
-기본적으로 생성하지 않습니다. 자산과 결과의 통합 관리에는 적합하지만 다른
-컴퓨터에서의 재실행을 보장하지 않습니다.
+기본 출력은 `result/exports/assets/{timestamp}_{id}/`입니다. ResultSet을 직접
+지정하지 않으면 `RunId='LATEST'`가 가리키는 toolkit 보고서를 사용합니다.
+Test Manager `.mldatx`, 내부 Harness가 유지된 모델, 결과에 대응하는 독립
+Harness `.slx`, 대상별 Signal Editor·SLDV 입력과 선택 결과의
+Excel/PDF/HTML/MLDATX·Coverage를 함께 보관합니다.
+
+독립 Harness는 원본 모델의 임시 사본에서 생성하므로 원본 Harness를 제거하지
+않습니다. 전체 모델 dependency, Toolbox와 전체 파일 checksum은 분석하지
+않으며 ZIP도 기본적으로 생성하지 않습니다.
 
 ZIP이 필요하거나 특정 결과를 선택하려면 다음처럼 실행합니다.
 
 ```matlab
 st_export_test_asset_bundle('CreateArchive', true)
-st_export_test_asset_bundle('RunId', '20260830_120000_example')
+st_export_test_asset_bundle('RunId', '20260901_120000_example')
 ```
+
+`ResultSet`과 명시적 `RunId`는 동시에 지정할 수 없습니다. 선택 결과에
+Coverage가 없거나 일부 보고서 생성이 실패하면 가능한 자산을 보존하고
+manifest 상태를 `PARTIAL`로 기록합니다.
+반환값과 manifest에는 `ResultSource`, `ResultName`, `Status`,
+`HarnessCount`, `ArtifactFailures`가 기록됩니다.
 
 완전한 재실행 번들이 필요할 때만 아래 명령을 사용합니다.
 

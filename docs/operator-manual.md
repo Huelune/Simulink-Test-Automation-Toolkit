@@ -458,19 +458,30 @@ summary = st_verify_all( ...
 
 ### 12.1 `st_export_test_asset_bundle`
 
-Test Manager 파일, 저장된 최상위 모델의 내부 Harness, 대상별 Signal
-Editor·SLDV 입력, 관리 Excel과 기존 Coverage 결과를 함께 복사합니다.
-전체 모델 dependency, Toolbox 분석과 SHA-256 계산은 생략하며 ZIP도
-기본적으로 만들지 않습니다.
+선택한 Test Manager 결과, 그 결과의 Test Case와 매핑되는 standalone
+Harness, Signal Editor·SLDV 입력, 관리 Excel과 Coverage 결과를 함께
+복사합니다. 전체 모델 dependency, Toolbox 분석과 전체 파일 SHA-256은
+생략하며 ZIP도 기본적으로 만들지 않습니다.
 
 ```matlab
-info = st_export_test_asset_bundle();
+rs = sltest.testmanager.getResultSets;
+info = st_export_test_asset_bundle('ResultSet', rs(3));
 ```
 
-출력: `result/exports/assets/{timestamp}_{id}/`. Harness는
-`SaveExternally=false`이므로 별도 파일 대신 복사된 최상위 모델 안에
-저장됩니다. 이 번들은 자산 통합 관리용이며 다른 컴퓨터에서 재실행 가능한
-완전한 번들이 아닙니다.
+기존 toolkit run을 선택:
+
+```matlab
+info = st_export_test_asset_bundle( ...
+    'RunId', '20260901_120000_example');
+```
+
+출력: `result/exports/assets/{timestamp}_{id}/`. 원본 모델에는 내부 Harness가
+그대로 남으며, 번들의 `harnesses/`에는 임시 모델 사본에서 분리한 독립 Harness
+`.slx`가 생성됩니다. Test Case 매핑은 Enabled와 관계없이 선택 결과를
+기준으로 합니다.
+`info.ResultSource`는 `ResultSet` 또는 `RunId`이며, `info.Status`가
+`PARTIAL`이면 `info.ArtifactFailures`와 manifest의 `ResultArtifacts`에서
+누락된 보고서 또는 Coverage를 확인할 수 있습니다.
 
 필요할 때만 ZIP 생성:
 

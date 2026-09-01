@@ -64,6 +64,13 @@ root = st_project_root();
 text = fileread(fullfile(root, 'src', 'exporting', ...
     'st_export_test_bundle.m'));
 verifyFalse(testCase, contains(text, 'sltest.harness.export('));
+
+assetText = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_standalone_harnesses.m'));
+verifyTrue(testCase, contains(assetText, 'sltest.harness.export('));
+verifyTrue(testCase, contains(assetText, 'temporaryModelFile'));
+verifyTrue(testCase, contains(assetText, ...
+    'copy_checked(sourceModelFile, temporaryModelFile)'));
 end
 
 function testExportShowsWorkflowStyleProgress(testCase)
@@ -84,33 +91,97 @@ verifyTrue(testCase, contains(text, 'FAILED  : %s'));
 verifyTrue(testCase, contains(text, 'st_log(cfg, ''ERROR'''));
 end
 
-function testAssetExportCollectsInputsWithoutFullDependencyScan(testCase)
+function testAssetExportAcceptsSelectedResultSet(testCase)
 root = st_project_root();
-wrapperText = fileread(fullfile(root, 'src', 'exporting', ...
+assetText = fileread(fullfile(root, 'src', 'exporting', ...
     'st_export_test_asset_bundle.m'));
-exportText = fileread(fullfile(root, 'src', 'exporting', ...
-    'st_export_test_bundle.m'));
 harnessText = fileread(fullfile(root, 'src', 'harness', ...
     'st_create_harnesses.m'));
 
-verifyTrue(testCase, contains(wrapperText, ...
-    "'Profile', 'ASSET'"));
-verifyTrue(testCase, contains(wrapperText, ...
+verifyTrue(testCase, contains(assetText, ...
+    "addParameter(p, 'ResultSet', [])"));
+verifyTrue(testCase, contains(assetText, ...
     "addParameter(p, 'CreateArchive', false"));
-verifyTrue(testCase, contains(wrapperText, ...
+verifyTrue(testCase, contains(assetText, ...
     "fullfile(cfg.ExportRootDir, 'assets')"));
-verifyTrue(testCase, contains(exportText, ...
-    'Model dependency analysis: SKIP'));
-verifyTrue(testCase, contains(exportText, ...
-    'targetInventory = collect_target_inputs'));
-verifyTrue(testCase, contains(exportText, ...
-    'Toolbox dependency analysis: SKIP'));
-verifyTrue(testCase, contains(exportText, ...
-    'Bundle file SHA-256 inventory: SKIP'));
-verifyTrue(testCase, contains(exportText, ...
-    "readmeResource = 'README.assets.ko.md'"));
+verifyFalse(testCase, contains(assetText, 'IncludeReferenceReport'));
+verifyTrue(testCase, contains(assetText, ...
+    'st_export_result_set_report'));
+verifyTrue(testCase, contains(assetText, ...
+    'st_export_standalone_harnesses'));
+verifyTrue(testCase, contains(assetText, ...
+    "'ResultSource', selection.Type"));
+verifyTrue(testCase, contains(assetText, ...
+    "targetInventory(i).ResultPath = resultBundlePath"));
+verifyTrue(testCase, contains(assetText, ...
+    'all_harness_inventory(cfg.TopModel)'));
+verifyTrue(testCase, contains(assetText, ...
+    "st_log(cfg, 'INFO', '[AssetExport] stage start"));
+verifyFalse(testCase, contains(assetText, ...
+    'matlab.codetools.requiredFilesAndProducts'));
 verifyTrue(testCase, contains(harnessText, ...
     "'SaveExternally', false"));
+end
+
+function testAssetTargetSelectionIgnoresEnabledAndUsesResultOrder(testCase)
+No = (1:3)';
+Enabled = [false; true; false];
+CUTPath = ["Top/A";"Top/B";"Top/C"];
+HarnessName = ["hA";"hB";"hC"];
+TestCaseName = ["tcA";"tcB";"tcC"];
+targets = table(No, Enabled, CUTPath, HarnessName, TestCaseName);
+
+selected = st_select_asset_targets(targets, ["tcC";"tcA"]);
+verifyEqual(testCase, selected.TestCaseName, ["tcC";"tcA"]);
+verifyEqual(testCase, selected.Enabled, [false;false]);
+end
+
+function testAssetTargetSelectionRejectsMissingCase(testCase)
+targets = asset_target_fixture(["tcA";"tcB"]);
+verifyError(testCase, ...
+    @() st_select_asset_targets(targets, "tcMissing"), ...
+    'simtest:AssetResultTargetMissing');
+end
+
+function testAssetTargetSelectionRejectsDuplicateMapping(testCase)
+targets = asset_target_fixture(["tcA";"tcA"]);
+verifyError(testCase, ...
+    @() st_select_asset_targets(targets, "tcA"), ...
+    'simtest:AssetResultTargetDuplicate');
+end
+
+function testAssetResultSelectionRejectsConflictBeforeRuntime(testCase)
+verifyError(testCase, @() st_export_test_asset_bundle( ...
+    'ResultSet', 1, 'RunId', 'run-id'), ...
+    'simtest:AssetResultSelectionConflict');
+end
+
+function testAssetResultSelectionRejectsInvalidObjectBeforeRuntime(testCase)
+verifyError(testCase, @() st_export_test_asset_bundle( ...
+    'ResultSet', 1), 'simtest:InvalidAssetResultSet');
+end
+
+function testAssetResultSelectionRejectsNonScalarBeforeRuntime(testCase)
+verifyError(testCase, @() st_export_test_asset_bundle( ...
+    'ResultSet', [1 2]), 'simtest:InvalidAssetResultSet');
+end
+
+function testSelectedResultReportDoesNotUpdateLatestOrClearResults(testCase)
+root = st_project_root();
+text = fileread(fullfile(root, 'src', 'reporting', ...
+    'st_export_result_set_report.m'));
+verifyFalse(testCase, contains(text, 'LatestReportPointer'));
+verifyFalse(testCase, contains(text, 'clearResults'));
+verifyTrue(testCase, contains(text, 'SelectedResults.mldatx'));
+verifyTrue(testCase, contains(text, 'SelectedTestResults.pdf'));
+end
+
+function testReviewBundleRemainsCompatibilityAlias(testCase)
+root = st_project_root();
+text = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_review_bundle.m'));
+verifyTrue(testCase, contains(text, ...
+    'st_export_test_asset_bundle(varargin{:})'));
 end
 
 function testRunnerCreatesExecutionWorkspace(testCase)
@@ -132,4 +203,13 @@ snapshotText = fileread(fullfile(root, 'src', 'verification', ...
 verifyTrue(testCase, contains(exportText, 'IncludeReferenceReport'));
 verifyTrue(testCase, contains(snapshotText, ...
     "'IncludeReferenceReport', false"));
+end
+
+function targets = asset_target_fixture(names)
+n = numel(names);
+No = (1:n)';
+CUTPath = repmat("Top/CUT", n, 1);
+HarnessName = repmat("Harness", n, 1);
+TestCaseName = names(:);
+targets = table(No, CUTPath, HarnessName, TestCaseName);
 end

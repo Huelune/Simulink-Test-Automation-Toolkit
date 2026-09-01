@@ -2,18 +2,20 @@
 
 ## 테스트 자산 통합 관리 번들과의 구분
 
-Test Manager 파일, 저장된 내부 Harness, Harness 입력과 Coverage 결과를
+선택한 Test Manager 결과, standalone Harness, Harness 입력과 Coverage 결과를
 한 폴더에서 관리하려면 다음 명령을 사용합니다.
 
 ```matlab
-st_export_test_asset_bundle
+rs = sltest.testmanager.getResultSets;
+st_export_test_asset_bundle('ResultSet', rs(3))
 ```
 
-이 명령은 `result/exports/assets/`에 내부 Harness가 저장된 최상위 모델,
-Test Manager 파일, 관리 Excel, 대상별 Signal Editor·SLDV 입력과 기존 통합
-보고서·Coverage를 복사합니다. 전체 모델 dependency 분석, Toolbox 분석,
-전체 파일 SHA-256과 ZIP 생성을 기본적으로 생략합니다. 결과 폴더는 테스트
-자산 관리용이며 `run_exported_tests`를 포함하지 않습니다.
+이 명령은 `result/exports/assets/`에 내부 Harness가 유지된 모델 사본,
+선택 결과와 매핑되는 독립 Harness `.slx`, Test Manager 파일, 관리 Excel,
+Signal Editor·SLDV 입력과 결과 보고서·Coverage를 복사합니다. 독립 Harness는
+원본을 다시 복사한 임시 모델에서 생성하므로 원본 Harness 관계를 변경하지
+않습니다. 전체 모델 dependency 분석, Toolbox 분석, 전체 파일 SHA-256과 ZIP
+생성을 기본적으로 생략합니다.
 
 `st_export_test_bundle`은 다른 컴퓨터에서의 재실행이 필요할 때 사용하는
 완전한 번들이며 아래의 재현성 검사를 모두 수행합니다.
