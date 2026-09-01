@@ -64,6 +64,24 @@ text = fileread(fullfile(root, 'src', 'exporting', ...
 verifyFalse(testCase, contains(text, 'sltest.harness.export('));
 end
 
+function testExportShowsWorkflowStyleProgress(testCase)
+root = st_project_root();
+text = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_test_bundle.m'));
+verifyTrue(testCase, contains(text, ...
+    'Reproducible Test Bundle Export'));
+verifyTrue(testCase, contains(text, ...
+    "currentStage = 'Discover Model Dependencies'"));
+verifyTrue(testCase, contains(text, ...
+    "currentStage = 'Collect Target Inputs'"));
+verifyTrue(testCase, contains(text, ...
+    "currentStage = 'Create ZIP Archive'"));
+verifyTrue(testCase, contains(text, 'START : %s'));
+verifyTrue(testCase, contains(text, 'DONE    : %s'));
+verifyTrue(testCase, contains(text, 'FAILED  : %s'));
+verifyTrue(testCase, contains(text, 'st_log(cfg, ''ERROR'''));
+end
+
 function testRunnerCreatesExecutionWorkspace(testCase)
 root = st_project_root();
 text = fileread(fullfile(root, 'resources', 'export_bundle', ...

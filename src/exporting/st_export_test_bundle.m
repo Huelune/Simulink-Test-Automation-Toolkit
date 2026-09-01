@@ -43,6 +43,26 @@ runId = strtrim(char(string(p.Results.RunId)));
 createArchive = p.Results.CreateArchive;
 includeReferenceReport = p.Results.IncludeReferenceReport;
 
+totalTimer = tic;
+fprintf('\n============================================\n');
+fprintf('Reproducible Test Bundle Export\n');
+fprintf('Model       : %s\n', cfg.TopModel);
+fprintf('Destination : %s\n', destination);
+fprintf('Run         : %s\n', runId);
+fprintf('Archive     : %s\n', on_off_text(createArchive));
+fprintf('Start       : %s\n', console_timestamp_text());
+fprintf('============================================\n');
+
+st_log(cfg, 'INFO', ...
+    ['Export Test Bundle start | Model=%s | Destination=%s | ' ...
+     'RunId=%s | Archive=%d | ReferenceReport=%d'], ...
+    cfg.TopModel, destination, runId, logical(createArchive), ...
+    logical(includeReferenceReport));
+
+currentStage = 'Validate Export Sources';
+stageTimer = start_step(currentStage);
+
+try
 requiredFiles = {cfg.ModelFile, cfg.TestFile, cfg.ManagementExcel};
 requiredLabels = {'model', 'Test File', 'management Excel'};
 for i = 1:numel(requiredFiles)
@@ -58,6 +78,13 @@ assert_saved_test_file(cfg);
 sourceModelSignature = st_file_signature(cfg.ModelFile);
 sourceTestSignature = st_file_signature(cfg.TestFile);
 targets = st_load_targets(cfg.OnlyEnabled);
+fprintf('Targets      : %d\n', height(targets));
+finish_step(currentStage, stageTimer);
+
+currentStage = 'Discover Model Dependencies';
+stageTimer = start_step(currentStage);
+st_log(cfg, 'DEBUG', 'Dependency analysis start | Model=%s', ...
+    cfg.ModelFile);
 [dependencyFiles, missingDependencies] = discover_dependencies(cfg.ModelFile);
 if ~isempty(missingDependencies)
     error('simtest:ExportDependencyMissing', ...
@@ -65,15 +92,26 @@ if ~isempty(missingDependencies)
         strjoin(missingDependencies, ', '));
 end
 assert_saved_dependency_models(dependencyFiles);
+st_log(cfg, 'DEBUG', 'Dependency analysis done | count=%d', ...
+    numel(dependencyFiles));
+fprintf('Dependencies : %d\n', numel(dependencyFiles));
+finish_step(currentStage, stageTimer);
 
+currentStage = 'Resolve Reference Report';
+stageTimer = start_step(currentStage);
 if includeReferenceReport
     [referenceRunId, referenceRunDirectory] = ...
         resolve_reference_run(cfg, runId);
+    fprintf('Reference Run : %s\n', referenceRunId);
 else
     referenceRunId = 'NONE';
     referenceRunDirectory = '';
+    fprintf('Reference report: SKIP\n');
 end
+finish_step(currentStage, stageTimer);
 
+currentStage = 'Prepare Bundle Template';
+stageTimer = start_step(currentStage);
 if ~isfolder(destination)
     mkdir(destination);
 end
@@ -117,12 +155,17 @@ for i = 1:numel(dependencyFiles)
         modelBundlePath = item.BundlePath;
     end
     dependencyInventory(end + 1, 1) = item; %#ok<AGROW>
+    fprintf('[%d/%d] COPY %s\n', ...
+        i, numel(dependencyFiles), item.BundlePath);
 end
 if isempty(modelBundlePath)
     error('simtest:ExportModelCopyMissing', ...
         'The selected model was not included in dependency analysis.');
 end
+finish_step(currentStage, stageTimer);
 
+currentStage = 'Collect Target Inputs';
+stageTimer = start_step(currentStage);
 targetInventory = collect_target_inputs( ...
     targets, cfg, stagingDirectory, templateDirectory);
 
@@ -134,13 +177,22 @@ if isfile(cfg.SldvManifestFile)
     sldvManifestBundlePath = ...
         bundle_path(stagingDirectory, sldvManifestOutput);
 end
+finish_step(currentStage, stageTimer);
 
+currentStage = 'Copy Reference Report';
+stageTimer = start_step(currentStage);
 if includeReferenceReport
     referenceOutput = fullfile( ...
         stagingDirectory, 'reference-report', referenceRunId);
     copyfile_checked(referenceRunDirectory, referenceOutput);
+    fprintf('Reference report copied: %s\n', referenceRunId);
+else
+    fprintf('Reference report: SKIP\n');
 end
+finish_step(currentStage, stageTimer);
 
+currentStage = 'Build Bundle Manifest';
+stageTimer = start_step(currentStage);
 resourceDirectory = fullfile(projectRoot, 'resources', 'export_bundle');
 runnerOutput = fullfile(stagingDirectory, 'run_exported_tests.m');
 copyfile_checked(fullfile(resourceDirectory, 'run_exported_tests.m'), ...
@@ -192,7 +244,11 @@ write_json(fullfile(stagingDirectory, 'manifest.json'), manifest);
 assert_source_unchanged(cfg.ModelFile, sourceModelSignature);
 assert_source_unchanged(cfg.TestFile, sourceTestSignature);
 assert_saved_dependency_models(dependencyFiles);
+fprintf('Inventory files : %d\n', numel(manifest.Files));
+finish_step(currentStage, stageTimer);
 
+currentStage = 'Finalize Bundle';
+stageTimer = start_step(currentStage);
 finalDirectory = fullfile(destination, bundleId);
 if isfolder(finalDirectory) || isfile(finalDirectory)
     error('simtest:ExportDestinationExists', ...
@@ -203,11 +259,17 @@ if ~ok
     error('simtest:ExportMoveFailed', ...
         'Cannot finalize export bundle: %s', message);
 end
+finish_step(currentStage, stageTimer);
 
 archivePath = '';
 if createArchive
+    currentStage = 'Create ZIP Archive';
+    stageTimer = start_step(currentStage);
     archivePath = [finalDirectory '.zip'];
     zip(archivePath, bundleId, destination);
+    finish_step(currentStage, stageTimer);
+else
+    fprintf('\nCreate ZIP Archive: SKIP (CreateArchive=false)\n');
 end
 
 info = struct( ...
@@ -220,12 +282,34 @@ info = struct( ...
     'DependencyCount', numel(dependencyFiles), ...
     'MATLABRelease', manifest.MATLABRelease);
 
-fprintf('\nReproducible test bundle created\n');
-fprintf('Folder : %s\n', finalDirectory);
+st_log(cfg, 'INFO', ...
+    'Export Test Bundle complete | Bundle=%s | elapsed=%.3f sec', ...
+    bundleId, toc(totalTimer));
+
+fprintf('\n============================================\n');
+fprintf('Test Bundle Export Complete\n');
+fprintf('End     : %s\n', console_timestamp_text());
+fprintf('Elapsed : %s\n', elapsed_text(toc(totalTimer)));
+fprintf('Folder  : %s\n', finalDirectory);
 if ~isempty(archivePath)
-    fprintf('ZIP    : %s\n', archivePath);
+    fprintf('ZIP     : %s\n', archivePath);
 end
-fprintf('Run    : run_exported_tests\n');
+fprintf('Run     : run_exported_tests\n');
+fprintf('============================================\n');
+
+catch ME
+    fail_step(currentStage, stageTimer, ME);
+    st_log(cfg, 'ERROR', ...
+        'Export Test Bundle failed | Stage=%s | %s: %s', ...
+        currentStage, ME.identifier, ME.message);
+    fprintf('\n============================================\n');
+    fprintf('Test Bundle Export Failed\n');
+    fprintf('Stage   : %s\n', currentStage);
+    fprintf('End     : %s\n', console_timestamp_text());
+    fprintf('Elapsed : %s\n', elapsed_text(toc(totalTimer)));
+    fprintf('============================================\n');
+    rethrow(ME);
+end
 end
 
 function assert_saved_model(cfg)
@@ -313,12 +397,27 @@ for i = 1:height(targets)
     item.TestCaseName = char(row.TestCaseName);
     item.SldvMode = char(row.SldvMode);
 
+    targetTimer = tic;
+    fprintf('[%d/%d] START %s | Harness=%s | SLDV=%s\n', ...
+        i, height(targets), item.CUTName, item.HarnessName, item.SldvMode);
+    st_log(cfg, 'DEBUG', ...
+        '[ExportTarget %d/%d] start | CUT=%s | Harness=%s | SLDV=%s', ...
+        i, height(targets), item.CUTName, item.HarnessName, item.SldvMode);
+
+    try
     if strcmpi(item.SldvMode, 'OFF')
         directInports = find_system( ...
             item.CUTPath, 'SearchDepth', 1, ...
             'Type', 'Block', 'BlockType', 'Inport');
         if isempty(directInports)
             inventory(end + 1, 1) = item; %#ok<AGROW>
+            fprintf('[%d/%d] OK    %s | no external input | %s\n', ...
+                i, height(targets), item.CUTName, ...
+                elapsed_text(toc(targetTimer)));
+            st_log(cfg, 'DEBUG', ...
+                ['[ExportTarget %d/%d] done | CUT=%s | ' ...
+                 'input=NONE | elapsed=%.3f sec'], ...
+                i, height(targets), item.CUTName, toc(targetTimer));
             continue;
         end
     end
@@ -355,6 +454,20 @@ for i = 1:height(targets)
             profile, 'SourceDataFile', outputDirectory, bundleRoot);
     end
     inventory(end + 1, 1) = item; %#ok<AGROW>
+    fprintf('[%d/%d] OK    %s | %s\n', ...
+        i, height(targets), item.CUTName, ...
+        elapsed_text(toc(targetTimer)));
+    st_log(cfg, 'DEBUG', ...
+        '[ExportTarget %d/%d] done | CUT=%s | elapsed=%.3f sec', ...
+        i, height(targets), item.CUTName, toc(targetTimer));
+    catch ME
+        st_log(cfg, 'ERROR', ...
+            '[ExportTarget %d/%d] failed | CUT=%s | %s: %s', ...
+            i, height(targets), item.CUTName, ME.identifier, ME.message);
+        fprintf('[%d/%d] FAIL  %s | %s\n', ...
+            i, height(targets), item.CUTName, ME.message);
+        rethrow(ME);
+    end
 end
 end
 
@@ -485,6 +598,45 @@ end
 function value = timestamp_text()
 value = char(datetime('now', ...
     'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'));
+end
+
+function timerValue = start_step(label)
+fprintf('\n============================================\n');
+fprintf('%s\n', label);
+fprintf('START : %s\n', console_timestamp_text());
+fprintf('============================================\n');
+timerValue = tic;
+end
+
+function finish_step(label, timerValue)
+fprintf('DONE    : %s\n', label);
+fprintf('ELAPSED : %s\n', elapsed_text(toc(timerValue)));
+end
+
+function fail_step(label, timerValue, exception)
+fprintf('FAILED  : %s\n', label);
+fprintf('ERROR   : %s\n', exception.message);
+fprintf('ELAPSED : %s\n', elapsed_text(toc(timerValue)));
+end
+
+function value = console_timestamp_text()
+value = char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss'));
+end
+
+function value = elapsed_text(secondsValue)
+hoursValue = floor(secondsValue / 3600);
+minutesValue = floor(mod(secondsValue, 3600) / 60);
+secondsPart = mod(secondsValue, 60);
+value = sprintf('%02d:%02d:%06.3f', ...
+    hoursValue, minutesValue, secondsPart);
+end
+
+function value = on_off_text(enabled)
+if enabled
+    value = 'ON';
+else
+    value = 'OFF';
+end
 end
 
 function value = target_folder(item)
