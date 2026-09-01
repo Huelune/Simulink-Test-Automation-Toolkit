@@ -131,6 +131,7 @@ cfg.OverwriteTestFile
 cfg.ExpectedUpdateMode
 cfg.PreparationMode
 cfg.CheckSharedSignalEditorDataFile
+cfg.IgnoreUnexpectedSldvInputs
 cfg.SaveResultFiles
 ```
 
@@ -380,6 +381,13 @@ SLDV 준비 전에 `on`으로 바꾸고 되돌리지 않습니다. 전체 workfl
 자동 변경을 금지하려면 이 설정을 `false`로 바꾸며, 이 경우 비-Atomic CUT은
 명확한 오류로 중단됩니다. 처리 결과는 `SldvGenerationResult`의
 `AtomicAction` 열에서 확인합니다.
+
+SLDV MAT에 Harness `ActiveScenario`에 없는 신규 입력이 포함되면 기본
+`cfg.IgnoreUnexpectedSldvInputs=false`에서는 준비 단계가 실패합니다. 신규 입력이
+해당 Harness 테스트에 필요하지 않음을 확인한 경우에만 이 설정을 `true`로
+변경할 수 있습니다. 이때 신규 입력은 Signal Editor Scenario에서 제외되고,
+공통 입력만 SLDV 값으로 교체됩니다. 제외 내역은 `SldvGenerationResult`의
+`IgnoredSldvInputs`, `IgnoredSldvInputCount` 열에서 확인합니다.
 
 ### 9.3 `GENERATE`
 

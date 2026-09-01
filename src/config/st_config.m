@@ -151,6 +151,17 @@ cfg.SldvTmaxResolution = 0.01;
 %   Require every FILE/GENERATE target to already be atomic.
 cfg.AutoConvertSldvTargetsToAtomic = true;
 
+% false (default):
+%   Fail when an SLDV Dataset contains input signals that are not present
+%   in the target Harness Signal Editor ActiveScenario.
+%
+% true:
+%   Ignore those unexpected SLDV input signals. Only signals that also
+%   exist in the Harness input interface are copied into generated
+%   Signal Editor scenarios. Ignored names are recorded in the SLDV
+%   preparation result and manifest.
+cfg.IgnoreUnexpectedSldvInputs = false;
+
 % true:
 %   Open every registered Harness before SLDV configuration and fail when
 %   multiple Harnesses use the same Signal Editor MAT file.

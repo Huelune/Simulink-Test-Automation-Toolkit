@@ -72,6 +72,7 @@
 
 ## v0.9.6 Candidate
 
+- Added optional filtering for SLDV Dataset inputs that are absent from the Harness ActiveScenario. `cfg.IgnoreUnexpectedSldvInputs=true` drops those inputs while assembling Signal Editor scenarios and records the ignored names and count; strict failure remains the default.
 - Added optional automatic atomic CUT setup for `SldvMode=GENERATE`. With `cfg.AutoEnableAtomicForSldvGenerate = true`, a non-atomic Subsystem is changed to `TreatAsAtomicUnit=on` only around `sldvrun`, then its original setting and the model Dirty state are restored.
 - Updated SLDV input handling to use the Harness Signal Editor `ActiveScenario` as the interface template. SLDV Dataset inputs may be a compatible subset; Harness-only external inputs are retained in every generated scenario, while unexpected SLDV inputs fail before mutation.
 - Removed the SLDV direct-CUT-Inport gate from Signal Editor and Test Manager setup. SLDV Iterations now always bind both `SignalEditorScenario` and `TestSequenceScenario` to the matching `UT_REQ_*` name.

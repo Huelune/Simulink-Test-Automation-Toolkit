@@ -17,6 +17,13 @@ verifyFalse(testCase, cfg.CheckSharedSignalEditorDataFile);
 end
 
 
+function testUnexpectedSldvInputsAreRejectedByDefault(testCase)
+cfg = st_config();
+
+verifyFalse(testCase, cfg.IgnoreUnexpectedSldvInputs);
+end
+
+
 function testExpectedUpdateIsAppliedByDefault(testCase)
 cfg = st_config();
 
