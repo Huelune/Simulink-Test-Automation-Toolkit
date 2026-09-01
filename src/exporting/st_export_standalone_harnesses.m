@@ -8,27 +8,52 @@ if ~isfile(sourceModelFile)
 end
 if ~isfolder(destination), mkdir(destination); end
 
-openHarnesses = close_open_source_harnesses(targets, topModel);
-openHarnessCleanup = onCleanup(@() restore_source_harnesses( ...
-    openHarnesses)); %#ok<NASGU>
-
 bundlePaths = strings(height(targets), 1);
 workRoot = tempname(destination);
 mkdir(workRoot);
 workCleanup = onCleanup(@() remove_work_root(workRoot)); %#ok<NASGU>
 
-[~, ~, extension] = fileparts(sourceModelFile);
-uuid = char(java.util.UUID.randomUUID());
-temporaryModel = matlab.lang.makeValidName( ...
-    ['asset_' uuid(1:8) '_' char(topModel)]);
-if numel(temporaryModel) > namelengthmax
-    temporaryModel = temporaryModel(1:namelengthmax);
+[~, sourceName, extension] = fileparts(sourceModelFile);
+if ~strcmp(sourceName, char(topModel))
+    error('simtest:AssetModelNameMismatch', ...
+        'Model file name must match TopModel: %s | %s', ...
+        sourceName, char(topModel));
 end
-temporaryModelFile = fullfile(workRoot, [temporaryModel extension]);
+% Internal Harness metadata retains owner paths. Keep the original model
+% name and isolate by directory instead of renaming the copied model.
+temporaryModel = char(topModel);
+temporaryModelFile = fullfile(workRoot, [sourceName extension]);
 copy_checked(sourceModelFile, temporaryModelFile);
+
+sourceWasLoaded = bdIsLoaded(topModel);
+sourceWasOpen = false;
+if sourceWasLoaded
+    try
+        sourceWasOpen = strcmp(get_param(topModel, 'Open'), 'on');
+    catch
+    end
+end
+if ~sourceWasLoaded, load_system(sourceModelFile); end
+openHarnesses = close_open_source_harnesses(topModel);
+try
+    close_system(topModel, 0);
+catch ME
+    restore_source_harnesses(openHarnesses);
+    if ~sourceWasLoaded, close_model(topModel); end
+    rethrow(ME);
+end
+sourceSessionCleanup = onCleanup(@() restore_source_session( ...
+    sourceModelFile, topModel, sourceWasLoaded, sourceWasOpen, ...
+    openHarnesses)); %#ok<NASGU>
 
 load_system(temporaryModelFile);
 modelCleanup = onCleanup(@() close_model(temporaryModel)); %#ok<NASGU>
+loadedTemporaryFile = char(get_param(temporaryModel, 'FileName'));
+if ~same_path(loadedTemporaryFile, temporaryModelFile)
+    error('simtest:AssetTempModelLoadMismatch', ...
+        ['Refusing Harness export because MATLAB loaded a different ' ...
+         'model file: %s'], loadedTemporaryFile);
+end
 
 keys = strings(0,1);
 keyPaths = strings(0,1);
@@ -43,14 +68,13 @@ for i = 1:height(targets)
         continue;
     end
 
-    copiedOwner = copied_owner_path( ...
-        sourceOwner, char(topModel), temporaryModel);
     matches = sltest.harness.find( ...
-        copiedOwner, 'SearchDepth', 0, 'Name', harnessName);
+        sourceOwner, 'SearchDepth', 0, 'Name', harnessName);
     if numel(matches) ~= 1
         error('simtest:AssetHarnessMissing', ...
-            ['Expected one Harness in the copied model, found %d: ' ...
-             '%s | %s'], numel(matches), sourceOwner, harnessName);
+            ['Expected one Harness in the copied model %s, found %d: ' ...
+             '%s | %s'], temporaryModelFile, numel(matches), ...
+            sourceOwner, harnessName);
     end
 
     outputFolder = fullfile(destination, target_folder(targets(i,:)));
@@ -64,7 +88,7 @@ for i = 1:height(targets)
     try
         save_system(temporaryModel);
         sltest.harness.export( ...
-            copiedOwner, harnessName, 'Name', outputModel);
+            sourceOwner, harnessName, 'Name', outputModel);
         if bdIsLoaded(outputModel)
             save_system(outputModel, outputPath);
             close_system(outputModel, 0);
@@ -86,16 +110,6 @@ for i = 1:height(targets)
 end
 end
 
-function path = copied_owner_path(sourceOwner, topModel, copiedModel)
-parts = strsplit(strrep(sourceOwner, '\', '/'), '/');
-if isempty(parts) || ~strcmpi(parts{1}, topModel)
-    error('simtest:AssetHarnessOwnerOutsideModel', ...
-        'Harness owner is outside the selected model: %s', sourceOwner);
-end
-parts{1} = copiedModel;
-path = strjoin(parts, '/');
-end
-
 function folder = target_folder(row)
 folder = sprintf('%04d_%s', round(double(row.No)), ...
     st_export_safe_name(char(string(row.CUTName))));
@@ -110,17 +124,19 @@ if ~isvarname(name) || numel(name) > namelengthmax
 end
 end
 
-function openHarnesses = close_open_source_harnesses(targets, topModel)
-openHarnesses = repmat(struct('Owner', '', 'Name', ''), 0, 1);
-keys = strings(0,1);
+function openHarnesses = close_open_source_harnesses(topModel)
+openHarnesses = repmat(struct( ...
+    'Owner', '', 'Name', '', 'WasOpen', false), 0, 1);
+harnesses = sltest.harness.find(topModel, 'OpenOnly', 'on');
 try
-    for i = 1:height(targets)
-        owner = char(st_normalize_cut_path(targets.CUTPath(i), topModel));
-        name = char(string(targets.HarnessName(i)));
-        key = string(lower(owner)) + "|" + string(lower(name));
-        if any(keys == key), continue; end
-        keys(end+1,1) = key; %#ok<AGROW>
-        if ~bdIsLoaded(name), continue; end
+    for i = 1:numel(harnesses)
+        owner = char(harnesses(i).ownerFullPath);
+        name = char(harnesses(i).name);
+        if bdIsLoaded(name) && strcmp(get_param(name, 'Dirty'), 'on')
+            error('simtest:AssetUnsavedHarness', ...
+                'Save the open Harness before asset export: %s', name);
+        end
+        wasOpen = logical_value(harnesses(i).isOpen);
         try
             sltest.harness.close(owner, name);
         catch ME
@@ -129,7 +145,8 @@ try
                 name, ME.message);
         end
         openHarnesses(end+1,1) = struct( ...
-            'Owner', owner, 'Name', name); %#ok<AGROW>
+            'Owner', owner, 'Name', name, ...
+            'WasOpen', wasOpen); %#ok<AGROW>
     end
 catch ME
     restore_source_harnesses(openHarnesses);
@@ -137,11 +154,43 @@ catch ME
 end
 end
 
+function value = logical_value(raw)
+value = false;
+if isempty(raw), return; end
+if islogical(raw) || isnumeric(raw)
+    value = logical(raw(1));
+    return;
+end
+text = lower(strtrim(char(string(raw))));
+value = ismember(text, {'true','1','yes','on'});
+end
+
+function restore_source_session( ...
+        sourceModelFile, topModel, sourceWasLoaded, sourceWasOpen, ...
+        openHarnesses)
+if bdIsLoaded(topModel), close_system(topModel, 0); end
+if ~sourceWasLoaded, return; end
+load_system(sourceModelFile);
+loadedSourceFile = char(get_param(topModel, 'FileName'));
+if ~same_path(loadedSourceFile, sourceModelFile)
+    error('simtest:AssetSourceRestoreMismatch', ...
+        'MATLAB restored a different source model file: %s', ...
+        loadedSourceFile);
+end
+if sourceWasOpen, open_system(topModel); end
+restore_source_harnesses(openHarnesses);
+end
+
 function restore_source_harnesses(openHarnesses)
 for i = 1:numel(openHarnesses)
     try
-        sltest.harness.load( ...
-            openHarnesses(i).Owner, openHarnesses(i).Name);
+        if openHarnesses(i).WasOpen
+            sltest.harness.open( ...
+                openHarnesses(i).Owner, openHarnesses(i).Name);
+        else
+            sltest.harness.load( ...
+                openHarnesses(i).Owner, openHarnesses(i).Name);
+        end
     catch ME
         warning('simtest:AssetHarnessRestoreFailed', ...
             'Cannot restore previously open Harness %s: %s', ...
@@ -173,4 +222,14 @@ end
 
 function value = portable_path(path)
 value = strrep(char(path), '\', '/');
+end
+
+function tf = same_path(left, right)
+left = char(java.io.File(char(left)).getCanonicalPath());
+right = char(java.io.File(char(right)).getCanonicalPath());
+if ispc
+    tf = strcmpi(left, right);
+else
+    tf = strcmp(left, right);
+end
 end

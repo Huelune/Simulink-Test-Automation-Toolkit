@@ -535,6 +535,9 @@ Excel/PDF/HTML/MLDATX·Coverage를 함께 보관합니다.
 독립 Harness는 원본 모델의 임시 사본에서 생성하므로 원본 Harness를 제거하지
 않습니다. 전체 모델 dependency, Toolbox와 전체 파일 checksum은 분석하지
 않으며 ZIP도 기본적으로 생성하지 않습니다.
+내부 Harness owner 경로를 유지하기 위해 export 중에는 원본 모델을 잠시
+unload하고 같은 모델명의 격리 사본을 처리한 뒤 원본 모델과 열려 있던 Harness를
+다시 복원합니다.
 
 ZIP이 필요하거나 특정 결과를 선택하려면 다음처럼 실행합니다.
 

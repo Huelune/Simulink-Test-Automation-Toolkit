@@ -489,6 +489,9 @@ info = st_export_test_asset_bundle( ...
 그대로 남으며, 번들의 `harnesses/`에는 임시 모델 사본에서 분리한 독립 Harness
 `.slx`가 생성됩니다. Test Case 매핑은 Enabled와 관계없이 선택 결과를
 기준으로 합니다.
+격리 사본은 내부 Harness owner 경로가 바뀌지 않도록 원본과 같은 모델명을
+사용합니다. 따라서 export 단계에서 원본 모델과 열려 있던 Harness를 잠시
+닫고, standalone Harness 생성이 끝나거나 실패하면 원본 세션을 복원합니다.
 `info.ResultSource`는 `ResultSet` 또는 `RunId`이며, `info.Status`가
 `PARTIAL`이면 `info.ArtifactFailures`와 manifest의 `ResultArtifacts`에서
 누락된 보고서 또는 Coverage를 확인할 수 있습니다.
