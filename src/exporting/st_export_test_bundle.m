@@ -15,8 +15,8 @@ function info = st_export_test_bundle(varargin)
 %                   Include the selected integrated report (default true).
 %                   Verification snapshots set this false so an existing
 %                   report is not required before an isolated runtime run.
-%     Profile       'REPRODUCIBLE' (default) or internal 'REVIEW'. Use
-%                   st_export_review_bundle for the public review workflow.
+%     Profile       'REPRODUCIBLE' (default) or internal 'ASSET'. Use
+%                   st_export_test_asset_bundle for asset management.
 
 %   The source model and Test File must be saved before export. Missing
 %   model dependencies stop the export instead of creating a partial
@@ -51,7 +51,7 @@ reproducible = strcmp(profile, 'REPRODUCIBLE');
 if reproducible
     exportTitle = 'Reproducible Test Bundle Export';
 else
-    exportTitle = 'Test Review Bundle Export';
+    exportTitle = 'Test Asset Bundle Export';
 end
 
 totalTimer = tic;
@@ -93,7 +93,7 @@ if reproducible
     sourceModelSignature = st_file_signature(cfg.ModelFile);
     sourceTestSignature = st_file_signature(cfg.TestFile);
 else
-    fprintf('Source SHA-256 validation: SKIP (review profile)\n');
+    fprintf('Source SHA-256 validation: SKIP (asset profile)\n');
 end
 targets = st_load_targets(cfg.OnlyEnabled);
 fprintf('Targets      : %d\n', height(targets));
@@ -114,7 +114,7 @@ if reproducible
 else
     dependencyFiles = {canonical_path(cfg.ModelFile)};
     fprintf(['Model dependency analysis: SKIP ' ...
-        '(review profile copies the top model only)\n']);
+        '(asset profile copies the Harness container model only)\n']);
 end
 assert_saved_dependency_models(dependencyFiles);
 st_log(cfg, 'DEBUG', 'Dependency analysis done | count=%d', ...
@@ -159,7 +159,7 @@ if reproducible
     copyfile_checked(fullfile(projectRoot, 'src'), ...
         fullfile(templateDirectory, 'src'));
 else
-    fprintf('Automation runtime copy: SKIP (review profile)\n');
+    fprintf('Automation runtime copy: SKIP (asset profile)\n');
 end
 
 copyfile_checked(cfg.ManagementExcel, ...
@@ -196,20 +196,14 @@ finish_step(currentStage, stageTimer);
 currentStage = 'Collect Target Inputs';
 stageTimer = start_step(currentStage);
 sldvManifestBundlePath = '';
-if reproducible
-    targetInventory = collect_target_inputs( ...
-        targets, cfg, stagingDirectory, templateDirectory);
-    if isfile(cfg.SldvManifestFile)
-        sldvManifestOutput = fullfile( ...
-            templateDirectory, 'result', 'sldv', 'sldv_manifest.mat');
-        copyfile_checked(cfg.SldvManifestFile, sldvManifestOutput);
-        sldvManifestBundlePath = ...
-            bundle_path(stagingDirectory, sldvManifestOutput);
-    end
-else
-    targetInventory = collect_review_targets(targets, cfg);
-    fprintf(['Harness and SLDV input collection: SKIP ' ...
-        '(review profile uses saved artifacts)\n']);
+targetInventory = collect_target_inputs( ...
+    targets, cfg, stagingDirectory, templateDirectory);
+if isfile(cfg.SldvManifestFile)
+    sldvManifestOutput = fullfile( ...
+        templateDirectory, 'result', 'sldv', 'sldv_manifest.mat');
+    copyfile_checked(cfg.SldvManifestFile, sldvManifestOutput);
+    sldvManifestBundlePath = ...
+        bundle_path(stagingDirectory, sldvManifestOutput);
 end
 finish_step(currentStage, stageTimer);
 
@@ -236,8 +230,8 @@ if reproducible
     readmeResource = 'README.bundle.ko.md';
 else
     products = repmat(struct('Name', '', 'Version', ''), 0, 1);
-    readmeResource = 'README.review.ko.md';
-    fprintf('Toolbox dependency analysis: SKIP (review profile)\n');
+    readmeResource = 'README.assets.ko.md';
+    fprintf('Toolbox dependency analysis: SKIP (asset profile)\n');
 end
 manifest = struct();
 manifest.Version = 1;
@@ -285,7 +279,7 @@ if reproducible
 else
     manifest.Files = inventory_files_light(stagingDirectory, ...
         {'manifest.json'});
-    fprintf('Bundle file SHA-256 inventory: SKIP (review profile)\n');
+    fprintf('Bundle file SHA-256 inventory: SKIP (asset profile)\n');
 end
 write_json(fullfile(stagingDirectory, 'manifest.json'), manifest);
 
@@ -349,7 +343,7 @@ end
 if reproducible
     fprintf('Run     : run_exported_tests\n');
 else
-    fprintf('Use     : review/archive only; rerun is not supported\n');
+    fprintf('Use     : test asset management; rerun is not supported\n');
 end
 fprintf('============================================\n');
 
@@ -524,21 +518,6 @@ for i = 1:height(targets)
             i, height(targets), item.CUTName, ME.message);
         rethrow(ME);
     end
-end
-end
-
-function inventory = collect_review_targets(targets, cfg)
-inventory = repmat(empty_target(), 0, 1);
-for i = 1:height(targets)
-    row = targets(i, :);
-    item = empty_target();
-    item.No = double(row.No);
-    item.CUTName = char(row.CUTName);
-    item.CUTPath = st_normalize_cut_path(row.CUTPath, cfg.TopModel);
-    item.HarnessName = char(row.HarnessName);
-    item.TestCaseName = char(row.TestCaseName);
-    item.SldvMode = char(row.SldvMode);
-    inventory(end + 1, 1) = item; %#ok<AGROW>
 end
 end
 
@@ -733,7 +712,7 @@ end
 
 function value = normalize_export_profile(value)
 text = string(value);
-allowed = {'REPRODUCIBLE', 'REVIEW'};
+allowed = {'REPRODUCIBLE', 'ASSET'};
 if ~isscalar(text)
     error('simtest:InvalidExportProfile', ...
         'Export Profile must be a scalar text value.');

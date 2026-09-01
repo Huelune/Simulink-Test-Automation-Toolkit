@@ -454,25 +454,28 @@ summary = st_verify_all( ...
 가리킵니다. 상세 판정은 `docs/user-manual.md`와 `docs/verification.md`를
 참조합니다.
 
-## 12. 확인용 보관과 재실행 번들 내보내기
+## 12. 테스트 자산 관리와 재실행 번들 내보내기
 
-### 12.1 `st_export_review_bundle`
+### 12.1 `st_export_test_asset_bundle`
 
-저장된 최상위 모델의 내부 Harness, Test File, 관리 Excel과 기존 결과만
-빠르게 복사합니다. dependency 분석, Harness 입력 수집, Toolbox 분석과
-SHA-256 계산을 생략하며 ZIP도 기본적으로 만들지 않습니다.
+Test Manager 파일, 저장된 최상위 모델의 내부 Harness, 대상별 Signal
+Editor·SLDV 입력, 관리 Excel과 기존 Coverage 결과를 함께 복사합니다.
+전체 모델 dependency, Toolbox 분석과 SHA-256 계산은 생략하며 ZIP도
+기본적으로 만들지 않습니다.
 
 ```matlab
-info = st_export_review_bundle();
+info = st_export_test_asset_bundle();
 ```
 
-출력: `result/exports/review/{timestamp}_{id}/`. 이 보관본은 확인용이며
-다른 컴퓨터에서 재실행 가능한 완전한 번들이 아닙니다.
+출력: `result/exports/assets/{timestamp}_{id}/`. Harness는
+`SaveExternally=false`이므로 별도 파일 대신 복사된 최상위 모델 안에
+저장됩니다. 이 번들은 자산 통합 관리용이며 다른 컴퓨터에서 재실행 가능한
+완전한 번들이 아닙니다.
 
 필요할 때만 ZIP 생성:
 
 ```matlab
-info = st_export_review_bundle('CreateArchive', true);
+info = st_export_test_asset_bundle('CreateArchive', true);
 ```
 
 ### 12.2 `st_export_test_bundle`
@@ -522,7 +525,7 @@ result/
 ├── sldv/             # generated latest data와 manifest
 ├── state/            # 증분 workflow checkpoint
 ├── runs/             # Test 실행 통합 보고서
-├── exports/          # 확인용 보관, 재실행 번들과 ZIP
+├── exports/          # 테스트 자산, 재실행 번들과 ZIP
 ├── verification/     # QUICK/RUNTIME/CERTIFY 결과
 ├── latest.json       # 최신 normal run 포인터
 └── TestSummary.xlsx  # 최신 normal run 요약

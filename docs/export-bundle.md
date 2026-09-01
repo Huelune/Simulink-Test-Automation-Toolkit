@@ -1,18 +1,19 @@
 # Reproducible test bundle export
 
-## 빠른 확인용 보관과의 구분
+## 테스트 자산 통합 관리 번들과의 구분
 
-기존 결과와 저장된 내부 Harness를 먼저 확인하는 목적이라면 다음 명령을
-사용합니다.
+Test Manager 파일, 저장된 내부 Harness, Harness 입력과 Coverage 결과를
+한 폴더에서 관리하려면 다음 명령을 사용합니다.
 
 ```matlab
-st_export_review_bundle
+st_export_test_asset_bundle
 ```
 
-이 명령은 `result/exports/review/`에 최상위 모델, Test File, 관리 Excel과
-기존 통합 보고서를 복사합니다. 모델 dependency 분석, Harness 입력 수집,
-Toolbox 분석, 전체 파일 SHA-256과 ZIP 생성을 기본적으로 생략합니다.
-결과 폴더는 검토·보관용이며 `run_exported_tests`를 포함하지 않습니다.
+이 명령은 `result/exports/assets/`에 내부 Harness가 저장된 최상위 모델,
+Test Manager 파일, 관리 Excel, 대상별 Signal Editor·SLDV 입력과 기존 통합
+보고서·Coverage를 복사합니다. 전체 모델 dependency 분석, Toolbox 분석,
+전체 파일 SHA-256과 ZIP 생성을 기본적으로 생략합니다. 결과 폴더는 테스트
+자산 관리용이며 `run_exported_tests`를 포함하지 않습니다.
 
 `st_export_test_bundle`은 다른 컴퓨터에서의 재실행이 필요할 때 사용하는
 완전한 번들이며 아래의 재현성 검사를 모두 수행합니다.
