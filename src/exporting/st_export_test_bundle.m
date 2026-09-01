@@ -15,6 +15,8 @@ function info = st_export_test_bundle(varargin)
 %                   Include the selected integrated report (default true).
 %                   Verification snapshots set this false so an existing
 %                   report is not required before an isolated runtime run.
+%     Profile       'REPRODUCIBLE' (default) or internal 'REVIEW'. Use
+%                   st_export_review_bundle for the public review workflow.
 
 %   The source model and Test File must be saved before export. Missing
 %   model dependencies stop the export instead of creating a partial
@@ -32,6 +34,8 @@ addParameter(p, 'CreateArchive', true, ...
     @(x) islogical(x) && isscalar(x));
 addParameter(p, 'IncludeReferenceReport', true, ...
     @(x) islogical(x) && isscalar(x));
+addParameter(p, 'Profile', 'REPRODUCIBLE', ...
+    @(x) ischar(x) || isstring(x));
 parse(p, varargin{:});
 
 cfg = st_require_runtime_target();
@@ -42,22 +46,30 @@ end
 runId = strtrim(char(string(p.Results.RunId)));
 createArchive = p.Results.CreateArchive;
 includeReferenceReport = p.Results.IncludeReferenceReport;
+profile = normalize_export_profile(p.Results.Profile);
+reproducible = strcmp(profile, 'REPRODUCIBLE');
+if reproducible
+    exportTitle = 'Reproducible Test Bundle Export';
+else
+    exportTitle = 'Test Review Bundle Export';
+end
 
 totalTimer = tic;
 fprintf('\n============================================\n');
-fprintf('Reproducible Test Bundle Export\n');
+fprintf('%s\n', exportTitle);
 fprintf('Model       : %s\n', cfg.TopModel);
 fprintf('Destination : %s\n', destination);
 fprintf('Run         : %s\n', runId);
+fprintf('Profile     : %s\n', profile);
 fprintf('Archive     : %s\n', on_off_text(createArchive));
 fprintf('Start       : %s\n', console_timestamp_text());
 fprintf('============================================\n');
 
 st_log(cfg, 'INFO', ...
     ['Export Test Bundle start | Model=%s | Destination=%s | ' ...
-     'RunId=%s | Archive=%d | ReferenceReport=%d'], ...
-    cfg.TopModel, destination, runId, logical(createArchive), ...
-    logical(includeReferenceReport));
+     'RunId=%s | Profile=%s | Archive=%d | ReferenceReport=%d'], ...
+    cfg.TopModel, destination, runId, profile, ...
+    logical(createArchive), logical(includeReferenceReport));
 
 currentStage = 'Validate Export Sources';
 stageTimer = start_step(currentStage);
@@ -75,8 +87,14 @@ end
 
 assert_saved_model(cfg);
 assert_saved_test_file(cfg);
-sourceModelSignature = st_file_signature(cfg.ModelFile);
-sourceTestSignature = st_file_signature(cfg.TestFile);
+sourceModelSignature = struct();
+sourceTestSignature = struct();
+if reproducible
+    sourceModelSignature = st_file_signature(cfg.ModelFile);
+    sourceTestSignature = st_file_signature(cfg.TestFile);
+else
+    fprintf('Source SHA-256 validation: SKIP (review profile)\n');
+end
 targets = st_load_targets(cfg.OnlyEnabled);
 fprintf('Targets      : %d\n', height(targets));
 finish_step(currentStage, stageTimer);
@@ -85,11 +103,18 @@ currentStage = 'Discover Model Dependencies';
 stageTimer = start_step(currentStage);
 st_log(cfg, 'DEBUG', 'Dependency analysis start | Model=%s', ...
     cfg.ModelFile);
-[dependencyFiles, missingDependencies] = discover_dependencies(cfg.ModelFile);
-if ~isempty(missingDependencies)
-    error('simtest:ExportDependencyMissing', ...
-        'Cannot create a complete bundle. Missing dependencies: %s', ...
-        strjoin(missingDependencies, ', '));
+if reproducible
+    [dependencyFiles, missingDependencies] = ...
+        discover_dependencies(cfg.ModelFile);
+    if ~isempty(missingDependencies)
+        error('simtest:ExportDependencyMissing', ...
+            'Cannot create a complete bundle. Missing dependencies: %s', ...
+            strjoin(missingDependencies, ', '));
+    end
+else
+    dependencyFiles = {canonical_path(cfg.ModelFile)};
+    fprintf(['Model dependency analysis: SKIP ' ...
+        '(review profile copies the top model only)\n']);
 end
 assert_saved_dependency_models(dependencyFiles);
 st_log(cfg, 'DEBUG', 'Dependency analysis done | count=%d', ...
@@ -126,12 +151,16 @@ mkdir(templateDirectory);
 mkdir(workspaceDirectory);
 
 projectRoot = st_project_root();
-copyfile_checked(fullfile(projectRoot, 'st_setup.m'), ...
-    fullfile(templateDirectory, 'st_setup.m'));
-copyfile_checked(fullfile(projectRoot, 'VERSION.txt'), ...
-    fullfile(templateDirectory, 'VERSION.txt'));
-copyfile_checked(fullfile(projectRoot, 'src'), ...
-    fullfile(templateDirectory, 'src'));
+if reproducible
+    copyfile_checked(fullfile(projectRoot, 'st_setup.m'), ...
+        fullfile(templateDirectory, 'st_setup.m'));
+    copyfile_checked(fullfile(projectRoot, 'VERSION.txt'), ...
+        fullfile(templateDirectory, 'VERSION.txt'));
+    copyfile_checked(fullfile(projectRoot, 'src'), ...
+        fullfile(templateDirectory, 'src'));
+else
+    fprintf('Automation runtime copy: SKIP (review profile)\n');
+end
 
 copyfile_checked(cfg.ManagementExcel, ...
     fullfile(templateDirectory, 'TestManagement.xlsx'));
@@ -166,16 +195,21 @@ finish_step(currentStage, stageTimer);
 
 currentStage = 'Collect Target Inputs';
 stageTimer = start_step(currentStage);
-targetInventory = collect_target_inputs( ...
-    targets, cfg, stagingDirectory, templateDirectory);
-
 sldvManifestBundlePath = '';
-if isfile(cfg.SldvManifestFile)
-    sldvManifestOutput = fullfile( ...
-        templateDirectory, 'result', 'sldv', 'sldv_manifest.mat');
-    copyfile_checked(cfg.SldvManifestFile, sldvManifestOutput);
-    sldvManifestBundlePath = ...
-        bundle_path(stagingDirectory, sldvManifestOutput);
+if reproducible
+    targetInventory = collect_target_inputs( ...
+        targets, cfg, stagingDirectory, templateDirectory);
+    if isfile(cfg.SldvManifestFile)
+        sldvManifestOutput = fullfile( ...
+            templateDirectory, 'result', 'sldv', 'sldv_manifest.mat');
+        copyfile_checked(cfg.SldvManifestFile, sldvManifestOutput);
+        sldvManifestBundlePath = ...
+            bundle_path(stagingDirectory, sldvManifestOutput);
+    end
+else
+    targetInventory = collect_review_targets(targets, cfg);
+    fprintf(['Harness and SLDV input collection: SKIP ' ...
+        '(review profile uses saved artifacts)\n']);
 end
 finish_step(currentStage, stageTimer);
 
@@ -194,14 +228,21 @@ finish_step(currentStage, stageTimer);
 currentStage = 'Build Bundle Manifest';
 stageTimer = start_step(currentStage);
 resourceDirectory = fullfile(projectRoot, 'resources', 'export_bundle');
-runnerOutput = fullfile(stagingDirectory, 'run_exported_tests.m');
-copyfile_checked(fullfile(resourceDirectory, 'run_exported_tests.m'), ...
-    runnerOutput);
-
-products = discover_products(dependencyFiles);
+if reproducible
+    runnerOutput = fullfile(stagingDirectory, 'run_exported_tests.m');
+    copyfile_checked(fullfile(resourceDirectory, 'run_exported_tests.m'), ...
+        runnerOutput);
+    products = discover_products(dependencyFiles);
+    readmeResource = 'README.bundle.ko.md';
+else
+    products = repmat(struct('Name', '', 'Version', ''), 0, 1);
+    readmeResource = 'README.review.ko.md';
+    fprintf('Toolbox dependency analysis: SKIP (review profile)\n');
+end
 manifest = struct();
 manifest.Version = 1;
 manifest.BundleId = bundleId;
+manifest.Profile = profile;
 manifest.CreatedAt = timestamp_text();
 manifest.MATLABRelease = version('-release');
 manifest.TopModel = cfg.TopModel;
@@ -221,15 +262,16 @@ manifest.Dependencies = dependencyInventory;
 manifest.Targets = targetInventory;
 manifest.RequiredProducts = products;
 manifest.Policy = struct( ...
+    'Reproducible', logical(reproducible), ...
     'SourceUnchanged', true, ...
-    'TemplateImmutable', true, ...
-    'FreshWorkspacePerRun', true, ...
-    'ExactMATLABReleaseRequiredByDefault', true, ...
+    'TemplateImmutable', logical(reproducible), ...
+    'FreshWorkspacePerRun', logical(reproducible), ...
+    'ExactMATLABReleaseRequiredByDefault', logical(reproducible), ...
     'PreparationWorkflowIncluded', false, ...
     'ReferenceReportIncluded', logical(includeReferenceReport));
 
 readmeTemplate = fileread( ...
-    fullfile(resourceDirectory, 'README.bundle.ko.md'));
+    fullfile(resourceDirectory, readmeResource));
 readmeText = strrep(readmeTemplate, '{{BUNDLE_ID}}', bundleId);
 readmeText = strrep(readmeText, '{{MATLAB_RELEASE}}', ...
     manifest.MATLABRelease);
@@ -237,12 +279,20 @@ readmeText = strrep(readmeText, '{{TOP_MODEL}}', cfg.TopModel);
 readmeText = strrep(readmeText, '{{REFERENCE_RUN}}', referenceRunId);
 write_text(fullfile(stagingDirectory, 'README.md'), readmeText);
 
-manifest.Files = inventory_files(stagingDirectory, ...
-    {'manifest.json'});
+if reproducible
+    manifest.Files = inventory_files(stagingDirectory, ...
+        {'manifest.json'});
+else
+    manifest.Files = inventory_files_light(stagingDirectory, ...
+        {'manifest.json'});
+    fprintf('Bundle file SHA-256 inventory: SKIP (review profile)\n');
+end
 write_json(fullfile(stagingDirectory, 'manifest.json'), manifest);
 
-assert_source_unchanged(cfg.ModelFile, sourceModelSignature);
-assert_source_unchanged(cfg.TestFile, sourceTestSignature);
+if reproducible
+    assert_source_unchanged(cfg.ModelFile, sourceModelSignature);
+    assert_source_unchanged(cfg.TestFile, sourceTestSignature);
+end
 assert_saved_dependency_models(dependencyFiles);
 fprintf('Inventory files : %d\n', numel(manifest.Files));
 finish_step(currentStage, stageTimer);
@@ -274,6 +324,8 @@ end
 
 info = struct( ...
     'BundleId', bundleId, ...
+    'Profile', profile, ...
+    'Reproducible', logical(reproducible), ...
     'BundleDirectory', finalDirectory, ...
     'Archive', archivePath, ...
     'Manifest', fullfile(finalDirectory, 'manifest.json'), ...
@@ -294,7 +346,11 @@ fprintf('Folder  : %s\n', finalDirectory);
 if ~isempty(archivePath)
     fprintf('ZIP     : %s\n', archivePath);
 end
-fprintf('Run     : run_exported_tests\n');
+if reproducible
+    fprintf('Run     : run_exported_tests\n');
+else
+    fprintf('Use     : review/archive only; rerun is not supported\n');
+end
 fprintf('============================================\n');
 
 catch ME
@@ -471,6 +527,21 @@ for i = 1:height(targets)
 end
 end
 
+function inventory = collect_review_targets(targets, cfg)
+inventory = repmat(empty_target(), 0, 1);
+for i = 1:height(targets)
+    row = targets(i, :);
+    item = empty_target();
+    item.No = double(row.No);
+    item.CUTName = char(row.CUTName);
+    item.CUTPath = st_normalize_cut_path(row.CUTPath, cfg.TopModel);
+    item.HarnessName = char(row.HarnessName);
+    item.TestCaseName = char(row.TestCaseName);
+    item.SldvMode = char(row.SldvMode);
+    inventory(end + 1, 1) = item; %#ok<AGROW>
+end
+end
+
 function output = copy_optional_input(profile, fieldName, outputDir, root)
 output = '';
 if ~isfield(profile, fieldName)
@@ -536,6 +607,27 @@ for i = 1:numel(listing)
         'BundlePath', relative, ...
         'SHA256', signature.SHA256, ...
         'Bytes', signature.Bytes);
+    inventory(end + 1, 1) = item; %#ok<AGROW>
+end
+end
+
+function inventory = inventory_files_light(root, excluded)
+listing = dir(fullfile(root, '**', '*'));
+inventory = repmat(struct( ...
+    'BundlePath', '', 'SHA256', '', 'Bytes', 0), 0, 1);
+for i = 1:numel(listing)
+    if listing(i).isdir
+        continue;
+    end
+    path = fullfile(listing(i).folder, listing(i).name);
+    relative = bundle_path(root, path);
+    if any(strcmp(relative, excluded))
+        continue;
+    end
+    item = struct( ...
+        'BundlePath', relative, ...
+        'SHA256', '', ...
+        'Bytes', double(listing(i).bytes));
     inventory(end + 1, 1) = item; %#ok<AGROW>
 end
 end
@@ -636,6 +728,21 @@ if enabled
     value = 'ON';
 else
     value = 'OFF';
+end
+end
+
+function value = normalize_export_profile(value)
+text = string(value);
+allowed = {'REPRODUCIBLE', 'REVIEW'};
+if ~isscalar(text)
+    error('simtest:InvalidExportProfile', ...
+        'Export Profile must be a scalar text value.');
+end
+value = upper(strtrim(char(text)));
+if isempty(value) || ~ismember(value, allowed)
+    error('simtest:InvalidExportProfile', ...
+        'Invalid export Profile: %s. Allowed: %s.', ...
+        value, strjoin(allowed, ', '));
 end
 end
 

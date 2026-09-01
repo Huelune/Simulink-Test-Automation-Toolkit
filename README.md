@@ -512,7 +512,28 @@ Coverage 미달은 보고 항목이며 현재 버전에서 Test 실패로
 가리킵니다. 보고서는 로컬 내부용이며 Notion이나 외부
 저장소로 자동 전송하지 않습니다.
 
-## 재실행 가능한 테스트 번들 내보내기
+## 테스트 결과 빠른 보관과 재실행 번들 내보내기
+
+저장된 Harness와 기존 결과를 우선 확인하려면 빠른 보관 명령을 사용합니다.
+
+```matlab
+st_export_review_bundle
+```
+
+기본 출력은 `result/exports/review/{timestamp}_{id}/`입니다. 최상위 모델에
+저장된 내부 Harness, Test File, 관리 Excel과 최신 통합 보고서를 복사하지만
+모델 dependency, 외부 Harness 입력, Toolbox와 파일 checksum은 분석하지
+않습니다. ZIP도 기본적으로 생성하지 않습니다. 따라서 빠른 검토와 보관에는
+적합하지만 다른 컴퓨터에서의 재실행을 보장하지 않습니다.
+
+ZIP이 필요하거나 특정 결과를 선택하려면 다음처럼 실행합니다.
+
+```matlab
+st_export_review_bundle('CreateArchive', true)
+st_export_review_bundle('RunId', '20260830_120000_example')
+```
+
+완전한 재실행 번들이 필요할 때만 아래 명령을 사용합니다.
 
 테스트 준비와 실행이 끝난 뒤 다음 독립 명령으로 현재 저장 상태를
 다른 컴퓨터에 전달할 수 있는 번들로 내보낼 수 있습니다.

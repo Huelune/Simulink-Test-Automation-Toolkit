@@ -454,9 +454,28 @@ summary = st_verify_all( ...
 가리킵니다. 상세 판정은 `docs/user-manual.md`와 `docs/verification.md`를
 참조합니다.
 
-## 12. 재실행 번들 내보내기
+## 12. 확인용 보관과 재실행 번들 내보내기
 
-### 12.1 `st_export_test_bundle`
+### 12.1 `st_export_review_bundle`
+
+저장된 최상위 모델의 내부 Harness, Test File, 관리 Excel과 기존 결과만
+빠르게 복사합니다. dependency 분석, Harness 입력 수집, Toolbox 분석과
+SHA-256 계산을 생략하며 ZIP도 기본적으로 만들지 않습니다.
+
+```matlab
+info = st_export_review_bundle();
+```
+
+출력: `result/exports/review/{timestamp}_{id}/`. 이 보관본은 확인용이며
+다른 컴퓨터에서 재실행 가능한 완전한 번들이 아닙니다.
+
+필요할 때만 ZIP 생성:
+
+```matlab
+info = st_export_review_bundle('CreateArchive', true);
+```
+
+### 12.2 `st_export_test_bundle`
 
 저장된 모델, Test File, 관리 Excel, dependency와 입력을 독립 실행 번들로
 복사합니다. 원본 모델과 Test File은 저장된 상태여야 합니다.
@@ -503,7 +522,7 @@ result/
 ├── sldv/             # generated latest data와 manifest
 ├── state/            # 증분 workflow checkpoint
 ├── runs/             # Test 실행 통합 보고서
-├── exports/          # 재실행 번들과 ZIP
+├── exports/          # 확인용 보관, 재실행 번들과 ZIP
 ├── verification/     # QUICK/RUNTIME/CERTIFY 결과
 ├── latest.json       # 최신 normal run 포인터
 └── TestSummary.xlsx  # 최신 normal run 요약
