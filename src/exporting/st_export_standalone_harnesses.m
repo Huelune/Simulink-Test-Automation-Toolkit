@@ -11,7 +11,12 @@ if ~isfolder(destination), mkdir(destination); end
 bundlePaths = strings(height(targets), 1);
 workRoot = tempname(destination);
 mkdir(workRoot);
-workCleanup = onCleanup(@() remove_work_root(workRoot)); %#ok<NASGU>
+sourceWasLoaded = bdIsLoaded(topModel);
+sourceWasOpen = false;
+openHarnesses = repmat(struct( ...
+    'Owner', '', 'Name', '', 'WasOpen', false), 0, 1);
+sourceDetached = false;
+sessionCleanup = onCleanup(@cleanup_export_session); %#ok<NASGU>
 
 [~, sourceName, extension] = fileparts(sourceModelFile);
 if ~strcmp(sourceName, char(topModel))
@@ -25,8 +30,6 @@ temporaryModel = char(topModel);
 temporaryModelFile = fullfile(workRoot, [sourceName extension]);
 copy_checked(sourceModelFile, temporaryModelFile);
 
-sourceWasLoaded = bdIsLoaded(topModel);
-sourceWasOpen = false;
 if sourceWasLoaded
     try
         sourceWasOpen = strcmp(get_param(topModel, 'Open'), 'on');
@@ -38,16 +41,16 @@ openHarnesses = close_open_source_harnesses(topModel);
 try
     close_system(topModel, 0);
 catch ME
-    restore_source_harnesses(openHarnesses);
-    if ~sourceWasLoaded, close_model(topModel); end
+    if bdIsLoaded(topModel)
+        restore_source_harnesses(openHarnesses);
+    else
+        sourceDetached = true;
+    end
     rethrow(ME);
 end
-sourceSessionCleanup = onCleanup(@() restore_source_session( ...
-    sourceModelFile, topModel, sourceWasLoaded, sourceWasOpen, ...
-    openHarnesses)); %#ok<NASGU>
+sourceDetached = true;
 
 load_system(temporaryModelFile);
-modelCleanup = onCleanup(@() close_model(temporaryModel)); %#ok<NASGU>
 loadedTemporaryFile = char(get_param(temporaryModel, 'FileName'));
 if ~same_path(loadedTemporaryFile, temporaryModelFile)
     error('simtest:AssetTempModelLoadMismatch', ...
@@ -108,6 +111,31 @@ for i = 1:height(targets)
     keyPaths(end+1,1) = string(relative); %#ok<AGROW>
     bundlePaths(i) = string(relative);
 end
+clear sessionCleanup;
+
+    function cleanup_export_session()
+        restoreError = [];
+        try
+            if sourceDetached
+                close_model(topModel);
+                if sourceWasLoaded
+                    load_system(sourceModelFile);
+                    loadedSourceFile = char(get_param(topModel, 'FileName'));
+                    if ~same_path(loadedSourceFile, sourceModelFile)
+                        error('simtest:AssetSourceRestoreMismatch', ...
+                            ['MATLAB restored a different source model ' ...
+                             'file: %s'], loadedSourceFile);
+                    end
+                    if sourceWasOpen, open_system(topModel); end
+                    restore_source_harnesses(openHarnesses);
+                end
+            end
+        catch ME
+            restoreError = ME;
+        end
+        remove_work_root(workRoot);
+        if ~isempty(restoreError), rethrow(restoreError); end
+    end
 end
 
 function folder = target_folder(row)
@@ -163,22 +191,6 @@ if islogical(raw) || isnumeric(raw)
 end
 text = lower(strtrim(char(string(raw))));
 value = ismember(text, {'true','1','yes','on'});
-end
-
-function restore_source_session( ...
-        sourceModelFile, topModel, sourceWasLoaded, sourceWasOpen, ...
-        openHarnesses)
-if bdIsLoaded(topModel), close_system(topModel, 0); end
-if ~sourceWasLoaded, return; end
-load_system(sourceModelFile);
-loadedSourceFile = char(get_param(topModel, 'FileName'));
-if ~same_path(loadedSourceFile, sourceModelFile)
-    error('simtest:AssetSourceRestoreMismatch', ...
-        'MATLAB restored a different source model file: %s', ...
-        loadedSourceFile);
-end
-if sourceWasOpen, open_system(topModel); end
-restore_source_harnesses(openHarnesses);
 end
 
 function restore_source_harnesses(openHarnesses)
