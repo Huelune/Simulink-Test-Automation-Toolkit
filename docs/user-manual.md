@@ -124,7 +124,13 @@ disp(cfg.ManagementExcel)
 | `TestCaseName` | Test Manager Test Case 이름 |
 
 실행 범위와 갱신 정책을 제어하려면 `Enabled`, `SldvMode`, `SldvDataFile`,
-`ExpectedUpdateMode`, `PreparationMode`, `PreparationFromStage`를 사용합니다.
+`ExpectedUpdateMode`, `CoverageFilterMode`, `CoverageFilterAction`,
+`CoverageFilterRationale`, `PreparationMode`, `PreparationFromStage`를 사용합니다.
+
+Coverage 자동 필터를 사용하려면 `CoverageFilterMode`를 `SUBSYSTEM` 또는
+`ALL_CONTENT`로 정하고, `CoverageFilterAction`과
+`CoverageFilterRationale`을 함께 입력합니다. CUT 자체가 아니라 바로 아래의
+Subsystem만 필터 대상이며, 기본 설정은 실행 중 Test Case별 임시 적용입니다.
 
 ## 5. 권장 실행 순서
 

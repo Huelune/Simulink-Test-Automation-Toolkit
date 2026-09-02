@@ -2,7 +2,7 @@ function state = st_invalidate_workflow_state(state, plan)
 %ST_INVALIDATE_WORKFLOW_STATE Clear checkpoints selected to run.
 
 stages = {'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR', ...
-    'ASSESSMENT','TEST_MANAGER','ALIGNMENT'};
+    'ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT'};
 for i = 1:height(plan)
     index = find_target(state, char(plan.Key(i)));
     if isempty(index)

@@ -39,6 +39,9 @@ workflow도 완료된 기능으로 기록하지 않습니다.
 | `SldvMode` | 아니요 | `OFF` | `OFF`, `FILE`, `GENERATE` |
 | `SldvDataFile` | 조건부 | 빈 값 | `FILE`일 때 필수. 절대 경로 또는 workbook 기준 상대 경로 |
 | `ExpectedUpdateMode` | 아니요 | `DEFAULT` | `DEFAULT`, `OFF`, `APPLY`. 행별 기대값 갱신 정책 |
+| `CoverageFilterMode` | 아니요 | `OFF` | `OFF`, `SUBSYSTEM`, `ALL_CONTENT`. CUT의 직속 하위 Subsystem 필터 생성 방식 |
+| `CoverageFilterAction` | 조건부 | 빈 값 | 필터 사용 시 `EXCLUDE` 또는 `JUSTIFY` |
+| `CoverageFilterRationale` | 조건부 | 빈 값 | 필터 사용 시 필수인 근거 문구 |
 | `PreparationMode` | 아니요 | `DEFAULT` | `DEFAULT`, `AUTO`, `FORCE`. 행별 준비 단계 재사용 정책 |
 | `PreparationFromStage` | 아니요 | `DEFAULT` | `FORCE` 실행을 시작할 준비 단계 |
 
@@ -273,7 +276,7 @@ st_run_from_harness( ...
 
 `Targets`에는 선택적으로 `PreparationMode`(`DEFAULT`, `AUTO`, `FORCE`)와
 `PreparationFromStage`(`DEFAULT`, `START`, `HARNESS`, `SLDV`,
-`HARNESS_CONFIG`, `SIGNAL_EDITOR`, `ASSESSMENT`, `TEST_MANAGER`,
+`HARNESS_CONFIG`, `SIGNAL_EDITOR`, `ASSESSMENT`, `COVERAGE_FILTER`, `TEST_MANAGER`,
 `ALIGNMENT`) 열을 둘 수 있습니다. 우선순위는 호출 옵션, Excel 행,
 전역 설정 순입니다. 준비 단계가 모두 캐시되어도 `RunGeneratedTests=true`이면
 선택된 테스트는 다시 실행합니다.
@@ -480,8 +483,22 @@ Assessment symbol
 ```matlab
 cfg.CoverageStructuralLevel = 'Decision';
 cfg.CoverageMetricSettings = 'dwe';
+cfg.CoverageFilterApplicationMode = 'RUNTIME';
 cfg.GenerateTestReport = true;
 ```
+
+Coverage 필터는 `Targets`의 각 행마다 독립된 `.cvf`로 생성됩니다. CUT 자체는
+필터링하지 않고 CUT 바로 아래의 `BlockType=SubSystem` 블록만 규칙 대상으로
+삼습니다. `SUBSYSTEM`은 하위 Subsystem 블록만, `ALL_CONTENT`는 해당 블록과
+내부 내용을 함께 처리합니다. 직속 하위 Subsystem이 없으면 WARN을 기록하고
+필터 없이 테스트를 계속합니다.
+
+기본 `RUNTIME` 모드는 실행 직전에 Test Case API로만 필터를 붙이고 `run(tf)`가
+끝나거나 오류가 나면 기존 수동 필터로 복원합니다. `PERSIST`는 Test Case별
+설정을 MLDATX에 저장합니다. 자동 필터를 Test File 수준에는 설정하지 않으며,
+Test Manager 화면의 필터 결과 표시는 제품 동작에 따라 Result Set 수준에서
+보일 수 있어도 적용 범위는 Test Case 설정을 따릅니다. 기존 Test File, Suite,
+Test Case의 수동 필터는 자동 필터와 함께 유지됩니다.
 
 각 실행은 다음 bundle을 생성합니다.
 
@@ -500,6 +517,7 @@ result/runs/{timestamp}_{run-id}/
 ```
 
 `TestSummary.xlsx`는 `Overview`, `Targets`, `Iterations`, `Coverage`,
+`CoverageFilters`,
 `ExpectedUpdates`, `Workflow`, `Metadata` Sheet를 포함합니다.
 Coverage는 전체, CUT, Test Case, Iteration 수준에서 Decision과
 Execution을 보고하며 분모가 0인 경우 `N/A`로 표시합니다.

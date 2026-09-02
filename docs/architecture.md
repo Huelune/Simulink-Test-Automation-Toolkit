@@ -15,6 +15,7 @@ Simulink-Test-Automation-Toolkit/
 │   ├── sldv/
 │   ├── signal_editor/
 │   ├── assessment/
+│   ├── coverage/
 │   ├── test_manager/
 │   ├── execution/
 │   ├── reporting/
@@ -39,7 +40,7 @@ Simulink-Test-Automation-Toolkit/
 | `workflow` | Full and existing-Harness orchestration entry points |
 | `config`, `targets` | Project settings, workbook parsing, model/CUT discovery and validation |
 | `harness`, `sldv`, `signal_editor` | Expensive model preparation and scenario data generation |
-| `assessment`, `test_manager` | Verification logic, Test Case, Iteration, and alignment management |
+| `assessment`, `coverage`, `test_manager` | Verification logic, per-Test-Case coverage filters, Test Case, Iteration, and alignment management |
 | `execution` | Test execution and expected-value update |
 | `exporting` | Immutable template bundle, dependency and input collection |
 | `verification` | QUICK/RUNTIME/CERTIFY orchestration, status aggregation, manual evidence and Excel/JSON/JUnit writers |
@@ -81,6 +82,10 @@ After MATLAB regression validation, a small `+simtest` package can be introduced
 - Coverage aggregation is outcome-weighted only across compatible CUT
   checksums. Coverage thresholds are report-only and do not alter test
   outcomes.
+- Managed coverage filters are generated before Test Manager preparation and
+  attached only through each Test Case coverage settings object. Runtime mode
+  restores manual settings after execution; persistent mode saves the
+  per-Test-Case attachment. Test File-level automatic attachment is forbidden.
 - Report bundles are local artifacts and have no Notion or repository
   publishing side effect.
 - Incremental workflow state is an operational cache under `result/state`.

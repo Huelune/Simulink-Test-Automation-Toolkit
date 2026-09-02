@@ -93,6 +93,9 @@ st_run_after_harness
 | `SldvMode` | 아니요 | `OFF`, `FILE`, `GENERATE` |
 | `SldvDataFile` | `FILE`에서 필수 | `sldv_data/Controller_sldvdata.mat` |
 | `ExpectedUpdateMode` | 아니요 | `DEFAULT`, `OFF`, `APPLY` |
+| `CoverageFilterMode` | 아니요 | `OFF`, `SUBSYSTEM`, `ALL_CONTENT` |
+| `CoverageFilterAction` | 필터 사용 시 | `EXCLUDE`, `JUSTIFY` |
+| `CoverageFilterRationale` | 필터 사용 시 | 검토 가능한 근거 문구 |
 | `PreparationMode` | 아니요 | `DEFAULT`, `AUTO`, `FORCE` |
 | `PreparationFromStage` | 아니요 | `DEFAULT`, `SLDV`, `ASSESSMENT` 등 |
 
@@ -129,6 +132,7 @@ cfg = st_config();
 cfg.RunGeneratedTests
 cfg.OverwriteTestFile
 cfg.ExpectedUpdateMode
+cfg.CoverageFilterApplicationMode
 cfg.PreparationMode
 cfg.CheckSharedSignalEditorDataFile
 cfg.IgnoreUnexpectedSldvInputs
@@ -141,7 +145,15 @@ cfg.SaveResultFiles
 cfg.RunGeneratedTests = false;
 cfg.OverwriteTestFile = false;
 cfg.ExpectedUpdateMode = 'OFF';
+cfg.CoverageFilterApplicationMode = 'RUNTIME';
 ```
+
+`CoverageFilterApplicationMode='RUNTIME'`은 `.cvf`를 실행 직전에 각 Test Case에
+API로 적용하고 실행 종료 또는 오류 시 기존 수동 필터로 복원합니다. `PERSIST`는
+Test Case별 필터 설정을 Test File에 저장합니다. 두 모드 모두 자동 필터를
+Test File 수준에는 기록하지 않습니다. 필터 규칙은 CUT 자체가 아닌 직속 하위
+Subsystem에만 생성되며, 직속 하위 Subsystem이 없으면 WARN 후 필터 없이
+테스트가 계속됩니다.
 
 실제 기본값은 파일을 수정해야 변경됩니다. Command Window에서 반환된 `cfg`만
 수정해도 다음 공개 명령의 새 `st_config()` 호출에는 반영되지 않습니다.
@@ -594,6 +606,7 @@ Scope:
 | `RUNS` | `result/runs`, `latest.json`, `TestSummary.xlsx` |
 | `EXPORTS` | `result/exports` |
 | `VERIFICATION` | `result/verification` |
+| `FILTERS` | `result/coverage_filters`; 다음 실행에서 자동 재생성 |
 | `ALL` | 위의 모든 알려진 생성물 |
 
 선택 범위 dry-run:

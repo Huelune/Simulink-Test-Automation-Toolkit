@@ -11,6 +11,9 @@ verifyTrue(testCase, endsWith(string(cfg.WorkflowStateFile), ...
     fullfile('result', 'state', 'workflow_state.mat')));
 verifyTrue(testCase, endsWith(string(cfg.WorkflowStateSummaryFile), ...
     fullfile('result', 'state', 'workflow_state.json')));
+verifyEqual(testCase, cfg.CoverageFilterApplicationMode, 'RUNTIME');
+verifyTrue(testCase, endsWith(string(cfg.CoverageFilterDir), ...
+    fullfile('result', 'coverage_filters')));
 end
 
 function testWorkflowOptionOverrides(testCase)
@@ -18,6 +21,11 @@ options = st_parse_workflow_options( ...
     'PreparationMode', 'force', 'FromStage', 'assessment');
 verifyEqual(testCase, options.PreparationMode, 'FORCE');
 verifyEqual(testCase, options.FromStage, 'ASSESSMENT');
+end
+
+function testCoverageFilterStageOverride(testCase)
+options = st_parse_workflow_options('FromStage', 'coverage_filter');
+verifyEqual(testCase, options.FromStage, 'COVERAGE_FILTER');
 end
 
 function testInvalidWorkflowOptionRejected(testCase)
@@ -37,7 +45,7 @@ end
 function testForcePlanPropagatesDownstream(testCase)
 plan = table((1:2).', 'VariableNames', {'No'});
 stages = {'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR', ...
-    'ASSESSMENT','TEST_MANAGER','ALIGNMENT'};
+    'ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT'};
 for i = 1:numel(stages)
     plan.(['Run' stages{i}]) = false(2,1);
     plan.(['Action' stages{i}]) = repmat("CACHED", 2, 1);
@@ -48,6 +56,7 @@ plan = st_force_plan_downstream( ...
     plan, [false; true], 'ASSESSMENT', 'test force');
 verifyFalse(testCase, plan.RunSIGNAL_EDITOR(2));
 verifyTrue(testCase, plan.RunASSESSMENT(2));
+verifyTrue(testCase, plan.RunCOVERAGE_FILTER(2));
 verifyTrue(testCase, plan.RunTEST_MANAGER(2));
 verifyTrue(testCase, plan.RunALIGNMENT(2));
 verifyEqual(testCase, plan.ReasonASSESSMENT(2), "test force");

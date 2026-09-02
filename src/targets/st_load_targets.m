@@ -5,6 +5,7 @@ function T = st_load_targets(onlyEnabled)
 %   CUTName, CUTPath, HarnessName, TestCaseName
 % Optional:
 %   No, Enabled, SldvMode, SldvDataFile, ExpectedUpdateMode,
+%   CoverageFilterMode, CoverageFilterAction, CoverageFilterRationale,
 %   PreparationMode, PreparationFromStage
 %
 % Important:
@@ -64,6 +65,15 @@ idxSldvDataFile = find_column_optional(names, ...
 idxExpectedUpdateMode = find_column_optional(names, ...
     {'ExpectedUpdateMode','Expected Update Mode','기대값갱신모드'});
 
+idxCoverageFilterMode = find_column_optional(names, ...
+    {'CoverageFilterMode','Coverage Filter Mode','커버리지필터모드'});
+
+idxCoverageFilterAction = find_column_optional(names, ...
+    {'CoverageFilterAction','Coverage Filter Action','커버리지필터동작'});
+
+idxCoverageFilterRationale = find_column_optional(names, ...
+    {'CoverageFilterRationale','Coverage Filter Rationale','커버리지필터사유'});
+
 idxPreparationMode = find_column_optional(names, ...
     {'PreparationMode','Preparation Mode','준비실행모드'});
 
@@ -106,6 +116,20 @@ ExpectedUpdateMode = repmat("DEFAULT", n, 1);
 
 if ~isempty(idxExpectedUpdateMode)
     ExpectedUpdateMode = string(raw{:, idxExpectedUpdateMode});
+end
+
+CoverageFilterMode = repmat("OFF", n, 1);
+CoverageFilterAction = strings(n, 1);
+CoverageFilterRationale = strings(n, 1);
+
+if ~isempty(idxCoverageFilterMode)
+    CoverageFilterMode = string(raw{:, idxCoverageFilterMode});
+end
+if ~isempty(idxCoverageFilterAction)
+    CoverageFilterAction = string(raw{:, idxCoverageFilterAction});
+end
+if ~isempty(idxCoverageFilterRationale)
+    CoverageFilterRationale = string(raw{:, idxCoverageFilterRationale});
 end
 
 PreparationMode = repmat("DEFAULT", n, 1);
@@ -183,8 +207,16 @@ TestCaseName = TestCaseName(keep);
 SldvMode = SldvMode(keep);
 SldvDataFile = SldvDataFile(keep);
 ExpectedUpdateMode = ExpectedUpdateMode(keep);
+CoverageFilterMode = CoverageFilterMode(keep);
+CoverageFilterAction = CoverageFilterAction(keep);
+CoverageFilterRationale = CoverageFilterRationale(keep);
 PreparationMode = PreparationMode(keep);
 PreparationFromStage = PreparationFromStage(keep);
+
+[CoverageFilterMode, CoverageFilterAction, CoverageFilterRationale] = ...
+    st_resolve_coverage_filter_settings( ...
+        CoverageFilterMode, CoverageFilterAction, ...
+        CoverageFilterRationale);
 
 ExpectedUpdateMode = ...
     st_resolve_expected_update_modes( ...
@@ -202,7 +234,8 @@ end
 
 validPreparationStages = [ ...
     "DEFAULT", "START", "HARNESS", "SLDV", "HARNESS_CONFIG", ...
-    "SIGNAL_EDITOR", "ASSESSMENT", "TEST_MANAGER", "ALIGNMENT"];
+    "SIGNAL_EDITOR", "ASSESSMENT", "COVERAGE_FILTER", ...
+    "TEST_MANAGER", "ALIGNMENT"];
 invalidPreparationStages = ...
     ~ismember(PreparationFromStage, validPreparationStages);
 if any(invalidPreparationStages)
@@ -222,6 +255,9 @@ T = table( ...
     SldvMode, ...
     SldvDataFile, ...
     ExpectedUpdateMode, ...
+    CoverageFilterMode, ...
+    CoverageFilterAction, ...
+    CoverageFilterRationale, ...
     PreparationMode, ...
     PreparationFromStage);
 

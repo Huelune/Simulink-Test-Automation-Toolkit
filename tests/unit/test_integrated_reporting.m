@@ -97,6 +97,7 @@ cfg = st_config();
 verifyEqual(testCase, cfg.CoverageStructuralLevel, 'Decision');
 verifyEqual(testCase, cfg.CoverageMetricSettings, 'dwe');
 verifyFalse(testCase, cfg.CoverageIncludeReferencedModels);
+verifyEqual(testCase, cfg.CoverageFilterApplicationMode, 'RUNTIME');
 verifyTrue(testCase, cfg.GenerateTestReport);
 end
 

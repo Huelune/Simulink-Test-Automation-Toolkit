@@ -2,7 +2,7 @@ function plan = st_force_plan_downstream(plan, rows, fromStage, reason)
 %ST_FORCE_PLAN_DOWNSTREAM Mark selected rows and downstream stages to run.
 
 stages = ["HARNESS", "SLDV", "HARNESS_CONFIG", "SIGNAL_EDITOR", ...
-    "ASSESSMENT", "TEST_MANAGER", "ALIGNMENT"];
+    "ASSESSMENT", "COVERAGE_FILTER", "TEST_MANAGER", "ALIGNMENT"];
 startIndex = find(stages == upper(string(fromStage)), 1);
 if isempty(startIndex)
     error('simtest:InvalidPreparationFromStage', ...

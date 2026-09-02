@@ -41,11 +41,16 @@ SldvMode = ["OFF"; "OFF"; "OFF"; "OFF"; "OFF"; "GENERATE"];
 SldvDataFile = strings(6,1);
 ExpectedUpdateMode = ["APPLY"; "APPLY"; "APPLY"; ...
     "APPLY"; "OFF"; "APPLY"];
+CoverageFilterMode = ["SUBSYSTEM"; repmat("OFF", 5, 1)];
+CoverageFilterAction = ["JUSTIFY"; strings(5, 1)];
+CoverageFilterRationale = ["Verification-only child subsystem"; ...
+    strings(5, 1)];
 PreparationMode = repmat("DEFAULT", 6, 1);
 PreparationFromStage = repmat("DEFAULT", 6, 1);
 targets = table(No, Enabled, CUTName, CUTPath, HarnessName, ...
     TestCaseName, SldvMode, SldvDataFile, ExpectedUpdateMode, ...
-    PreparationMode, PreparationFromStage);
+    CoverageFilterMode, CoverageFilterAction, ...
+    CoverageFilterRationale, PreparationMode, PreparationFromStage);
 writetable(targets, managementFile, 'Sheet', 'Targets');
 
 TopModel = modelName; %#ok<NASGU>
@@ -68,6 +73,8 @@ add_block('simulink/Math Operations/Bias', [path '/MismatchBias'], ...
     'Bias', '1', 'Position', [100 45 155 75]);
 add_block('simulink/Sinks/Out1', [path '/y'], ...
     'Position', [210 53 240 67]);
+add_block('simulink/Ports & Subsystems/Subsystem', ...
+    [path '/FilterOnlyChild'], 'Position', [100 105 155 145]);
 add_line(path, 'u/1', 'MismatchBias/1');
 add_line(path, 'MismatchBias/1', 'y/1');
 end

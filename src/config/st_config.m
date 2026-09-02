@@ -326,6 +326,18 @@ cfg.CoverageStructuralLevel = 'Decision';
 cfg.CoverageMetricSettings = 'dwe';
 cfg.CoverageIncludeReferencedModels = false;
 
+% RUNTIME:
+%   Apply each generated filter to its Test Case only while run(tf) is
+%   active, then restore and save the original Test Case settings.
+% PERSIST:
+%   Keep the generated per-Test-Case filter settings in the MLDATX file.
+cfg.CoverageFilterApplicationMode = 'RUNTIME';
+
+% Generated CVF files are toolkit-owned artifacts. Files outside this
+% directory are treated as manual filters and are never removed.
+cfg.CoverageFilterDir = ...
+    fullfile(rootDir, 'result', 'coverage_filters');
+
 cfg.GenerateTestReport = true;
 cfg.TestRunRootDir = ...
     fullfile(rootDir, 'result', 'runs');

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added Excel-driven per-Test-Case coverage filters with `OFF`, `SUBSYSTEM`,
+  and `ALL_CONTENT` selection, `EXCLUDE`/`JUSTIFY` actions, required
+  rationale, API-only `RUNTIME` or `PERSIST` application, managed CVF
+  cleanup, incremental workflow checkpoints, and integrated report metadata.
 - Changed CUT path discovery to enforce one-to-one subsystem assignment,
   remove already claimed paths from later recommendations, reject duplicate
   existing ownership, and update the management workbook only after every

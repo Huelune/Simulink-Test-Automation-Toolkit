@@ -29,6 +29,16 @@ verifyError(testCase, ...
 end
 
 
+function testFilterScopeTargetsManagedCoverageDirectory(testCase)
+cfg = st_config();
+plan = st_cleanup_results('Scope', 'FILTERS');
+
+verifyEqual(testCase, height(plan), 1);
+verifyEqual(testCase, plan.Scope, "FILTERS");
+verifyEqual(testCase, plan.Path, string(cfg.CoverageFilterDir));
+end
+
+
 function tf = under_result(paths, root)
 root = char(java.io.File(root).getCanonicalPath());
 prefix = [root filesep];
