@@ -1,10 +1,16 @@
-function [cleanupObj, R] = ...
-    st_apply_test_case_coverage_filters(tf, testCases, targetConfig, cfg)
+function [cleanupObj, R, session] = ...
+    st_apply_test_case_coverage_filters(tf, testCases, targetConfig, cfg, varargin)
 %ST_APPLY_TEST_CASE_COVERAGE_FILTERS Apply managed CVFs through the API.
 %
-% RUNTIME returns an onCleanup that restores manual/original settings and
-% removes toolkit-managed filter references. PERSIST saves the configured
-% per-Test-Case filters and returns [].
+% RUNTIME returns an onCleanup plus a session.Restore function. Call
+% session.Restore explicitly whenever restoration failure must be handled as
+% a structured execution failure. The onCleanup is only a last-resort guard.
+% PERSIST saves the configured per-Test-Case filters and returns [].
+
+p = inputParser;
+addParameter(p, 'FilterFiles', strings(0, 1), ...
+    @(x) ischar(x) || isstring(x) || iscellstr(x));
+parse(p, varargin{:});
 
 applicationMode = ...
     st_coverage_filter_application_mode(cfg.CoverageFilterApplicationMode);
@@ -13,13 +19,24 @@ if isempty(testCases)
     error('simtest:CoverageFilterNoTestCases', ...
         'No Test Cases were supplied for coverage filter application.');
 end
-
 caseCells = num2cell(testCases(:));
 n = numel(caseCells);
 caseNames = strings(n, 1);
 coverageObjects = cell(n, 1);
-restoreFilters = cell(n, 1);
+originalFilters = cell(n, 1);
+suiteCoverageObjects = cell(n, 1);
+suiteOriginalFilters = cell(n, 1);
 manualFilters = cell(n, 1);
+fileCoverage = [];
+fileOriginalFilters = strings(0, 1);
+
+filterFiles = string(p.Results.FilterFiles(:));
+if isempty(filterFiles)
+    filterFiles = strings(n, 1);
+elseif numel(filterFiles) ~= n
+    error('simtest:CoverageFilterFileCountMismatch', ...
+        'FilterFiles must contain one value per Test Case.');
+end
 
 totalTimer = tic;
 st_log(cfg, 'INFO', ...
@@ -28,8 +45,10 @@ st_log(cfg, 'INFO', ...
 
 try
     fileCoverage = getCoverageSettings(tf);
-    fileManualFilters = remove_managed_filters(normalize_filter_values( ...
-        fileCoverage.CoverageFilterFilename), cfg.CoverageFilterDir);
+    fileOriginalFilters = normalize_filter_values( ...
+        fileCoverage.CoverageFilterFilename);
+    fileManualFilters = remove_managed_filters( ...
+        fileOriginalFilters, cfg.CoverageFilterDir);
 
     for i = 1:n
         caseNames(i) = string(caseCells{i}.Name);
@@ -43,13 +62,16 @@ try
         coverageObjects{i} = getCoverageSettings(caseCells{i});
         current = normalize_filter_values( ...
             coverageObjects{i}.CoverageFilterFilename);
-        restoreFilters{i} = remove_managed_filters( ...
-            current, cfg.CoverageFilterDir);
+        originalFilters{i} = current;
         suiteCoverage = getCoverageSettings(caseCells{i}.Parent);
+        suiteCoverageObjects{i} = suiteCoverage;
+        suiteOriginalFilters{i} = normalize_filter_values( ...
+            suiteCoverage.CoverageFilterFilename);
         suiteFilters = remove_managed_filters(normalize_filter_values( ...
             suiteCoverage.CoverageFilterFilename), cfg.CoverageFilterDir);
         manualFilters{i} = unique([fileManualFilters; suiteFilters; ...
-            restoreFilters{i}], 'stable');
+            remove_managed_filters(current, cfg.CoverageFilterDir)], ...
+            'stable');
     end
 catch ME
     st_log(cfg, 'ERROR', ...
@@ -58,10 +80,17 @@ catch ME
     rethrow(ME);
 end
 
+restored = false;
+restoreResult = table();
+session = struct( ...
+    'ApplicationMode', applicationMode, ...
+    'TestCaseNames', caseNames, ...
+    'Restore', @restore_explicit, ...
+    'GetRestoreResult', @get_restore_result);
+
 cleanupObj = [];
 if strcmp(applicationMode, 'RUNTIME')
-    cleanupObj = onCleanup(@() restore_filters( ...
-        tf, coverageObjects, restoreFilters, cfg));
+    cleanupObj = onCleanup(@restore_fallback);
 end
 
 FilterMode = strings(n, 1);
@@ -83,7 +112,10 @@ try
 
         filters = manualFilters{i};
         if row.CoverageFilterMode ~= "OFF"
-            expectedFile = st_coverage_filter_file(row, cfg);
+            expectedFile = char(filterFiles(i));
+            if isempty(expectedFile)
+                expectedFile = st_coverage_filter_file(row, cfg);
+            end
             if isfile(expectedFile)
                 FilterFile(i) = string(expectedFile);
                 filters(end+1,1) = string(expectedFile); %#ok<AGROW>
@@ -127,10 +159,16 @@ catch ME
     st_log(cfg, 'ERROR', ...
         'Test Case coverage filter apply failed | %s: %s', ...
         ME.identifier, ME.message);
-    if strcmp(applicationMode, 'RUNTIME')
-        clear cleanupObj;
-    else
-        restore_filters(tf, coverageObjects, restoreFilters, cfg);
+    try
+        restore_explicit();
+    catch restoreME
+        combined = MException('simtest:CoverageFilterRestoreFailed', ...
+            ['Coverage filter application failed and the original filter ' ...
+             'state could not be restored. Apply error: %s | Restore error: %s'], ...
+            ME.message, restoreME.message);
+        combined = addCause(combined, ME);
+        combined = addCause(combined, restoreME);
+        throw(combined);
     end
     rethrow(ME);
 end
@@ -147,6 +185,108 @@ st_log(cfg, 'INFO', ...
     ['Test Case coverage filter apply complete | OK=%d | WARN=%d | ' ...
      'elapsed=%.3f sec'], ...
     sum(Status == "OK"), sum(Status == "WARN"), toc(totalTimer));
+
+    function result = restore_explicit()
+        if restored
+            result = restoreResult;
+            return;
+        end
+        result = restore_filters_strict();
+        restoreResult = result;
+        restored = true;
+    end
+
+    function result = get_restore_result()
+        result = restoreResult;
+    end
+
+    function restore_fallback()
+        if restored
+            return;
+        end
+        try
+            restore_explicit();
+        catch ME
+            st_log(cfg, 'ERROR', ...
+                'Coverage filter fallback restore failed | %s: %s', ...
+                ME.identifier, ME.message);
+            warning('simtest:CoverageFilterRestoreFailed', ...
+                ['The last-resort cleanup could not restore the original ' ...
+                 'coverage filters: %s'], ME.message);
+        end
+    end
+
+    function result = restore_filters_strict()
+        st_log(cfg, 'DEBUG', ...
+            'Test Case coverage filter restore start | cases=%d', n);
+
+        Status = repmat("OK", n, 1);
+        Message = repmat("Original filter list restored and verified", n, 1);
+        OriginalFilterCount = zeros(n, 1);
+        RestoredFilterCount = zeros(n, 1);
+
+        for restoreIndex = 1:n
+            OriginalFilterCount(restoreIndex) = ...
+                numel(originalFilters{restoreIndex});
+            try
+                coverageObjects{restoreIndex}.CoverageFilterFilename = ...
+                    filter_property_value(originalFilters{restoreIndex});
+                actual = normalize_filter_values( ...
+                    coverageObjects{restoreIndex}.CoverageFilterFilename);
+                RestoredFilterCount(restoreIndex) = numel(actual);
+                if ~isequal(actual, originalFilters{restoreIndex})
+                    error('simtest:CoverageFilterRestoreMismatch', ...
+                        'Restored Test Case filter list does not match its backup.');
+                end
+
+                suiteActual = normalize_filter_values( ...
+                    suiteCoverageObjects{restoreIndex}.CoverageFilterFilename);
+                if ~isequal(suiteActual, suiteOriginalFilters{restoreIndex})
+                    error('simtest:CoverageFilterSuiteStateChanged', ...
+                        'Test Suite filter list changed during transient application.');
+                end
+            catch restoreME
+                Status(restoreIndex) = "FAIL";
+                Message(restoreIndex) = string(restoreME.message);
+            end
+        end
+
+        try
+            fileActual = normalize_filter_values( ...
+                fileCoverage.CoverageFilterFilename);
+            if ~isequal(fileActual, fileOriginalFilters)
+                error('simtest:CoverageFilterFileStateChanged', ...
+                    'Test File filter list changed during transient application.');
+            end
+            saveToFile(tf);
+        catch saveME
+            failedIndex = find(Status == "OK", 1, 'first');
+            if isempty(failedIndex)
+                failedIndex = 1;
+            end
+            Status(failedIndex) = "FAIL";
+            Message(failedIndex) = string(saveME.message);
+        end
+
+        result = table(caseNames, OriginalFilterCount, ...
+            RestoredFilterCount, Status, Message, ...
+            'VariableNames', {'TestCaseName','OriginalFilterCount', ...
+            'RestoredFilterCount','Status','Message'});
+        st_write_result('CoverageFilterRestoreResult', result);
+
+        if any(Status == "FAIL")
+            failures = result.Message(result.Status == "FAIL");
+            st_log(cfg, 'ERROR', ...
+                'Test Case coverage filter restore failed | %s', ...
+                char(strjoin(failures, ' | ')));
+            error('simtest:CoverageFilterRestoreFailed', ...
+                'Could not restore and verify coverage filters: %s', ...
+                char(strjoin(failures, ' | ')));
+        end
+
+        st_log(cfg, 'DEBUG', ...
+            'Test Case coverage filter restore done and verified');
+    end
 end
 
 
@@ -191,37 +331,5 @@ try
     end
 catch
     tf = false;
-end
-end
-
-
-function restore_filters(tf, coverageObjects, restoreFilters, cfg)
-st_log(cfg, 'DEBUG', ...
-    'Test Case coverage filter restore start | cases=%d', ...
-    numel(coverageObjects));
-failures = strings(0, 1);
-for i = 1:numel(coverageObjects)
-    try
-        coverageObjects{i}.CoverageFilterFilename = ...
-            filter_property_value(restoreFilters{i});
-    catch ME
-        failures(end+1,1) = string(ME.message); %#ok<AGROW>
-    end
-end
-try
-    saveToFile(tf);
-catch ME
-    failures(end+1,1) = string(ME.message); %#ok<AGROW>
-end
-if isempty(failures)
-    st_log(cfg, 'DEBUG', ...
-        'Test Case coverage filter restore done');
-else
-    st_log(cfg, 'ERROR', ...
-        'Test Case coverage filter restore failed | %s', ...
-        char(strjoin(failures, ' | ')));
-    warning('simtest:CoverageFilterRestoreFailed', ...
-        'Could not fully restore Test Case coverage filters: %s', ...
-        char(strjoin(failures, ' | ')));
 end
 end
