@@ -16,13 +16,15 @@ verifySubstring(testCase, text, ...
 verifySubstring(testCase, text, 'sldvcompat(candidatePath, options)');
 verifySubstring(testCase, text, ...
     'if options.RunActualSLDV');
+verifySubstring(testCase, text, "st_log(cfg, 'INFO'");
 end
 
 
 function testInvalidPathReturnsStructuredResultWithoutSldv(testCase)
 
-result = st_validate_sldv_target( ...
-    'st_model_that_does_not_exist/Target');
+output = evalc([ ...
+    'result = st_validate_sldv_target(' ...
+    '''st_model_that_does_not_exist/Target'');']);
 
 verifyFalse(testCase, result.Path.Success);
 verifyFalse(testCase, result.SLDV.Executed);
@@ -31,6 +33,8 @@ verifyEmpty(testCase, result.ParentChecks);
 verifyTrue(testCase, isfield(result.Dependency, ...
     'ExternalDataStoreCount'));
 verifyTrue(testCase, isfield(result, 'FirstAnalyzablePath'));
+verifySubstring(testCase, output, '[SLDV Precheck]');
+verifySubstring(testCase, output, '[ERROR]');
 end
 
 

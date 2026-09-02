@@ -626,6 +626,8 @@ cfg.VerboseLogging = true;
 
 `st_log.m`은 장시간 호출 전후에 timestamp가 포함된 `INFO`, `DEBUG`, `TRACE`, `WARN`, `ERROR` 로그를 남깁니다. `VerboseLogging = false`이면 추가 INFO/DEBUG/TRACE 로그만 숨기고 기존 START/OK/FAIL/summary 출력은 유지합니다.
 
+새로 추가하거나 실질적으로 확장하는 모든 기능은 `st_log`로 시작/종료, 장시간 API 호출 전후, 경고 및 실패 원인을 기록해야 합니다.
+
 `sltest.harness.create`, `sltest.harness.load`, `run(tf)` 같은 blocking API 내부의 실제 percentage는 표시하지 않습니다. 마지막으로 출력된 호출 직전 로그를 통해 현재 대기 중인 위치를 확인합니다.
 
 ## Excel access diagnostic

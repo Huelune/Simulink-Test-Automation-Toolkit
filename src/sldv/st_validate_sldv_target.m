@@ -24,17 +24,29 @@ function result = st_validate_sldv_target(targetPath, varargin)
 options = parse_options(targetPath, varargin{:});
 targetPath = options.TargetPath;
 result = empty_result(targetPath, options);
+cfg = st_config();
+totalTimer = tic;
+
+st_log(cfg, 'INFO', ...
+    ['[SLDV Precheck] start | Target=%s | CheckParents=%d | ' ...
+     'MaxParentDepth=%d | RunActualSLDV=%d'], ...
+    targetPath, options.CheckParents, options.MaxParentDepth, ...
+    options.RunActualSLDV);
 
 [pathCheck, modelName] = validate_target_path(targetPath);
 result.Path = pathCheck;
 
 if ~pathCheck.Success
     result.Message = pathCheck.Message;
+    st_log(cfg, 'ERROR', ...
+        ['[SLDV Precheck] invalid target | Target=%s | ' ...
+         'ElapsedSec=%.3f | Message=%s'], ...
+        targetPath, toc(totalTimer), pathCheck.Message);
     print_summary(result);
     return;
 end
 
-compileCheck = compile_model(modelName);
+compileCheck = compile_model(modelName, cfg);
 candidatePaths = build_candidate_paths( ...
     targetPath, options.CheckParents, options.MaxParentDepth);
 candidateChecks = repmat(empty_candidate(), numel(candidatePaths), 1);
@@ -47,17 +59,26 @@ for i = 1:numel(candidatePaths)
     candidate.Name = system_name(candidatePath);
     candidate.Compile = compileCheck;
 
+    st_log(cfg, 'DEBUG', ...
+        '[SLDV Precheck] candidate start | Depth=%d | Path=%s', ...
+        candidate.Depth, candidate.Path);
+
     try
-        candidate.Dependency = st_inspect_sldv_dependencies(candidatePath);
+        candidate.Dependency = st_inspect_sldv_dependencies( ...
+            candidatePath, cfg);
     catch ME
         candidate.Dependency = empty_dependency_failure(ME.message);
+        st_log(cfg, 'ERROR', ...
+            ['[SLDV Precheck] dependency inspection failed | ' ...
+             'Depth=%d | Path=%s | Message=%s'], ...
+            candidate.Depth, candidate.Path, ME.message);
     end
 
     candidate.Boundary = candidate.Dependency.Boundary;
 
     if compileCheck.Success
         candidate.Compatibility = check_compatibility( ...
-            candidatePath, modelName);
+            candidatePath, modelName, cfg);
     else
         candidate.Compatibility = skipped_check( ...
             'SKIPPED', 'Compatibility was skipped because compile failed.');
@@ -65,7 +86,8 @@ for i = 1:numel(candidatePaths)
 
     if options.RunActualSLDV
         if compileCheck.Success && candidate.Compatibility.Success
-            candidate.SLDV = run_actual_sldv(candidatePath, modelName);
+            candidate.SLDV = run_actual_sldv( ...
+                candidatePath, modelName, cfg);
         else
             candidate.SLDV = skipped_check( ...
                 'SKIPPED', ...
@@ -95,6 +117,8 @@ for i = 1:numel(candidatePaths)
     candidate.Message = candidate_message(candidate, options.RunActualSLDV);
     candidateChecks(i) = candidate;
 
+    log_candidate_result(cfg, candidate);
+
     % The requested result is the minimum analyzable scope. Avoid extra
     % parent compatibility checks after the first candidate is found.
     if candidate.AnalyzableCandidate && i < numel(candidatePaths)
@@ -120,6 +144,7 @@ result.ParentChecks = candidateChecks;
 result.Status = targetCheck.Status;
 result.Message = targetCheck.Message;
 
+log_final_result(cfg, result, toc(totalTimer));
 print_summary(result);
 end
 
@@ -251,6 +276,7 @@ function [check, modelName] = validate_target_path(targetPath)
 
 check = base_check();
 check.Status = 'FAIL';
+operationTimer = tic;
 modelName = '';
 
 if isempty(targetPath)
@@ -291,12 +317,14 @@ end
 end
 
 
-function check = compile_model(modelName)
+function check = compile_model(modelName, cfg)
 
 check = base_check();
 check.Status = 'FAIL';
 
 try
+    st_log(cfg, 'INFO', ...
+        '[SLDV Precheck] compile start | Model=%s', modelName);
     st_force_model_stopped(modelName);
     commandOutput = evalc( ...
         'feval(modelName, [], [], [], ''compile'');');
@@ -307,10 +335,16 @@ try
     check.Status = 'PASS';
     check.Message = sprintf('Model compile succeeded: %s', modelName);
     check.Details = nonempty_lines(commandOutput);
+    st_log(cfg, 'INFO', ...
+        ['[SLDV Precheck] compile done | Model=%s | Status=PASS | ' ...
+         'ElapsedSec=%.3f'], modelName, toc(operationTimer));
 catch ME
     terminate_compile(modelName);
     check.Message = ME.message;
     check.Details = string(ME.getReport('basic', 'hyperlinks', 'off'));
+    st_log(cfg, 'ERROR', ...
+        ['[SLDV Precheck] compile failed | Model=%s | ElapsedSec=%.3f | ' ...
+         'Message=%s'], modelName, toc(operationTimer), ME.message);
 end
 end
 
@@ -353,7 +387,7 @@ end
 end
 
 
-function check = check_compatibility(candidatePath, modelName)
+function check = check_compatibility(candidatePath, modelName, cfg)
 
 check = base_check();
 check.Status = 'FAIL';
@@ -362,13 +396,19 @@ if exist('sldvcompat', 'file') == 0
     check.Status = 'UNAVAILABLE';
     check.Message = ['sldvcompat is unavailable. Install/license ' ...
         'Simulink Design Verifier to perform compatibility checking.'];
+    st_log(cfg, 'WARN', ...
+        '[SLDV Precheck] compatibility unavailable | Path=%s', ...
+        candidatePath);
     return;
 end
 
 try
+    operationTimer = tic;
     options = precheck_options(modelName);
     compatibilityStatus = false;
     messages = [];
+    st_log(cfg, 'INFO', ...
+        '[SLDV Precheck] sldvcompat start | Path=%s', candidatePath);
     commandOutput = evalc( ...
         '[compatibilityStatus, messages] = sldvcompat(candidatePath, options);');
 
@@ -389,14 +429,22 @@ try
     end
     check.Message = messageText;
     check.Details = [nonempty_lines(commandOutput); message_lines(messages)];
+    st_log(cfg, 'INFO', ...
+        ['[SLDV Precheck] sldvcompat done | Path=%s | Status=%s | ' ...
+         'ElapsedSec=%.3f'], ...
+        candidatePath, check.Status, toc(operationTimer));
 catch ME
     check.Message = ME.message;
     check.Details = string(ME.getReport('basic', 'hyperlinks', 'off'));
+    st_log(cfg, 'ERROR', ...
+        ['[SLDV Precheck] sldvcompat failed | Path=%s | ' ...
+         'ElapsedSec=%.3f | Message=%s'], ...
+        candidatePath, toc(operationTimer), ME.message);
 end
 end
 
 
-function check = run_actual_sldv(candidatePath, modelName)
+function check = run_actual_sldv(candidatePath, modelName, cfg)
 
 check = base_check();
 check.Executed = true;
@@ -407,10 +455,14 @@ if exist('sldvrun', 'file') == 0
     check.Status = 'UNAVAILABLE';
     check.Message = ['sldvrun is unavailable. Install/license ' ...
         'Simulink Design Verifier to run actual analysis.'];
+    st_log(cfg, 'WARN', ...
+        '[SLDV Precheck] actual SLDV unavailable | Path=%s', ...
+        candidatePath);
     return;
 end
 
 try
+    operationTimer = tic;
     options = precheck_options(modelName);
     set_option_if_available(options, 'SaveReport', 'off');
     set_option_if_available(options, 'SaveHarnessModel', 'off');
@@ -418,6 +470,8 @@ try
     runStatus = false;
     files = struct();
     messages = [];
+    st_log(cfg, 'INFO', ...
+        '[SLDV Precheck] sldvrun start | Path=%s', candidatePath);
     commandOutput = evalc( ...
         ['[runStatus, files, messages] = ' ...
          'sldvrun(candidatePath, options, false);']);
@@ -435,10 +489,66 @@ try
     end
     check.Details = [nonempty_lines(commandOutput); message_lines(messages)];
     check.Files = files;
+    st_log(cfg, 'INFO', ...
+        ['[SLDV Precheck] sldvrun done | Path=%s | Status=%s | ' ...
+         'ElapsedSec=%.3f'], ...
+        candidatePath, check.Status, toc(operationTimer));
 catch ME
     check.Message = ME.message;
     check.Details = string(ME.getReport('basic', 'hyperlinks', 'off'));
     check.Files = struct();
+    st_log(cfg, 'ERROR', ...
+        ['[SLDV Precheck] sldvrun failed | Path=%s | ' ...
+         'ElapsedSec=%.3f | Message=%s'], ...
+        candidatePath, toc(operationTimer), ME.message);
+end
+end
+
+
+function log_candidate_result(cfg, candidate)
+
+formatText = [ ...
+    '[SLDV Precheck] candidate done | Depth=%d | Path=%s | ' ...
+    'Status=%s | Compatibility=%s | ActualSLDV=%s | ' ...
+     'DataStore=%d | Goto=%d | ' ...
+    'FunctionCaller=%d | Stateflow=%d | Boundary=%d'];
+arguments = { ...
+    candidate.Depth, ...
+    candidate.Path, ...
+    candidate.Status, ...
+    candidate.Compatibility.Status, ...
+    candidate.SLDV.Status, ...
+    candidate.Dependency.ExternalDataStoreCount, ...
+    candidate.Dependency.ExternalGotoCount, ...
+    candidate.Dependency.FunctionCallerCount, ...
+    candidate.Dependency.StateflowExternalDataCount, ...
+    candidate.Dependency.BoundaryDependencyCount};
+
+if strcmp(candidate.Status, 'FAIL')
+    level = 'WARN';
+else
+    level = 'INFO';
+end
+st_log(cfg, level, formatText, arguments{:});
+end
+
+
+function log_final_result(cfg, result, elapsedSec)
+
+if isempty(result.FirstAnalyzablePath)
+    st_log(cfg, 'WARN', ...
+        ['[SLDV Precheck] done | Target=%s | TargetStatus=%s | ' ...
+        'FirstAnalyzablePath=NONE | Checked=%d | ElapsedSec=%.3f'], ...
+        result.Target, result.Status, numel(result.ParentChecks), ...
+        elapsedSec);
+else
+    st_log(cfg, 'INFO', ...
+        ['[SLDV Precheck] done | Target=%s | TargetStatus=%s | ' ...
+         'FirstAnalyzablePath=%s | Depth=%d | Checked=%d | ' ...
+         'ElapsedSec=%.3f'], ...
+        result.Target, result.Status, result.FirstAnalyzablePath, ...
+        result.FirstAnalyzableDepth, numel(result.ParentChecks), ...
+        elapsedSec);
 end
 end
 
