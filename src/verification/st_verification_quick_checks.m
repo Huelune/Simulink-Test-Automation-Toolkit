@@ -40,9 +40,10 @@ try
     checks = [checks; inspect_targets(targets, cfg, profile, target)];
     checks = [checks; inspect_test_file(targets, cfg, profile, target)];
     checks = [checks; inspect_state(cfg, profile, target)];
-    checks = [checks; inspect_report(cfg, profile, target)];
+    checks = [checks; inspect_report(targets, cfg, profile, target)];
     checks = [checks; inspect_sldv(targets, cfg, profile, target)];
-    checks = [checks; inspect_static_configuration(cfg, profile, target)];
+    checks = [checks; inspect_static_configuration( ...
+        targets, cfg, profile, target)];
 catch ME
     checks = [checks; st_verification_check( ...
         'CURRENT_STRUCTURE', 'TARGETS', profile, target, true, ...
@@ -190,7 +191,7 @@ if ~alreadyOpen && ~isempty(tf)
 end
 end
 
-function checks = inspect_static_configuration(cfg, profile, target)
+function checks = inspect_static_configuration(T, cfg, profile, target)
 checks = st_empty_verification_checks();
 checks = [checks; st_verification_check( ...
     'CURRENT.PATH_LOGIC', 'PATHS', profile, target, true, 'PASS', ...
@@ -210,6 +211,19 @@ checks = [checks; st_verification_check( ...
     pass_if(coverageValid), ...
     ['Decision, Block Execution, and per-Test-Case filter application ' ...
      'are configured'])];
+try
+    executionMode = st_resolve_execution_mode(cfg.ExecutionMode, T);
+    executionValid = ~strcmp(executionMode, 'PER_CUT') || ...
+        strcmpi(cfg.CoverageFilterApplicationMode, 'RUNTIME');
+    executionStatus = pass_if(executionValid);
+    executionMessage = "Resolved execution mode: " + executionMode;
+catch ME
+    executionStatus = 'FAIL';
+    executionMessage = string(ME.message);
+end
+checks = [checks; st_verification_check( ...
+    'CURRENT.EXECUTION_MODE', 'EXECUTION', profile, target, true, ...
+    executionStatus, executionMessage)];
 root = st_project_root();
 exportFiles = {fullfile(root, 'resources', 'export_bundle', ...
     'run_exported_tests.m'), fullfile(root, 'src', 'exporting', ...
@@ -261,20 +275,29 @@ checks = [checks; st_verification_check( ...
     'WORKFLOW_STATE.JSON', 'CACHE', profile, target, false, result, message)];
 end
 
-function checks = inspect_report(cfg, profile, target)
-if ~isfile(cfg.LatestReportPointer)
+function checks = inspect_report(T, cfg, profile, target)
+executionMode = st_resolve_execution_mode(cfg.ExecutionMode, T);
+if strcmp(executionMode, 'PER_CUT')
+    pointer = cfg.PerCutLatestPointer;
+    label = 'per-CUT';
+else
+    pointer = cfg.LatestReportPointer;
+    label = 'integrated';
+end
+if ~isfile(pointer)
     checks = st_verification_check('LATEST_REPORT', 'REPORTING', ...
-        profile, target, false, 'WARN', 'No latest integrated report');
+        profile, target, false, 'WARN', ['No latest ' label ' report']);
     return;
 end
 try
-    latest = jsondecode(fileread(cfg.LatestReportPointer));
+    latest = jsondecode(fileread(pointer));
     required = {'RunId','RunDirectory','Manifest','Summary','Status'};
     valid = all(isfield(latest, required)) && ...
         isfolder(char(latest.RunDirectory)) && ...
         isfile(char(latest.Manifest)) && isfile(char(latest.Summary));
     if valid
-        status = 'PASS'; message = 'Latest report pointer and artifacts are valid';
+        status = 'PASS';
+        message = ['Latest ' label ' report pointer and artifacts are valid'];
     else
         status = 'FAIL'; message = 'Latest report pointer references missing artifacts';
     end

@@ -10,8 +10,8 @@
 | --- | --- |
 | 원격 저장소 | `https://github.com/Huelune/Simulink-Test-Automation-Toolkit.git` |
 | 기본 브랜치 | `main` |
-| 인수인계 브랜치 | `handoff/r2025b-cross-machine` |
-| 인수인계 기반 커밋 | `b458d2a` (`docs: 종합 검증 사용자 매뉴얼 추가`) |
+| 현재 작업 브랜치 | `feat/per-cut-filtered-execution` |
+| 작업 기반 커밋 | `78101c0` (`feat(coverage): 테스트 케이스별 자동 필터 추가`) |
 | 개발 상태 | 기능 구현과 정적 검토 완료, MATLAB R2025b runtime 미검증 |
 | 우선 검증 환경 | MATLAB R2025b, Simulink, Simulink Test, Simulink Coverage, SLDV |
 
@@ -22,9 +22,10 @@
 - 재실행 가능한 테스트 번들 내보내기
 - QUICK/RUNTIME/CERTIFY 종합 검증 프레임워크
 - 자동 생성 검증 fixture와 사용자 매뉴얼
+- CUT별 transient CVF 격리 실행과 개별 결과·Coverage 보고서
 
 `main`을 기준으로 새 작업을 만들면 위 기능이 빠집니다. R2025b 검증과 후속
-개발은 반드시 이 인수인계 브랜치 또는 이 브랜치에서 만든 작업 브랜치에서
+개발은 반드시 이 작업 브랜치 또는 이 브랜치에서 만든 후속 브랜치에서
 시작합니다.
 
 ## 2. 다른 PC에서 처음 시작하는 절차
@@ -33,7 +34,7 @@
 git clone https://github.com/Huelune/Simulink-Test-Automation-Toolkit.git
 cd Simulink-Test-Automation-Toolkit
 git fetch origin
-git switch --track origin/handoff/r2025b-cross-machine
+git switch --track origin/feat/per-cut-filtered-execution
 git status --short --branch
 git log -1 --oneline
 ```
@@ -43,8 +44,8 @@ git log -1 --oneline
 ```bash
 git status --short --branch
 git fetch origin
-git switch handoff/r2025b-cross-machine
-git pull --ff-only origin handoff/r2025b-cross-machine
+git switch feat/per-cut-filtered-execution
+git pull --ff-only origin feat/per-cut-filtered-execution
 ```
 
 수정 파일이 있으면 전환이나 pull 전에 임의로 버리지 않습니다. 변경의 소유자와
@@ -56,7 +57,7 @@ git pull --ff-only origin handoff/r2025b-cross-machine
 
 ```text
 이 저장소의 AGENTS.md와 docs/cross-machine-handoff.md를 먼저 모두 읽어줘.
-현재 작업 기준은 origin/handoff/r2025b-cross-machine이며 main에는 아직 기능이
+현재 작업 기준은 origin/feat/per-cut-filtered-execution이며 main에는 아직 기능이
 병합되지 않았다. README.md, docs/user-manual.md, docs/verification.md,
 docs/export-bundle.md, docs/TODO.md를 확인하고 현재 Git 상태와 MATLAB 제품 및
 라이선스를 점검해줘. 실제로 실행하지 않은 검증은 통과로 기록하지 말고,
@@ -110,6 +111,10 @@ summary = st_verify_all( ...
 
 전체 인증 전에 fixture 생성, Harness와 기본 실행 경로가 해당 장비에서
 동작하는지 확인하는 중간 smoke 단계입니다.
+
+fixture에는 `SUBSYSTEM+JUSTIFY`, `ALL_CONTENT+EXCLUDE`, `OFF` Coverage 필터
+대상이 포함됩니다. 활성 필터가 있으므로 `AUTO`는 모든 활성 CUT을 `PER_CUT`으로
+실행하고 결과는 `result/per_cut_runs`에 저장합니다.
 
 ### 4.4 CERTIFY + FIXTURE
 
@@ -230,11 +235,11 @@ force push와 원격 이력 재작성은 사용하지 않습니다.
 ```bash
 # R2025b 장비 예시
 git switch -c verify/r2025b-first-certification \
-  origin/handoff/r2025b-cross-machine
+  origin/feat/per-cut-filtered-execution
 
 # 다른 개발 장비 예시
 git switch -c feat/verification-resume \
-  origin/handoff/r2025b-cross-machine
+  origin/feat/per-cut-filtered-execution
 ```
 
 각 브랜치를 push하고 검증 결과를 공유한 뒤 인수인계 브랜치에 통합합니다.
@@ -268,6 +273,7 @@ MATLAB 검증을 PASS로 적지 않습니다.
 | 날짜 | 환경 | 브랜치/커밋 | 수행 내용 | 검증 상태 | 다음 작업 |
 | --- | --- | --- | --- | --- | --- |
 | 2026-08-30 | 현재 개발 PC, MATLAB runtime 없음 | `handoff/r2025b-cross-machine` | 증분 실행·보고서·내보내기·검증 코드와 매뉴얼을 인수인계 브랜치로 구성 | 정적 확인만 완료, R2025b 미검증 | R2025b 장비에서 `QUICK + CURRENT`와 `RUNTIME + FIXTURE` 실행 |
+| 2026-09-03 | 현재 개발 PC, MATLAB runtime 없음 | `feat/per-cut-filtered-execution` (기반 `78101c0`) | CUT별 CVF 적용, 독립 Test Case 실행·보고서, 기대값 재실행, 복원 검증과 별도 pointer 구현 | 정적 확인만 수행, R2025b fixture 미검증 | 원격 브랜치 동기화 후 `CERTIFY + FIXTURE`로 실행·복원 순서 확인 |
 
 새 세션은 마지막 행과 Git 로그를 비교하여 어느 쪽이 최신인지 확인한 후
 시작합니다.

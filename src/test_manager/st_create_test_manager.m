@@ -1,4 +1,4 @@
-function R = st_create_test_manager(stageSelection)
+function R = st_create_test_manager(stageSelection, varargin)
 %ST_CREATE_TEST_MANAGER Create or extend Test Manager test cases.
 %
 % Test File : {TopModel}.mldatx
@@ -48,6 +48,11 @@ T = ...
 if nargin < 1
     stageSelection = [];
 end
+p = inputParser;
+addParameter(p, 'DeferCoverageFilters', false, ...
+    @(x) islogical(x) && isscalar(x));
+parse(p, varargin{:});
+deferCoverageFilters = logical(p.Results.DeferCoverageFilters);
 selection = st_normalize_stage_selection(T, stageSelection);
 
 if ~any(selection.Run)
@@ -611,7 +616,7 @@ saveToFile( ...
 st_log(cfg, 'DEBUG', ...
     'Test Manager saveToFile done');
 
-if ~any(Status == "FAIL")
+if ~any(Status == "FAIL") && ~deferCoverageFilters
     coverageApplicationMode = st_coverage_filter_application_mode( ...
         cfg.CoverageFilterApplicationMode);
     st_log(cfg, 'INFO', ...

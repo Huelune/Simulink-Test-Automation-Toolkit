@@ -45,6 +45,11 @@ This file records decisions that are intentionally not presented as implemented 
   `AUTO` and `FORCE` execution policies.
 - [x] Add local run bundles with initial/final results, Decision and Execution
   coverage, Excel summary, official PDF, HTML, and MLDATX artifacts.
+- [x] Add sequential per-CUT execution with transient CVF isolation, explicit
+  restore verification, per-target result bundles, and a separate latest pointer.
+- [ ] Run the R2025b per-CUT fixture matrix (`SUBSYSTEM+JUSTIFY`,
+  `ALL_CONTENT+EXCLUDE`, `OFF`) and preserve evidence for apply, run, export,
+  restore, continue-on-failure, and restore-failure abort ordering.
 - [x] Add a standalone, non-destructive export command that packages the saved
   internal Harness model, inputs, Test File, dependencies, and reference report
   and creates a fresh workspace for every recipient rerun.

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Added `AUTO`, `BATCH`, and `PER_CUT` execution policies. Active coverage
+  filters now select sequential per-CUT execution for every enabled row while
+  all-OFF workbooks retain the legacy `run(tf)` path.
+- Added transient CVF sessions with exact Test File, Test Suite, and Test Case
+  filter restoration checks, PERSIST rollback, and immediate abort when a
+  filter cannot be restored safely.
+- Added separate `result/per_cut_runs` bundles and `per_cut_latest.json`, with
+  per-target CVF hashes, manifests, initial/final ResultSets, Excel summaries,
+  lightweight or full coverage HTML, and optional official PDF reports.
+
 - Added Excel-driven per-Test-Case coverage filters with `OFF`, `SUBSYSTEM`,
   and `ALL_CONTENT` selection, `EXCLUDE`/`JUSTIFY` actions, required
   rationale, API-only `RUNTIME` or `PERSIST` application, managed CVF

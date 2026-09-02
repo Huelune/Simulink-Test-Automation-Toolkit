@@ -8,6 +8,7 @@ MATLAB/Simulink Test 자동화 도구입니다. Excel에서 CUT, Harness, Test C
 | --- | --- |
 | 버전 | v0.9.6 candidate 기반 `Unreleased` |
 | 기본 브랜치 | `main` |
+| 현재 작업 브랜치 | `feat/per-cut-filtered-execution` |
 | 개발 상태 | 기능 브랜치 구현 후보, 실제 MATLAB end-to-end 재검증 필요 |
 | 확인된 근거 | 코드 정적 검토, 생성된 Harness의 Assessment 입력 순서 수동 확인 |
 | 미확인 범위 | MATLAB R2025b 전체 workflow와 SLDV FILE/GENERATE 실행 |
@@ -249,7 +250,7 @@ st_run_after_harness
 5. Signal Editor 설정
 6. Test Assessment 설정
 7. Test Manager 생성 또는 증분 갱신
-8. 설정에 따른 Test 실행 및 expected-value 갱신
+8. 설정에 따른 Test 실행, CUT별 Coverage 필터 격리 및 expected-value 갱신
 
 `st_run_after_harness`는 기존 Harness 존재 여부를 검증한 뒤 SLDV 준비 단계부터 실행합니다.
 
@@ -442,6 +443,7 @@ MATLAB R2025b의 `Iteration.TestParams` 표시에서는 `SignalEditorScenario`�
 
 ```matlab
 cfg.RunGeneratedTests = true;
+cfg.ExecutionMode = 'AUTO';
 cfg.ExpectedUpdateMode = 'APPLY';
 cfg.ExpectedValueSampleTime = 0.01;
 cfg.RerunAfterExpectedUpdate = true;
@@ -461,7 +463,24 @@ expected-value updater는 Failed Iteration만 처리합니다. Assessment의 `ve
 
 SLDV Iteration은 각 Scenario의 결과를 개별 처리하고 `Tmax` 시점의 실제값을 사용합니다. 실행 직후 `getVerifyRuns` 결과에서 활성 Scenario의 `step2` verify가 없거나 `Untested`이면 tail time을 추가하지 않고 timing 실패로 기록합니다.
 
-`cfg.OnlyEnabled = true`일 때 실행 대상은 관리 파일에서 `Enabled=true`인 행의 `TestCaseName`으로 제한됩니다. 실행 중에는 해당 Test Case만 임시로 Enabled로 두고 기존에 남아 있는 다른 Test Case는 모두 Disabled 처리하며, 종료·오류 뒤에는 원래 Enabled 상태를 복원합니다.
+`ExecutionMode='AUTO'`는 활성 행 중 하나라도 `CoverageFilterMode`가 `OFF`가
+아니면 모든 활성 CUT을 Excel 순서대로 `PER_CUT` 실행합니다. 전부 `OFF`이면
+기존 `run(tf)`의 `BATCH` 경로를 유지합니다. `BATCH`를 명시한 상태에서 활성
+CVF가 발견되면 테스트 시작 전에 오류를 발생시킵니다.
+
+```matlab
+[results, updates, summary] = st_run_tests_per_cut( ...
+    'ContinueOnFailure', true, ...
+    'ReportMode', 'SUMMARY', ...
+    'FailOnNonPass', true);
+```
+
+`PER_CUT`은 다른 Test Case의 Enabled 값을 바꾸지 않고 `run(testCase)`를
+사용합니다. 한 CUT의 테스트 또는 보고서가 실패해도 CVF 복원 검증이 성공하면
+다음 CUT을 처리하지만, 복원 또는 저장 검증이 실패하면 필터 누출을 막기 위해
+즉시 중단합니다. `CoverageFilterApplicationMode='PERSIST'`는 허용하지 않습니다.
+이 모드에서 workflow의 첫 번째 출력은 CUT별 `InitialResult`와 `FinalResult`를
+담은 struct 배열이고, `BATCH`에서는 기존 단일 최종 ResultSet을 유지합니다.
 
 ```text
 Assessment symbol
@@ -493,9 +512,10 @@ Coverage 필터는 `Targets`의 각 행마다 독립된 `.cvf`로 생성됩니�
 내부 내용을 함께 처리합니다. 직속 하위 Subsystem이 없으면 WARN을 기록하고
 필터 없이 테스트를 계속합니다.
 
-기본 `RUNTIME` 모드는 실행 직전에 Test Case API로만 필터를 붙이고 `run(tf)`가
-끝나거나 오류가 나면 기존 수동 필터로 복원합니다. `PERSIST`는 Test Case별
-설정을 MLDATX에 저장합니다. 자동 필터를 Test File 수준에는 설정하지 않으며,
+기본 `RUNTIME` 모드는 실행 직전에 현재 Test Case API로만 필터를 붙이고 해당
+CUT의 초기·최종 결과를 저장한 뒤 Test File·Suite·Test Case의 기존 필터
+목록을 복원하고 다시 비교합니다. `PERSIST`는 기존 BATCH 설정 용도로만 남으며
+PER_CUT 실행에서는 거부됩니다. 자동 필터를 Test File 수준에는 설정하지 않으며,
 Test Manager 화면의 필터 결과 표시는 제품 동작에 따라 Result Set 수준에서
 보일 수 있어도 적용 범위는 Test Case 설정을 따릅니다. 기존 Test File, Suite,
 Test Case의 수동 필터는 자동 필터와 함께 유지됩니다.
@@ -531,6 +551,29 @@ Coverage 미달은 보고 항목이며 현재 버전에서 Test 실패로
 `result/latest.json`과 `result/TestSummary.xlsx`는 가장 최근 실행을
 가리킵니다. 보고서는 로컬 내부용이며 Notion이나 외부
 저장소로 자동 전송하지 않습니다.
+
+CVF가 활성화된 `PER_CUT` 실행은 기존 bundle과 충돌하지 않는 별도 경로를
+사용합니다. `SUMMARY`는 MLDATX, Excel과 경량 Coverage HTML을 만들고,
+`FULL`은 공식 PDF와 전체 Coverage HTML을 추가합니다.
+
+```text
+result/per_cut_runs/{run-id}/
+├── TestSummary.xlsx
+├── manifest.json
+├── targets/{No}_{CUTName}_{hash}/
+│   ├── target-manifest.json
+│   ├── filter/applied.cvf
+│   ├── initial/{TestSummary.xlsx,raw/,coverage/,official/}
+│   └── final/{TestSummary.xlsx,raw/,coverage/,official/}
+└── logs/
+```
+
+`result/per_cut_latest.json`만 갱신하며 기존 `result/latest.json`과
+`result/runs/`는 변경하지 않습니다. `CoverageFilterMode=OFF`인 CUT도 AUTO가
+PER_CUT으로 결정된 실행에서는 독립 ResultSet과 보고서를 가지며 CVF 파일만
+생성하지 않습니다.
+`logs/execution.log`에는 CUT별 `APPLY → RUN → EXPORT → RESTORE → NEXT`
+순서를 확인할 수 있는 timestamp event가 기록됩니다.
 
 ## 테스트 자산 통합 관리와 재실행 번들 내보내기
 

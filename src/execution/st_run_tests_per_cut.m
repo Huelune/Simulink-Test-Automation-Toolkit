@@ -44,6 +44,7 @@ end
 [runId, runDirectory] = create_run_directory(cfg.PerCutRunRootDir);
 mkdir(fullfile(runDirectory, 'targets'));
 mkdir(fullfile(runDirectory, 'logs'));
+logPath = fullfile(runDirectory, 'logs', 'execution.log');
 startedAt = timestamp_text();
 
 results = repmat(struct( ...
@@ -95,6 +96,7 @@ for i = 1:n
 
     session = [];
     sessionCreated = false;
+    applyStarted = false;
     restoreSucceeded = false;
     initialInfo = struct();
     finalInfo = struct();
@@ -104,6 +106,7 @@ for i = 1:n
         '[PER_CUT %d/%d] start | No=%g | CUT=%s | TestCase=%s | CVF=%s', ...
         i, n, No(i), char(CUTName(i)), char(TestCaseName(i)), ...
         char(FilterMode(i)));
+    append_event(logPath, i, 'TARGET_START', char(TestCaseName(i)));
 
     try
         if row.ExpectedUpdateMode == "APPLY"
@@ -114,6 +117,7 @@ for i = 1:n
         if row.CoverageFilterMode ~= "OFF"
             mkdir(filterDirectory);
             filterFile = string(fullfile(filterDirectory, 'applied.cvf'));
+            FilterGenerationStatus(i) = "STARTED";
             generated = st_generate_coverage_filter_file( ...
                 row, char(filterFile), cfg);
             FilterGenerationStatus(i) = generated.Status;
@@ -128,11 +132,16 @@ for i = 1:n
             CVFSHA256(i) = string(signature.SHA256);
         end
 
+        applyStarted = true;
+        FilterApplyStatus(i) = "STARTED";
+        append_event(logPath, i, 'APPLY_START', char(CVFPath(i)));
         [filterCleanup, applyResult, session] = ...
             st_apply_test_case_coverage_filters( ...
                 tf, tc, row, cfg, 'FilterFiles', filterFile); %#ok<NASGU>
         sessionCreated = true;
         FilterApplyStatus(i) = string(applyResult.Status(1));
+        append_event(logPath, i, 'APPLY_DONE', ...
+            char(FilterApplyStatus(i)));
         if any(applyResult.Status == "FAIL") || ...
                 (row.CoverageFilterMode ~= "OFF" && ...
                 strlength(string(applyResult.FilterFile(1))) == 0)
@@ -143,7 +152,9 @@ for i = 1:n
 
         st_log(cfg, 'DEBUG', ...
             '[PER_CUT %d/%d] run(testCase) initial start', i, n);
+        append_event(logPath, i, 'RUN_INITIAL_START', char(TestCaseName(i)));
         initialResult = run(tc);
+        append_event(logPath, i, 'RUN_INITIAL_DONE', char(TestCaseName(i)));
         results(i).No = No(i);
         results(i).TestCaseName = char(TestCaseName(i));
         results(i).InitialResult = initialResult;
@@ -152,6 +163,7 @@ for i = 1:n
         FinalOutcome(i) = InitialOutcome(i);
         validate_verify_timing(initialResult, 'initial');
 
+        append_event(logPath, i, 'EXPORT_INITIAL_START', initialDirectory);
         initialInfo = st_export_result_set_report( ...
             initialResult, row, initialDirectory, ...
             [char(TestCaseName(i)) ' initial'], ...
@@ -159,6 +171,7 @@ for i = 1:n
             'IncludeOfficialReport', strcmp(reportMode, 'FULL'), ...
             'ResultLabel', 'INITIAL');
         InitialReport(i) = string(initialInfo.Summary);
+        append_event(logPath, i, 'EXPORT_INITIAL_DONE', initialInfo.Status);
         artifacts = append_artifacts(artifacts, No(i), ...
             "INITIAL", initialInfo.Artifacts);
         coverage = append_table(coverage, initialInfo.Coverage);
@@ -170,11 +183,7 @@ for i = 1:n
         if row.ExpectedUpdateMode == "APPLY"
             updateResult = st_update_expected_from_results(initialResult, row);
             if ~isempty(updateResult)
-                updateResult = addvars(updateResult, ...
-                    repmat(No(i), height(updateResult), 1), ...
-                    repmat(CUTName(i), height(updateResult), 1), ...
-                    'Before', 1, ...
-                    'NewVariableNames', {'TargetNo','CUTName'});
+                updateResult = renamevars(updateResult, 'No', 'TargetNo');
                 updates = append_table(updates, updateResult);
                 ExpectedUpdatedCount(i) = sum(updateResult.UpdatedCount);
                 if any(string(updateResult.Status) == "FAIL")
@@ -188,12 +197,15 @@ for i = 1:n
         if ExpectedUpdatedCount(i) > 0 && cfg.RerunAfterExpectedUpdate
             st_log(cfg, 'DEBUG', ...
                 '[PER_CUT %d/%d] run(testCase) final start', i, n);
+            append_event(logPath, i, 'RUN_FINAL_START', char(TestCaseName(i)));
             finalResult = run(tc);
+            append_event(logPath, i, 'RUN_FINAL_DONE', char(TestCaseName(i)));
             results(i).FinalResult = finalResult;
             results(i).RerunPerformed = true;
             RerunPerformed(i) = true;
             FinalOutcome(i) = result_outcome(finalResult, row, 'FINAL');
             validate_verify_timing(finalResult, 'final');
+            append_event(logPath, i, 'EXPORT_FINAL_START', finalDirectory);
             finalInfo = st_export_result_set_report( ...
                 finalResult, row, finalDirectory, ...
                 [char(TestCaseName(i)) ' final'], ...
@@ -201,6 +213,7 @@ for i = 1:n
                 'IncludeOfficialReport', strcmp(reportMode, 'FULL'), ...
                 'ResultLabel', 'FINAL');
             FinalReport(i) = string(finalInfo.Summary);
+            append_event(logPath, i, 'EXPORT_FINAL_DONE', finalInfo.Status);
             artifacts = append_artifacts(artifacts, No(i), ...
                 "FINAL", finalInfo.Artifacts);
             coverage = append_table(coverage, finalInfo.Coverage);
@@ -210,9 +223,12 @@ for i = 1:n
             end
         end
 
+        append_event(logPath, i, 'RESTORE_START', char(TestCaseName(i)));
         restoreResult = session.Restore();
         restoreSucceeded = all(restoreResult.Status == "OK");
         FilterRestoreStatus(i) = string(restoreResult.Status(1));
+        append_event(logPath, i, 'RESTORE_DONE', ...
+            char(FilterRestoreStatus(i)));
         clear filterCleanup;
         if ~restoreSucceeded
             error('simtest:CoverageFilterRestoreFailed', ...
@@ -228,15 +244,34 @@ for i = 1:n
         end
     catch ME
         targetError = ME;
+        if FilterGenerationStatus(i) == "STARTED"
+            FilterGenerationStatus(i) = "FAIL";
+        end
+        if strcmp(ME.identifier, 'simtest:CoverageFilterRestoreFailed')
+            abortError = ME;
+        end
         if sessionCreated && ~restoreSucceeded
             try
+                append_event(logPath, i, 'RESTORE_START', ...
+                    char(TestCaseName(i)));
                 restoreResult = session.Restore();
                 restoreSucceeded = all(restoreResult.Status == "OK");
                 FilterRestoreStatus(i) = string(restoreResult.Status(1));
+                append_event(logPath, i, 'RESTORE_DONE', ...
+                    char(FilterRestoreStatus(i)));
             catch restoreME
                 FilterRestoreStatus(i) = "FAIL";
                 targetError = addCause(restoreME, ME);
                 abortError = targetError;
+            end
+        elseif applyStarted
+            FilterApplyStatus(i) = "FAIL";
+            if isempty(abortError)
+                % The apply helper rethrows only after its exact rollback
+                % succeeds; rollback failure uses the restore identifier.
+                FilterRestoreStatus(i) = "OK";
+            else
+                FilterRestoreStatus(i) = "FAIL";
             end
         elseif ~sessionCreated
             FilterRestoreStatus(i) = "NOT_REQUIRED";
@@ -247,6 +282,7 @@ for i = 1:n
         st_log(cfg, 'ERROR', ...
             '[PER_CUT %d/%d] failed | %s: %s', ...
             i, n, targetError.identifier, targetError.message);
+        append_event(logPath, i, 'TARGET_FAIL', targetError.message);
 
         if isempty(abortError) && ~continueOnFailure
             abortError = targetError;
@@ -284,6 +320,7 @@ for i = 1:n
             i, n, abortError.message);
         break;
     end
+    append_event(logPath, i, 'TARGET_COMPLETE', char(Status(i)));
 end
 
 processed = strlength(CompletedAt) > 0;
@@ -298,6 +335,10 @@ targets = table(No, CUTName, CUTPath, TestCaseName, ...
     RerunPerformed, ExpectedUpdatedCount, FilterApplyStatus, ...
     FilterRestoreStatus, Status, Message, DurationSec, StartedAt, ...
     CompletedAt, TargetManifest);
+if isfile(logPath)
+    artifacts(end+1,:) = {0, "ROOT", "LOG", string(logPath), ...
+        "OK", "Sequential execution event log"};
+end
 completedAt = timestamp_text();
 summary = st_write_per_cut_run_report( ...
     runId, runDirectory, targets, coverage, artifacts, cfg, ...
@@ -311,9 +352,11 @@ if ~isempty(abortError)
         'Partial PER_CUT report was written to %s.', summary.Manifest));
     throw(abortError);
 end
-if failOnNonPass && any(Status == "FAIL")
+if failOnNonPass && (any(Status == "FAIL") || ...
+        strcmp(summary.Status, 'FAIL'))
     error('simtest:PerCutRunFailed', ...
-        '%d CUT(s) failed. Results were written to %s.', ...
+        ['%d CUT(s) failed or the root report was incomplete. ' ...
+         'Results were written to %s.'], ...
         sum(Status == "FAIL"), summary.Manifest);
 end
 end
@@ -448,6 +491,20 @@ function delete_if_present(path)
 if isfile(path)
     delete(path);
 end
+end
+
+
+function append_event(path, order, event, message)
+fileId = fopen(path, 'a', 'n', 'UTF-8');
+if fileId < 0
+    warning('simtest:PerCutLogWriteFailed', ...
+        'Cannot append per-CUT execution log: %s', path);
+    return;
+end
+cleanup = onCleanup(@() fclose(fileId)); %#ok<NASGU>
+message = strrep(char(string(message)), newline, ' ');
+fprintf(fileId, '%s\t%d\t%s\t%s\n', ...
+    timestamp_text(), order, char(string(event)), message);
 end
 
 

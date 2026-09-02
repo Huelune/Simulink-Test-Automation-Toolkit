@@ -5,6 +5,15 @@ function [resultObj, updateResult, workflowResult, reportInfo] = ...
 cfg = st_require_runtime_target();
 options = st_parse_workflow_options(varargin{:});
 T = st_load_targets(cfg.OnlyEnabled);
+requestedExecutionMode = options.ExecutionMode;
+if isempty(requestedExecutionMode)
+    requestedExecutionMode = cfg.ExecutionMode;
+end
+executionMode = st_resolve_execution_mode( ...
+    requestedExecutionMode, T);
+% Pass the resolved policy into fingerprint/artifact planning. AUTO itself
+% is not sufficient to decide whether a shared CVF should exist.
+cfg.ExecutionMode = executionMode;
 [plan, state, context] = ...
     st_build_execution_plan(T, cfg, workflowKind, options);
 
@@ -26,6 +35,7 @@ fprintf('Incremental Simulink Test Automation\n');
 fprintf('Workflow : %s\n', upper(char(string(workflowKind))));
 fprintf('Model    : %s\n', cfg.TopModel);
 fprintf('State    : %s\n', context.StateLoadStatus);
+fprintf('Execute  : %s\n', executionMode);
 fprintf('Start    : %s\n', timestamp_text());
 fprintf('============================================\n');
 print_plan(plan);
@@ -76,6 +86,14 @@ for s = 1:numel(stageNames)
     stage = stageNames{s};
     selection = st_stage_selection(plan, stage);
     fn = stageFunctions{s};
+    if strcmp(executionMode, 'PER_CUT') && ...
+            strcmp(stage, 'COVERAGE_FILTER')
+        fn = @st_defer_coverage_filters_to_per_cut;
+    elseif strcmp(executionMode, 'PER_CUT') && ...
+            strcmp(stage, 'TEST_MANAGER')
+        fn = @(value) st_create_test_manager( ...
+            value, 'DeferCoverageFilters', true);
+    end
     stageResults{s} = execute_timed_step( ...
         stageLabels{s}, @() fn(selection));
     state = st_checkpoint_workflow_state( ...
@@ -85,8 +103,25 @@ for s = 1:numel(stageNames)
 end
 
 if cfg.RunGeneratedTests
-    [resultObj, updateResult, runContext] = execute_timed_step( ...
-        'Run Generated Tests', @() st_run_generated_tests());
+    if strcmp(executionMode, 'PER_CUT')
+        continueOnFailure = option_or_default( ...
+            options.ContinueOnFailure, cfg.PerCutContinueOnFailure);
+        failOnNonPass = option_or_default( ...
+            options.FailOnNonPass, cfg.PerCutFailOnNonPass);
+        reportMode = options.ReportMode;
+        if isempty(reportMode)
+            reportMode = cfg.PerCutReportMode;
+        end
+        [resultObj, updateResult, reportInfo] = execute_timed_step( ...
+            'Run Generated Tests Per CUT', ...
+            @() st_run_tests_per_cut( ...
+                'ContinueOnFailure', continueOnFailure, ...
+                'ReportMode', reportMode, ...
+                'FailOnNonPass', failOnNonPass));
+    else
+        [resultObj, updateResult, runContext] = execute_timed_step( ...
+            'Run Generated Tests', @() st_run_generated_tests());
+    end
 else
     fprintf('\nRun Generated Tests: SKIP (cfg.RunGeneratedTests=false)\n');
 end
@@ -107,7 +142,9 @@ end
 workflowResult = table(Stage, RunCount, CachedCount, FailCount);
 st_write_result('WorkflowResult', workflowResult);
 
-if cfg.RunGeneratedTests && cfg.GenerateTestReport
+if cfg.RunGeneratedTests && strcmp(executionMode, 'PER_CUT')
+    % st_run_tests_per_cut writes its report before each filter is restored.
+elseif cfg.RunGeneratedTests && cfg.GenerateTestReport
     reportInfo = execute_timed_step( ...
         'Generate Integrated Test Report', ...
         @() st_generate_test_report( ...
@@ -122,6 +159,12 @@ fprintf('Automation Complete\n');
 fprintf('End     : %s\n', timestamp_text());
 fprintf('Elapsed : %s\n', elapsed_text(toc(totalTimer)));
 fprintf('============================================\n');
+end
+
+function value = option_or_default(value, defaultValue)
+if isempty(value)
+    value = defaultValue;
+end
 end
 
 function varargout = execute_timed_step(label, fn)

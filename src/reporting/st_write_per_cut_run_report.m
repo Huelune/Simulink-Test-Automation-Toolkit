@@ -33,6 +33,9 @@ try
     writetable(targets, summaryPath, 'Sheet', 'Targets');
     if ~isempty(coverage)
         writetable(coverage, summaryPath, 'Sheet', 'Coverage');
+    else
+        writecell({'Message'; 'No coverage rows were collected'}, ...
+            summaryPath, 'Sheet', 'Coverage');
     end
     if ~isempty(artifacts)
         writetable(artifacts, summaryPath, 'Sheet', 'Artifacts');

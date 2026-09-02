@@ -14,6 +14,10 @@ verifyTrue(testCase, endsWith(string(cfg.WorkflowStateSummaryFile), ...
 verifyEqual(testCase, cfg.CoverageFilterApplicationMode, 'RUNTIME');
 verifyTrue(testCase, endsWith(string(cfg.CoverageFilterDir), ...
     fullfile('result', 'coverage_filters')));
+verifyEqual(testCase, cfg.ExecutionMode, 'AUTO');
+verifyTrue(testCase, cfg.PerCutContinueOnFailure);
+verifyEqual(testCase, cfg.PerCutReportMode, 'SUMMARY');
+verifyTrue(testCase, cfg.PerCutFailOnNonPass);
 end
 
 function testWorkflowOptionOverrides(testCase)
@@ -28,11 +32,27 @@ options = st_parse_workflow_options('FromStage', 'coverage_filter');
 verifyEqual(testCase, options.FromStage, 'COVERAGE_FILTER');
 end
 
+function testPerCutWorkflowOptionOverrides(testCase)
+options = st_parse_workflow_options( ...
+    'ExecutionMode', 'per_cut', ...
+    'ContinueOnFailure', false, ...
+    'ReportMode', 'full', ...
+    'FailOnNonPass', false);
+verifyEqual(testCase, options.ExecutionMode, 'PER_CUT');
+verifyFalse(testCase, options.ContinueOnFailure);
+verifyEqual(testCase, options.ReportMode, 'FULL');
+verifyFalse(testCase, options.FailOnNonPass);
+end
+
 function testInvalidWorkflowOptionRejected(testCase)
 verifyError(testCase, @() st_parse_workflow_options( ...
     'PreparationMode', 'DELETE'), 'simtest:InvalidPreparationMode');
 verifyError(testCase, @() st_parse_workflow_options( ...
     'FromStage', 'REPORT'), 'simtest:InvalidPreparationFromStage');
+verifyError(testCase, @() st_parse_workflow_options( ...
+    'ExecutionMode', 'PARALLEL'), 'simtest:InvalidExecutionMode');
+verifyError(testCase, @() st_parse_workflow_options( ...
+    'ReportMode', 'PDF_ONLY'), 'simtest:InvalidPerCutReportMode');
 end
 
 function testDefaultStageSelectionRunsEveryRow(testCase)

@@ -145,8 +145,15 @@ fingerprint = st_verification_target_fingerprint(cfg)
 6. fixture Decision·Execution 100%, 최초/최종 결과 연결, FILE/GENERATE,
    두 번째 AUTO 캐시 재사용, 손상 상태 복구, 부분 실패 시 테스트 미실행,
    내보낸 template 불변과 두 번의 재실행을 확인합니다.
-7. 실제 모델 source inventory가 실행 전후 동일한지 확인합니다.
-8. `PASS` 실행의 manifest와 R2025b 버전을 최초 인증 근거로 보관합니다.
+7. fixture의 `SUBSYSTEM+JUSTIFY`, `ALL_CONTENT+EXCLUDE`, `OFF` CUT이 Excel
+   순서대로 독립 실행되고, 각 target manifest의 CVF 적용·복원 상태와 SHA-256,
+   초기·최종 ResultSet 연결이 일치하는지 확인합니다.
+8. 실제 모델 source inventory가 실행 전후 동일한지 확인합니다.
+9. `PASS` 실행의 manifest와 R2025b 버전을 최초 인증 근거로 보관합니다.
+
+`CERTIFY + FIXTURE`는 현재 활성 CVF 때문에 `AUTO → PER_CUT` 경로를 사용하고
+`FULL` 보고서로 CUT별 MLDATX, Excel, Coverage HTML과 PDF를 확인합니다. CVF
+복원 실패 시 이후 CUT이 실행되지 않는지도 별도 실패 fixture로 확인해야 합니다.
 
 현재 개발 환경에서 MATLAB R2025b runtime 결과를 만들지 않았다면 코드와
 문서가 존재해도 인증 완료로 기록하지 않습니다.

@@ -338,8 +338,9 @@ cfg.CoverageMetricSettings = 'dwe';
 cfg.CoverageIncludeReferencedModels = false;
 
 % RUNTIME:
-%   Apply each generated filter to its Test Case only while run(tf) is
-%   active, then restore and save the original Test Case settings.
+%   Apply each generated filter only for its execution scope. PER_CUT keeps
+%   it through result export, then restores and verifies the original Test
+%   File, Test Suite, and Test Case filter settings before the next CUT.
 % PERSIST:
 %   Keep the generated per-Test-Case filter settings in the MLDATX file.
 cfg.CoverageFilterApplicationMode = 'RUNTIME';

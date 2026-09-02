@@ -38,6 +38,16 @@ verifyEqual(testCase, plan.Scope, "FILTERS");
 verifyEqual(testCase, plan.Path, string(cfg.CoverageFilterDir));
 end
 
+function testPerCutScopeTargetsOnlyPerCutArtifacts(testCase)
+cfg = st_config();
+plan = st_cleanup_results('Scope', 'PER_CUT_RUNS');
+
+verifyEqual(testCase, height(plan), 2);
+verifyTrue(testCase, all(plan.Scope == "PER_CUT_RUNS"));
+verifyEqual(testCase, plan.Path, ...
+    string({cfg.PerCutRunRootDir; cfg.PerCutLatestPointer}));
+end
+
 
 function tf = under_result(paths, root)
 root = char(java.io.File(root).getCanonicalPath());

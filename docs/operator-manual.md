@@ -309,6 +309,21 @@ st_run_from_harness( ...
     'FromStage', 'SLDV');
 ```
 
+실행 방식은 기본 `AUTO`입니다. 활성 Coverage 필터가 하나라도 있으면 모든 활성
+CUT을 개별 실행하고, 전부 `OFF`이면 기존 일괄 실행을 사용합니다.
+
+```matlab
+[results, updates, workflow, report] = st_run_from_harness( ...
+    'ExecutionMode', 'PER_CUT', ...
+    'ContinueOnFailure', true, ...
+    'ReportMode', 'SUMMARY', ...
+    'FailOnNonPass', true);
+```
+
+`BATCH`는 모든 활성 행의 `CoverageFilterMode=OFF`일 때만 허용됩니다.
+`SUMMARY`는 CUT별 MLDATX·Excel·경량 HTML, `FULL`은 여기에 PDF와 전체 Coverage
+HTML을 추가합니다. 필터 복원 실패는 다음 CUT로 진행하지 않는 안전 오류입니다.
+
 ### 7.2 `st_run_after_harness`
 
 대상 Harness가 이미 존재할 때 사용합니다. Harness 생성 대신 기존 매핑을
@@ -356,6 +371,7 @@ st_cleanup_results('Scope', 'STATE', 'Apply', true);
 | `st_create_test_manager` | Test File, TC, Iteration 구성 | `TestManagerResult.ini` |
 | `st_validate_scenario_alignment` | Scenario와 Iteration 정렬 확인 | `ScenarioAlignmentResult.ini` |
 | `st_run_generated_tests` | 선택된 Test Case 실행과 기대값 정책 적용 | Test Manager 결과 및 실행 보고서 입력 |
+| `st_run_tests_per_cut` | CUT별 transient CVF, 독립 실행·보고서·복원 검증 | `result/per_cut_runs`, `per_cut_latest.json` |
 
 단계별 명령을 임의 순서로 호출하면 SLDV manifest나 이전 단계 산출물이 없어
 실패할 수 있습니다.
@@ -604,6 +620,7 @@ Scope:
 | `SLDV` | `result/sldv`; 삭제 후 SLDV 준비 필요 |
 | `STATE` | `result/state`; 다음 AUTO에서 준비 단계 재평가 |
 | `RUNS` | `result/runs`, `latest.json`, `TestSummary.xlsx` |
+| `PER_CUT_RUNS` | `result/per_cut_runs`, `per_cut_latest.json` |
 | `EXPORTS` | `result/exports` |
 | `VERIFICATION` | `result/verification` |
 | `FILTERS` | `result/coverage_filters`; 다음 실행에서 자동 재생성 |
