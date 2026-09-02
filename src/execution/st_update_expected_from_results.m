@@ -1,4 +1,4 @@
-function R = st_update_expected_from_results(resultObj)
+function R = st_update_expected_from_results(resultObj, targetConfig)
 %ST_UPDATE_EXPECTED_FROM_RESULTS
 % Test execution 결과를 사용하여 실패한 Iteration의 verify expected value를 갱신합니다.
 %
@@ -36,9 +36,11 @@ function R = st_update_expected_from_results(resultObj)
 
 cfg = st_require_runtime_target();
 
-T = ...
-    st_load_targets( ...
-        cfg.OnlyEnabled);
+if nargin < 2 || isempty(targetConfig)
+    T = st_load_targets(cfg.OnlyEnabled);
+else
+    T = targetConfig;
+end
 
 T = ...
     T(T.ExpectedUpdateMode == "APPLY", :);

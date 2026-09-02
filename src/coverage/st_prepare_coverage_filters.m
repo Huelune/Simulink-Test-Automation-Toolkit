@@ -76,36 +76,26 @@ for i = 1:n
             continue;
         end
 
-        ownerPath = st_normalize_cut_path(T.CUTPath(i), cfg.TopModel);
-        ownerHandle = getSimulinkBlockHandle(ownerPath);
-        if ownerHandle == -1 || ...
-                ~strcmp(get_param(ownerHandle, 'BlockType'), 'SubSystem')
-            error('simtest:CoverageFilterTargetNotSubsystem', ...
-                'Coverage filter CUT is missing or not a Subsystem: %s', ...
-                ownerPath);
-        end
+        generated = st_generate_coverage_filter_file( ...
+            T(i,:), filterPath, cfg);
+        RuleCount(i) = generated.RuleCount;
+        RulePaths(i) = generated.RulePaths;
 
-        children = find_direct_child_subsystems(ownerPath);
-        RuleCount(i) = numel(children);
-        RulePaths(i) = string(strjoin(children, ' | '));
-
-        if isempty(children)
+        if generated.Status == "WARN"
             delete_managed_file_quiet(filterPath, cfg.CoverageFilterDir);
             Status(i) = "WARN";
-            Message(i) = "No direct child Subsystem; filter not attached";
+            Message(i) = generated.Message;
             st_log(cfg, 'WARN', ...
                 ['[CoverageFilter %d/%d] no direct child Subsystem | ' ...
                  'CUT=%s | TestCase=%s'], ...
-                i, n, ownerPath, char(T.TestCaseName(i)));
+                i, n, char(T.CUTPath(i)), char(T.TestCaseName(i)));
             ElapsedSec(i) = toc(rowTimer);
             continue;
         end
 
-        write_filter_atomic(filterPath, children, T(i,:), cfg);
         FilterFile(i) = string(filterPath);
         Status(i) = "OK";
-        Message(i) = sprintf('Generated %d direct-child rule(s)', ...
-            RuleCount(i));
+        Message(i) = generated.Message;
 
         st_log(cfg, 'DEBUG', ...
             ['[CoverageFilter %d/%d] generated | rules=%d | ' ...
@@ -145,94 +135,6 @@ st_log(cfg, 'INFO', ...
      'FAIL=%d | elapsed=%.3f sec'], ...
     sum(Status == "OK"), sum(Status == "WARN"), ...
     sum(Status == "FAIL"), toc(totalTimer));
-end
-
-
-function children = find_direct_child_subsystems(ownerPath)
-
-children = find_system(ownerPath, ...
-    'SearchDepth', 1, ...
-    'FollowLinks', 'on', ...
-    'LookUnderMasks', 'all', ...
-    'LookInsideSubsystemReference', 'on', ...
-    'MatchFilter', @Simulink.match.allVariants, ...
-    'Type', 'Block', ...
-    'BlockType', 'SubSystem');
-
-children = children(~strcmp(children, ownerPath));
-children = unique(children, 'stable');
-end
-
-
-function write_filter_atomic(filterPath, children, targetRow, cfg)
-
-folder = fileparts(filterPath);
-if ~isfolder(folder)
-    mkdir(folder);
-end
-
-filterObj = slcoverage.Filter;
-setFilterName(filterObj, sprintf('Auto filter - %s', ...
-    char(targetRow.TestCaseName)));
-setFilterDescription(filterObj, sprintf( ...
-    'Generated from Targets row No=%g, CUT=%s', ...
-    double(targetRow.No), char(targetRow.CUTPath)));
-
-if targetRow.CoverageFilterMode == "SUBSYSTEM"
-    selectorType = slcoverage.BlockSelectorType.Subsystem;
-else
-    selectorType = slcoverage.BlockSelectorType.SubsystemAllContent;
-end
-
-if targetRow.CoverageFilterAction == "EXCLUDE"
-    filterMode = slcoverage.FilterMode.Exclude;
-else
-    filterMode = slcoverage.FilterMode.Justify;
-end
-
-for i = 1:numel(children)
-    sid = Simulink.ID.getSID(children{i});
-    selector = slcoverage.BlockSelector(selectorType, sid);
-    rule = slcoverage.FilterRule(selector, ...
-        char(targetRow.CoverageFilterRationale), filterMode);
-    addRule(filterObj, rule);
-end
-
-temporaryBase = tempname(folder);
-temporaryFile = [temporaryBase '.cvf'];
-cleanup = onCleanup(@() delete_temporary_filter( ...
-    temporaryBase, temporaryFile)); %#ok<NASGU>
-
-st_log(cfg, 'TRACE', ...
-    'Coverage filter save start | temporary=%s | final=%s', ...
-    temporaryFile, filterPath);
-save(filterObj, temporaryBase);
-if ~isfile(temporaryFile) && isfile(temporaryBase)
-    temporaryFile = temporaryBase;
-end
-if ~isfile(temporaryFile)
-    error('simtest:CoverageFilterSaveFailed', ...
-        'Coverage filter API did not create the expected file: %s', ...
-        temporaryFile);
-end
-
-[moved, moveMessage] = movefile(temporaryFile, filterPath, 'f');
-if ~moved
-    error('simtest:CoverageFilterSaveFailed', ...
-        'Cannot replace coverage filter %s: %s', ...
-        filterPath, moveMessage);
-end
-st_log(cfg, 'TRACE', ...
-    'Coverage filter save done | final=%s', filterPath);
-end
-
-
-function delete_temporary_filter(varargin)
-for i = 1:nargin
-    if isfile(varargin{i})
-        delete(varargin{i});
-    end
-end
 end
 
 

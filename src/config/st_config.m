@@ -268,6 +268,17 @@ cfg.OverwriteTestFile = false;
 % false : Stop after Test Manager creation.
 cfg.RunGeneratedTests = true;
 
+% AUTO: use PER_CUT when any enabled target has an active CVF, otherwise
+% keep the legacy BATCH run(tf) path. BATCH rejects active CVFs. PER_CUT
+% always executes each enabled Test Case independently in Excel order.
+cfg.ExecutionMode = 'AUTO';
+
+% Per-CUT execution continues after a Test Case/report failure only when
+% the transient coverage filter was restored and verified successfully.
+cfg.PerCutContinueOnFailure = true;
+cfg.PerCutReportMode = 'SUMMARY';
+cfg.PerCutFailOnNonPass = true;
+
 
 %% ============================================================
 % Incremental preparation
@@ -345,6 +356,11 @@ cfg.LatestReportPointer = ...
     fullfile(rootDir, 'result', 'latest.json');
 cfg.LatestSummaryFile = ...
     fullfile(rootDir, 'result', 'TestSummary.xlsx');
+
+cfg.PerCutRunRootDir = ...
+    fullfile(rootDir, 'result', 'per_cut_runs');
+cfg.PerCutLatestPointer = ...
+    fullfile(rootDir, 'result', 'per_cut_latest.json');
 
 % Standalone command st_export_test_bundle writes reproducible bundles here.
 % This setting is not used by either normal workflow entry point.
