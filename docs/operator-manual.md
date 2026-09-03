@@ -336,10 +336,6 @@ Test Case 판정이 `FAILED`, `UNTESTED`, `INCOMPLETE`여도 실행 자체가 �
 `FinalOutcome`과 `WARN`으로 기록하고 다음 CUT을 실행합니다. `run(tc)` 또는 결과
 저장 중 예외가 발생한 경우에만 실행 실패(`FAIL`)로 기록됩니다.
 
-PER_CUT 결과 내보내기와 필터 복원이 끝나면 실행에 사용한 Harness를 닫습니다.
-열린 Harness 때문에 Test Manager의 `Aggregated Coverage Results` 링크가 점
-인덱싱 오류로 열리지 않는 MATLAB Coverage UI 문제를 피하기 위한 동작입니다.
-
 `BATCH`는 모든 활성 행의 `CoverageFilterMode=OFF`일 때만 허용됩니다.
 `SUMMARY`는 CUT별 MLDATX·Excel·경량 HTML, `FULL`은 여기에 PDF와 전체 Coverage
 HTML을 추가합니다. 필터 복원 실패는 다음 CUT로 진행하지 않는 안전 오류입니다.

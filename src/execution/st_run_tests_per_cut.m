@@ -345,20 +345,6 @@ for i = 1:n
         end
     end
 
-    % Test Manager can fail while opening Aggregated Coverage Details when
-    % the test harness remains loaded. Close it after result export and
-    % filter restoration so the saved ResultSet stays viewable.
-    harnessClose = close_harness_for_coverage_view(row, cfg);
-    append_event(logPath, i, 'HARNESS_CLOSE_FOR_COVERAGE', ...
-        char(harnessClose.Status));
-    if harnessClose.Status == "WARN"
-        if Status(i) == "PASS"
-            Status(i) = "WARN";
-        end
-        Message(i) = append_status_message( ...
-            Message(i), string(harnessClose.Message));
-    end
-
     DurationSec(i) = toc(rowTimer);
     CompletedAt(i) = timestamp_text();
     targetManifest = build_target_manifest( ...
@@ -479,54 +465,6 @@ for i = 1:numel(indices)
         " [" + messages(index) + "]";
 end
 text = char(strjoin(details, ' | '));
-end
-
-
-function result = close_harness_for_coverage_view(row, cfg)
-result = struct('Status', "SKIP", ...
-    'Message', "Harness was not loaded");
-harnessName = char(string(row.HarnessName));
-timer = tic;
-try
-    if isempty(harnessName) || ~bdIsLoaded(harnessName)
-        st_log(cfg, 'TRACE', ...
-            ['Coverage-view Harness close skipped | Harness=%s | ' ...
-             'elapsed=%.3f sec'], harnessName, toc(timer));
-        return;
-    end
-
-    ownerPath = st_normalize_cut_path(row.CUTPath, cfg.TopModel);
-    st_log(cfg, 'DEBUG', ...
-        'Coverage-view Harness close start | Owner=%s | Harness=%s', ...
-        ownerPath, harnessName);
-    sltest.harness.close(ownerPath, harnessName);
-    if bdIsLoaded(harnessName)
-        error('simtest:HarnessStillLoadedForCoverageView', ...
-            'Harness remained loaded after close: %s', harnessName);
-    end
-    result.Status = "OK";
-    result.Message = "Harness closed for Test Manager Coverage view";
-    st_log(cfg, 'DEBUG', ...
-        ['Coverage-view Harness close complete | Harness=%s | ' ...
-         'elapsed=%.3f sec'], harnessName, toc(timer));
-catch ME
-    result.Status = "WARN";
-    result.Message = "Could not close Harness for Coverage view: " + ...
-        string(ME.message);
-    st_log(cfg, 'WARN', ...
-        ['Coverage-view Harness close failed | Harness=%s | %s: %s | ' ...
-         'elapsed=%.3f sec'], ...
-        harnessName, ME.identifier, ME.message, toc(timer));
-end
-end
-
-
-function value = append_status_message(current, added)
-if strlength(current) == 0
-    value = added;
-else
-    value = current + " | " + added;
-end
 end
 
 
