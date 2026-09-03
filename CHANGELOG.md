@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Close each loaded PER_CUT harness after result export and filter restore,
+  preventing the Test Manager Aggregated Coverage Details dot-indexing error
+  that can occur while the harness remains open.
 - Removed the editable target-model placeholder from tracked configuration.
   Local model name and file path now come only from the Git-ignored
   `runtime_target.mat` created by `st_select_target_model`.
