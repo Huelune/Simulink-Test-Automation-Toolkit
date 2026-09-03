@@ -6,6 +6,8 @@ p.FunctionName = 'Simulink Test workflow';
 addParameter(p, 'PreparationMode', '', @(v) ischar(v) || isstring(v));
 addParameter(p, 'FromStage', '', @(v) ischar(v) || isstring(v));
 addParameter(p, 'ExecutionMode', '', @(v) ischar(v) || isstring(v));
+addParameter(p, 'SystemUnderTestMode', '', ...
+    @(v) ischar(v) || isstring(v));
 addParameter(p, 'ContinueOnFailure', [], ...
     @(v) isempty(v) || (islogical(v) && isscalar(v)));
 addParameter(p, 'ReportMode', '', @(v) ischar(v) || isstring(v));
@@ -19,6 +21,8 @@ options.PreparationMode = upper(strtrim(char(string( ...
 options.FromStage = upper(strtrim(char(string(p.Results.FromStage))));
 options.ExecutionMode = upper(strtrim(char(string( ...
     p.Results.ExecutionMode))));
+options.SystemUnderTestMode = upper(strtrim(char(string( ...
+    p.Results.SystemUnderTestMode))));
 options.ContinueOnFailure = p.Results.ContinueOnFailure;
 options.ReportMode = upper(strtrim(char(string(p.Results.ReportMode))));
 options.FailOnNonPass = p.Results.FailOnNonPass;
@@ -42,6 +46,9 @@ if ~isempty(options.ExecutionMode) && ...
         ~ismember(options.ExecutionMode, {'AUTO','BATCH','PER_CUT'})
     error('simtest:InvalidExecutionMode', ...
         'ExecutionMode override must be AUTO, BATCH, or PER_CUT.');
+end
+if ~isempty(options.SystemUnderTestMode)
+    st_resolve_system_under_test_mode(options.SystemUnderTestMode);
 end
 if ~isempty(options.ReportMode) && ...
         ~ismember(options.ReportMode, {'SUMMARY','FULL'})

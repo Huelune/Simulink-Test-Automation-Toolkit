@@ -1,0 +1,213 @@
+function info = st_generate_standalone_coverage_filters( ...
+        modelPath, targetRow, filterDirectory, cfg)
+%ST_GENERATE_STANDALONE_COVERAGE_FILTERS Create Harness and CUT CVFs.
+
+modelPath = char(string(modelPath));
+[modelDirectory, modelName] = fileparts(modelPath);
+if ~isfolder(filterDirectory), mkdir(filterDirectory); end
+st_log(cfg, 'INFO', ...
+    ['Standalone coverage filter generation start | TestCase=%s | ' ...
+     'Model=%s'], char(targetRow.TestCaseName), modelName);
+timerValue = tic;
+
+pathCleanup = register_model_path(modelDirectory); %#ok<NASGU>
+load_system(modelPath);
+modelCleanup = onCleanup(@() close_model(modelName)); %#ok<NASGU>
+assert_loaded_file(modelName, modelPath);
+cut = st_resolve_exported_cut(modelName, targetRow, cfg);
+
+allTopBlocks = find_system(modelName, ...
+    'SearchDepth', 1, ...
+    'FollowLinks', 'on', ...
+    'LookUnderMasks', 'all', ...
+    'Type', 'Block');
+allTopBlocks = cellstr(string(allTopBlocks(:)));
+harnessPaths = allTopBlocks(~strcmp(allTopBlocks, cut.ExportedPath));
+harnessPaths = unique(harnessPaths, 'stable');
+if any(strcmp(harnessPaths, modelName)) || ...
+        any(strcmp(harnessPaths, cut.ExportedPath))
+    error('simtest:StandaloneHarnessFilterScopeInvalid', ...
+        'Harness-scope CVF attempted to select the model root or CUT.');
+end
+harnessTypes = cell(numel(harnessPaths),1);
+for i = 1:numel(harnessPaths)
+    if strcmp(get_param(harnessPaths{i}, 'BlockType'), 'SubSystem')
+        harnessTypes{i} = ...
+            slcoverage.BlockSelectorType.SubsystemAllContent;
+    else
+        harnessTypes{i} = slcoverage.BlockSelectorType.BlockInstance;
+    end
+end
+harnessModes = repmat({slcoverage.FilterMode.Exclude}, ...
+    numel(harnessPaths), 1);
+harnessRationale = repmat( ...
+    {'Test Harness infrastructure; not design under test'}, ...
+    numel(harnessPaths), 1);
+harnessPath = fullfile(filterDirectory, 'harness-scope.cvf');
+harnessResult = write_filter(harnessPath, ...
+    sprintf('Harness scope - %s', char(targetRow.TestCaseName)), ...
+    sprintf('All top-level Harness infrastructure except CUT %s', ...
+        cut.ExportedPath), ...
+    harnessPaths, harnessTypes, harnessRationale, harnessModes);
+
+targetPath = '';
+targetResult = empty_filter_result();
+targetResult.Status = 'OFF';
+if targetRow.CoverageFilterMode ~= "OFF"
+    targetPaths = find_system(cut.ExportedPath, ...
+        'SearchDepth', 1, ...
+        'FollowLinks', 'on', ...
+        'LookUnderMasks', 'all', ...
+        'LookInsideSubsystemReference', 'on', ...
+        'MatchFilter', @Simulink.match.allVariants, ...
+        'Type', 'Block', ...
+        'BlockType', 'SubSystem');
+    targetPaths = cellstr(string(targetPaths(:)));
+    targetPaths = targetPaths(~strcmp(targetPaths, cut.ExportedPath));
+    targetPaths = unique(targetPaths, 'stable');
+    if targetRow.CoverageFilterMode == "SUBSYSTEM"
+        selectorType = slcoverage.BlockSelectorType.BlockInstance;
+    else
+        selectorType = slcoverage.BlockSelectorType.SubsystemAllContent;
+    end
+    if targetRow.CoverageFilterAction == "EXCLUDE"
+        filterMode = slcoverage.FilterMode.Exclude;
+    else
+        filterMode = slcoverage.FilterMode.Justify;
+    end
+    targetTypes = repmat({selectorType}, numel(targetPaths), 1);
+    targetModes = repmat({filterMode}, numel(targetPaths), 1);
+    targetRationale = repmat( ...
+        {char(targetRow.CoverageFilterRationale)}, numel(targetPaths), 1);
+    targetPath = fullfile(filterDirectory, 'target-policy.cvf');
+    targetResult = write_filter(targetPath, ...
+        sprintf('CUT policy - %s', char(targetRow.TestCaseName)), ...
+        sprintf('Direct child Subsystems of exported CUT %s', ...
+            cut.ExportedPath), ...
+        targetPaths, targetTypes, targetRationale, targetModes);
+end
+
+files = string(harnessPath);
+if ~isempty(targetPath), files(end+1,1) = string(targetPath); end
+info = struct( ...
+    'ModelPath', modelPath, ...
+    'ExportedCUTPath', cut.ExportedPath, ...
+    'ExportedCUTSID', cut.SID, ...
+    'Files', files, ...
+    'Harness', harnessResult, ...
+    'Target', targetResult, ...
+    'Status', 'OK');
+st_log(cfg, 'INFO', ...
+    ['Standalone coverage filter generation complete | TestCase=%s | ' ...
+     'HarnessRules=%d | TargetRules=%d | elapsed=%.3f sec'], ...
+    char(targetRow.TestCaseName), harnessResult.RuleCount, ...
+    targetResult.RuleCount, toc(timerValue));
+end
+
+function result = write_filter(path, name, description, paths, ...
+        selectorTypes, rationales, filterModes)
+filterObj = slcoverage.Filter;
+setFilterName(filterObj, name);
+setFilterDescription(filterObj, description);
+sids = strings(numel(paths),1);
+for i = 1:numel(paths)
+    sids(i) = string(Simulink.ID.getSID(paths{i}));
+    selector = slcoverage.BlockSelector(selectorTypes{i}, char(sids(i)));
+    rule = slcoverage.FilterRule(selector, rationales{i}, filterModes{i});
+    if ~addRule(filterObj, rule)
+        error('simtest:StandaloneCoverageRuleRejected', ...
+            'Coverage filter rule was rejected: %s', paths{i});
+    end
+end
+
+temporaryBase = tempname(fileparts(path));
+temporaryFile = [temporaryBase '.cvf'];
+cleanup = onCleanup(@() delete_if_present( ...
+    temporaryBase, temporaryFile)); %#ok<NASGU>
+save(filterObj, temporaryBase);
+if ~isfile(temporaryFile) && isfile(temporaryBase)
+    temporaryFile = temporaryBase;
+end
+if ~isfile(temporaryFile)
+    error('simtest:StandaloneCoverageFilterSaveFailed', ...
+        'Coverage API did not create a CVF: %s', path);
+end
+[ok, message] = movefile(temporaryFile, path, 'f');
+if ~ok
+    error('simtest:StandaloneCoverageFilterSaveFailed', ...
+        'Cannot replace %s: %s', path, message);
+end
+
+saved = slcoverage.Filter(path);
+savedRules = rules(saved);
+if numel(savedRules) ~= numel(paths)
+    error('simtest:StandaloneCoverageFilterValidationFailed', ...
+        'Saved CVF rule count mismatch: %s', path);
+end
+for i = 1:numel(savedRules)
+    selector = savedRules(i).Selector;
+    if ~isequal(selector.Type, selectorTypes{i}) || ...
+            string(selector.Id) ~= sids(i) || ...
+            ~isequal(savedRules(i).Mode, filterModes{i}) || ...
+            string(savedRules(i).Rationale) ~= string(rationales{i})
+        error('simtest:StandaloneCoverageFilterValidationFailed', ...
+            'Saved CVF rule mismatch for %s.', paths{i});
+    end
+end
+signature = st_file_signature(path);
+result = struct( ...
+    'Path', path, ...
+    'SHA256', signature.SHA256, ...
+    'RuleCount', numel(paths), ...
+    'RulePaths', string(paths(:)), ...
+    'RuleSIDs', sids, ...
+    'SelectorTypes', enum_strings(selectorTypes), ...
+    'Modes', enum_strings(filterModes), ...
+    'Rationales', string(rationales(:)), ...
+    'Status', 'OK');
+end
+
+function output = enum_strings(values)
+output = strings(numel(values),1);
+for i = 1:numel(values)
+    output(i) = string(values{i});
+end
+end
+
+function result = empty_filter_result()
+result = struct('Path', '', 'SHA256', '', 'RuleCount', 0, ...
+    'RulePaths', strings(0,1), 'RuleSIDs', strings(0,1), ...
+    'SelectorTypes', strings(0,1), 'Modes', strings(0,1), ...
+    'Rationales', strings(0,1), ...
+    'Status', 'OFF');
+end
+
+function cleanup = register_model_path(directory)
+addpath(directory, '-begin');
+cleanup = onCleanup(@() remove_path(directory));
+end
+
+function remove_path(directory)
+try, rmpath(directory); catch, end
+end
+
+function assert_loaded_file(modelName, expected)
+actual = get_param(modelName, 'FileName');
+left = char(java.io.File(actual).getCanonicalPath());
+right = char(java.io.File(expected).getCanonicalPath());
+if ispc, equal = strcmpi(left, right); else, equal = strcmp(left, right); end
+if ~equal
+    error('simtest:StandaloneModelLoadMismatch', ...
+        'MATLAB loaded a different standalone model: %s', actual);
+end
+end
+
+function close_model(modelName)
+if bdIsLoaded(modelName), close_system(modelName, 0); end
+end
+
+function delete_if_present(varargin)
+for i = 1:nargin
+    if isfile(varargin{i}), delete(varargin{i}); end
+end
+end

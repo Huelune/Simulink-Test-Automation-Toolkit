@@ -12,6 +12,7 @@ function [cleanupObj, R, session] = ...
 p = inputParser;
 addParameter(p, 'FilterFiles', strings(0, 1), ...
     @(x) ischar(x) || isstring(x) || iscellstr(x));
+addParameter(p, 'FilterFileSets', {}, @iscell);
 addParameter(p, 'ExistingFilterPolicy', 'MERGE', ...
     @(x) ischar(x) || (isstring(x) && isscalar(x)));
 addParameter(p, 'ApplyManagedFiltersDuringRun', true, ...
@@ -47,7 +48,15 @@ fileCoverage = [];
 fileOriginalFilters = strings(0, 1);
 
 filterFiles = string(p.Results.FilterFiles(:));
-if isempty(filterFiles)
+filterFileSets = p.Results.FilterFileSets;
+usesFilterFileSets = ~isempty(filterFileSets);
+if usesFilterFileSets
+    if numel(filterFileSets) ~= n
+        error('simtest:CoverageFilterFileSetCountMismatch', ...
+            'FilterFileSets must contain one cell per Test Case.');
+    end
+    filterFileSets = filterFileSets(:);
+elseif isempty(filterFiles)
     filterFiles = strings(n, 1);
 elseif numel(filterFiles) ~= n
     error('simtest:CoverageFilterFileCountMismatch', ...
@@ -152,37 +161,61 @@ try
             ManualFilterCount(i) = numel(manualFilters{i});
             filters = manualFilters{i};
         end
-        if row.CoverageFilterMode ~= "OFF"
-            expectedFile = char(filterFiles(i));
-            if isempty(expectedFile)
-                expectedFile = st_coverage_filter_file(row, cfg);
+        expectedFiles = strings(0,1);
+        if usesFilterFileSets
+            expectedFiles = string(filterFileSets{i}(:));
+            expectedFiles = expectedFiles(strlength(expectedFiles) > 0);
+        elseif row.CoverageFilterMode ~= "OFF"
+            expectedFiles = filterFiles(i);
+            if strlength(expectedFiles) == 0
+                expectedFiles = string(st_coverage_filter_file(row, cfg));
             end
+        end
+        missingFiles = strings(0,1);
+        for filterIndex = 1:numel(expectedFiles)
+            expectedFile = char(expectedFiles(filterIndex));
             if isfile(expectedFile)
-                FilterFile(i) = string(expectedFile);
                 if applyManagedFiltersDuringRun
                     filters(end+1,1) = string(expectedFile); %#ok<AGROW>
                 end
             else
-                st_log(cfg, 'WARN', ...
-                    ['Coverage filter file is absent; Test Case will run ' ...
-                     'without an automatic filter | TestCase=%s | File=%s'], ...
-                    char(caseNames(i)), expectedFile);
+                missingFiles(end+1,1) = string(expectedFile); %#ok<AGROW>
             end
+        end
+        if ~isempty(expectedFiles)
+            FilterFile(i) = strjoin(expectedFiles, ';');
+        end
+        if ~isempty(missingFiles)
+            st_log(cfg, 'WARN', ...
+                ['Coverage filter file is absent; Test Case will run ' ...
+                 'without it | TestCase=%s | Files=%s'], ...
+                char(caseNames(i)), char(strjoin(missingFiles, ' | ')));
         end
 
         filters = unique(filters(strlength(filters) > 0), 'stable');
         coverageObjects{i}.CoverageFilterFilename = ...
             filter_property_value(filters);
+        actualFilters = normalize_filter_values( ...
+            coverageObjects{i}.CoverageFilterFilename);
+        missingApplied = setdiff(expectedFiles, actualFilters, 'stable');
+        if ~isempty(missingApplied)
+            error('simtest:CoverageFilterApplyVerificationFailed', ...
+                'Coverage filters were not retained by Test Case %s: %s', ...
+                char(caseNames(i)), char(strjoin(missingApplied, ' | ')));
+        end
         AppliedFilterCount(i) = numel(filters);
         Status(i) = "OK";
-        if strlength(FilterFile(i)) > 0
+        if ~isempty(missingFiles)
+            Status(i) = "WARN";
+            Message(i) = "Some managed coverage filters are missing";
+        elseif strlength(FilterFile(i)) > 0
             if applyManagedFiltersDuringRun
-                Message(i) = "Automatic per-Test-Case filter applied";
+                Message(i) = "Managed per-Test-Case filter set applied";
             else
                 Message(i) = ...
                     "Automatic filter deferred to result coverage data";
             end
-        elseif row.CoverageFilterMode == "OFF"
+        elseif row.CoverageFilterMode == "OFF" && ~usesFilterFileSets
             Message(i) = "Automatic coverage filter disabled";
         else
             Status(i) = "WARN";

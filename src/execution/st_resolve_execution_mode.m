@@ -1,5 +1,12 @@
-function mode = st_resolve_execution_mode(requestedMode, targetConfig)
+function mode = st_resolve_execution_mode( ...
+        requestedMode, targetConfig, systemUnderTestMode)
 %ST_RESOLVE_EXECUTION_MODE Resolve AUTO/BATCH/PER_CUT execution policy.
+
+if nargin < 3
+    systemUnderTestMode = 'INTERNAL_HARNESS';
+end
+systemUnderTestMode = st_resolve_system_under_test_mode( ...
+    systemUnderTestMode);
 
 requestedMode = upper(strtrim(string(requestedMode)));
 if ismissing(requestedMode) || strlength(requestedMode) == 0
@@ -12,6 +19,15 @@ if ~isscalar(requestedMode) || ...
 end
 
 hasActiveFilter = any(string(targetConfig.CoverageFilterMode) ~= "OFF");
+if strcmp(systemUnderTestMode, 'EXPORTED_MODEL')
+    if requestedMode == "BATCH"
+        error('simtest:StandaloneModelRequiresPerCut', ...
+            ['EXPORTED_MODEL execution requires PER_CUT because every ' ...
+             'CUT has a different standalone SUT and Harness-scope CVF.']);
+    end
+    mode = 'PER_CUT';
+    return;
+end
 if requestedMode == "AUTO"
     if hasActiveFilter
         mode = 'PER_CUT';

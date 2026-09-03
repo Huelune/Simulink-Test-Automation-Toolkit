@@ -4,6 +4,7 @@ function varargout = st_run_from_harness(varargin)
 % st_run_from_harness
 % st_run_from_harness('PreparationMode','FORCE','FromStage','SLDV')
 % st_run_from_harness('ExecutionMode','PER_CUT','ReportMode','FULL')
+% st_run_from_harness('SystemUnderTestMode','EXPORTED_MODEL')
 
 [varargout{1:nargout}] = st_run_workflow('FULL', varargin{:});
 end

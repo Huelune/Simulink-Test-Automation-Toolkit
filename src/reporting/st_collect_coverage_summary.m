@@ -9,10 +9,19 @@ addParameter(p, 'MatchCoverageObjects', false, ...
     @(x) islogical(x) && isscalar(x));
 addParameter(p, 'ProgressFcn', [], ...
     @(x) isempty(x) || isa(x, 'function_handle'));
+addParameter(p, 'CoverageTargetPaths', strings(0,1), ...
+    @(x) ischar(x) || isstring(x) || iscellstr(x));
 parse(p, varargin{:});
 includeTestDetails = p.Results.IncludeTestDetails;
 matchCoverageObjects = p.Results.MatchCoverageObjects;
 progressFcn = p.Results.ProgressFcn;
+coverageTargetPaths = string(p.Results.CoverageTargetPaths(:));
+if isempty(coverageTargetPaths)
+    coverageTargetPaths = string(targetConfig.CUTPath);
+elseif numel(coverageTargetPaths) ~= height(targetConfig)
+    error('simtest:CoverageTargetPathCountMismatch', ...
+        'CoverageTargetPaths must contain one path per target row.');
+end
 
 coverage = empty_coverage_table();
 resultCoverage = getCoverageResults(resultObj);
@@ -23,7 +32,7 @@ resultDescriptors = describe_coverage_objects(resultCoverage);
 for t = 1:height(targetConfig)
     notify_progress(progressFcn, 'CUT coverage', t, height(targetConfig));
     target = targetConfig(t,:);
-    targetPath = char(target.CUTPath);
+    targetPath = char(coverageTargetPaths(t));
     matches = select_coverage_objects(resultDescriptors, targetPath, ...
         matchCoverageObjects);
     if isempty(matches)
@@ -71,7 +80,7 @@ for c = 1:numel(caseResults)
     end
     target = targetConfig(targetIndex,:);
     caseCoverage = getCoverageResults(tcResult);
-    targetPath = char(target.CUTPath);
+    targetPath = char(coverageTargetPaths(targetIndex));
     caseMatches = select_coverage_objects( ...
         describe_coverage_objects(caseCoverage), targetPath, ...
         matchCoverageObjects);

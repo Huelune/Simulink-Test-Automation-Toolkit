@@ -274,6 +274,14 @@ cfg.RunGeneratedTests = true;
 % always executes each enabled Test Case independently in Excel order.
 cfg.ExecutionMode = 'AUTO';
 
+% INTERNAL_HARNESS:
+%   Keep the existing Test Manager SUT binding (TopModel + Harness).
+% EXPORTED_MODEL:
+%   Export each internal Harness to an execution-local standalone model,
+%   bind that model as the Test Manager SUT, and run every CUT separately.
+% This is an execution-wide setting; Excel rows cannot mix both modes.
+cfg.SystemUnderTestMode = 'INTERNAL_HARNESS';
+
 % Per-CUT execution continues after a Test Case/report failure only when
 % the transient coverage filter was restored and verified successfully.
 cfg.PerCutContinueOnFailure = true;
@@ -372,6 +380,11 @@ cfg.PerCutRunRootDir = ...
     fullfile(rootDir, 'result', 'per_cut_runs');
 cfg.PerCutLatestPointer = ...
     fullfile(rootDir, 'result', 'per_cut_latest.json');
+
+cfg.StandaloneRunRootDir = ...
+    fullfile(rootDir, 'result', 'standalone_runs');
+cfg.StandaloneLatestPointer = ...
+    fullfile(rootDir, 'result', 'standalone_latest.json');
 
 % Standalone command st_export_test_bundle writes reproducible bundles here.
 % This setting is not used by either normal workflow entry point.

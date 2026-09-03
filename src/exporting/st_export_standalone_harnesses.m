@@ -1,6 +1,30 @@
 function bundlePaths = st_export_standalone_harnesses( ...
-        sourceModelFile, topModel, targets, destination, bundleRoot)
+        sourceModelFile, topModel, targets, destination, bundleRoot, varargin)
 %ST_EXPORT_STANDALONE_HARNESSES Export Harnesses from a disposable copy.
+
+p = inputParser;
+addParameter(p, 'ModelNames', strings(0,1), ...
+    @(x) ischar(x) || isstring(x) || iscellstr(x));
+addParameter(p, 'FlatOutput', false, ...
+    @(x) islogical(x) && isscalar(x));
+addParameter(p, 'LogConfig', struct(), @isstruct);
+parse(p, varargin{:});
+
+modelNames = string(p.Results.ModelNames(:));
+if isempty(modelNames)
+    modelNames = string(targets.HarnessName);
+elseif numel(modelNames) ~= height(targets)
+    error('simtest:StandaloneModelNameCountMismatch', ...
+        'ModelNames must contain one name per target row.');
+end
+flatOutput = logical(p.Results.FlatOutput);
+logCfg = p.Results.LogConfig;
+
+if ~isempty(fieldnames(logCfg))
+    st_log(logCfg, 'INFO', ...
+        'Standalone Harness export start | targets=%d | destination=%s', ...
+        height(targets), destination);
+end
 
 if ~isfile(sourceModelFile)
     error('simtest:AssetModelMissing', ...
@@ -64,7 +88,8 @@ for i = 1:height(targets)
     sourceOwner = char(st_normalize_cut_path( ...
         targets.CUTPath(i), topModel));
     harnessName = char(string(targets.HarnessName(i)));
-    key = string(lower(sourceOwner)) + "|" + string(lower(harnessName));
+    key = string(lower(sourceOwner)) + "|" + string(lower(harnessName)) + ...
+        "|" + lower(modelNames(i));
     existing = find(keys == key, 1);
     if ~isempty(existing)
         bundlePaths(i) = keyPaths(existing);
@@ -80,9 +105,13 @@ for i = 1:height(targets)
             sourceOwner, harnessName);
     end
 
-    outputFolder = fullfile(destination, target_folder(targets(i,:)));
+    if flatOutput
+        outputFolder = destination;
+    else
+        outputFolder = fullfile(destination, target_folder(targets(i,:)));
+    end
     if ~isfolder(outputFolder), mkdir(outputFolder); end
-    outputModel = standalone_model_name(harnessName);
+    outputModel = standalone_model_name(char(modelNames(i)));
     outputPath = fullfile(outputFolder, [outputModel '.slx']);
 
     previousFolder = pwd;
@@ -112,6 +141,11 @@ for i = 1:height(targets)
     bundlePaths(i) = string(relative);
 end
 clear sessionCleanup;
+
+if ~isempty(fieldnames(logCfg))
+    st_log(logCfg, 'INFO', ...
+        'Standalone Harness export complete | targets=%d', height(targets));
+end
 
     function cleanup_export_session()
         restoreError = [];

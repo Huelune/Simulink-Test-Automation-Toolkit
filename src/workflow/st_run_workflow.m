@@ -5,15 +5,22 @@ function [resultObj, updateResult, workflowResult, reportInfo] = ...
 cfg = st_require_runtime_target();
 options = st_parse_workflow_options(varargin{:});
 T = st_load_targets(cfg.OnlyEnabled);
+systemUnderTestMode = options.SystemUnderTestMode;
+if isempty(systemUnderTestMode)
+    systemUnderTestMode = cfg.SystemUnderTestMode;
+end
+systemUnderTestMode = st_resolve_system_under_test_mode( ...
+    systemUnderTestMode);
 requestedExecutionMode = options.ExecutionMode;
 if isempty(requestedExecutionMode)
     requestedExecutionMode = cfg.ExecutionMode;
 end
 executionMode = st_resolve_execution_mode( ...
-    requestedExecutionMode, T);
+    requestedExecutionMode, T, systemUnderTestMode);
 % Pass the resolved policy into fingerprint/artifact planning. AUTO itself
 % is not sufficient to decide whether a shared CVF should exist.
 cfg.ExecutionMode = executionMode;
+cfg.SystemUnderTestMode = systemUnderTestMode;
 [plan, state, context] = ...
     st_build_execution_plan(T, cfg, workflowKind, options);
 
@@ -36,6 +43,7 @@ fprintf('Workflow : %s\n', upper(char(string(workflowKind))));
 fprintf('Model    : %s\n', cfg.TopModel);
 fprintf('State    : %s\n', context.StateLoadStatus);
 fprintf('Execute  : %s\n', executionMode);
+fprintf('SUT Mode : %s\n', systemUnderTestMode);
 fprintf('Start    : %s\n', timestamp_text());
 fprintf('============================================\n');
 print_plan(plan);
@@ -86,7 +94,10 @@ for s = 1:numel(stageNames)
     stage = stageNames{s};
     selection = st_stage_selection(plan, stage);
     fn = stageFunctions{s};
-    if strcmp(executionMode, 'PER_CUT') && ...
+    if strcmp(systemUnderTestMode, 'EXPORTED_MODEL') && ...
+            ismember(stage, {'COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT'})
+        fn = @(value) st_defer_standalone_execution_stage(value, stage);
+    elseif strcmp(executionMode, 'PER_CUT') && ...
             strcmp(stage, 'COVERAGE_FILTER')
         fn = @st_defer_coverage_filters_to_per_cut;
     elseif strcmp(executionMode, 'PER_CUT') && ...
@@ -115,6 +126,7 @@ if cfg.RunGeneratedTests
         [resultObj, updateResult, reportInfo] = execute_timed_step( ...
             'Run Generated Tests Per CUT', ...
             @() st_run_tests_per_cut( ...
+                'SystemUnderTestMode', systemUnderTestMode, ...
                 'ContinueOnFailure', continueOnFailure, ...
                 'ReportMode', reportMode, ...
                 'FailOnNonPass', failOnNonPass));
