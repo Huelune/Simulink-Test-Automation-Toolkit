@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Restored `SUBSYSTEM` CVF generation to the dedicated subsystem-only
+  selector. Descendant filtering remains exclusive to `ALL_CONTENT`.
+- Moved PER_CUT result serialization until after transient filter restore
+  and added before/after ResultSet coverage integrity checks around MLDATX,
+  CVT, CVF-copy, and HTML creation.
 - Removed the editable target-model placeholder from tracked configuration.
   Local model name and file path now come only from the Git-ignored
   `runtime_target.mat` created by `st_select_target_model`.

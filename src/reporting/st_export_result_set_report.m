@@ -35,6 +35,27 @@ targets = empty_target_table();
 iterations = empty_iteration_table();
 coverage = empty_coverage_table();
 
+integrityBaseline = table();
+integrityBaselineAvailable = false;
+integrityTimer = tic;
+st_log(logConfig, 'DEBUG', ...
+    'Result coverage integrity check start | stage=BEFORE_EXPORT | label=%s', ...
+    resultLabel);
+try
+    integrityBaseline = coverage_integrity_snapshot(resultObj);
+    integrityBaselineAvailable = true;
+    st_log(logConfig, 'DEBUG', ...
+        ['Result coverage integrity check complete | ' ...
+         'stage=BEFORE_EXPORT | objects=%d | elapsed=%.3f sec'], ...
+        height(integrityBaseline), toc(integrityTimer));
+catch ME
+    artifacts = record_artifact(artifacts, 'RESULT_INTEGRITY', '', ...
+        'FAIL', ['Coverage data was invalid before export: ' ME.message]);
+    st_log(logConfig, 'ERROR', ...
+        'Result coverage integrity check failed before export | %s: %s', ...
+        ME.identifier, ME.message);
+end
+
 stepTimer = report_step_start(1, 6, 'Collect Test Result Hierarchy');
 try
     [targets, iterations] = st_collect_test_result_summary( ...
@@ -140,6 +161,35 @@ coverageArtifactStatus = char(st_report_status( ...
     artifacts.Status(coverageArtifactTypes)));
 report_step_finish(5, 6, 'Create Portable Coverage Artifacts', ...
     stepTimer, coverageArtifactStatus);
+
+integrityTimer = tic;
+st_log(logConfig, 'DEBUG', ...
+    'Result coverage integrity check start | stage=AFTER_EXPORT | label=%s', ...
+    resultLabel);
+try
+    integrityAfter = coverage_integrity_snapshot(resultObj);
+    if ~integrityBaselineAvailable
+        error('simtest:ResultCoverageIntegrityBaselineMissing', ...
+            'The pre-export coverage snapshot was unavailable.');
+    end
+    if ~isequal(integrityAfter, integrityBaseline)
+        error('simtest:ResultCoverageChangedDuringExport', ...
+            ['Result coverage ID, root, or filter reference changed while ' ...
+             'portable artifacts were created.']);
+    end
+    artifacts = record_artifact(artifacts, 'RESULT_INTEGRITY', '', ...
+        'OK', 'Live ResultSet coverage remained unchanged during export');
+    st_log(logConfig, 'DEBUG', ...
+        ['Result coverage integrity check complete | ' ...
+         'stage=AFTER_EXPORT | objects=%d | elapsed=%.3f sec'], ...
+        height(integrityAfter), toc(integrityTimer));
+catch ME
+    artifacts = record_artifact(artifacts, 'RESULT_INTEGRITY', '', ...
+        'FAIL', ME.message);
+    st_log(logConfig, 'ERROR', ...
+        'Result coverage integrity check failed after export | %s: %s', ...
+        ME.identifier, ME.message);
+end
 
 summaryPath = fullfile(outputDirectory, 'TestSummary.xlsx');
 stepTimer = report_step_start(6, 6, 'Write Test Summary Excel');
@@ -456,6 +506,25 @@ end
 
 function text = timestamp_text()
 text = char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss.SSS'));
+end
+
+function snapshot = coverage_integrity_snapshot(resultObj)
+coverageObjects = getCoverageResults(resultObj);
+n = numel(coverageObjects);
+Id = zeros(n,1);
+RootPath = strings(n,1);
+FilterReferences = strings(n,1);
+for i = 1:n
+    Id(i) = double(coverageObjects(i).id);
+    testObject = coverageObjects(i).test;
+    RootPath(i) = string(testObject.rootPath);
+    filters = string(coverageObjects(i).filter);
+    filters = filters(:);
+    filters(ismissing(filters)) = "";
+    filters = filters(strlength(filters) > 0);
+    FilterReferences(i) = strjoin(filters, "|");
+end
+snapshot = table(Id, RootPath, FilterReferences);
 end
 
 function T = empty_artifact_table()

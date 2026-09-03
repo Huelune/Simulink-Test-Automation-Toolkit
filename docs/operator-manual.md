@@ -165,8 +165,9 @@ Subsystem 자체에 한 개 생성되므로 내부에 직속 하위 Subsystem이
 
 `CoverageFilterExistingPolicy='REPLACE'`는 PER_CUT 실행 중 Test File, Test
 Suite, Test Case에 연결된 기존 CVF를 임시로 해제하고 새로 생성한 CVF만
-해당 Test Case 실행에 등록합니다. `SUBSYSTEM`은 CUT의 `BlockInstance`만
-필터링하므로 내부 일반 블록 Coverage는 유지됩니다. 결과 저장 시 CVF 복사본을
+해당 Test Case 실행에 등록합니다. `SUBSYSTEM`은 CUT의 전용 `Subsystem`
+선택자로 블록 자체만 필터링하고, `ALL_CONTENT`만 `SubsystemAllContent`로
+내부 일반 블록까지 필터링합니다. 결과 저장 시 CVF 복사본을
 함께 보존하지만 Test Manager의 결과 객체 참조는 변경하지 않습니다. 실행 후에는
 기존 연결을 복원합니다. 기존 CVF도 함께 적용하려면 `MERGE`로 변경합니다.
 

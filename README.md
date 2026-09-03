@@ -346,12 +346,12 @@ CVF를 사용할 때는 `CoverageFilterRationale`이 필수입니다. CVF는 저
 CVF 생성
 → Test File·Suite·Test Case 기존 필터 목록 백업
 → 기존 Test File·Suite·Test Case 필터를 임시 해제
-→ CVF 없이 run(testCase)로 전체 Coverage 수집
-→ 완료된 결과에 새 CVF만 적용
-→ 결과 폴더의 CVF 복사본으로 참조를 변경한 후 저장
+→ 새 CVF를 Test Manager 실행 설정에 임시 등록
+→ run(testCase)로 해당 CUT의 필터된 Coverage 수집
 → APPLY 변경 시 같은 CVF로 재실행과 최종 결과 저장
 → 원래 필터 복원
 → 실제 설정 재조회·일치 확인
+→ ResultSet 무결성을 확인하며 MLDATX·CVT·CVF 사본·HTML 저장
 → 다음 CUT
 ```
 
@@ -359,8 +359,10 @@ CVF 생성
 후 복원하며 `CoverageFilterExistingPolicy='MERGE'`일 때만 새 CVF와 함께 적용합니다.
 자동 CVF는 실행별 CUT 폴더에 따로 저장합니다. `PER_CUT`은 항상 transient
 필터를 사용하므로 `CoverageFilterApplicationMode=PERSIST`를 거부합니다.
-자동 CVF는 시뮬레이션 전이 아닌 결과 Coverage에 적용하여 필터 외
-블록의 원본 Coverage 데이터를 보존합니다.
+자동 CVF는 Test Manager가 실행 중 관리하므로 결과와 필터 참조가 함께
+저장됩니다. 결과 산출물은 임시 필터 설정을 원복한 뒤 생성하며,
+보존 전·후 `cvdata` ID·루트·CVF 참조가 달라지면 해당 CUT을 실패로
+기록합니다.
 
 Coverage 분모가 0이면 `N/A`, justified outcome은 별도 수치로 기록합니다.
 다른 checksum의 Coverage를 하나의 합계로 섞지 않으며, Coverage 미달 자체는

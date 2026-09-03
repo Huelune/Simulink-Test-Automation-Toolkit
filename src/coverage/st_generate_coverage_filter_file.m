@@ -48,10 +48,9 @@ try
         double(targetRow.No), char(targetRow.CUTPath)));
 
     if targetRow.CoverageFilterMode == "SUBSYSTEM"
-        % Select only the CUT block instance. In some MATLAB releases the
-        % Subsystem selector is treated as a hierarchical subsystem rule
-        % and also filters descendants from the coverage report.
-        selectorType = slcoverage.BlockSelectorType.BlockInstance;
+        % Subsystem selects only the subsystem block. All descendant
+        % content is reserved for the explicit ALL_CONTENT mode below.
+        selectorType = slcoverage.BlockSelectorType.Subsystem;
     else
         selectorType = slcoverage.BlockSelectorType.SubsystemAllContent;
     end
