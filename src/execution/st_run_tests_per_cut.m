@@ -4,7 +4,7 @@ function [results, updates, summary] = st_run_tests_per_cut(varargin)
 % [results, updates, summary] = st_run_tests_per_cut( ...
 %     'ContinueOnFailure', true, ...
 %     'ReportMode', 'SUMMARY', ...
-%     'FailOnNonPass', true)
+%     'FailOnNonPass', false)
 
 p = inputParser;
 p.FunctionName = 'st_run_tests_per_cut';
@@ -12,7 +12,7 @@ addParameter(p, 'ContinueOnFailure', true, ...
     @(x) islogical(x) && isscalar(x));
 addParameter(p, 'ReportMode', 'SUMMARY', ...
     @(x) ismember(upper(string(x)), ["SUMMARY","FULL"]));
-addParameter(p, 'FailOnNonPass', true, ...
+addParameter(p, 'FailOnNonPass', false, ...
     @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 
@@ -284,8 +284,21 @@ for i = 1:n
             Status(i) = "PASS";
             Message(i) = "Test Case completed and filter state restored";
         else
-            Status(i) = "FAIL";
-            Message(i) = "Final Test Case outcome is not Passed";
+            actualOutcome = upper(strtrim(FinalOutcome(i)));
+            if strlength(actualOutcome) == 0
+                actualOutcome = "UNKNOWN";
+            end
+            % A Test Manager verdict is result data, not a runner error.
+            % Keep the verdict in FinalOutcome and continue to the next CUT.
+            Status(i) = "WARN";
+            Message(i) = "Execution completed; final Test Case outcome is " + ...
+                actualOutcome;
+            st_log(cfg, 'WARN', ...
+                ['[PER_CUT %d/%d] non-passing outcome | ' ...
+                 'TestCase=%s | outcome=%s | continuing'], ...
+                i, n, char(TestCaseName(i)), char(actualOutcome));
+            append_event(logPath, i, 'TARGET_OUTCOME_NONPASS', ...
+                char(Message(i)));
         end
     catch ME
         targetError = ME;
@@ -399,12 +412,22 @@ if ~isempty(abortError)
         'Partial PER_CUT report was written to %s.', summary.Manifest));
     throw(abortError);
 end
-if failOnNonPass && (any(Status == "FAIL") || ...
-        strcmp(summary.Status, 'FAIL'))
-    error('simtest:PerCutRunFailed', ...
-        ['%d CUT(s) failed or the root report was incomplete. ' ...
-         'Results were written to %s.'], ...
-        sum(Status == "FAIL"), summary.Manifest);
+nonPassMask = ismember(Status, ["FAIL","WARN"]);
+if failOnNonPass && (any(nonPassMask) || strcmp(summary.Status, 'FAIL'))
+    nonPassCount = sum(nonPassMask);
+    if nonPassCount > 0
+        failureDetails = format_nonpass_targets( ...
+            TestCaseName, FinalOutcome, Message, nonPassMask);
+        failureMessage = sprintf( ...
+            '%d CUT(s) did not pass: %s. Results were written to %s.', ...
+            nonPassCount, failureDetails, summary.Manifest);
+    else
+        failureMessage = sprintf( ...
+            'The root report was incomplete. Results were written to %s.', ...
+            summary.Manifest);
+    end
+    st_log(cfg, 'ERROR', 'PER_CUT execution failed | %s', failureMessage);
+    error('simtest:PerCutRunFailed', '%s', failureMessage);
 end
 end
 
@@ -427,6 +450,23 @@ if isempty(targetResult)
 else
     outcome = upper(string(targetResult.Outcome(end)));
 end
+end
+
+
+function text = format_nonpass_targets( ...
+        testCaseNames, finalOutcomes, messages, nonPassMask)
+indices = find(nonPassMask);
+details = strings(numel(indices), 1);
+for i = 1:numel(indices)
+    index = indices(i);
+    outcome = upper(strtrim(finalOutcomes(index)));
+    if strlength(outcome) == 0
+        outcome = "UNKNOWN";
+    end
+    details(i) = testCaseNames(index) + "=" + outcome + ...
+        " [" + messages(index) + "]";
+end
+text = char(strjoin(details, ' | '));
 end
 
 

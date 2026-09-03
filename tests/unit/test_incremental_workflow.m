@@ -17,7 +17,7 @@ verifyTrue(testCase, endsWith(string(cfg.CoverageFilterDir), ...
 verifyEqual(testCase, cfg.ExecutionMode, 'AUTO');
 verifyTrue(testCase, cfg.PerCutContinueOnFailure);
 verifyEqual(testCase, cfg.PerCutReportMode, 'SUMMARY');
-verifyTrue(testCase, cfg.PerCutFailOnNonPass);
+verifyFalse(testCase, cfg.PerCutFailOnNonPass);
 end
 
 function testWorkflowOptionOverrides(testCase)

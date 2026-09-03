@@ -277,7 +277,9 @@ cfg.ExecutionMode = 'AUTO';
 % the transient coverage filter was restored and verified successfully.
 cfg.PerCutContinueOnFailure = true;
 cfg.PerCutReportMode = 'SUMMARY';
-cfg.PerCutFailOnNonPass = true;
+% Test verdicts remain in FinalOutcome. Runner/report exceptions are logged,
+% recorded in the manifest, and skipped by default so later CUTs can run.
+cfg.PerCutFailOnNonPass = false;
 
 
 %% ============================================================

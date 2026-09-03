@@ -327,8 +327,12 @@ CUT을 개별 실행하고, 전부 `OFF`이면 기존 일괄 실행을 사용합
     'ExecutionMode', 'PER_CUT', ...
     'ContinueOnFailure', true, ...
     'ReportMode', 'SUMMARY', ...
-    'FailOnNonPass', true);
+    'FailOnNonPass', false);
 ```
+
+Test Case 판정이 `FAILED`, `UNTESTED`, `INCOMPLETE`여도 실행 자체가 완료되면
+`FinalOutcome`과 `WARN`으로 기록하고 다음 CUT을 실행합니다. `run(tc)` 또는 결과
+저장 중 예외가 발생한 경우에만 실행 실패(`FAIL`)로 기록됩니다.
 
 `BATCH`는 모든 활성 행의 `CoverageFilterMode=OFF`일 때만 허용됩니다.
 `SUMMARY`는 CUT별 MLDATX·Excel·경량 HTML, `FULL`은 여기에 PDF와 전체 Coverage

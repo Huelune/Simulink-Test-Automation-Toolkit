@@ -165,7 +165,7 @@ st_find_target_paths              % 같은 이름의 후보를 문맥으로 순�
     'ExecutionMode', 'PER_CUT', ...
     'ContinueOnFailure', true, ...
     'ReportMode', 'SUMMARY', ...
-    'FailOnNonPass', true);
+    'FailOnNonPass', false);
 ```
 
 준비가 끝난 Test File만 직접 실행할 수도 있습니다.
@@ -174,14 +174,18 @@ st_find_target_paths              % 같은 이름의 후보를 문맥으로 순�
 [results, updates, summary] = st_run_tests_per_cut( ...
     'ContinueOnFailure', true, ...
     'ReportMode', 'SUMMARY', ...
-    'FailOnNonPass', true);
+    'FailOnNonPass', false);
 ```
 
 | 옵션 | 기본값 | 설명 |
 | --- | --- | --- |
 | `ContinueOnFailure` | `true` | 테스트·보고서 실패 후 필터 복원이 확인되면 다음 CUT 진행 |
 | `ReportMode` | `SUMMARY` | `SUMMARY` 또는 `FULL` |
-| `FailOnNonPass` | `true` | 안전하게 처리 가능한 CUT을 모두 기록한 뒤 최종 실패가 있으면 오류 |
+| `FailOnNonPass` | `false` | `true`이면 모든 CUT 처리 후 Test 판정 또는 실행기·보고서 실패를 MATLAB 오류로 전달 |
+
+Test Case의 `FAILED`, `UNTESTED`, `INCOMPLETE` 판정은 `FinalOutcome`에 보존되고
+대상 실행 상태는 `WARN`으로 기록됩니다. 이는 실행기 예외가 아니므로 다음 CUT을
+계속 실행합니다. 엄격한 최종 판정이 필요할 때만 `FailOnNonPass=true`를 지정합니다.
 
 필터 복원 또는 복원 검증에 실패하면 설정 누출 위험이 있으므로
 `ContinueOnFailure=true`여도 전체 실행을 즉시 중단합니다. 병렬 CUT 실행은
