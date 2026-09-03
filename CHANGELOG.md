@@ -2,8 +2,12 @@
 
 ## Unreleased
 
-- Restored `SUBSYSTEM` CVF generation to the dedicated subsystem-only
-  selector. Descendant filtering remains exclusive to `ALL_CONTENT`.
+- Changed automatic CVF generation to exclude the CUT root and create rules
+  only for its direct-child Subsystems. `SUBSYSTEM` uses `BlockInstance`, while
+  descendant filtering remains exclusive to `ALL_CONTENT`.
+- Added the read-only `st_check_per_cut_cvf` R2025b diagnostic, which reports
+  per-target and aggregate six-bit codes for artifact integrity, lifecycle,
+  rule count, CUT exclusion, direct-child matching, and mode/action matching.
 - Moved PER_CUT result serialization until after transient filter restore
   and added before/after ResultSet coverage integrity checks around MLDATX,
   CVT, CVF-copy, and HTML creation.
@@ -16,20 +20,22 @@
   copies the CVF without relinking the live result object.
 - Fixed PER_CUT ResultSet traversal for direct `run(testCase)` results,
   attached absolute CVF paths to result coverage data, changed each CVF name
-  to `{TestCaseName}.cvf`, generated one verified rule for the CUT itself,
+  to `{TestCaseName}.cvf`, validates the generated rules after saving,
   and removed Java path canonicalization from result-filter verification.
 - Added portable PER_CUT coverage artifacts: standalone detail HTML,
   reloadable CVT data, and copied CVF files while preserving their sources.
 - Made result coverage filter verification compatible with MATLAB releases
   that return only the CVF basename or omit the `.cvf` extension on readback.
-- Changed `SUBSYSTEM` coverage filtering to use the CUT `BlockInstance`, so
-  only the CUT block is filtered while its descendant blocks remain included.
+- Changed `SUBSYSTEM` coverage filtering to use each direct-child Subsystem's
+  `BlockInstance`, so the CUT root and descendant primitive blocks remain
+  included.
 - Added the default PER_CUT `REPLACE` existing-filter policy, which temporarily
   suppresses inherited Test File, Suite, and Test Case CVFs and restores them
   after applying the newly generated Test Case CVF in isolation.
 - Applies each PER_CUT CVF through Test Manager during its isolated run. The
-  `BlockInstance` rule keeps descendant coverage for `SUBSYSTEM`, and portable
-  output copies the CVF without mutating the live Test Manager result.
+  direct-child `BlockInstance` rules keep descendant coverage for `SUBSYSTEM`,
+  and portable output copies the CVF without mutating the live Test Manager
+  result.
 - Fixed incremental SLDV preparation so `OFF` and legacy cached profiles
   use the same canonical structure schema as newly generated profiles.
 - Added `AUTO`, `BATCH`, and `PER_CUT` execution policies. Active coverage

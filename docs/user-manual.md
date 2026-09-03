@@ -129,9 +129,14 @@ disp(cfg.ManagementExcel)
 
 Coverage 자동 필터를 사용하려면 `CoverageFilterMode`를 `SUBSYSTEM` 또는
 `ALL_CONTENT`로 정하고, `CoverageFilterAction`과
-`CoverageFilterRationale`을 함께 입력합니다. `SUBSYSTEM`은 CUT 블록 자체를,
-`ALL_CONTENT`는 CUT과 내부 전체를 필터 대상으로 하며, 기본 설정은 실행 중
-Test Case별 임시 적용입니다.
+`CoverageFilterRationale`을 함께 입력합니다. `SUBSYSTEM`은 CUT의 직속 하위
+Subsystem 블록만, `ALL_CONTENT`는 그 직속 하위 Subsystem과 각 내부 전체를
+필터 대상으로 합니다. CUT 자기 자신과 일반 블록은 직접 필터링하지 않으며,
+기본 설정은 실행 중 Test Case별 임시 적용입니다.
+
+실제 실행이 끝난 뒤 `[code, details] = st_check_per_cut_cvf()`를 실행하면 CUT별
+6비트 점검 코드가 출력됩니다. `111111`만 전체 통과입니다. 문제가 있으면
+`CVF-CHECK-v1`로 시작하는 줄 전체와 `details` 표를 전달하십시오.
 
 ## 5. 권장 실행 순서
 

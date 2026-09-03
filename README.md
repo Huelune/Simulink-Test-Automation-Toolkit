@@ -331,14 +331,16 @@ cfg.CoverageFilterExistingPolicy = 'REPLACE';
 | Excel 설정 | 의미 |
 | --- | --- |
 | `CoverageFilterMode=OFF` | 자동 CVF를 만들지 않음 |
-| `SUBSYSTEM` | `CUTPath`의 Subsystem 블록 자체를 필터 대상으로 선택 |
-| `ALL_CONTENT` | `CUTPath`의 Subsystem과 그 내부 전체를 필터 대상으로 선택 |
+| `SUBSYSTEM` | `CUTPath` 직속 하위 Subsystem 블록만 필터 대상으로 선택 |
+| `ALL_CONTENT` | `CUTPath` 직속 하위 Subsystem과 각 내부 전체를 필터 대상으로 선택 |
 | `CoverageFilterAction=EXCLUDE` | 대상 outcome을 Coverage에서 제외 |
 | `CoverageFilterAction=JUSTIFY` | 대상 outcome을 justified로 기록 |
 
 CVF를 사용할 때는 `CoverageFilterRationale`이 필수입니다. CVF는 저장 직후 다시
 열어 규칙 수와 action을 검증하며, 올바르게 열리지 않으면 해당 CUT을 `FAIL`로
-기록합니다. 필터 설정이 안전한 상태이면 다음 CUT은 계속 처리합니다.
+기록합니다. CUT 자기 자신과 일반 블록은 규칙에 포함하지 않습니다. 직속 하위
+Subsystem이 없으면 규칙 0개짜리 CVF를 생성합니다. 필터 설정이 안전한 상태이면
+다음 CUT은 계속 처리합니다.
 
 `PER_CUT`의 안전 순서는 다음과 같습니다.
 
@@ -367,6 +369,37 @@ CVF 생성
 Coverage 분모가 0이면 `N/A`, justified outcome은 별도 수치로 기록합니다.
 다른 checksum의 Coverage를 하나의 합계로 섞지 않으며, Coverage 미달 자체는
 테스트 실패로 바꾸지 않습니다.
+
+### 9.1 실제 시스템 CVF 자체 점검
+
+최신 `PER_CUT` 실행이 끝난 뒤 생성된 CVF가 CUT 자신이 아니라 직속 하위
+Subsystem을 가리키는지 읽기 전용으로 확인할 수 있습니다.
+
+```matlab
+st_setup
+[code, details] = st_check_per_cut_cvf();
+disp(details(:, {'No','TestCaseName','Code','Status','Message'}))
+```
+
+특정 실행을 검사하려면 `RunDirectory`에 실행 폴더나 run ID를 지정합니다.
+
+```matlab
+[code, details] = st_check_per_cut_cvf( ...
+    'RunDirectory', 'result/per_cut_runs/<run-id>');
+```
+
+| 비트 | 통과 조건 |
+| --- | --- |
+| B1 | target manifest, CVF와 SHA-256 일치 |
+| B2 | 생성·적용·복원 상태가 모두 `OK` |
+| B3 | 실제 rule 수가 manifest와 같고 0보다 큼 |
+| B4 | CUT 자신이 selector에 없음 |
+| B5 | selector가 직속 하위 Subsystem 집합과 정확히 일치 |
+| B6 | selector 모드와 `EXCLUDE`/`JUSTIFY` action 일치 |
+
+`111111`만 전체 통과입니다. 여러 CUT이 있으면 CUT별 코드와 전체 AND 코드가 함께
+출력됩니다. 문의할 때 `CVF-CHECK-v1`로 시작하는 출력 줄 전체와 `details` 표를
+전달하십시오. 이 명령은 모델, Test File과 CVF를 저장하거나 변경하지 않습니다.
 
 ## 10. 실행 결과와 보고서
 

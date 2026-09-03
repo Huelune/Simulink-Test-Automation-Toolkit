@@ -155,21 +155,35 @@ cfg.CoverageFilterExistingPolicy = 'REPLACE';
 `CoverageFilterApplicationMode='RUNTIME'`은 `.cvf`를 실행 직전에 각 Test Case에
 API로 적용하고 실행 종료 또는 오류 시 기존 수동 필터로 복원합니다. `PERSIST`는
 Test Case별 필터 설정을 Test File에 저장합니다. 두 모드 모두 자동 필터를
-Test File 수준에는 기록하지 않습니다. 필터 규칙은 CUT 경로가 가리키는
-Subsystem 자체에 한 개 생성되므로 내부에 직속 하위 Subsystem이 없는 CUT도
-필터링할 수 있습니다. 생성한 CVF는 다시 열어 규칙 수와 모드를 검증하며,
-검증에 실패하면 해당 CUT 실행을 실패로 기록합니다.
+Test File 수준에는 기록하지 않습니다. 필터 규칙은 CUT 자체가 아니라 직속 하위
+Subsystem마다 생성합니다. `SUBSYSTEM`은 해당 블록 인스턴스만, `ALL_CONTENT`는
+해당 Subsystem과 내부 전체를 대상으로 하며 일반 블록은 직접 rule로 만들지
+않습니다. 직속 하위 Subsystem이 없으면 규칙 0개짜리 CVF를 생성합니다. 생성한
+CVF는 다시 열어 규칙 수와 모드를 검증하며, 검증에 실패하면 해당 CUT 실행을
+실패로 기록합니다.
 
 실제 기본값은 파일을 수정해야 변경됩니다. Command Window에서 반환된 `cfg`만
 수정해도 다음 공개 명령의 새 `st_config()` 호출에는 반영되지 않습니다.
 
 `CoverageFilterExistingPolicy='REPLACE'`는 PER_CUT 실행 중 Test File, Test
 Suite, Test Case에 연결된 기존 CVF를 임시로 해제하고 새로 생성한 CVF만
-해당 Test Case 실행에 등록합니다. `SUBSYSTEM`은 CUT의 전용 `Subsystem`
-선택자로 블록 자체만 필터링하고, `ALL_CONTENT`만 `SubsystemAllContent`로
-내부 일반 블록까지 필터링합니다. 결과 저장 시 CVF 복사본을
+해당 Test Case 실행에 등록합니다. `SUBSYSTEM`은 직속 하위 Subsystem의
+`BlockInstance`만 필터링하고, `ALL_CONTENT`만 `SubsystemAllContent`로
+각 하위 Subsystem의 내부 일반 블록까지 필터링합니다. 결과 저장 시 CVF 복사본을
 함께 보존하지만 Test Manager의 결과 객체 참조는 변경하지 않습니다. 실행 후에는
 기존 연결을 복원합니다. 기존 CVF도 함께 적용하려면 `MERGE`로 변경합니다.
+
+실제 실행 후 selector와 복원 상태를 고정 6비트 코드로 점검하려면 다음 명령을
+사용합니다.
+
+```matlab
+[code, details] = st_check_per_cut_cvf();
+disp(details(:, {'No','TestCaseName','Code','Status','Message'}))
+```
+
+비트 순서는 산출물 무결성, 적용 수명주기, rule 수, CUT 자신 제외, 직속 하위
+Subsystem 정확 일치, 모드·action 일치입니다. `111111`만 전체 통과이며 문의 시
+`CVF-CHECK-v1` 출력 줄 전체를 전달합니다.
 
 ## 5. 모델 선택과 CUT 경로 준비
 
