@@ -15,6 +15,9 @@
 - Added the default PER_CUT `REPLACE` existing-filter policy, which temporarily
   suppresses inherited Test File, Suite, and Test Case CVFs and restores them
   after applying the newly generated Test Case CVF in isolation.
+- Changed PER_CUT model coverage to collect without filters and apply the CVF
+  to completed result data, preserving descendant coverage. Portable MLDATX,
+  CVT, PDF, and HTML artifacts now reference their copied result-local CVF.
 - Fixed incremental SLDV preparation so `OFF` and legacy cached profiles
   use the same canonical structure schema as newly generated profiles.
 - Added `AUTO`, `BATCH`, and `PER_CUT` execution policies. Active coverage
