@@ -18,12 +18,12 @@ end
 function testActiveSettingsAreNormalized(testCase)
 [mode, action, rationale] = st_resolve_coverage_filter_settings( ...
     [" subsystem "; "all_content"], [" exclude "; "justify"], ...
-    [" direct children "; "approved content"]);
+    [" inactive cut "; "approved content"]);
 
 verifyEqual(testCase, mode, ["SUBSYSTEM"; "ALL_CONTENT"]);
 verifyEqual(testCase, action, ["EXCLUDE"; "JUSTIFY"]);
 verifyEqual(testCase, rationale, ...
-    ["direct children"; "approved content"]);
+    ["inactive cut"; "approved content"]);
 end
 
 
@@ -103,4 +103,20 @@ verifyNotEmpty(testCase, regexp(source, ...
     'st_apply_test_case_coverage_filters', 'once'));
 verifyNotEmpty(testCase, regexp(source, ...
     'coverageFilterSession\.Restore\(\)', 'once'));
+end
+
+
+function testGeneratedFilterTargetsTheCutItself(testCase)
+root = st_project_root();
+source = fileread(fullfile(root, 'src', 'coverage', ...
+    'st_generate_coverage_filter_file.m'));
+
+verifyNotEmpty(testCase, regexp(source, ...
+    'Simulink\.ID\.getSID\(ownerPath\)', 'once'));
+verifyEmpty(testCase, regexp(source, ...
+    'find_system\(ownerPath', 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'savedFilter\s*=\s*slcoverage\.Filter\(filterPath\)', 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'numel\(savedRules\)\s*~=\s*1', 'once'));
 end

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed PER_CUT ResultSet traversal for direct `run(testCase)` results,
+  attached absolute CVF paths to result coverage data, changed each CVF name
+  to `{TestCaseName}.cvf`, and generated one verified rule for the CUT itself.
 - Fixed incremental SLDV preparation so `OFF` and legacy cached profiles
   use the same canonical structure schema as newly generated profiles.
 - Added `AUTO`, `BATCH`, and `PER_CUT` execution policies. Active coverage

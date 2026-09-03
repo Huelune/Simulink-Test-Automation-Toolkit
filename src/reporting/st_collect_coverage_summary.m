@@ -59,7 +59,7 @@ if ~includeTestDetails
     return;
 end
 
-caseResults = collect_test_cases(resultObj);
+caseResults = st_collect_test_case_results(resultObj);
 for c = 1:numel(caseResults)
     notify_progress(progressFcn, 'Test Case coverage', c, ...
         numel(caseResults));
@@ -229,20 +229,6 @@ value = "";
 try
     value = string(cvd.test.rootPath);
 catch
-end
-end
-
-function resultCells = collect_test_cases(resultObj)
-resultCells = {};
-fileResults = getTestFileResults(resultObj);
-for f = 1:numel(fileResults)
-    suiteResults = getTestSuiteResults(fileResults(f));
-    for s = 1:numel(suiteResults)
-        caseResults = getTestCaseResults(suiteResults(s));
-        for c = 1:numel(caseResults)
-            resultCells{end+1,1} = caseResults(c); %#ok<AGROW>
-        end
-    end
 end
 end
 

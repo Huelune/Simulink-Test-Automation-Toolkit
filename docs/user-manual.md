@@ -129,8 +129,9 @@ disp(cfg.ManagementExcel)
 
 Coverage 자동 필터를 사용하려면 `CoverageFilterMode`를 `SUBSYSTEM` 또는
 `ALL_CONTENT`로 정하고, `CoverageFilterAction`과
-`CoverageFilterRationale`을 함께 입력합니다. CUT 자체가 아니라 바로 아래의
-Subsystem만 필터 대상이며, 기본 설정은 실행 중 Test Case별 임시 적용입니다.
+`CoverageFilterRationale`을 함께 입력합니다. `SUBSYSTEM`은 CUT 블록 자체를,
+`ALL_CONTENT`는 CUT과 내부 전체를 필터 대상으로 하며, 기본 설정은 실행 중
+Test Case별 임시 적용입니다.
 
 ## 5. 권장 실행 순서
 

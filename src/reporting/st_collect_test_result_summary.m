@@ -19,7 +19,7 @@ IterationName = strings(0,1);
 IterationOutcome = strings(0,1);
 IterationDurationSec = zeros(0,1);
 
-caseResults = collect_test_cases(resultObj);
+caseResults = st_collect_test_case_results(resultObj);
 for c = 1:numel(caseResults)
     tcResult = caseResults{c};
     caseName = string(safe_property(tcResult, 'Name', ''));
@@ -67,20 +67,6 @@ iterations = table(IterationRun, IterationNo, IterationCUTName, ...
     IterationDurationSec, 'VariableNames', ...
     {'Run','No','CUTName','TestCaseName','IterationName','Outcome', ...
      'DurationSec'});
-end
-
-function resultCells = collect_test_cases(resultObj)
-resultCells = {};
-fileResults = getTestFileResults(resultObj);
-for f = 1:numel(fileResults)
-    suiteResults = getTestSuiteResults(fileResults(f));
-    for s = 1:numel(suiteResults)
-        caseResults = getTestCaseResults(suiteResults(s));
-        for c = 1:numel(caseResults)
-            resultCells{end+1,1} = caseResults(c); %#ok<AGROW>
-        end
-    end
-end
 end
 
 function results = safe_iterations(tcResult)

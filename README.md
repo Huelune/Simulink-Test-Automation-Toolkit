@@ -321,14 +321,14 @@ cfg.CoverageFilterApplicationMode = 'RUNTIME';
 | Excel 설정 | 의미 |
 | --- | --- |
 | `CoverageFilterMode=OFF` | 자동 CVF를 만들지 않음 |
-| `SUBSYSTEM` | CUT 직속 하위 Subsystem 블록을 대상으로 규칙 생성 |
-| `ALL_CONTENT` | 직속 하위 Subsystem과 내부 내용을 함께 대상으로 처리 |
+| `SUBSYSTEM` | `CUTPath`의 Subsystem 블록 자체를 필터 대상으로 선택 |
+| `ALL_CONTENT` | `CUTPath`의 Subsystem과 그 내부 전체를 필터 대상으로 선택 |
 | `CoverageFilterAction=EXCLUDE` | 대상 outcome을 Coverage에서 제외 |
 | `CoverageFilterAction=JUSTIFY` | 대상 outcome을 justified로 기록 |
 
-CVF를 사용할 때는 `CoverageFilterRationale`이 필수입니다. 직속 하위 Subsystem이
-없으면 유효한 CVF를 만들 수 없으므로 현재 `PER_CUT` 실행에서는 해당 CUT을
-`FAIL`로 기록합니다. 필터 설정이 안전한 상태이면 다음 CUT은 계속 처리합니다.
+CVF를 사용할 때는 `CoverageFilterRationale`이 필수입니다. CVF는 저장 직후 다시
+열어 규칙 수와 action을 검증하며, 올바르게 열리지 않으면 해당 CUT을 `FAIL`로
+기록합니다. 필터 설정이 안전한 상태이면 다음 CUT은 계속 처리합니다.
 
 `PER_CUT`의 안전 순서는 다음과 같습니다.
 
@@ -386,7 +386,7 @@ result/per_cut_runs/{run-id}/
 │   └── {No}_{CUTName}_{hash}/
 │       ├── target-manifest.json
 │       ├── filter/
-│       │   └── applied.cvf
+│       │   └── {TestCaseName}.cvf
 │       ├── initial/
 │       │   ├── TestSummary.xlsx
 │       │   ├── raw/InitialResults.mldatx
@@ -403,7 +403,8 @@ result/per_cut_runs/{run-id}/
 - `SUMMARY`: Excel, MLDATX, 경량 Coverage HTML을 생성합니다.
 - `FULL`: `SUMMARY` 산출물에 공식 PDF와 전체 Coverage HTML을 추가합니다.
 - `final/`은 기대값 변경 후 실제 재실행한 경우에만 생성됩니다.
-- `filter/applied.cvf`는 CVF 활성 CUT에만 생성됩니다.
+- `filter/{TestCaseName}.cvf`는 CVF 활성 CUT에만 생성됩니다. Test Case 실행 전에
+  해당 폴더를 MATLAB path에 등록하고 ResultSet coverage에도 절대 경로로 연결합니다.
 - root Excel은 모든 CUT의 최종 상태와 초기·최종 결과 연결을 인덱싱합니다.
 - target manifest는 CVF SHA-256, action, rationale, 적용·복원 상태를 기록합니다.
 

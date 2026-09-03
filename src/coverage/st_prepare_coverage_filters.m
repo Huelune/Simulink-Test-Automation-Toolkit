@@ -1,8 +1,7 @@
 function R = st_prepare_coverage_filters(stageSelection)
 %ST_PREPARE_COVERAGE_FILTERS Generate one managed CVF per Targets row.
 %
-% The CUT itself is never filtered. Rules are generated only for direct
-% child blocks whose BlockType is SubSystem.
+% Each active target gets one rule for the CUT subsystem itself.
 
 cfg = st_require_runtime_target();
 T = st_load_targets(cfg.OnlyEnabled);
@@ -86,9 +85,10 @@ for i = 1:n
             Status(i) = "WARN";
             Message(i) = generated.Message;
             st_log(cfg, 'WARN', ...
-                ['[CoverageFilter %d/%d] no direct child Subsystem | ' ...
-                 'CUT=%s | TestCase=%s'], ...
-                i, n, char(T.CUTPath(i)), char(T.TestCaseName(i)));
+                ['[CoverageFilter %d/%d] generation warning | ' ...
+                 'CUT=%s | TestCase=%s | %s'], ...
+                i, n, char(T.CUTPath(i)), char(T.TestCaseName(i)), ...
+                char(generated.Message));
             ElapsedSec(i) = toc(rowTimer);
             continue;
         end

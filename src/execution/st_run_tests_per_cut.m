@@ -101,6 +101,7 @@ for i = 1:n
     initialInfo = struct();
     finalInfo = struct();
     targetError = [];
+    resultFilterFiles = strings(0,1);
 
     st_log(cfg, 'INFO', ...
         '[PER_CUT %d/%d] start | No=%g | CUT=%s | TestCase=%s | CVF=%s', ...
@@ -116,7 +117,8 @@ for i = 1:n
         filterFile = "";
         if row.CoverageFilterMode ~= "OFF"
             mkdir(filterDirectory);
-            filterFile = string(fullfile(filterDirectory, 'applied.cvf'));
+            filterFile = string(st_per_cut_coverage_filter_file( ...
+                filterDirectory, row));
             FilterGenerationStatus(i) = "STARTED";
             generated = st_generate_coverage_filter_file( ...
                 row, char(filterFile), cfg);
@@ -130,6 +132,10 @@ for i = 1:n
             CVFPath(i) = filterFile;
             signature = st_file_signature(filterFile);
             CVFSHA256(i) = string(signature.SHA256);
+            addpath(filterDirectory, '-begin');
+            st_log(cfg, 'DEBUG', ...
+                '[PER_CUT %d/%d] CVF directory registered | %s', ...
+                i, n, filterDirectory);
         end
 
         applyStarted = true;
@@ -149,12 +155,19 @@ for i = 1:n
                 'The generated CVF was not applied to %s.', ...
                 char(TestCaseName(i)));
         end
+        appliedCoverage = getCoverageSettings(tc);
+        resultFilterFiles = string( ...
+            appliedCoverage.CoverageFilterFilename);
 
         st_log(cfg, 'DEBUG', ...
             '[PER_CUT %d/%d] run(testCase) initial start', i, n);
         append_event(logPath, i, 'RUN_INITIAL_START', char(TestCaseName(i)));
         initialResult = run(tc);
         append_event(logPath, i, 'RUN_INITIAL_DONE', char(TestCaseName(i)));
+        st_apply_result_coverage_filters( ...
+            initialResult, resultFilterFiles, cfg);
+        append_event(logPath, i, 'RESULT_FILTER_ATTACHED', ...
+            char(strjoin(resultFilterFiles, ' | ')));
         results(i).No = No(i);
         results(i).TestCaseName = char(TestCaseName(i));
         results(i).InitialResult = initialResult;
@@ -200,6 +213,10 @@ for i = 1:n
             append_event(logPath, i, 'RUN_FINAL_START', char(TestCaseName(i)));
             finalResult = run(tc);
             append_event(logPath, i, 'RUN_FINAL_DONE', char(TestCaseName(i)));
+            st_apply_result_coverage_filters( ...
+                finalResult, resultFilterFiles, cfg);
+            append_event(logPath, i, 'RESULT_FILTER_ATTACHED', ...
+                char(strjoin(resultFilterFiles, ' | ')));
             results(i).FinalResult = finalResult;
             results(i).RerunPerformed = true;
             RerunPerformed(i) = true;

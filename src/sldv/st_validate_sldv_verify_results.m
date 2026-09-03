@@ -3,7 +3,7 @@ function R = st_validate_sldv_verify_results(resultObj)
 
 cfg = st_require_runtime_target();
 T = st_load_targets(cfg.OnlyEnabled);
-testCaseResults = collect_test_case_results(resultObj);
+testCaseResults = st_collect_test_case_results(resultObj);
 
 TargetRow = zeros(0,1);
 No = zeros(0,1);
@@ -121,21 +121,6 @@ try
 catch
     % If the release omits BlockPath metadata, the result cannot be safely
     % attributed when multiple scenarios exist.
-end
-end
-
-
-function resultCells = collect_test_case_results(resultObj)
-resultCells = {};
-testFileResults = getTestFileResults(resultObj);
-for f = 1:numel(testFileResults)
-    suiteResults = getTestSuiteResults(testFileResults(f));
-    for s = 1:numel(suiteResults)
-        caseResults = getTestCaseResults(suiteResults(s));
-        for c = 1:numel(caseResults)
-            resultCells{end+1,1} = caseResults(c); %#ok<AGROW>
-        end
-    end
 end
 end
 

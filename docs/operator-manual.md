@@ -151,9 +151,10 @@ cfg.CoverageFilterApplicationMode = 'RUNTIME';
 `CoverageFilterApplicationMode='RUNTIME'`은 `.cvf`를 실행 직전에 각 Test Case에
 API로 적용하고 실행 종료 또는 오류 시 기존 수동 필터로 복원합니다. `PERSIST`는
 Test Case별 필터 설정을 Test File에 저장합니다. 두 모드 모두 자동 필터를
-Test File 수준에는 기록하지 않습니다. 필터 규칙은 CUT 자체가 아닌 직속 하위
-Subsystem에만 생성되며, 직속 하위 Subsystem이 없으면 WARN 후 필터 없이
-테스트가 계속됩니다.
+Test File 수준에는 기록하지 않습니다. 필터 규칙은 CUT 경로가 가리키는
+Subsystem 자체에 한 개 생성되므로 내부에 직속 하위 Subsystem이 없는 CUT도
+필터링할 수 있습니다. 생성한 CVF는 다시 열어 규칙 수와 모드를 검증하며,
+검증에 실패하면 해당 CUT 실행을 실패로 기록합니다.
 
 실제 기본값은 파일을 수정해야 변경됩니다. Command Window에서 반환된 `cfg`만
 수정해도 다음 공개 명령의 새 `st_config()` 호출에는 반영되지 않습니다.

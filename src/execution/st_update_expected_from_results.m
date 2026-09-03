@@ -63,7 +63,7 @@ st_force_model_stopped( ...
 %% ============================================================
 
 testCaseResults = ...
-    collect_test_case_results( ...
+    st_collect_test_case_results( ...
         resultObj);
 
 
@@ -1532,44 +1532,6 @@ end
 %% ============================================================
 % Test Result Hierarchy
 %% ============================================================
-
-function resultCells = ...
-    collect_test_case_results( ...
-        resultObj)
-
-
-resultCells = {};
-
-
-testFileResults = ...
-    getTestFileResults( ...
-        resultObj);
-
-
-for f = 1:numel(testFileResults)
-
-    suiteResults = ...
-        getTestSuiteResults( ...
-            testFileResults(f));
-
-
-    for s = 1:numel(suiteResults)
-
-        caseResults = ...
-            getTestCaseResults( ...
-                suiteResults(s));
-
-
-        for c = 1:numel(caseResults)
-
-            resultCells{end+1,1} = ...
-                caseResults(c); %#ok<AGROW>
-        end
-    end
-end
-
-end
-
 
 function tcResult = ...
     find_test_case_result( ...
