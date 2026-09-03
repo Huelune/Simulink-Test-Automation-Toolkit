@@ -35,12 +35,6 @@ targets = empty_target_table();
 iterations = empty_iteration_table();
 coverage = empty_coverage_table();
 
-% Relink coverage data before serializing any artifact. The result, CVT,
-% MLDATX, PDF, and HTML must all reference the CVF copy that lives inside
-% this result directory rather than the execution-local source CVF.
-artifacts = copy_coverage_filters( ...
-    artifacts, resultObj, coverageDirectory, logConfig);
-
 stepTimer = report_step_start(1, 6, 'Collect Test Result Hierarchy');
 try
     [targets, iterations] = st_collect_test_result_summary( ...
@@ -129,6 +123,8 @@ end
 
 stepTimer = report_step_start(5, 6, 'Create Portable Coverage Artifacts');
 artifacts = export_coverage_data( ...
+    artifacts, resultObj, coverageDirectory, logConfig);
+artifacts = copy_coverage_filters( ...
     artifacts, resultObj, coverageDirectory, logConfig);
 artifacts = export_coverage_summary_html( ...
     artifacts, coverage, coverageDirectory);
@@ -252,7 +248,6 @@ try
         return;
     end
     mkdir(filterDirectory);
-    destinations = strings(0,1);
     for i = 1:numel(sources)
         source = resolve_filter_source(char(sources(i)));
         [~, name, extension] = fileparts(source);
@@ -264,11 +259,9 @@ try
         end
         artifacts = record_artifact(artifacts, 'CVF_COPY', destination, ...
             'OK', ['Copied without changing source: ' source]);
-        destinations(end+1,1) = string(destination); %#ok<AGROW>
     end
-    st_apply_result_coverage_filters(resultObj, destinations, cfg);
     st_log(cfg, 'DEBUG', ...
-        ['Portable coverage filter copy and relink complete | files=%d | ' ...
+        ['Portable coverage filter copy complete | files=%d | ' ...
          'elapsed=%.3f sec'], numel(sources), toc(timer));
 catch ME
     st_log(cfg, 'ERROR', ...

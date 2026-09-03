@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Fixed a PER_CUT regression where post-run mutation of `cvdata.filter`
+  could make Test Manager Coverage Details fail to open. Generated filters
+  are now registered through Test Manager for the run, while report export
+  copies the CVF without relinking the live result object.
 - Fixed PER_CUT ResultSet traversal for direct `run(testCase)` results,
   attached absolute CVF paths to result coverage data, changed each CVF name
   to `{TestCaseName}.cvf`, generated one verified rule for the CUT itself,
@@ -15,9 +19,9 @@
 - Added the default PER_CUT `REPLACE` existing-filter policy, which temporarily
   suppresses inherited Test File, Suite, and Test Case CVFs and restores them
   after applying the newly generated Test Case CVF in isolation.
-- Changed PER_CUT model coverage to collect without filters and apply the CVF
-  to completed result data, preserving descendant coverage. Portable MLDATX,
-  CVT, PDF, and HTML artifacts now reference their copied result-local CVF.
+- Applies each PER_CUT CVF through Test Manager during its isolated run. The
+  `BlockInstance` rule keeps descendant coverage for `SUBSYSTEM`, and portable
+  output copies the CVF without mutating the live Test Manager result.
 - Fixed incremental SLDV preparation so `OFF` and legacy cached profiles
   use the same canonical structure schema as newly generated profiles.
 - Added `AUTO`, `BATCH`, and `PER_CUT` execution policies. Active coverage

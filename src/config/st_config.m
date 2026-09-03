@@ -348,9 +348,9 @@ cfg.CoverageIncludeReferencedModels = false;
 cfg.CoverageFilterApplicationMode = 'RUNTIME';
 
 % PER_CUT existing-filter policy:
-%   REPLACE: temporarily clear Test File, Suite, and Test Case CVFs, collect
-%            unfiltered coverage, and apply only the newly generated CVF to
-%            completed result data. Restore original settings afterward.
+%   REPLACE: temporarily clear Test File, Suite, and Test Case CVFs and
+%            register only the newly generated CVF for the isolated run.
+%            Restore original settings afterward.
 %   MERGE:   combine existing CVFs with the generated Test Case CVF.
 cfg.CoverageFilterExistingPolicy = 'REPLACE';
 

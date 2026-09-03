@@ -64,7 +64,7 @@ FilterMode = string(targetConfig.CoverageFilterMode);
 FilterAction = string(targetConfig.CoverageFilterAction);
 FilterRationale = string(targetConfig.CoverageFilterRationale);
 ExistingFilterPolicy = repmat(string(existingFilterPolicy), n, 1);
-ManagedFilterApplication = repmat("RESULT_ONLY", n, 1);
+ManagedFilterApplication = repmat("DURING_RUN", n, 1);
 CVFPath = strings(n,1);
 CVFSHA256 = strings(n,1);
 CVFRuleCount = zeros(n,1);
@@ -105,7 +105,6 @@ for i = 1:n
     initialInfo = struct();
     finalInfo = struct();
     targetError = [];
-    resultFilterFiles = strings(0,1);
 
     st_log(cfg, 'INFO', ...
         '[PER_CUT %d/%d] start | No=%g | CUT=%s | TestCase=%s | CVF=%s', ...
@@ -150,7 +149,7 @@ for i = 1:n
                 tf, tc, row, cfg, 'FilterFiles', filterFile, ...
                 'ExistingFilterPolicy', ...
                 existingFilterPolicy, ...
-                'ApplyManagedFiltersDuringRun', false); %#ok<NASGU>
+                'ApplyManagedFiltersDuringRun', true); %#ok<NASGU>
         sessionCreated = true;
         FilterApplyStatus(i) = string(applyResult.Status(1));
         append_event(logPath, i, 'APPLY_DONE', ...
@@ -162,20 +161,17 @@ for i = 1:n
                 'The generated CVF was not applied to %s.', ...
                 char(TestCaseName(i)));
         end
-        % Model coverage is collected without exclusions. Attach the exact
-        % generated CVF to the completed result so descendant block data is
-        % retained and filtering affects only report interpretation.
-        resultFilterFiles = string(filterFile);
-
         st_log(cfg, 'DEBUG', ...
             '[PER_CUT %d/%d] run(testCase) initial start', i, n);
         append_event(logPath, i, 'RUN_INITIAL_START', char(TestCaseName(i)));
         initialResult = run(tc);
         append_event(logPath, i, 'RUN_INITIAL_DONE', char(TestCaseName(i)));
-        st_apply_result_coverage_filters( ...
-            initialResult, resultFilterFiles, cfg);
-        append_event(logPath, i, 'RESULT_FILTER_ATTACHED', ...
-            char(strjoin(resultFilterFiles, ' | ')));
+        st_log(cfg, 'DEBUG', ...
+            ['[PER_CUT %d/%d] run(testCase) initial complete | ' ...
+             'CVF managed by Test Manager=%s'], ...
+            i, n, char(CVFPath(i)));
+        append_event(logPath, i, 'RESULT_FILTER_MANAGED', ...
+            char(CVFPath(i)));
         results(i).No = No(i);
         results(i).TestCaseName = char(TestCaseName(i));
         results(i).InitialResult = initialResult;
@@ -231,10 +227,12 @@ for i = 1:n
             append_event(logPath, i, 'RUN_FINAL_START', char(TestCaseName(i)));
             finalResult = run(tc);
             append_event(logPath, i, 'RUN_FINAL_DONE', char(TestCaseName(i)));
-            st_apply_result_coverage_filters( ...
-                finalResult, resultFilterFiles, cfg);
-            append_event(logPath, i, 'RESULT_FILTER_ATTACHED', ...
-                char(strjoin(resultFilterFiles, ' | ')));
+            st_log(cfg, 'DEBUG', ...
+                ['[PER_CUT %d/%d] run(testCase) final complete | ' ...
+                 'CVF managed by Test Manager=%s'], ...
+                i, n, char(CVFPath(i)));
+            append_event(logPath, i, 'RESULT_FILTER_MANAGED', ...
+                char(CVFPath(i)));
             results(i).FinalResult = finalResult;
             results(i).RerunPerformed = true;
             RerunPerformed(i) = true;
