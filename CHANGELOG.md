@@ -12,6 +12,9 @@
   that return only the CVF basename or omit the `.cvf` extension on readback.
 - Changed `SUBSYSTEM` coverage filtering to use the CUT `BlockInstance`, so
   only the CUT block is filtered while its descendant blocks remain included.
+- Added the default PER_CUT `REPLACE` existing-filter policy, which temporarily
+  suppresses inherited Test File, Suite, and Test Case CVFs and restores them
+  after applying the newly generated Test Case CVF in isolation.
 - Fixed incremental SLDV preparation so `OFF` and legacy cached profiles
   use the same canonical structure schema as newly generated profiles.
 - Added `AUTO`, `BATCH`, and `PER_CUT` execution policies. Active coverage

@@ -197,6 +197,7 @@ st_find_target_paths              % 같은 이름의 후보를 문맥으로 순�
 | 준비 모드와 시작 단계 | 호출 옵션 > Excel 행 > `st_config` |
 | 기대값 갱신 | Excel 행 > `cfg.ExpectedUpdateMode` |
 | CVF 선택 | Excel 행의 `CoverageFilter*` 값 |
+| 기존 CVF 처리 | `cfg.CoverageFilterExistingPolicy` (`REPLACE` 기본) |
 
 `ExecutionMode=AUTO`는 Excel 행의 CVF 설정을 읽어 BATCH/PER_CUT을 결정하지만,
 Excel에 행별 `ExecutionMode` 열을 두지는 않습니다.
@@ -316,6 +317,7 @@ Test File Coverage는 Decision으로 설정하며, 이에 포함되는 Block Exe
 cfg.CoverageStructuralLevel = 'Decision';
 cfg.CoverageMetricSettings = 'dwe';
 cfg.CoverageFilterApplicationMode = 'RUNTIME';
+cfg.CoverageFilterExistingPolicy = 'REPLACE';
 ```
 
 | Excel 설정 | 의미 |
@@ -335,7 +337,8 @@ CVF를 사용할 때는 `CoverageFilterRationale`이 필수입니다. CVF는 저
 ```text
 CVF 생성
 → Test File·Suite·Test Case 기존 필터 목록 백업
-→ 현재 Test Case에 수동 필터와 실행 전용 CVF 결합
+→ 기존 Test File·Suite·Test Case 필터를 임시 해제
+→ 현재 Test Case에 새 실행 전용 CVF만 적용
 → 초기 run(testCase)와 결과 저장
 → APPLY 변경 시 같은 CVF로 재실행과 최종 결과 저장
 → 원래 필터 복원
@@ -343,7 +346,8 @@ CVF 생성
 → 다음 CUT
 ```
 
-다른 Test Case의 Enabled 상태는 변경하지 않습니다. 기존 수동 필터는 보존하며,
+다른 Test Case의 Enabled 상태는 변경하지 않습니다. 기존 수동 필터 설정은 실행
+후 복원하며 `CoverageFilterExistingPolicy='MERGE'`일 때만 새 CVF와 함께 적용합니다.
 자동 CVF는 실행별 CUT 폴더에 따로 저장합니다. `PER_CUT`은 항상 transient
 필터를 사용하므로 `CoverageFilterApplicationMode=PERSIST`를 거부합니다.
 

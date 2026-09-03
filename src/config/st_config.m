@@ -345,6 +345,13 @@ cfg.CoverageIncludeReferencedModels = false;
 %   Keep the generated per-Test-Case filter settings in the MLDATX file.
 cfg.CoverageFilterApplicationMode = 'RUNTIME';
 
+% PER_CUT existing-filter policy:
+%   REPLACE: temporarily clear Test File, Suite, and Test Case CVFs and use
+%            only the newly generated Test Case CVF. Restore all original
+%            settings after the target run.
+%   MERGE:   combine existing CVFs with the generated Test Case CVF.
+cfg.CoverageFilterExistingPolicy = 'REPLACE';
+
 % Generated CVF files are toolkit-owned artifacts. Files outside this
 % directory are treated as manual filters and are never removed.
 cfg.CoverageFilterDir = ...

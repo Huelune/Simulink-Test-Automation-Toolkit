@@ -133,6 +133,7 @@ cfg.RunGeneratedTests
 cfg.OverwriteTestFile
 cfg.ExpectedUpdateMode
 cfg.CoverageFilterApplicationMode
+cfg.CoverageFilterExistingPolicy
 cfg.PreparationMode
 cfg.CheckSharedSignalEditorDataFile
 cfg.IgnoreUnexpectedSldvInputs
@@ -146,6 +147,7 @@ cfg.RunGeneratedTests = false;
 cfg.OverwriteTestFile = false;
 cfg.ExpectedUpdateMode = 'OFF';
 cfg.CoverageFilterApplicationMode = 'RUNTIME';
+cfg.CoverageFilterExistingPolicy = 'REPLACE';
 ```
 
 `CoverageFilterApplicationMode='RUNTIME'`은 `.cvf`를 실행 직전에 각 Test Case에
@@ -158,6 +160,11 @@ Subsystem 자체에 한 개 생성되므로 내부에 직속 하위 Subsystem이
 
 실제 기본값은 파일을 수정해야 변경됩니다. Command Window에서 반환된 `cfg`만
 수정해도 다음 공개 명령의 새 `st_config()` 호출에는 반영되지 않습니다.
+
+`CoverageFilterExistingPolicy='REPLACE'`는 PER_CUT 실행 중 Test File, Test
+Suite, Test Case에 연결된 기존 CVF를 임시로 해제하고 새로 생성한 CVF만
+적용합니다. 실행 후에는 기존 연결을 복원합니다. 기존 CVF도 함께 적용하려면
+`MERGE`로 변경합니다.
 
 ## 5. 모델 선택과 CUT 경로 준비
 
