@@ -532,11 +532,18 @@ info = st_export_test_asset_bundle( ...
 ResultSet을 직접 선택한 경우 Excel Coverage 요약은 `OVERALL`과 `CUT` 수준만
 생성합니다. 기본 `CoverageReportMode='SUMMARY'`는 Coverage 없는 공식 PDF와
 경량 `CoverageSummary.html`을 만들며, 전체 Coverage 원본은 선택 결과 MLDATX에
-보존합니다. 공식 PDF Coverage와 `cvhtml` 상세 보고서가 꼭 필요할 때만
+보존합니다. 또한 `coverage/data/`에 CVT를 저장하고 적용된 CVF 원본을 유지한
+채 `coverage/filters/`에도 복사합니다. 공식 PDF Coverage와 `cvhtml` 상세
+보고서가 꼭 필요할 때만
 `CoverageReportMode='FULL'`을 지정하십시오. Coverage 객체 메타데이터가 CUT와
 정확히 매핑되지 않으면 전체 객체를 교차 조회하지 않고 해당 행과 번들을
 `PARTIAL`로 기록합니다. 명령창에는 결과 계층, MLDATX, CUT Coverage, PDF,
 HTML, Excel의 6단계 진행 상태와 경과 시간이 출력됩니다.
+
+PER_CUT 실행은 `SUMMARY`에서도 각 `initial/coverage/detail/` 및 실제 재실행이
+있는 경우 `final/coverage/detail/`에 독립 Coverage Detail HTML과 동반 리소스를
+생성합니다. Test Manager의 원본 ResultSet과 원본 CVF는 유지됩니다. 다른
+위치로 전달할 때는 해당 `initial/` 또는 `final/` 폴더 전체를 복사합니다.
 `info.ResultSource`는 `ResultSet` 또는 `RunId`이며, `info.Status`가
 `PARTIAL`이면 `info.ArtifactFailures`와 manifest의 `ResultArtifacts`에서
 누락된 보고서 또는 Coverage를 확인할 수 있습니다.

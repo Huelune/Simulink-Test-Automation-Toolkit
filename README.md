@@ -390,18 +390,31 @@ result/per_cut_runs/{run-id}/
 │       ├── initial/
 │       │   ├── TestSummary.xlsx
 │       │   ├── raw/InitialResults.mldatx
-│       │   ├── coverage/CoverageSummary.html
+│       │   ├── coverage/
+│       │   │   ├── CoverageSummary.html
+│       │   │   ├── data/*.cvt
+│       │   │   ├── filters/{TestCaseName}.cvf
+│       │   │   └── detail/...
 │       │   └── official/InitialTestResults.pdf
 │       └── final/
 │           ├── TestSummary.xlsx
 │           ├── raw/FinalResults.mldatx
-│           ├── coverage/CoverageSummary.html
+│           ├── coverage/
+│           │   ├── CoverageSummary.html
+│           │   ├── data/*.cvt
+│           │   ├── filters/{TestCaseName}.cvf
+│           │   └── detail/...
 │           └── official/FinalTestResults.pdf
 └── logs/execution.log
 ```
 
 - `SUMMARY`: Excel, MLDATX, 경량 Coverage HTML을 생성합니다.
 - `FULL`: `SUMMARY` 산출물에 공식 PDF와 전체 Coverage HTML을 추가합니다.
+- PER_CUT 결과는 모드와 관계없이 `coverage/data/`에 CVT 원본을 저장하고,
+  `coverage/filters/`에 적용한 CVF를 원본 삭제 없이 복사하며,
+  `coverage/detail/`에 독립 Coverage Detail HTML과 동반 리소스를 생성합니다.
+  결과를 전달할 때는 HTML 파일 하나가 아니라 `initial/` 또는 `final/` 폴더
+  전체를 복사해야 합니다.
 - `final/`은 기대값 변경 후 실제 재실행한 경우에만 생성됩니다.
 - `filter/{TestCaseName}.cvf`는 CVF 활성 CUT에만 생성됩니다. Test Case 실행 전에
   해당 폴더를 MATLAB path에 등록하고 ResultSet coverage에도 절대 경로로 연결합니다.

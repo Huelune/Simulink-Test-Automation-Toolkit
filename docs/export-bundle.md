@@ -19,6 +19,11 @@ Coverage Excel/HTML과 전체 결과 MLDATX를 보존하면서 Coverage 포함 P
 `st_export_test_asset_bundle('SelectResult',true,'CoverageReportMode','FULL')`을
 사용합니다.
 
+선택 결과를 새로 내보낼 때는 `coverage/data/`에 Coverage 원본 CVT를 저장하고,
+적용된 CVF가 있으면 원본을 유지한 채 `coverage/filters/`에 복사합니다.
+PER_CUT 결과에는 `SUMMARY` 모드에서도 `coverage/detail/`의 독립 상세 HTML과
+동반 리소스가 포함됩니다.
+
 이 명령은 `result/exports/assets/`에 내부 Harness가 유지된 모델 사본,
 선택 결과와 매핑되는 독립 Harness `.slx`, Test Manager 파일, 관리 Excel,
 Signal Editor·SLDV 입력과 결과 보고서·Coverage를 복사합니다. 독립 Harness는

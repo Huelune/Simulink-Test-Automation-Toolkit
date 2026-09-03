@@ -6,6 +6,8 @@
   attached absolute CVF paths to result coverage data, changed each CVF name
   to `{TestCaseName}.cvf`, generated one verified rule for the CUT itself,
   and removed Java path canonicalization from result-filter verification.
+- Added portable PER_CUT coverage artifacts: standalone detail HTML,
+  reloadable CVT data, and copied CVF files while preserving their sources.
 - Fixed incremental SLDV preparation so `OFF` and legacy cached profiles
   use the same canonical structure schema as newly generated profiles.
 - Added `AUTO`, `BATCH`, and `PER_CUT` execution policies. Active coverage
