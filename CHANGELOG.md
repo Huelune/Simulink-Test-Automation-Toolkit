@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed incremental SLDV preparation so `OFF` and legacy cached profiles
+  use the same canonical structure schema as newly generated profiles.
 - Added `AUTO`, `BATCH`, and `PER_CUT` execution policies. Active coverage
   filters now select sequential per-CUT execution for every enabled row while
   all-OFF workbooks retain the legacy `run(tf)` path.

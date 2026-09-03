@@ -37,6 +37,14 @@ profile = st_get_sldv_profile(target, cfg);
 verifyEqual(testCase, profile.Mode, 'OFF');
 verifyEqual(testCase, profile.ScenarioNames, {'UT_REQ_Controller_001'});
 verifyTrue(testCase, isnan(profile.Tmax));
+verifyEqual(testCase, sort(fieldnames(profile)), ...
+    sort(fieldnames(st_empty_sldv_profile())));
+verifyEqual(testCase, profile.Status, 'OK');
+verifyEqual(testCase, profile.AtomicAction, 'NOT_APPLICABLE');
+
+profiles = repmat(st_empty_sldv_profile(), 2, 1);
+profiles(1) = profile;
+verifyEqual(testCase, profiles(1).TestCaseName, 'ControllerTest');
 end
 
 
@@ -80,6 +88,12 @@ profile = st_get_sldv_profile(target, cfg);
 
 verifyEqual(testCase, profile.Status, 'OK');
 verifyEqual(testCase, profile.EffectiveDataFile, dataFile);
+verifyEqual(testCase, sort(fieldnames(profile)), ...
+    sort(fieldnames(st_empty_sldv_profile())));
+
+profiles = repmat(st_empty_sldv_profile(), 2, 1);
+profiles(1) = profile;
+verifyEqual(testCase, profiles(1).Mode, 'FILE');
 end
 
 

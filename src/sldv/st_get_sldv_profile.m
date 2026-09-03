@@ -11,8 +11,16 @@ if isempty(mode)
 end
 
 if strcmp(mode, 'OFF')
-    profile = struct();
+    profile = st_empty_sldv_profile();
+    profile.No = double(targetRow.No);
+    profile.CUTName = char(targetRow.CUTName);
+    profile.CUTPath = st_normalize_cut_path( ...
+        targetRow.CUTPath, cfg.TopModel);
+    profile.HarnessName = char(targetRow.HarnessName);
+    profile.TestCaseName = char(targetRow.TestCaseName);
     profile.Mode = 'OFF';
+    profile.RequestedDataFile = char(targetRow.SldvDataFile);
+    profile.SourceDataFile = char(targetRow.SldvDataFile);
     profile.ScenarioNames = {st_scenario_name(targetRow.CUTName, 1)};
     profile.SourceIndices = [];
     profile.EndTimes = [];
@@ -20,6 +28,9 @@ if strcmp(mode, 'OFF')
     profile.ParameterCounts = 0;
     profile.EffectiveDataFile = '';
     profile.SignalEditorDataFile = '';
+    profile.AtomicAction = 'NOT_APPLICABLE';
+    profile.Status = 'OK';
+    profile.Message = 'Legacy single-scenario workflow';
     return;
 end
 
@@ -57,6 +68,7 @@ end
 if ~matched
     error('No matching target row exists in the SLDV manifest.');
 end
+profile = normalize_profile_schema(profile);
 % Older incremental runs could persist the reporting-only CACHED state in
 % the runtime manifest. Treat it as a successful reusable profile and
 % normalize it so the next manifest write repairs the stored state.
@@ -67,5 +79,17 @@ elseif ~strcmp(profile.Status, 'OK')
 end
 if isempty(profile.EffectiveDataFile) || ~isfile(profile.EffectiveDataFile)
     error('Prepared SLDV data file is missing: %s', profile.EffectiveDataFile);
+end
+end
+
+
+function normalized = normalize_profile_schema(profile)
+normalized = st_empty_sldv_profile();
+fields = fieldnames(normalized);
+for i = 1:numel(fields)
+    field = fields{i};
+    if isfield(profile, field)
+        normalized.(field) = profile.(field);
+    end
 end
 end
