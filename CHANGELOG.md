@@ -8,6 +8,8 @@
   and removed Java path canonicalization from result-filter verification.
 - Added portable PER_CUT coverage artifacts: standalone detail HTML,
   reloadable CVT data, and copied CVF files while preserving their sources.
+- Made result coverage filter verification compatible with MATLAB releases
+  that return only the CVF basename or omit the `.cvf` extension on readback.
 - Fixed incremental SLDV preparation so `OFF` and legacy cached profiles
   use the same canonical structure schema as newly generated profiles.
 - Added `AUTO`, `BATCH`, and `PER_CUT` execution policies. Active coverage

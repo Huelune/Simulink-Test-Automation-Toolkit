@@ -36,11 +36,22 @@ try
     propertyValue = filter_property_value(filterFiles);
     for i = 1:numel(coverageObjects)
         coverageObjects(i).filter = propertyValue;
-        actual = normalize_filter_values(coverageObjects(i).filter);
-        if ~all(ismember(path_keys(filterFiles), path_keys(actual)))
+        returned = string(coverageObjects(i).filter);
+        returned = returned(:);
+        returned(ismissing(returned)) = "";
+        returned = returned(strlength(returned) > 0);
+        actual = normalize_filter_values(returned);
+        st_log(cfg, 'TRACE', ...
+            ['Result coverage filter readback | Object=%d | ' ...
+             'Requested=%s | Returned=%s | Resolved=%s'], ...
+            i, join_filter_values(filterFiles), ...
+            join_filter_values(returned), join_filter_values(actual));
+        if ~filter_sets_match(filterFiles, actual)
             error('simtest:ResultCoverageFilterVerificationFailed', ...
                 ['Coverage result did not retain every requested filter. ' ...
-                 'Object=%d'], i);
+                 'Object=%d | Requested=%s | Returned=%s'], ...
+                i, join_filter_values(filterFiles), ...
+                join_filter_values(returned));
         end
     end
     st_log(cfg, 'DEBUG', ...
@@ -61,7 +72,7 @@ files(ismissing(files)) = "";
 files = files(strlength(files) > 0);
 for i = 1:numel(files)
     candidate = char(files(i));
-    [resolved, found] = existing_filter_path(candidate, false);
+    [resolved, found] = existing_filter_path(candidate, true);
     if found
         files(i) = resolved;
     end
@@ -134,6 +145,49 @@ function keys = path_keys(paths)
 keys = replace(string(paths(:)), '/', filesep);
 if ispc
     keys = lower(keys);
+end
+end
+
+
+function tf = filter_sets_match(expected, actual)
+expectedPaths = path_keys(expected);
+actualPaths = path_keys(actual);
+if all(ismember(expectedPaths, actualPaths))
+    tf = true;
+    return;
+end
+
+% Some releases retain only the CVF basename (and may omit .cvf) after a
+% valid absolute path is assigned to cvdata.filter. The basename is safe to
+% accept here because PER_CUT names every CVF after its unique Test Case and
+% registers that exact filter directory on the MATLAB path.
+tf = all(ismember(filter_name_keys(expected), ...
+    filter_name_keys(actual)));
+end
+
+
+function keys = filter_name_keys(paths)
+paths = string(paths(:));
+keys = strings(size(paths));
+for i = 1:numel(paths)
+    [~, name, extension] = fileparts(char(paths(i)));
+    if isempty(extension)
+        extension = '.cvf';
+    end
+    keys(i) = string([name lower(extension)]);
+end
+if ispc
+    keys = lower(keys);
+end
+end
+
+
+function value = join_filter_values(values)
+values = string(values(:));
+if isempty(values)
+    value = '<empty>';
+else
+    value = char(strjoin(values, ' | '));
 end
 end
 
