@@ -124,6 +124,8 @@ MATLAB을 새로 시작했거나 저장소 위치를 바꾼 뒤 가장 먼저 �
 
 `st_config`는 직접 실행하는 workflow가 아니라 전체 기본 설정을 반환합니다.
 일반적으로 `src/config/st_config.m`을 검토하고 필요한 기본값만 수정합니다.
+Top Model 이름과 파일 경로는 이 파일에 수정하지 않습니다. 로컬 모델 선택은
+`st_select_target_model`로 수행하며 Git에서 제외된 `runtime_target.mat`에 저장됩니다.
 
 자주 확인하는 값:
 
@@ -163,10 +165,10 @@ Subsystem 자체에 한 개 생성되므로 내부에 직속 하위 Subsystem이
 
 `CoverageFilterExistingPolicy='REPLACE'`는 PER_CUT 실행 중 Test File, Test
 Suite, Test Case에 연결된 기존 CVF를 임시로 해제하고 새로 생성한 CVF만
-결과 Coverage에 적용합니다. 시뮬레이션 중에는 필터를 비워 전체 Coverage를
-수집하고, 결과 저장 전에 결과 폴더의 CVF 복사본으로 참조를 변경합니다.
-실행 후에는 기존 연결을 복원합니다. 기존 CVF도 함께 적용하려면
-`MERGE`로 변경합니다.
+해당 Test Case 실행에 등록합니다. `SUBSYSTEM`은 CUT의 `BlockInstance`만
+필터링하므로 내부 일반 블록 Coverage는 유지됩니다. 결과 저장 시 CVF 복사본을
+함께 보존하지만 Test Manager의 결과 객체 참조는 변경하지 않습니다. 실행 후에는
+기존 연결을 복원합니다. 기존 CVF도 함께 적용하려면 `MERGE`로 변경합니다.
 
 ## 5. 모델 선택과 CUT 경로 준비
 

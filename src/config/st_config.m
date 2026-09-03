@@ -1,6 +1,7 @@
 function cfg = st_config()
 %ST_CONFIG Common settings for Simulink Test automation.
-% Edit this file first.
+% Edit repository-wide defaults here. Select the local target model with
+% st_select_target_model; do not place a model name in this tracked file.
 
 rootDir = st_project_root();
 
@@ -12,9 +13,9 @@ rootDir = st_project_root();
 cfg.RuntimeTargetFile = ...
     fullfile(rootDir, 'runtime_target.mat');
 
-cfg.TopModel = ...
-    'TEST_TARGET_MODEL_NAME';
-
+% Model identity is intentionally local and untracked. It is populated only
+% from runtime_target.mat, which st_select_target_model creates.
+cfg.TopModel = '';
 cfg.ModelFile = '';
 cfg.HasRuntimeTarget = false;
 

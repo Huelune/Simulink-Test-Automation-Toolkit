@@ -86,6 +86,10 @@ st_run_from_harness
 - `st_run_from_harness`: 누락 Harness 생성부터 테스트와 보고서까지 전체 workflow를
   실행합니다.
 
+모델명과 모델 파일 경로는 추적되는 `src/config/st_config.m`에 기록하지 않습니다.
+`st_select_target_model`이 생성하는 Git 제외 파일 `runtime_target.mat`에만 저장되므로
+저장소를 pull해도 모델 선택값과 충돌하지 않습니다.
+
 Harness가 이미 모두 존재하면 생성 단계를 건너뛰는 진입점을 사용합니다.
 
 ```matlab

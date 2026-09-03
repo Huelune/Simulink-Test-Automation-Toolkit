@@ -26,6 +26,18 @@ verifyEqual(testCase, cfg.VerificationRootDir, ...
 end
 
 
+function testTrackedConfigDoesNotContainTargetModelName(testCase)
+rootDir = st_project_root();
+source = fileread(fullfile(rootDir, 'src', 'config', 'st_config.m'));
+ignoreText = fileread(fullfile(rootDir, '.gitignore'));
+
+verifyTrue(testCase, contains(source, "cfg.TopModel = '';"));
+verifyEmpty(testCase, regexp(source, ...
+    'TEST_TARGET_MODEL_NAME', 'once'));
+verifyTrue(testCase, contains(ignoreText, 'runtime_target.mat'));
+end
+
+
 function testVerificationEntryPointsExist(testCase)
 rootDir = st_project_root();
 required = { ...
