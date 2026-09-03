@@ -33,6 +33,22 @@ summary = st_verify_all( ...
 `FailOnNonPass=true`여도 Excel, JSON, JUnit XML과 manifest를 모두 기록한
 뒤 `FAIL` 또는 `BLOCKED`에서 오류를 발생시킵니다.
 
+### 현장 실행용 고정 코드
+
+이미 완료된 PER_CUT 실행을 새 검증 workspace 없이 읽기 전용으로 빠르게
+점검하려면 다음 명령을 사용합니다.
+
+```matlab
+summary = st_check_actual_system();
+```
+
+이 명령은 R2025b 환경·제품·라이선스·입력·API·경로 중복 6개, 실행 root·CUT
+매핑·실행 완료·기대값 재실행·산출물·필터 누출 6개, CVF selector 6개를
+`ENV`, `RUN`, `CVF` 순서의 18비트로 출력합니다. 이는 `st_verify_all`의
+fixture, source checksum, 수동 증거와 JUnit 인증을 대체하지 않습니다. 현장 오류
+분석을 요청할 때 코드 줄과 `summary.Environment`, `summary.Run`, `summary.CVF`
+표를 함께 전달합니다.
+
 ## 프로필과 예상 시간
 
 아래 시간은 모델 크기, Harness 수, SLDV 탐색 공간과 라이선스 서버 상태에

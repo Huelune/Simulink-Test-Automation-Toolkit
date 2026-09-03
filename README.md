@@ -42,6 +42,7 @@ TestManagement.xlsx
 | Coverage | Decision과 Block Execution 수집, CUT별 transient CVF 적용·복원 |
 | 보고서 | Excel, JSON manifest, MLDATX, HTML, 선택적 공식 PDF |
 | 검증 | `QUICK`, `RUNTIME`, `CERTIFY` 프로필과 Excel·JSON·JUnit 결과 |
+| 현장 점검 | 환경·실행·CVF 상태를 전달 가능한 고정 18비트 코드로 요약 |
 | 내보내기 | 선택 결과 자산 묶음과 원본을 보존하는 반복 실행 번들 |
 
 ## 2. 요구 환경과 입력 파일
@@ -400,6 +401,46 @@ disp(details(:, {'No','TestCaseName','Code','Status','Message'}))
 `111111`만 전체 통과입니다. 여러 CUT이 있으면 CUT별 코드와 전체 AND 코드가 함께
 출력됩니다. 문의할 때 `CVF-CHECK-v1`로 시작하는 출력 줄 전체와 `details` 표를
 전달하십시오. 이 명령은 모델, Test File과 CVF를 저장하거나 변경하지 않습니다.
+
+### 9.2 실제 시스템 전체 18비트 점검
+
+환경, PER_CUT 실행 결과와 CVF를 한 번에 확인하려면 최신 실행 뒤 다음 명령을
+사용합니다.
+
+```matlab
+st_setup
+summary = st_check_actual_system();
+disp(summary.Environment)
+disp(summary.Run)
+disp(summary.CVF(:, {'No','TestCaseName','Code','Status','Message'}))
+```
+
+특정 실행은 `st_check_actual_system('RunDirectory', '<run-id 또는 폴더>')`로
+지정합니다. 마지막 출력은 다음처럼 세 개의 6비트 묶음과 전체 18비트입니다.
+
+```text
+SYSTEM-CHECK-v1 ENV=111111 RUN=111111 CVF=111111 OVERALL=111111111111111111
+```
+
+| 묶음 | 비트 | 통과 조건 |
+| --- | --- | --- |
+| ENV | E1 | MATLAB 릴리스가 R2025b |
+| ENV | E2 | MATLAB, Simulink, Simulink Test, Coverage, SLDV 설치 |
+| ENV | E3 | 위 제품의 라이선스 존재 |
+| ENV | E4 | `runtime_target.mat`, 모델, 관리 Excel, Test File 존재 |
+| ENV | E5 | Harness, Test Manager, Coverage, dependency API 존재 |
+| ENV | E6 | 주요 `st_*` 함수가 현재 저장소에서 하나씩만 해석됨 |
+| RUN | R1 | latest pointer, root manifest, Excel과 run ID 일치 |
+| RUN | R2 | Excel 순서에 해당하는 target manifest 순서·식별자 일치 |
+| RUN | R3 | 모든 CUT이 실행 결과에 도달하고 실행기 실패·skip 없음 |
+| RUN | R4 | 기대값 변경 수, APPLY, 최종 재실행·결과 연결 일치 |
+| RUN | R5 | MLDATX, Excel, HTML, CVT 등 필수 산출물이 있고 실패 기록 없음 |
+| RUN | R6 | 실행별 CVF가 Test File·Suite·Test Case에 남아 있지 않음 |
+
+`OVERALL=111111111111111111`만 전체 자동 점검 통과입니다. Test Manager 화면과
+PDF/HTML의 시각적 내용은 자동 코드로 판정하지 않으므로 별도로 확인해야 합니다.
+문의할 때 `SYSTEM-CHECK-v1`, `CVF-CHECK-v1`로 시작하는 줄과 `summary`의 세 상세
+표를 함께 전달하십시오. 이 명령도 프로젝트 자산을 저장하거나 변경하지 않습니다.
 
 ## 10. 실행 결과와 보고서
 

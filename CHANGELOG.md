@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added the read-only `st_check_actual_system` field diagnostic. It combines
+  six environment checks, six PER_CUT run checks, and the existing six CVF
+  checks into one transferable 18-bit result code with detailed tables.
+- Fixed `st_check_per_cut_cvf` so a diagnostic no longer relies on the
+  runtime-target helper that could load a model before its original open
+  state was recorded.
 - Changed automatic CVF generation to exclude the CUT root and create rules
   only for its direct-child Subsystems. `SUBSYSTEM` uses `BlockInstance`, while
   descendant filtering remains exclusive to `ALL_CONTENT`.

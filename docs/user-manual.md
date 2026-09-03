@@ -138,6 +138,13 @@ Subsystem 블록만, `ALL_CONTENT`는 그 직속 하위 Subsystem과 각 내부 
 6비트 점검 코드가 출력됩니다. `111111`만 전체 통과입니다. 문제가 있으면
 `CVF-CHECK-v1`로 시작하는 줄 전체와 `details` 표를 전달하십시오.
 
+환경과 실행 결과까지 함께 확인하려면 `summary = st_check_actual_system()`을
+실행하십시오. `SYSTEM-CHECK-v1`의 `ENV`, `RUN`, `CVF`가 모두 `111111`이면
+18개 자동 검사를 통과한 것입니다. 0이 있으면 `summary.Environment`,
+`summary.Run`, `summary.CVF`에서 같은 번호의 메시지를 확인하고 세 코드 줄과 표를
+함께 전달하십시오. 명령은 모델과 Test File을 저장하지 않습니다. PDF/HTML의
+시각적 내용과 Test Manager 화면 동작은 사용자가 별도로 확인해야 합니다.
+
 ## 5. 권장 실행 순서
 
 ### 5.1 1단계: QUICK 결과부터 확인

@@ -25,11 +25,19 @@ addParameter(p, 'RunDirectory', 'LATEST', ...
     @(x) (ischar(x) || (isstring(x) && isscalar(x))));
 parse(p, varargin{:});
 
-cfg = st_require_runtime_target();
+cfg = st_config();
 totalTimer = tic;
 requestedRun = char(string(p.Results.RunDirectory));
 st_log(cfg, 'INFO', ...
     'Per-CUT CVF self-check start | RunDirectory=%s', requestedRun);
+
+if ~cfg.HasRuntimeTarget || ~isfile(cfg.ModelFile)
+    [overallCode, details] = fatal_result( ...
+        'A valid runtime target model is not selected');
+    st_log(cfg, 'ERROR', ...
+        'Per-CUT CVF self-check failed | runtime target is unavailable');
+    return;
+end
 
 try
     runDirectory = resolve_run_directory(requestedRun, cfg);
@@ -64,7 +72,7 @@ modelMessage = "";
 try
     modelWasLoaded = bdIsLoaded(modelName);
     if ~modelWasLoaded
-        load_system(modelName);
+        load_system(cfg.ModelFile);
     end
     modelAvailable = true;
 catch ME

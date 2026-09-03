@@ -185,6 +185,21 @@ disp(details(:, {'No','TestCaseName','Code','Status','Message'}))
 Subsystem 정확 일치, 모드·action 일치입니다. `111111`만 전체 통과이며 문의 시
 `CVF-CHECK-v1` 출력 줄 전체를 전달합니다.
 
+현장 실행 전체를 한 번에 판정할 때는 다음 명령을 우선 사용합니다.
+
+```matlab
+summary = st_check_actual_system();
+disp(summary.Environment)
+disp(summary.Run)
+disp(summary.CVF)
+```
+
+출력의 `ENV`, `RUN`, `CVF`는 각각 6비트이며 전체 18비트가 모두 1이어야 자동
+점검을 통과합니다. ENV는 R2025b·제품·라이선스·입력 파일·API·MATLAB 경로를,
+RUN은 실행 pointer·CUT 순서·실행 완료·기대값 재실행·산출물·필터 복원을,
+CVF는 기존 selector 검사를 뜻합니다. 0이 있으면 대응 상세 표의 같은 비트 행을
+확인합니다. 시각적 보고서 내용과 Test Manager GUI 동작은 별도 수동 확인입니다.
+
 ## 5. 모델 선택과 CUT 경로 준비
 
 ### 5.1 `st_select_target_model`

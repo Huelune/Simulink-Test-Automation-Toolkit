@@ -10,6 +10,7 @@
 - 활성 개발 브랜치: feat/per-cut-filtered-execution
 - 필수 기능 기준: d109472
 - 필수 handoff 기준: 2b3ba09 이후
+- 필수 진단 기준: 현재 브랜치 최신 커밋의 st_check_actual_system 포함
 - MATLAB R2025b 검증: 미수행
 - 현재 PC: MATLAB 실행 파일과 실제 result 폴더 없음
 - 완료 표현: 정적 구현 완료까지만 허용하며 인증 완료나 PR 준비 완료로 표현하지 않는다.
@@ -60,6 +61,22 @@ feat/per-cut-filtered-execution의 최신 원격에서 시작한다.
 
 ## 실제 시스템 CVF 점검
 
+실제 시스템의 기본 진단 진입점은 전체 18비트 검사다.
+
+    st_setup
+    summary = st_check_actual_system();
+    disp(summary.Environment)
+    disp(summary.Run)
+    disp(summary.CVF)
+
+SYSTEM-CHECK-v1의 ENV, RUN, CVF가 각각 111111일 때만 환경, 실행 연결과 CVF
+자동 검사가 모두 통과한 것이다. ENV는 R2025b·제품·라이선스·입력·API·경로
+중복을, RUN은 실행 root·CUT 매핑·실행 완료·기대값 갱신·산출물·필터 누출을
+확인한다. 이 검사는 읽기 전용이며 PDF/HTML 시각 품질과 Test Manager GUI는
+자동 판정 범위가 아니다.
+
+CVF selector만 다시 확인하려면 아래 개별 검사를 사용한다.
+
 최신 PER_CUT 실행이 끝난 뒤 다음을 실행한다.
 
     st_setup
@@ -90,7 +107,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 
 1. MATLAB 경로 중복 여부를 which 함수명 -all 형태로 확인한다.
 2. SUBSYSTEM, ALL_CONTENT, OFF 대상이 포함된 PER_CUT 실행을 수행한다.
-3. st_check_per_cut_cvf 출력과 details 표를 보관한다.
+3. st_check_actual_system과 st_check_per_cut_cvf 출력 및 상세 표를 보관한다.
 4. 생성 CVF에서 CUT 자신이 없고 직계 하위 Subsystem만 있는지 확인한다.
 5. SUBSYSTEM이 내부 일반 블록 전체를 필터링하지 않는지 Coverage HTML로 확인한다.
 6. ALL_CONTENT만 선택된 하위 Subsystem 내부 전체를 처리하는지 확인한다.
@@ -102,6 +119,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 실패 시 최소 전달 자료:
 
 - CVF-CHECK-v1로 시작하는 모든 출력 줄
+- SYSTEM-CHECK-v1로 시작하는 모든 출력 줄과 summary 상세 표
 - details 표
 - result/per_cut_latest.json
 - 해당 run의 manifest.json과 logs/execution.log
@@ -114,7 +132,8 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 2. 원격 feat/per-cut-filtered-execution의 최신 커밋을 확인한다.
 3. 작업 트리가 깨끗할 때만 fast-forward한다.
 4. 이 문서의 브랜치 지도와 변경 불가 핵심 결정을 읽는다.
-5. st_setup 후 which st_check_per_cut_cvf -all 및 주요 st 함수의 중복을 확인한다.
+5. st_setup 후 st_check_actual_system을 실행한다. E6이 주요 st 함수 중복을
+   자동 확인하며 필요할 때만 which 함수명 -all로 상세 경로를 확인한다.
 6. 정리된 과거 브랜치를 다시 만들거나 과거 tip을 전체 병합하지 않는다.
 7. R2025b 결과가 없으면 정적 검증과 런타임 검증을 명확히 분리한다.
 8. 새 런타임 결과와 결정이 생기면 이 문서의 기준일, 커밋, 검증 상태를 갱신한다.
@@ -122,5 +141,6 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 ## 다음 작업 순서
 
 1. R2025b PC에서 최신 활성 브랜치를 fast-forward하고 실제 PER_CUT 실행을 수행한다.
-2. 6비트 코드와 상세 산출물을 분석해 필요한 수정만 새 커밋으로 반영한다.
+2. 18비트 전체 코드, CUT별 6비트 코드와 상세 산출물을 분석해 필요한 수정만 새
+   커밋으로 반영한다.
 3. CERTIFY + BOTH와 수동 GUI 증거가 끝난 뒤에만 PR과 main 통합을 결정한다.
