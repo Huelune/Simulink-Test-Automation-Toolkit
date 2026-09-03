@@ -69,6 +69,8 @@ catch ME
 end
 
 if strcmp(options.Profile, 'CERTIFY')
+    checks = [checks; certify_standalone_fixture( ...
+        fixtureRoot, workspaceDirectory, options)];
     checks = [checks; certify_sldv_file_mode(cfg, options)];
     checks = [checks; certify_corrupt_state(cfg, options)];
     checks = [checks; certify_partial_failure(cfg, options)];
@@ -78,6 +80,43 @@ else
     checks = append(checks, row('CERTIFY.FIXTURE.EXHAUSTIVE', ...
         'CORE', options, 'SKIP', ...
         'Exhaustive recovery, FILE mode, and export checks require CERTIFY'));
+end
+end
+
+function checks = certify_standalone_fixture(sourceRoot, workspaceRoot, options)
+checks = st_empty_verification_checks();
+started = timestamp_text(); timerValue = tic;
+standaloneRoot = fullfile(workspaceRoot, 'standalone_fixture');
+try
+    prepare_project_copy(sourceRoot, standaloneRoot);
+    oldPath = path;
+    oldDirectory = pwd;
+    cleanup = onCleanup(@() restore_environment( ...
+        oldDirectory, oldPath, 'ST_VerificationModel', ...
+        standaloneRoot)); %#ok<NASGU>
+    cd(standaloneRoot);
+    addpath(fullfile(standaloneRoot, 'tests', 'fixtures'), '-begin');
+    st_build_verification_fixture(standaloneRoot);
+    addpath(standaloneRoot, '-begin');
+    clear st_setup st_config st_project_root st_require_runtime_target
+    st_setup();
+    [~, ~, ~, report] = st_run_from_harness( ...
+        'PreparationMode', 'FORCE', 'FromStage', 'START', ...
+        'SystemUnderTestMode', 'EXPORTED_MODEL', ...
+        'ExecutionMode', 'AUTO', 'ReportMode', 'FULL', ...
+        'FailOnNonPass', false);
+    [code, details] = st_check_standalone_run( ...
+        'RunDirectory', report.RunDirectory); %#ok<NASGU>
+    checks = append(checks, row( ...
+        'CERTIFY.FIXTURE.STANDALONE_SUT', 'STANDALONE_SUT', ...
+        options, pass_if(strcmp(code, '111111')), ...
+        ['Exported model SUT, dual CVFs, expected re-export, ' ...
+         'restoration, and artifacts were checked'], ...
+        report.RunDirectory, toc(timerValue), started));
+catch ME
+    checks = append(checks, exception_row( ...
+        'CERTIFY.FIXTURE.STANDALONE_SUT', 'STANDALONE_SUT', ...
+        options, ME, standaloneRoot, toc(timerValue), started));
 end
 end
 
@@ -431,6 +470,10 @@ copy_required(fullfile(sourceRoot, 'VERSION.txt'), ...
 copy_required(fullfile(sourceRoot, 'src'), fullfile(destination, 'src'));
 copy_required(fullfile(sourceRoot, 'resources'), ...
     fullfile(destination, 'resources'));
+diagnosticsSource = fullfile(sourceRoot, 'diagnostics');
+if isfolder(diagnosticsSource)
+    copy_required(diagnosticsSource, fullfile(destination, 'diagnostics'));
+end
 fixtureSource = fullfile(sourceRoot, 'tests', 'fixtures');
 copy_required(fixtureSource, fullfile(destination, 'tests', 'fixtures'));
 end

@@ -18,6 +18,7 @@ verifyEqual(testCase, cfg.ExecutionMode, 'AUTO');
 verifyTrue(testCase, cfg.PerCutContinueOnFailure);
 verifyEqual(testCase, cfg.PerCutReportMode, 'SUMMARY');
 verifyFalse(testCase, cfg.PerCutFailOnNonPass);
+verifyEqual(testCase, cfg.SystemUnderTestMode, 'INTERNAL_HARNESS');
 end
 
 function testWorkflowOptionOverrides(testCase)
@@ -35,10 +36,12 @@ end
 function testPerCutWorkflowOptionOverrides(testCase)
 options = st_parse_workflow_options( ...
     'ExecutionMode', 'per_cut', ...
+    'SystemUnderTestMode', 'exported_model', ...
     'ContinueOnFailure', false, ...
     'ReportMode', 'full', ...
     'FailOnNonPass', false);
 verifyEqual(testCase, options.ExecutionMode, 'PER_CUT');
+verifyEqual(testCase, options.SystemUnderTestMode, 'EXPORTED_MODEL');
 verifyFalse(testCase, options.ContinueOnFailure);
 verifyEqual(testCase, options.ReportMode, 'FULL');
 verifyFalse(testCase, options.FailOnNonPass);
@@ -53,6 +56,9 @@ verifyError(testCase, @() st_parse_workflow_options( ...
     'ExecutionMode', 'PARALLEL'), 'simtest:InvalidExecutionMode');
 verifyError(testCase, @() st_parse_workflow_options( ...
     'ReportMode', 'PDF_ONLY'), 'simtest:InvalidPerCutReportMode');
+verifyError(testCase, @() st_parse_workflow_options( ...
+    'SystemUnderTestMode', 'MIXED'), ...
+    'simtest:InvalidSystemUnderTestMode');
 end
 
 function testDefaultStageSelectionRunsEveryRow(testCase)

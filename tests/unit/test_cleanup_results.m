@@ -48,6 +48,16 @@ verifyEqual(testCase, plan.Path, ...
     string({cfg.PerCutRunRootDir; cfg.PerCutLatestPointer}));
 end
 
+function testStandaloneScopeTargetsOnlyStandaloneArtifacts(testCase)
+cfg = st_config();
+plan = st_cleanup_results('Scope', 'STANDALONE_RUNS');
+
+verifyEqual(testCase, height(plan), 2);
+verifyTrue(testCase, all(plan.Scope == "STANDALONE_RUNS"));
+verifyEqual(testCase, plan.Path, ...
+    string({cfg.StandaloneRunRootDir; cfg.StandaloneLatestPointer}));
+end
+
 
 function tf = under_result(paths, root)
 root = char(java.io.File(root).getCanonicalPath());
