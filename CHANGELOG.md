@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Added opt-in `EXPORTED_MODEL` Test Manager execution. Each internal Harness is
+  exported to a uniquely named run-local SLX, bound as a Model SUT, executed in
+  Excel order, and preserved with input snapshots and a separate Test File.
+- Added separate Harness-infrastructure and CUT-policy CVFs for standalone
+  models. The Harness CVF always excludes non-CUT top-level blocks, while the
+  optional target CVF keeps the existing direct-child Subsystem policy. Manual
+  source Test File filters are copied into the run-local Test File without
+  carrying forward old toolkit-managed CVFs.
+- Added Initial/Final model re-export after expected-value updates, separate
+  standalone reports and latest pointer, safe cleanup scope, and the read-only
+  six-bit `st_check_standalone_run` diagnostic.
+
 - Added the read-only `st_check_actual_system` field diagnostic. It combines
   six environment checks, six PER_CUT run checks, and the existing six CVF
   checks into one transferable 18-bit result code with detailed tables.

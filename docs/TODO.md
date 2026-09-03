@@ -38,6 +38,8 @@ This file records decisions that are intentionally not presented as implemented 
   Harness or SLDV preparation work.
 - [ ] Connect the normalized JUnit output to CI after the first R2025b result
   establishes runtime duration and license behavior.
+- [ ] Add Model Reference CUT export and identity validation. The initial
+  EXPORTED_MODEL implementation supports the existing Subsystem CUT contract.
 
 ## Reporting and operations
 
@@ -50,6 +52,12 @@ This file records decisions that are intentionally not presented as implemented 
 - [ ] Run the R2025b per-CUT fixture matrix (`SUBSYSTEM+JUSTIFY`,
   `ALL_CONTENT+EXCLUDE`, `OFF`) and preserve evidence for apply, run, export,
   restore, continue-on-failure, and restore-failure abort ordering.
+- [ ] Run and preserve the R2025b EXPORTED_MODEL matrix, including Model SUT
+  binding, Harness-scope exclusion, CUT direct-child policy, Initial/Final
+  re-export, Signal Editor/SLDV input snapshots, and six-bit self-check output.
+- [ ] Decide whether EXPORTED_MODEL should package referenced models, data
+  dictionaries, and custom code instead of recording them as external
+  dependencies in the target manifest.
 - [x] Add a standalone, non-destructive export command that packages the saved
   internal Harness model, inputs, Test File, dependencies, and reference report
   and creates a fresh workspace for every recipient rerun.

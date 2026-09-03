@@ -10,9 +10,10 @@
 | --- | --- |
 | 원격 저장소 | `https://github.com/Huelune/Simulink-Test-Automation-Toolkit.git` |
 | 기본 브랜치 | `main` |
-| 현재 작업 브랜치 | `feat/per-cut-filtered-execution` |
-| 작업 기반 커밋 | `78101c0` (`feat(coverage): 테스트 케이스별 자동 필터 추가`) |
-| 개발 상태 | 기능 구현과 정적 검토 완료, MATLAB R2025b runtime 미검증 |
+| 현재 로컬 작업 브랜치 | `feat/standalone-harness-model-execution` |
+| 원격 공유 기준 | `origin/feat/per-cut-filtered-execution` / `a48ec9e` |
+| 독립 모델 로컬 기준 | `1af915c`, `cc10729` 이후 문서 커밋 |
+| 개발 상태 | 독립 모델 기능 구현과 정적 계약 확인 완료, 미push, MATLAB R2025b runtime 미검증 |
 | 우선 검증 환경 | MATLAB R2025b, Simulink, Simulink Test, Simulink Coverage, SLDV |
 
 이 브랜치는 아직 `main`에 반영되지 않은 다음 기능을 모두 포함합니다.
@@ -23,10 +24,11 @@
 - QUICK/RUNTIME/CERTIFY 종합 검증 프레임워크
 - 자동 생성 검증 fixture와 사용자 매뉴얼
 - CUT별 transient CVF 격리 실행과 개별 결과·Coverage 보고서
+- 내부 Harness를 실행별 SLX Model SUT로 사용하는 독립 모델 실행과 이중 CVF
 
-`main`을 기준으로 새 작업을 만들면 위 기능이 빠집니다. R2025b 검증과 후속
-개발은 반드시 이 작업 브랜치 또는 이 브랜치에서 만든 후속 브랜치에서
-시작합니다.
+`main`을 기준으로 새 작업을 만들면 위 기능이 빠집니다. 현재 원격에서 바로
+재개할 수 있는 기준은 `feat/per-cut-filtered-execution`입니다. 독립 모델 기능은
+이 문서에 적힌 로컬 브랜치가 원격에 push된 뒤에만 다른 PC에서 재개할 수 있습니다.
 
 ## 2. 다른 PC에서 처음 시작하는 절차
 
@@ -34,7 +36,7 @@
 git clone https://github.com/Huelune/Simulink-Test-Automation-Toolkit.git
 cd Simulink-Test-Automation-Toolkit
 git fetch origin
-git switch --track origin/feat/per-cut-filtered-execution
+git switch --track origin/feat/standalone-harness-model-execution
 git status --short --branch
 git log -1 --oneline
 ```
@@ -44,9 +46,12 @@ git log -1 --oneline
 ```bash
 git status --short --branch
 git fetch origin
-git switch feat/per-cut-filtered-execution
-git pull --ff-only origin feat/per-cut-filtered-execution
+git switch feat/standalone-harness-model-execution
+git pull --ff-only origin feat/standalone-harness-model-execution
 ```
+
+위 명령은 독립 모델 브랜치를 원격에 push한 뒤 사용합니다. 그 전에는
+`origin/feat/per-cut-filtered-execution`까지만 공유된 상태입니다.
 
 수정 파일이 있으면 전환이나 pull 전에 임의로 버리지 않습니다. 변경의 소유자와
 목적을 확인하고 별도 커밋 또는 작업 브랜치로 보존합니다.
@@ -57,8 +62,10 @@ git pull --ff-only origin feat/per-cut-filtered-execution
 
 ```text
 이 저장소의 AGENTS.md와 docs/cross-machine-handoff.md를 먼저 모두 읽어줘.
-현재 작업 기준은 origin/feat/per-cut-filtered-execution이며 main에는 아직 기능이
-병합되지 않았다. README.md, docs/user-manual.md, docs/verification.md,
+현재 독립 모델 작업 기준은 origin/feat/standalone-harness-model-execution이며
+main에는 아직 기능이 병합되지 않았다. 해당 원격 브랜치가 없으면 작업을 시작하지
+말고 origin/feat/per-cut-filtered-execution의 a48ec9e까지만 공유됐다고 보고해줘.
+README.md, docs/user-manual.md, docs/verification.md,
 docs/export-bundle.md, docs/TODO.md를 확인하고 현재 Git 상태와 MATLAB 제품 및
 라이선스를 점검해줘. 실제로 실행하지 않은 검증은 통과로 기록하지 말고,
 result/verification의 실행별 결과와 최종 커밋을 인수인계 문서에 남겨줘.
@@ -274,6 +281,7 @@ MATLAB 검증을 PASS로 적지 않습니다.
 | --- | --- | --- | --- | --- | --- |
 | 2026-08-30 | 현재 개발 PC, MATLAB runtime 없음 | `handoff/r2025b-cross-machine` | 증분 실행·보고서·내보내기·검증 코드와 매뉴얼을 인수인계 브랜치로 구성 | 정적 확인만 완료, R2025b 미검증 | R2025b 장비에서 `QUICK + CURRENT`와 `RUNTIME + FIXTURE` 실행 |
 | 2026-09-03 | 현재 개발 PC, MATLAB runtime 없음 | `feat/per-cut-filtered-execution` (기반 `78101c0`) | CUT별 CVF 적용, 독립 Test Case 실행·보고서, 기대값 재실행, 복원 검증과 별도 pointer 구현 | 정적 확인만 수행, R2025b fixture 미검증 | 원격 브랜치 동기화 후 `CERTIFY + FIXTURE`로 실행·복원 순서 확인 |
+| 2026-09-04 | 현재 개발 PC, MATLAB runtime 없음 | `feat/standalone-harness-model-execution` (`1af915c`, `cc10729`, 로컬) | 내부 Harness를 실행별 SLX Model SUT로 export하고 Harness/CUT 이중 CVF, 기대값 Final 재export, 별도 보고서와 6비트 진단 추가 | 정적 계약 확인만 수행, R2025b EXPORTED_MODEL 미검증, 아직 push하지 않음 | 별도 push 요청 후 R2025b에서 `STANDALONE-CHECK-v1`과 FULL 산출물 확인 |
 
 새 세션은 마지막 행과 Git 로그를 비교하여 어느 쪽이 최신인지 확인한 후
 시작합니다.

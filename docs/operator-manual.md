@@ -646,6 +646,8 @@ result/
 ├── sldv/             # generated latest data와 manifest
 ├── state/            # 증분 workflow checkpoint
 ├── runs/             # Test 실행 통합 보고서
+├── per_cut_runs/     # 내부 Harness CUT별 실행 결과
+├── standalone_runs/  # 독립 Harness 모델 SUT 실행 결과
 ├── exports/          # 테스트 자산, 재실행 번들과 ZIP
 ├── verification/     # QUICK/RUNTIME/CERTIFY 결과
 ├── latest.json       # 최신 normal run 포인터
@@ -674,6 +676,7 @@ Scope:
 | `STATE` | `result/state`; 다음 AUTO에서 준비 단계 재평가 |
 | `RUNS` | `result/runs`, `latest.json`, `TestSummary.xlsx` |
 | `PER_CUT_RUNS` | `result/per_cut_runs`, `per_cut_latest.json` |
+| `STANDALONE_RUNS` | `result/standalone_runs`, `standalone_latest.json` |
 | `EXPORTS` | `result/exports` |
 | `VERIFICATION` | `result/verification` |
 | `FILTERS` | `result/coverage_filters`; 다음 실행에서 자동 재생성 |
@@ -752,6 +755,39 @@ summary = st_verify_all( ...
     'FailOnNonPass', false);
 ```
 
+### 독립 Harness 모델을 Test Manager SUT로 실행
+
+```matlab
+[results, updates, workflow, report] = st_run_after_harness( ...
+    'SystemUnderTestMode', 'EXPORTED_MODEL', ...
+    'ExecutionMode', 'AUTO', ...
+    'ReportMode', 'SUMMARY', ...
+    'ContinueOnFailure', true);
+```
+
+이 모드는 기존 내부 Harness와 `{TopModel}.mldatx`를 실행 대상으로 사용하지
+않습니다. 실행 폴더에 CUT별 SLX, 입력 사본과 전용 MLDATX를 만들고 다음 순서로
+처리합니다.
+
+1. CUT을 제외한 최상위 Harness 인프라를 `harness-scope.cvf`로 제외합니다.
+2. Excel 정책이 활성화됐으면 CUT 직계 Subsystem용 `target-policy.cvf`를
+   추가합니다.
+3. 원본 Test File 계층의 수동 CVF를 실행용 Test File에 복사하고 두 자동 CVF를
+   Test Case에 transient로 추가한 뒤 독립 모델을 실행합니다.
+4. 필터와 MATLAB path를 원복하고 모델을 unload한 뒤 다음 CUT으로 이동합니다.
+5. 기대값이 변경되면 내부 Harness를 기준으로 Final 모델과 CVF를 새로 만듭니다.
+
+실행 뒤 아래 6비트 코드를 확인합니다.
+
+```matlab
+[code, details] = st_check_standalone_run();
+disp(details)
+```
+
+`STANDALONE-CHECK-v1 CODE=111111`만 모델, Harness 범위 CVF, CUT 정책 CVF,
+Final 재export, 복원과 산출물이 모두 통과한 상태입니다. R2025b 최초 확인 전에는
+이 결과를 기능 인증 완료로 기록하지 않습니다.
+
 ## 17. 실패 시 확인 순서
 
 1. MATLAB Command Window의 마지막 `[단계/대상] FAIL` 메시지
@@ -761,6 +797,7 @@ summary = st_verify_all( ...
 5. SLDV FILE이면 subsystem path, TestCase, Dataset 이름·자료형·차원 확인
 6. Test Manager 단계면 Scenario/Iteration 이름과 기존 TC 중복 확인
 7. runtime 인증은 `VerificationSummary.xlsx`의 required FAIL/BLOCKED 확인
+8. 독립 모델 실행이면 `STANDALONE-CHECK-v1`과 해당 target manifest 확인
 
 `Ctrl+C`로 중단했으면 열린 Harness와 모델의 Dirty 상태를 확인하고 저장 여부를
 판단한 뒤 다시 실행합니다. 증분 checkpoint는 성공한 단계만 재사용합니다.

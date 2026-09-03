@@ -6,11 +6,13 @@
 
 ## 현재 기준
 
-- 기준일: 2026-09-03
-- 활성 개발 브랜치: feat/per-cut-filtered-execution
-- 필수 기능 기준: d109472
-- 필수 handoff 기준: 2b3ba09 이후
-- 필수 진단 기준: 현재 브랜치 최신 커밋의 st_check_actual_system 포함
+- 기준일: 2026-09-04
+- 활성 개발 브랜치: feat/standalone-harness-model-execution
+- 기반 브랜치/커밋: feat/per-cut-filtered-execution / a48ec9e
+- 독립 모델 기능 기준: 1af915c
+- 독립 모델 검증 기준: cc10729
+- 필수 handoff 기준: 이 문서의 현재 커밋
+- 필수 진단 기준: st_check_actual_system과 st_check_standalone_run 포함
 - MATLAB R2025b 검증: 미수행
 - 현재 PC: MATLAB 실행 파일과 실제 result 폴더 없음
 - 완료 표현: 정적 구현 완료까지만 허용하며 인증 완료나 PR 준비 완료로 표현하지 않는다.
@@ -30,7 +32,21 @@ CoverageFilterMode이 활성화된 CUT의 자동 CVF는 CUT 자기 자신을 rul
 - CVF는 CUT별 실행 폴더에 보존하고 실행 후 원래 Test File, Suite, Test Case 필터
   목록을 복원해야 한다.
 
-이 기준은 d109472에서 최신 기능 브랜치 위에 다시 반영됐다. 이전 원격 커밋
+독립 Harness 모델 실행은 다음 경계를 추가로 지킨다.
+
+- `INTERNAL_HARNESS`가 기본이며 `EXPORTED_MODEL`은 실행 전체 옵션이다.
+- EXPORTED_MODEL은 항상 PER_CUT이며 BATCH와 행별 혼합을 허용하지 않는다.
+- 내부 Harness는 Assessment와 expected value의 원본이다. APPLY 변경 후 Final
+  독립 모델을 다시 export하고 SID 기반 CVF도 다시 생성한다.
+- `harness-scope.cvf`는 독립 모델의 CUT을 제외한 최상위 블록만 선택한다.
+- `target-policy.cvf`는 활성 정책일 때 CUT의 직계 하위 Subsystem만 선택한다.
+- 원본 Test File 계층의 수동 CVF만 실행용 Test File에 복사하며 기존 자동 관리
+  CVF는 승계하지 않는다.
+- 실행 모델, 입력 사본, 전용 Test File과 결과는 result/standalone_runs에 두며
+  기존 per_cut_runs와 latest pointer를 변경하지 않는다.
+
+위의 공통 CUT 직계 Subsystem 필터 기준은 d109472에서 최신 기능 브랜치 위에
+다시 반영됐다. 이전 원격 커밋
 f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사용하지 않는다.
 
 ## 활성 브랜치 지도
@@ -38,7 +54,8 @@ f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사
 | 브랜치 | 기준 커밋 | 역할과 처리 방침 |
 | --- | --- | --- |
 | main | 0a0ace5 | 파일 구조 정리까지만 반영된 안정 기준. R2025b 검증 전 기능을 임의 backport하지 않는다. |
-| feat/per-cut-filtered-execution | d109472 이후 | 현재 활성 통합 브랜치. 다른 작업은 이 브랜치 최신 원격을 fetch한 뒤 이어간다. |
+| feat/per-cut-filtered-execution | a48ec9e | 검증되지 않은 독립 모델 변경을 포함하지 않는 안정 부모 브랜치. |
+| feat/standalone-harness-model-execution | cc10729 (로컬) | 현재 활성 실험 브랜치. 내부 Harness를 독립 Model SUT로 실행하며 R2025b 결과 전에는 부모 브랜치를 대체하지 않는다. 아직 push하지 않았다. |
 
 ## 정리된 과거 브랜치
 
@@ -56,8 +73,8 @@ f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사
 | feat/reproducible-test-bundle-export | 0812582 | 현재 활성 브랜치에 포함됨 |
 | handoff/r2025b-cross-machine | 96926cf | 현재 handoff 문서와 활성 브랜치가 대체함 |
 
-과거 커밋 해시는 추적 근거로만 유지한다. 새 수정은 main이 아니라
-feat/per-cut-filtered-execution의 최신 원격에서 시작한다.
+과거 커밋 해시는 추적 근거로만 유지한다. 일반 수정은 부모 브랜치 최신 원격에서,
+독립 모델 실행 수정은 feat/standalone-harness-model-execution에서 이어간다.
 
 ## 실제 시스템 CVF 점검
 
@@ -114,7 +131,14 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 7. 실행 전후 Test File, Suite, Test Case의 기존 필터 목록이 동일한지 확인한다.
 8. Test Manager Coverage 화면에서 점 인덱싱 오류가 재발하지 않는지 확인한다.
 9. 각 CUT의 MLDATX, CVT, CVF, Excel, HTML과 선택적 PDF를 확인한다.
-10. 모델, Test File, Excel과 입력 파일의 원본 checksum 불변을 확인한다.
+10. Test File, Excel과 입력 파일 checksum은 불변인지 확인하고, 원본 모델은
+    Harness logging 및 APPLY 기대값 갱신 외의 변경이 없는지 확인한다.
+11. EXPORTED_MODEL로 같은 fixture를 실행하고 Test Case의 Model SUT,
+    HarnessOwner/HarnessName 공백과 Assessment 경로를 확인한다.
+12. Harness CVF가 CUT을 제외한 최상위 블록 전체와 일치하고 Target CVF가 CUT
+    직계 Subsystem만 선택하는지 확인한다.
+13. APPLY 뒤 Final 모델·CVF가 별도 이름과 SID로 생성되는지 확인한다.
+14. st_check_standalone_run 결과 `111111`과 상세 표를 보관한다.
 
 실패 시 최소 전달 자료:
 
@@ -124,12 +148,16 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - result/per_cut_latest.json
 - 해당 run의 manifest.json과 logs/execution.log
 - 실패 CUT의 target-manifest.json과 filter 폴더
+- EXPORTED_MODEL이면 STANDALONE-CHECK-v1 출력과 standalone run의 Initial/Final
+  모델, 두 CVF 및 실행 전용 Test File
 - MATLAB 오류의 getReport extended 출력과 dbstack completenames 출력
 
 ## 다른 Codex의 시작 절차
 
 1. git fetch --prune origin을 실행한다.
 2. 원격 feat/per-cut-filtered-execution의 최신 커밋을 확인한다.
+   독립 모델 작업을 이어갈 때는 원격에 게시된
+   feat/standalone-harness-model-execution의 최신 커밋을 확인한다.
 3. 작업 트리가 깨끗할 때만 fast-forward한다.
 4. 이 문서의 브랜치 지도와 변경 불가 핵심 결정을 읽는다.
 5. st_setup 후 st_check_actual_system을 실행한다. E6이 주요 st 함수 중복을
@@ -140,7 +168,8 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 
 ## 다음 작업 순서
 
-1. R2025b PC에서 최신 활성 브랜치를 fast-forward하고 실제 PER_CUT 실행을 수행한다.
-2. 18비트 전체 코드, CUT별 6비트 코드와 상세 산출물을 분석해 필요한 수정만 새
-   커밋으로 반영한다.
-3. CERTIFY + BOTH와 수동 GUI 증거가 끝난 뒤에만 PR과 main 통합을 결정한다.
+1. 현재 개발 PC의 독립 모델 브랜치는 구현·검증 코드를 커밋했으며 MATLAB
+   R2025b 실행은 아직 수행하지 않았다.
+2. R2025b PC에서 기존 PER_CUT과 EXPORTED_MODEL을 같은 fixture로 각각 실행한다.
+3. 18비트, 기존 CVF 6비트, STANDALONE 6비트와 상세 산출물을 비교한다.
+4. CERTIFY + BOTH와 수동 GUI 증거가 끝난 뒤에만 PR과 main 통합을 결정한다.

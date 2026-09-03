@@ -173,3 +173,34 @@ fingerprint = st_verification_target_fingerprint(cfg)
 
 현재 개발 환경에서 MATLAB R2025b runtime 결과를 만들지 않았다면 코드와
 문서가 존재해도 인증 완료로 기록하지 않습니다.
+
+## EXPORTED_MODEL 추가 인증
+
+독립 Harness 모델 실행은 기존 PER_CUT 인증과 별도로 다음 명령으로 시작합니다.
+
+```matlab
+st_run_from_harness( ...
+    'SystemUnderTestMode', 'EXPORTED_MODEL', ...
+    'ExecutionMode', 'AUTO', ...
+    'ReportMode', 'FULL', ...
+    'FailOnNonPass', false);
+[code, details] = st_check_standalone_run();
+disp(details)
+```
+
+fixture에는 `SUBSYSTEM+JUSTIFY`, `ALL_CONTENT+EXCLUDE`, `OFF` CUT을 포함하고
+다음을 수동·자동으로 함께 확인합니다.
+
+- Test Case의 Model은 실행별 SLX이고 HarnessOwner/HarnessName은 비어 있음
+- Harness CVF는 CUT을 제외한 모든 최상위 Harness 블록과 정확히 일치
+- Target CVF는 CUT 자신이 아니라 직계 자식 Subsystem만 선택
+- APPLY 변경 뒤 Final 모델명, SID와 두 CVF가 Initial과 별도로 생성됨
+- Test File 필터, MATLAB path와 로드 모델 상태가 다음 CUT 전에 복원됨
+- 원본 Test File의 수동 CVF는 실행용 Test File에 승계되고 툴킷 관리 CVF는
+  승계되지 않음
+- `result/standalone_runs` 이외의 기존 run pointer가 바뀌지 않음
+- Signal Editor·SLDV 입력 사본 checksum이 원본과 일치함
+- 참조 모델·데이터 사전·사용자 코드는 manifest에 외부 의존성으로 남음
+
+`STANDALONE-CHECK-v1 CODE=111111`과 FULL 보고서의 PDF/HTML 시각 검토가 모두
+확보되기 전에는 EXPORTED_MODEL을 R2025b 인증 완료로 표시하지 않습니다.

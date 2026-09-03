@@ -10,7 +10,7 @@ Coverage 수집, 결과 보고서와 재실행 번들까지 만드는 MATLAB 자
 | --- | --- |
 | 버전 | `0.9.6` candidate 이후 `Unreleased` |
 | 기본 브랜치 | `main` |
-| 이 README의 작업 브랜치 | `feat/per-cut-filtered-execution` |
+| 이 README의 작업 브랜치 | `feat/standalone-harness-model-execution` |
 | 기본 기대값 정책 | `APPLY` |
 | 기본 실행 정책 | `AUTO` |
 | 현재 검증 상태 | 코드·정적 검토 단계, MATLAB R2025b 전체 인증 미완료 |
@@ -38,11 +38,13 @@ TestManagement.xlsx
 | 준비 자동화 | 누락 Harness 생성, Signal Editor Scenario, Assessment, Iteration 구성 |
 | 증분 처리 | 대상·단계별 fingerprint와 checkpoint를 사용한 준비 결과 재사용 |
 | 테스트 실행 | 모든 Test Case 일괄 실행 또는 Excel 순서의 CUT별 독립 실행 |
+| 독립 모델 실행 | 내부 Harness를 실행별 SLX로 export하고 Model SUT로 연결해 CUT별 실행 |
 | 기대값 처리 | 실패 결과의 지원 가능한 실제값을 Assessment expected value에 반영 후 재실행 |
 | Coverage | Decision과 Block Execution 수집, CUT별 transient CVF 적용·복원 |
 | 보고서 | Excel, JSON manifest, MLDATX, HTML, 선택적 공식 PDF |
 | 검증 | `QUICK`, `RUNTIME`, `CERTIFY` 프로필과 Excel·JSON·JUnit 결과 |
 | 현장 점검 | 환경·실행·CVF 상태를 전달 가능한 고정 18비트 코드로 요약 |
+| 독립 모델 점검 | 모델·이중 CVF·재내보내기·복원을 고정 6비트 코드로 요약 |
 | 내보내기 | 선택 결과 자산 묶음과 원본을 보존하는 반복 실행 번들 |
 
 ## 2. 요구 환경과 입력 파일
@@ -143,6 +145,7 @@ st_find_target_paths              % 같은 이름의 후보를 문맥으로 순�
 | `st_run_from_harness` | Harness가 없을 수 있는 전체 workflow |
 | `st_run_after_harness` | 기존 Harness를 검증한 뒤 SLDV 단계부터 실행 |
 | `st_run_tests_per_cut` | 이미 준비된 Test File을 CUT별로 직접 실행 |
+| `st_run_tests_from_exported_harnesses` | Harness를 독립 모델 SUT로 내보내 CUT별 실행 |
 
 두 workflow 진입점은 다음 네 개의 결과를 반환할 수 있습니다.
 
@@ -196,13 +199,57 @@ Test Case의 `FAILED`, `UNTESTED`, `INCOMPLETE` 판정은 `FinalOutcome`에 보�
 `ContinueOnFailure=true`여도 전체 실행을 즉시 중단합니다. 병렬 CUT 실행은
 지원하지 않습니다.
 
-### 5.3 설정 우선순위
+### 5.3 독립 Harness 모델 실행
+
+기존 내부 Harness 실행은 기본값으로 유지됩니다. Test Manager에서 내보낸
+Harness SLX 자체를 Model SUT로 사용하려면 실행 전체에 다음 옵션을 지정합니다.
+
+```matlab
+[results, updates, workflow, report] = st_run_from_harness( ...
+    'SystemUnderTestMode', 'EXPORTED_MODEL', ...
+    'ExecutionMode', 'AUTO', ...
+    'ReportMode', 'SUMMARY');
+```
+
+`EXPORTED_MODEL`에서는 `AUTO`가 항상 `PER_CUT`으로 해석되고 `BATCH`는
+거부됩니다. 원본 내부 Harness는 기대값과 Assessment의 기준 자산으로 유지하며,
+각 실행에서 다음 순서로 처리합니다.
+
+```text
+내부 Harness logging 준비
+→ CUT별 Initial SLX export
+→ 실행 전용 Test File의 Model SUT 연결
+→ harness-scope.cvf + 선택적 target-policy.cvf 적용
+→ Initial 실행·보고서·필터 복원
+→ APPLY 기대값 갱신
+→ Final SLX 재export·CVF 재생성·재실행
+```
+
+- `harness-scope.cvf`는 CUT을 제외한 독립 모델 최상위 하네스 블록을 항상
+  `EXCLUDE`합니다.
+- `target-policy.cvf`는 Excel의 `CoverageFilterMode`가 활성화된 경우에만 CUT의
+  직계 자식 Subsystem을 기존 `SUBSYSTEM`/`ALL_CONTENT` 규칙으로 처리합니다.
+- CUT 자신과 독립 모델 루트는 어느 CVF에도 추가하지 않습니다.
+- 원본 Test File·Suite·Test Case의 수동 CVF는 읽기만 한 뒤 실행용 Test File에
+  복사해 두 자동 CVF와 함께 적용합니다. 툴킷 관리 경로의 과거 자동 CVF는
+  승계하지 않습니다.
+- Signal Editor와 SLDV 입력은 실행 폴더에 복사합니다. 참조 모델·데이터 사전·
+  사용자 코드는 복사하지 않고 manifest에 경로·존재·checksum을 기록합니다.
+- 결과는 `result/standalone_runs/{run-id}`에 저장되고
+  `result/standalone_latest.json`이 최신 실행을 가리킵니다.
+
+현재 자동 export 대상은 기존 Harness 생성 정책과 동일한 Subsystem CUT입니다.
+Model Reference CUT 지원은 TODO이며, R2025b 실제 실행 검증 전까지 이 모드는
+부분 검증 상태입니다.
+
+### 5.4 설정 우선순위
 
 옵션 종류마다 적용 범위가 다릅니다.
 
 | 정책 | 우선순위 |
 | --- | --- |
 | 실행 모드 | workflow 호출의 `ExecutionMode` > `cfg.ExecutionMode` |
+| Test Manager SUT | workflow 호출의 `SystemUnderTestMode` > `cfg.SystemUnderTestMode` |
 | 준비 모드와 시작 단계 | 호출 옵션 > Excel 행 > `st_config` |
 | 기대값 갱신 | Excel 행 > `cfg.ExpectedUpdateMode` |
 | CVF 선택 | Excel 행의 `CoverageFilter*` 값 |
@@ -210,6 +257,7 @@ Test Case의 `FAILED`, `UNTESTED`, `INCOMPLETE` 판정은 `FinalOutcome`에 보�
 
 `ExecutionMode=AUTO`는 Excel 행의 CVF 설정을 읽어 BATCH/PER_CUT을 결정하지만,
 Excel에 행별 `ExecutionMode` 열을 두지는 않습니다.
+`SystemUnderTestMode`도 실행 전체에 적용하며 Excel 행별 혼합은 지원하지 않습니다.
 
 ## 6. 증분 준비와 단계 재실행
 
@@ -442,6 +490,33 @@ PDF/HTML의 시각적 내용은 자동 코드로 판정하지 않으므로 별�
 문의할 때 `SYSTEM-CHECK-v1`, `CVF-CHECK-v1`로 시작하는 줄과 `summary`의 세 상세
 표를 함께 전달하십시오. 이 명령도 프로젝트 자산을 저장하거나 변경하지 않습니다.
 
+### 9.3 독립 모델 실행 6비트 점검
+
+`EXPORTED_MODEL` 실행 뒤 다음 출력을 전달하면 독립 모델과 두 종류 CVF를 함께
+판단할 수 있습니다.
+
+```matlab
+[code, details] = st_check_standalone_run();
+disp(details)
+```
+
+```text
+STANDALONE-CHECK-v1 CODE=111111 ...
+```
+
+| 비트 | 통과 조건 |
+| --- | --- |
+| S1 | latest pointer, manifest, Excel, 실행 전용 Test File 일치 |
+| S2 | CUT별 Initial/Final 모델과 checksum 일치 |
+| S3 | Harness CVF가 CUT을 제외한 최상위 하네스 요소와 정확히 일치 |
+| S4 | CUT 정책 CVF가 `OFF`이거나 직계 자식 Subsystem과 정확히 일치 |
+| S5 | 기대값 갱신 수와 Final 재export·재실행 연결 일치 |
+| S6 | 실행 PASS, CVF 복원, 원본 상태와 산출물 무결성 통과 |
+
+`111111`만 전체 통과입니다. 특정 실행은
+`st_check_standalone_run('RunDirectory','result/standalone_runs/<run-id>')`로
+지정합니다.
+
 ## 10. 실행 결과와 보고서
 
 ### 10.1 BATCH 통합 보고서
@@ -515,6 +590,37 @@ result/per_cut_runs/{run-id}/
 `result/per_cut_latest.json`은 최신 CUT별 실행만 가리킵니다. 이 경로는 기존
 `result/latest.json`과 `result/runs/`를 변경하지 않습니다. 보고서는 로컬
 내부용이며 Notion이나 외부 저장소로 자동 전송하지 않습니다.
+
+### 10.3 EXPORTED_MODEL 개별 보고서
+
+```text
+result/standalone_runs/{run-id}/
+├── TestSummary.xlsx
+├── manifest.json
+├── test_manager/StandaloneHarnessTests.mldatx
+├── logs/execution.log
+└── targets/{No}_{CUTName}_{hash}/
+    ├── target-manifest.json
+    ├── inputs/
+    ├── initial/
+    │   ├── model/{standalone-model}.slx
+    │   ├── filters/harness-scope.cvf
+    │   ├── filters/target-policy.cvf
+    │   ├── test_manager/StandaloneHarnessTests.mldatx
+    │   ├── raw/InitialResults.mldatx
+    │   └── coverage/
+    └── final/
+        ├── model/{standalone-model}.slx
+        ├── filters/harness-scope.cvf
+        ├── filters/target-policy.cvf
+        ├── test_manager/StandaloneHarnessTests.mldatx
+        ├── raw/FinalResults.mldatx
+        └── coverage/
+```
+
+`target-policy.cvf`와 `final/`은 각각 CUT 정책 활성화와 실제 기대값 갱신·재실행
+조건을 만족할 때만 생성됩니다. Initial과 Final은 서로 다른 모델 이름과 새 SID
+기준 CVF를 사용합니다.
 
 ## 11. 전체 기능 상태 검증
 
@@ -612,10 +718,12 @@ info = st_export_test_bundle;
 ```matlab
 plan = st_cleanup_results('Scope', 'PER_CUT_RUNS');
 plan = st_cleanup_results('Scope', 'PER_CUT_RUNS', 'Apply', true);
+plan = st_cleanup_results('Scope', 'STANDALONE_RUNS');
 ```
 
-지원 범위는 `REPORTS`, `SLDV`, `STATE`, `RUNS`, `PER_CUT_RUNS`, `EXPORTS`,
-`VERIFICATION`, `FILTERS`, `ALL`입니다. 알려진 `result/` 하위 산출물만 대상으로
+지원 범위는 `REPORTS`, `SLDV`, `STATE`, `RUNS`, `PER_CUT_RUNS`,
+`STANDALONE_RUNS`, `EXPORTS`, `VERIFICATION`, `FILTERS`, `ALL`입니다. 알려진
+`result/` 하위 산출물만 대상으로
 하며 모델, Excel, runtime target, Test File과 사용자 SLDV 입력은 선택하지
 않습니다.
 
@@ -699,6 +807,9 @@ CUT별 CVF 격리 실행 구현 및 단위 테스트 코드가 포함되어 있�
 - 기대값 최초 실패, 갱신, 같은 CVF 재실행과 최종 PASS
 - Test File·Suite·Test Case 수동 필터의 저장·재개방 후 동일성
 - Decision·Execution CUT 매핑과 Excel·HTML·PDF·MLDATX 생성
+- 독립 SLX Model SUT 바인딩과 HarnessOwner/HarnessName 공백 확인
+- Harness 범위 CVF와 CUT 정책 CVF의 실제 적용, Final 재export와 source session 복원
+- `STANDALONE-CHECK-v1 CODE=111111` 및 FULL 독립 모델 산출물 확인
 - SLDV `FILE`/`GENERATE`, Scenario·Iteration과 정확한 `Tmax` timing
 - `QUICK → RUNTIME → CERTIFY` 전체 인증과 재실행 번들 반복 실행
 

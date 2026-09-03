@@ -42,7 +42,7 @@ Simulink-Test-Automation-Toolkit/
 | `harness`, `sldv`, `signal_editor` | Expensive model preparation and scenario data generation |
 | `assessment`, `coverage`, `test_manager` | Verification logic, per-Test-Case coverage filters, Test Case, Iteration, and alignment management |
 | `execution` | Test execution and expected-value update |
-| `exporting` | Immutable template bundle, dependency and input collection |
+| `exporting` | Immutable template bundle, standalone Harness SUT export, dependency and input collection |
 | `verification` | QUICK/RUNTIME/CERTIFY orchestration, status aggregation, manual evidence and Excel/JSON/JUnit writers |
 | `maintenance` | Dry-run-first cleanup of known generated result artifacts |
 | `reporting`, `shared`, `scenarios` | Cross-domain result, path, lifecycle, and naming helpers |
@@ -86,6 +86,13 @@ After MATLAB regression validation, a small `+simtest` package can be introduced
   attached only through each Test Case coverage settings object. Runtime mode
   restores manual settings after execution; persistent mode saves the
   per-Test-Case attachment. Test File-level automatic attachment is forbidden.
+- `SystemUnderTestMode=EXPORTED_MODEL` defers Coverage Filter, Test Manager and
+  alignment preparation to a run-local path. The exported model is the SUT;
+  a mandatory CVF excludes every top-level Harness infrastructure block except
+  the copied CUT, and an optional second CVF applies the Excel CUT policy.
+- The internal Harness remains the expected-value source of truth. A changed
+  expected value causes a new Final model export and new SID-based CVFs rather
+  than mutating or reusing the Initial execution model.
 - Report bundles are local artifacts and have no Notion or repository
   publishing side effect.
 - Incremental workflow state is an operational cache under `result/state`.
