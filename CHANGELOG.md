@@ -10,6 +10,8 @@
   reloadable CVT data, and copied CVF files while preserving their sources.
 - Made result coverage filter verification compatible with MATLAB releases
   that return only the CVF basename or omit the `.cvf` extension on readback.
+- Changed `SUBSYSTEM` coverage filtering to use the CUT `BlockInstance`, so
+  only the CUT block is filtered while its descendant blocks remain included.
 - Fixed incremental SLDV preparation so `OFF` and legacy cached profiles
   use the same canonical structure schema as newly generated profiles.
 - Added `AUTO`, `BATCH`, and `PER_CUT` execution policies. Active coverage
