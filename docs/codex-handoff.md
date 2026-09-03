@@ -8,8 +8,8 @@
 
 - 기준일: 2026-09-03
 - 활성 개발 브랜치: feat/per-cut-filtered-execution
-- 원격에서 가져온 기준: def658e
-- 최신 로컬 기능 커밋: d109472
+- 필수 기능 기준: d109472
+- 필수 handoff 기준: 2b3ba09 이후
 - MATLAB R2025b 검증: 미수행
 - 현재 PC: MATLAB 실행 파일과 실제 result 폴더 없음
 - 완료 표현: 정적 구현 완료까지만 허용하며 인증 완료나 PR 준비 완료로 표현하지 않는다.
@@ -32,20 +32,31 @@ CoverageFilterMode이 활성화된 CUT의 자동 CVF는 CUT 자기 자신을 rul
 이 기준은 d109472에서 최신 기능 브랜치 위에 다시 반영됐다. 이전 원격 커밋
 f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사용하지 않는다.
 
-## 브랜치 지도
+## 활성 브랜치 지도
 
 | 브랜치 | 기준 커밋 | 역할과 처리 방침 |
 | --- | --- | --- |
 | main | 0a0ace5 | 파일 구조 정리까지만 반영된 안정 기준. R2025b 검증 전 기능을 임의 backport하지 않는다. |
-| integration/comprehensive | 34cf49f | 증분 실행, 보고서, 내보내기, 종합 검증을 모은 공통 기반. PER_CUT 최신 수정은 없음. |
-| feature/api-per-testcase-coverage-filters | e27ffbb | Test Case별 필터 API 실험 기준. 현재 PER_CUT 브랜치가 후속 구현이다. |
 | feat/per-cut-filtered-execution | d109472 이후 | 현재 활성 통합 브랜치. 다른 작업은 이 브랜치 최신 원격을 fetch한 뒤 이어간다. |
-| fix/rebuild-coverage-filter-from-687aa78 | baadd60 | 결과 단계 필터 적용 실험 위에서 하위 Subsystem 선택을 복구한 비교 브랜치. 통째로 병합하지 않는다. |
-| fix/rebuild-coverage-filter-from-9165bc9 | a5469f7 | 이전 실행 중 필터 적용 기준의 비교 브랜치. 통째로 병합하지 않는다. |
 
-두 fix 브랜치는 서로 다른 과거 기준에서 만들어졌고 최신 def658e의 후속 오류
-수정을 모두 포함하지 않는다. 하위 Subsystem 선택 의도는 d109472에 선별 반영됐다.
-R2025b 검증 전에는 두 브랜치를 삭제하거나 현재 브랜치에 전체 병합하지 않는다.
+## 정리된 과거 브랜치
+
+다음 브랜치는 현재 활성 브랜치에 포함되었거나 필요한 변경을 선별 반영한 뒤
+2026-09-03에 로컬 또는 원격에서 정리했다. 동일 이름으로 작업을 재개하지 않는다.
+
+| 과거 브랜치 | 마지막 기준 | 정리 근거 |
+| --- | --- | --- |
+| integration/comprehensive | 34cf49f | 현재 활성 브랜치의 공통 기반으로 전부 포함됨 |
+| feature/api-per-testcase-coverage-filters | e27ffbb | SLDV 수정은 현재 브랜치의 547c9c9에 동일하게 반영됨 |
+| fix/rebuild-coverage-filter-from-687aa78 | baadd60 | 하위 Subsystem 선택 의도를 d109472에 최신 기준으로 선별 반영함 |
+| fix/rebuild-coverage-filter-from-9165bc9 | a5469f7 | 같은 의도의 과거 실행 기준 비교 브랜치로 d109472가 대체함 |
+| feat/comprehensive-verification | b458d2a | 현재 활성 브랜치에 포함됨 |
+| feat/incremental-execution-reporting | 8663b36 | 현재 활성 브랜치에 포함됨 |
+| feat/reproducible-test-bundle-export | 0812582 | 현재 활성 브랜치에 포함됨 |
+| handoff/r2025b-cross-machine | 96926cf | 현재 handoff 문서와 활성 브랜치가 대체함 |
+
+과거 커밋 해시는 추적 근거로만 유지한다. 새 수정은 main이 아니라
+feat/per-cut-filtered-execution의 최신 원격에서 시작한다.
 
 ## 실제 시스템 CVF 점검
 
@@ -104,14 +115,12 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 3. 작업 트리가 깨끗할 때만 fast-forward한다.
 4. 이 문서의 브랜치 지도와 변경 불가 핵심 결정을 읽는다.
 5. st_setup 후 which st_check_per_cut_cvf -all 및 주요 st 함수의 중복을 확인한다.
-6. 기존 원격 fix 브랜치를 전체 병합하지 않는다.
+6. 정리된 과거 브랜치를 다시 만들거나 과거 tip을 전체 병합하지 않는다.
 7. R2025b 결과가 없으면 정적 검증과 런타임 검증을 명확히 분리한다.
 8. 새 런타임 결과와 결정이 생기면 이 문서의 기준일, 커밋, 검증 상태를 갱신한다.
 
 ## 다음 작업 순서
 
-1. 현재 로컬 d109472와 이 handoff 문서를 원격 활성 브랜치에 push한다.
-2. R2025b PC에서 최신 브랜치를 fast-forward하고 실제 PER_CUT 실행을 수행한다.
-3. 6비트 코드와 상세 산출물을 분석해 필요한 수정만 새 커밋으로 반영한다.
-4. 검증 통과 후 두 비교 fix 브랜치의 보존 또는 삭제를 결정한다.
-5. CERTIFY + BOTH와 수동 GUI 증거가 끝난 뒤에만 PR과 main 통합을 결정한다.
+1. R2025b PC에서 최신 활성 브랜치를 fast-forward하고 실제 PER_CUT 실행을 수행한다.
+2. 6비트 코드와 상세 산출물을 분석해 필요한 수정만 새 커밋으로 반영한다.
+3. CERTIFY + BOTH와 수동 GUI 증거가 끝난 뒤에만 PR과 main 통합을 결정한다.
