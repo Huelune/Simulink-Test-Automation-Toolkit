@@ -149,6 +149,10 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   회귀 검사를 추가했다. MATLAB 없는 PC에서 정적 검사만 가능하며 실제 대상은 실행하지 않는다.
 - 추가 요청으로 MaxTime 열을 넣었다. 연결된 입력 시나리오의 모든 신호 시간 중
   최댓값을 초 단위로 기록하며 확인 불가/입력 없음은 NaN(Excel 빈 셀)이다.
+- 실제 PC에서 9행 수집 후 split_cells의 char(string(...))에서 missing 변환 오류가
+  보고됐다. MaxTime NaN을 포함한 숫자 셀은 텍스트 검사에서 제외하고 문자열 missing은
+  빈 셀로 정규화했다. NaN·0·유효 시간·문자열 missing의 저장/읽기 회귀 검사를 추가했다.
+  수정 후 MATLAB 실행 검증은 미수행이다.
 - `st_export_test_specification`은 기존 실행 흐름과 독립된 읽기 전용 명세서 추출 명령이다.
 - 실제 Assessment 시나리오 전체, iteration별 입력 연결, 마지막 입력 샘플 및 verify를
   Excel로 기록한다. 배열·버스 경로 생성은 `st_indexed_expressions`를 공유한다.

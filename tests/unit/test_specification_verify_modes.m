@@ -129,6 +129,34 @@ verifyError(testCase, @() st_export_test_specification('VerifyMode', 'STEP1'), .
     'simtest:SpecificationVerifyMode');
 end
 
+function testWorkbookMissingTextAndNaNMaxTimeRemainBlank(testCase)
+folder = tempname;
+mkdir(folder);
+cleanup = onCleanup(@() rmdir(folder, 's')); %#ok<NASGU>
+file = fullfile(folder, 'missing_values.xlsx');
+original = table(["Case1"; "Case2"; "Case3"; "Case4"], ...
+    [string(missing); ""; "<missing>"; "A: 1"], [NaN; 0; 7.5; NaN], ...
+    'VariableNames', {'Case','Input','MaxTime'});
+details = table("S.step2", string(missing), ...
+    'VariableNames', {'StepPath','OriginalAction'});
+st_write_specification_workbook(original, details, file);
+readback = readtable(file, 'Sheet', 'TestSpecification', 'TextType', 'string');
+verifyEqual(testCase, height(readback), 4);
+verifyTrue(testCase, ismissing(readback.Input(1)) || strlength(readback.Input(1)) == 0);
+verifyTrue(testCase, ismissing(readback.Input(2)) || strlength(readback.Input(2)) == 0);
+verifyEqual(testCase, readback.Input(3), "<missing>");
+verifyEqual(testCase, readback.Input(4), "A: 1");
+verifyTrue(testCase, isnan(readback.MaxTime(1)));
+verifyEqual(testCase, readback.MaxTime(2:3), [0; 7.5]);
+verifyTrue(testCase, isnan(readback.MaxTime(4)));
+detailReadback = readtable(file, 'Sheet', 'AssessmentDetails', 'TextType', 'string');
+verifyTrue(testCase, all(ismissing(detailReadback.OriginalAction)));
+overflow = readtable(file, 'Sheet', 'OverflowDetails', 'TextType', 'string');
+verifyEqual(testCase, height(overflow), 0);
+verifyTrue(testCase, ismissing(original.Input(1)));
+verifyTrue(testCase, isnan(original.MaxTime(1)));
+end
+
 function testMaxTimeUsesAllSignalsAndConvertsUnitsToSeconds(testCase)
 first = timeseries([1;2], [0;2000]);
 first.TimeInfo.Units = 'milliseconds';

@@ -47,7 +47,17 @@ function [output, overflow] = split_cells(input, sheet, overflow)
 output = input;
 for row = 1:height(input)
     for col = 1:width(input)
-        text = char(string(input{row,col}));
+        value = input{row,col};
+        % Numeric cells cannot overflow the text limits. Preserve their types,
+        % especially MaxTime NaN, which writetable writes as an empty cell.
+        % string(NaN) is missing and char(missing) throws in MATLAB.
+        if isnumeric(value) || islogical(value), continue; end
+        textValue = string(value);
+        if ismissing(textValue)
+            if isstring(value), output{row,col} = ""; end
+            continue;
+        end
+        text = char(textValue);
         % Excel also limits the number of line feeds per cell to 253.
         if numel(text) <= 32767 && sum(text == newline) <= 253, continue; end
         part = 0;

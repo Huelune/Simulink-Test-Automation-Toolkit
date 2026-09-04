@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed specification workbook writing when MaxTime is NaN or text is missing.
+  Overflow checks now preserve numeric cells and normalize missing strings to
+  empty cells before character conversion.
 - Specification export now defaults to the direct Assessment `step2` verify.
   `VerifyMode=ALL_STEPS_COLUMNS` puts each verify-bearing step in a separate
   column. Partial step/transition failures preserve readable verify content,
