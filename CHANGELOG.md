@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed specification-export cleanup after an early error: cleanup callbacks
+  now capture their arguments instead of reading cleared nested-workspace
+  variables. Unsaved-model rejection still preserves the user's changes.
 - Added `st_export_test_specification` to export every saved Assessment scenario
   without test execution. Input last samples are expanded into scalar array/bus
   paths; simple verify equalities become path/value lines. Wrapped Excel cells,

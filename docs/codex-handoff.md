@@ -150,6 +150,10 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   저장된 실제 하네스의 Excel 추출을 확인해야 한다. API 반환 형식, 시나리오 스텝 순서,
   버스 배열 경로, 줄바꿈/overflow 서식과 원본·기존 세션 보존은 아직 런타임 미검증이다.
 - 명령과 확인 절차는 `docs/test-specification.md`에 있다. 기존 CVF 검증 기준은 유지한다.
+- 실제 PC 전달 로그: 미저장 Top Model에서 `SpecificationUnsaved`로 중단된 뒤
+  중첩 `cleanup_session`이 해제된 `openedTestFile`을 참조하여 onCleanup 경고가 발생했다.
+  정리 콜백을 인수를 캡처하는 로컬 함수로 분리했다. 미저장 보호는 유지하며, 해당 오류
+  경로의 회귀 검사를 추가했다. 수정 후 실제 MATLAB 재검증은 아직 미수행이다.
 
 ### 기존 통합 검증
 

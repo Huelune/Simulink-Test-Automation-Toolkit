@@ -171,3 +171,61 @@ for i = 1:numel(files)
     end
 end
 end
+
+function testDirtyModelRejectionDoesNotWarnOrCloseUserModel(testCase)
+% Exercise the actual early-error/unwind path from the field report.
+% Only st_config/st_load_targets are redirected to disposable local inputs.
+assumeTrue(testCase, ~isempty(which('new_system')));
+folder = tempname;
+mkdir(folder);
+[~, token] = fileparts(folder);
+model = matlab.lang.makeValidName(['SpecCleanup_' token]);
+originalPath = path;
+testCase.addTeardown(@() cleanup_dirty_fixture(model, folder, originalPath));
+cfg = struct('TopModel', model, 'ModelFile', fullfile(folder, [model '.slx']), ...
+    'TestFile', fullfile(folder, 'test.mldatx'), ...
+    'ManagementExcel', fullfile(folder, 'targets.xlsx'), ...
+    'ResultDir', folder, 'HasRuntimeTarget', true, ...
+    'OnlyEnabled', true, 'VerboseLogging', false);
+new_system(model);
+save_system(model, cfg.ModelFile);
+set_param(model, 'Dirty', 'on');
+write_fixture_file(cfg.TestFile, 'unused: rejected before Test Manager load');
+write_fixture_file(cfg.ManagementExcel, 'unused: targets supplied by fixture');
+save(fullfile(folder, 'cfg.mat'), 'cfg');
+write_fixture_file(fullfile(folder, 'st_config.m'), sprintf([ ...
+    'function cfg = st_config()\n' ...
+    's = load(fullfile(fileparts(mfilename(''fullpath'')), ''cfg.mat''));\n' ...
+    'cfg = s.cfg;\nend\n']));
+write_fixture_file(fullfile(folder, 'st_load_targets.m'), sprintf([ ...
+    'function targets = st_load_targets(varargin)\n' ...
+    'targets = table(strings(0,1), ''VariableNames'', {''HarnessName''});\nend\n']));
+addpath(folder, '-begin');
+clear st_config st_load_targets;
+signature = st_file_signature(cfg.ModelFile);
+output = fullfile(folder, 'rejected.xlsx');
+lastwarn('');
+verifyError(testCase, @() st_export_test_specification('OutputFile', output), ...
+    'simtest:SpecificationUnsaved');
+[warningText, ~] = lastwarn;
+verifyEmpty(testCase, warningText);
+verifyTrue(testCase, bdIsLoaded(model));
+verifyEqual(testCase, get_param(model, 'Dirty'), 'on');
+verifyFalse(testCase, isfile(output));
+after = st_file_signature(cfg.ModelFile);
+verifyEqual(testCase, after.SHA256, signature.SHA256);
+end
+
+function write_fixture_file(file, text)
+fid = fopen(file, 'w');
+assert(fid >= 0, 'Cannot create test fixture file.');
+cleanup = onCleanup(@() fclose(fid)); %#ok<NASGU>
+fprintf(fid, '%s', text);
+end
+
+function cleanup_dirty_fixture(model, folder, originalPath)
+path(originalPath);
+clear st_config st_load_targets;
+if bdIsLoaded(model), close_system(model, 0); end
+if isfolder(folder), rmdir(folder, 's'); end
+end

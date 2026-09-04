@@ -26,10 +26,12 @@ timer = tic;
 initialModels = string(find_system('SearchDepth', 0, 'Type', 'block_diagram'));
 initialModels = initialModels(:);
 testFile = [];
-openedTestFile = false;
+cleanupTestFile = [];
 sources = strings(0,1);
 hashes = strings(0,1);
-cleanupSession = onCleanup(@cleanup_session);
+% Capture values in callbacks to local (not nested) functions. On error,
+% MATLAB can clear shared parent variables before a nested cleanup runs.
+cleanupModels = onCleanup(@() cleanup_models(initialModels, cfg));
 try
     if ~cfg.HasRuntimeTarget
         error('simtest:SpecificationTarget', 'Select and save a runtime target first.');
@@ -53,7 +55,7 @@ try
     if isempty(testFile)
         st_log(cfg, 'DEBUG', 'Specification Test File load start | File=%s', cfg.TestFile);
         testFile = sltest.testmanager.TestFile(cfg.TestFile, false);
-        openedTestFile = true;
+        cleanupTestFile = onCleanup(@() close_test_file(testFile, cfg));
         st_log(cfg, 'DEBUG', 'Specification Test File load end | File=%s', cfg.TestFile);
     end
     if testFile.Dirty
@@ -125,7 +127,8 @@ try
     if testFile.Dirty
         error('simtest:SpecificationUnsaved', 'Test File became dirty during inspection.');
     end
-    clear cleanupSession;
+    clear cleanupTestFile;
+    clear cleanupModels;
     verify_sources();
     headers = {'테스트 케이스명','대상 모델명','하네스명','하네스 input 파일명', ...
         'Test Sequence scenario 명','input 시나리오 내용','verify 내용', ...
@@ -170,20 +173,28 @@ end
         st_log(cfg, 'DEBUG', 'Specification source verification end | Files=%d', numel(sources));
     end
 
-    function cleanup_session()
-        if openedTestFile && ~isempty(testFile)
-            try
-                close(testFile);
-            catch ME
-                st_log(cfg, 'WARN', 'Specification Test File cleanup failed | %s', ME.message);
-            end
-        end
-        loaded = string(find_system('SearchDepth', 0, 'Type', 'block_diagram'));
-        created = setdiff(loaded, initialModels, 'stable');
-        for n = numel(created):-1:1
-            close_harness(char(created(n)), true, cfg);
-        end
+end
+
+function close_test_file(testFile, cfg)
+try
+    close(testFile);
+catch ME
+    st_log(cfg, 'WARN', 'Specification Test File cleanup failed | %s', ME.message);
+end
+end
+
+function cleanup_models(initialModels, cfg)
+st_log(cfg, 'DEBUG', 'Specification model cleanup start');
+try
+    loaded = string(find_system('SearchDepth', 0, 'Type', 'block_diagram'));
+    created = setdiff(loaded(:), initialModels(:), 'stable');
+    for n = numel(created):-1:1
+        close_harness(char(created(n)), true, cfg);
     end
+    st_log(cfg, 'DEBUG', 'Specification model cleanup end | Models=%d', numel(created));
+catch ME
+    st_log(cfg, 'WARN', 'Specification model cleanup failed | %s', ME.message);
+end
 end
 
 function check_model(model, expectedFile)
