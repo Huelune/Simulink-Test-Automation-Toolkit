@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added `st_export_test_specification` to export every saved Assessment scenario
+  without test execution. Input last samples are expanded into scalar array/bus
+  paths; simple verify equalities become path/value lines. Wrapped Excel cells,
+  original step/transition details, lossless overflow, and source guards are included.
 - Added the read-only `st_check_actual_system` field diagnostic. It combines
   six environment checks, six PER_CUT run checks, and the existing six CVF
   checks into one transferable 18-bit result code with detailed tables.

@@ -44,6 +44,7 @@ TestManagement.xlsx
 | 검증 | `QUICK`, `RUNTIME`, `CERTIFY` 프로필과 Excel·JSON·JUnit 결과 |
 | 현장 점검 | 환경·실행·CVF 상태를 전달 가능한 고정 18비트 코드로 요약 |
 | 내보내기 | 선택 결과 자산 묶음과 원본을 보존하는 반복 실행 번들 |
+| 테스트 명세서 | 실행 없이 Assessment 시나리오별 입력 마지막 값과 verify를 Excel로 추출 |
 
 ## 2. 요구 환경과 입력 파일
 
@@ -564,12 +565,22 @@ result/verification/
 
 ## 12. 테스트 자산과 재실행 번들 내보내기
 
-두 내보내기 기능의 목적은 다릅니다.
+내보내기 기능은 목적에 따라 선택합니다.
 
 | 명령 | 목적 | 기본 출력 |
 | --- | --- | --- |
 | `st_export_test_asset_bundle` | 선택한 결과, Test Case, standalone Harness, 입력과 보고서 보관 | `result/exports/assets/` |
 | `st_export_test_bundle` | 다른 PC에서 같은 시작 상태로 반복 실행할 self-contained template | `result/exports/`와 ZIP |
+| `st_export_test_specification` | 테스트 실행 없이 저장된 Assessment 시나리오, 입력 마지막 값, verify 명세 추출 | `result/test_specification_<timestamp>.xlsx` |
+
+테스트 실행 없이 명세서를 정리하려면 다음 명령을 사용합니다. 배열과 버스는 원소별
+`신호 경로: 값`으로 셀 안에 줄바꿈하고, 실제 Assessment 시나리오 이름을 사용합니다.
+
+```matlab
+[T, outputFile] = st_export_test_specification();
+```
+
+시나리오 연결과 예외 처리 기준은 [테스트 명세서 추출](docs/test-specification.md)을 참조하십시오.
 
 현재 Test Manager 결과나 저장된 toolkit run을 선택해 자산을 모으려면:
 
@@ -666,6 +677,7 @@ st_diagnose_excel_access(true)   % disposable workbook 쓰기까지 확인
 | [종합 검증 사용자 매뉴얼](docs/user-manual.md) | QUICK부터 CERTIFY까지 단계별 실행 |
 | [검증 기술 문서](docs/verification.md) | 검사 catalog, 상태와 결과 schema 확인 |
 | [내보내기 설계 문서](docs/export-bundle.md) | 번들 구조, checksum과 재현성 범위 확인 |
+| [테스트 명세서 추출](docs/test-specification.md) | 테스트 실행 없이 시나리오별 입력·verify를 Excel로 정리 |
 | [저장소 아키텍처](docs/architecture.md) | 모듈 책임과 향후 `+simtest` 이전 방향 확인 |
 | [TODO](docs/TODO.md) | 아직 결정·검증되지 않은 작업 확인 |
 | [다른 PC에서 이어서 작업하기](docs/cross-machine-handoff.md) | 원격 브랜치와 R2025b 인수인계 절차 확인 |

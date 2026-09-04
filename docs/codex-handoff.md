@@ -140,6 +140,19 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 
 ## 다음 작업 순서
 
+### 2026-09-04 테스트 명세서 추출 추가
+
+- `st_export_test_specification`은 기존 실행 흐름과 독립된 읽기 전용 명세서 추출 명령이다.
+- 실제 Assessment 시나리오 전체, iteration별 입력 연결, 마지막 입력 샘플 및 verify를
+  Excel로 기록한다. 배열·버스 경로 생성은 `st_indexed_expressions`를 공유한다.
+- MATLAB 없는 PC에서 MISS_HIT 구문/정적 검사만 수행했다. 실제 대상 테스트는 실행하지 않았다.
+- R2025b에서는 `tests/unit/test_export_test_specification.m`의 비시뮬레이션 검사와
+  저장된 실제 하네스의 Excel 추출을 확인해야 한다. API 반환 형식, 시나리오 스텝 순서,
+  버스 배열 경로, 줄바꿈/overflow 서식과 원본·기존 세션 보존은 아직 런타임 미검증이다.
+- 명령과 확인 절차는 `docs/test-specification.md`에 있다. 기존 CVF 검증 기준은 유지한다.
+
+### 기존 통합 검증
+
 1. R2025b PC에서 최신 활성 브랜치를 fast-forward하고 실제 PER_CUT 실행을 수행한다.
 2. 18비트 전체 코드, CUT별 6비트 코드와 상세 산출물을 분석해 필요한 수정만 새
    커밋으로 반영한다.
