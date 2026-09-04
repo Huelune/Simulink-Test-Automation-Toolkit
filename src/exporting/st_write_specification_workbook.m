@@ -14,6 +14,9 @@ for i = 1:numel(tables)
     if height(tables{i}) > 1048575
         error('simtest:SpecificationRowLimit', 'Excel row limit exceeded: %s', sheets{i});
     end
+    if width(tables{i}) > 16384
+        error('simtest:SpecificationColumnLimit', 'Excel column limit exceeded: %s', sheets{i});
+    end
 end
 work = tempname;
 mkdir(work);
@@ -24,7 +27,7 @@ for i = 1:numel(tables)
 end
 package = fullfile(work, 'package');
 unzip(book, package);
-wrap_styles(package);
+wrap_styles(package, tables);
 archive = fullfile(work, 'wrapped.zip');
 entries = dir(package);
 names = {entries.name};
@@ -69,7 +72,7 @@ for row = 1:height(input)
 end
 end
 
-function wrap_styles(package)
+function wrap_styles(package, tables)
 styleFile = fullfile(package, 'xl', 'styles.xml');
 doc = xmlread(styleFile);
 xfs = doc.getElementsByTagName('cellXfs').item(0);
@@ -93,6 +96,8 @@ xfs.setAttribute('count', num2str(2*count));
 xmlwrite(styleFile, doc);
 files = dir(fullfile(package, 'xl', 'worksheets', 'sheet*.xml'));
 for n = 1:numel(files)
+    sheetNumber = sscanf(files(n).name, 'sheet%d.xml');
+    headers = string(tables{sheetNumber}.Properties.VariableNames);
     file = fullfile(files(n).folder, files(n).name);
     sheet = xmlread(file);
     cells = sheet.getElementsByTagName('c');
@@ -115,12 +120,16 @@ for n = 1:numel(files)
     end
     namespace = sheet.getDocumentElement().getNamespaceURI();
     cols = sheet.createElementNS(namespace, 'cols');
-    for col = 1:13
+    for col = 1:numel(headers)
         item = sheet.createElementNS(namespace, 'col');
         item.setAttribute('min', num2str(col));
         item.setAttribute('max', num2str(col));
         w = 26;
-        if ismember(col, [6 7 13]), w = 60; end
+        if startsWith(headers(col), "verify 내용") || ismember(headers(col), ...
+                ["input 시나리오 내용","비고","OriginalAction","Transitions", ...
+                "VerifySummary","Message","Text"])
+            w = 60;
+        end
         item.setAttribute('width', num2str(w));
         item.setAttribute('customWidth', '1');
         cols.appendChild(item);

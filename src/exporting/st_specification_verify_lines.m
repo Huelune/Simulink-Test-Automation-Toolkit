@@ -1,4 +1,4 @@
-function [text, notes] = st_specification_verify_lines(action)
+function [text, notes, count] = st_specification_verify_lines(action)
 %ST_SPECIFICATION_VERIFY_LINES Summarize simple verifies without evaluating RHS.
 % Mask comments/strings before scanning balanced calls; keep complex calls intact.
 action = char(action);
@@ -51,6 +51,7 @@ for n = 1:numel(starts)
 end
 text = string(strjoin(lines, newline));
 notes = string(strjoin(unique(notes, 'stable'), ' | '));
+count = numel(lines);
 end
 
 function tf = has_top_level_comma(code)

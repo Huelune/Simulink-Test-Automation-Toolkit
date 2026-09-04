@@ -142,6 +142,13 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 
 ### 2026-09-04 테스트 명세서 추출 추가
 
+- verify 기본 모드는 직계 `step2`이며 `VerifyMode=ALL_STEPS_COLUMNS`를 지정하면
+  verify가 있는 스텝마다 오른쪽 열을 추가한다. 실패한 다른 스텝·전이 때문에 정상
+  step2 내용이 사라지지 않도록 수집을 분리했고, 상세 시트에 ReadStatus/Message를 추가했다.
+- `test_specification_verify_modes.m`에 스텝 선택·순서·부분 실패·동적 열/overflow
+  회귀 검사를 추가했다. MATLAB 없는 PC에서 정적 검사만 가능하며 실제 대상은 실행하지 않는다.
+- 추가 요청으로 MaxTime 열을 넣었다. 연결된 입력 시나리오의 모든 신호 시간 중
+  최댓값을 초 단위로 기록하며 확인 불가/입력 없음은 NaN(Excel 빈 셀)이다.
 - `st_export_test_specification`은 기존 실행 흐름과 독립된 읽기 전용 명세서 추출 명령이다.
 - 실제 Assessment 시나리오 전체, iteration별 입력 연결, 마지막 입력 샘플 및 verify를
   Excel로 기록한다. 배열·버스 경로 생성은 `st_indexed_expressions`를 공유한다.

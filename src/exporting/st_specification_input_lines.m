@@ -1,11 +1,15 @@
-function [text, notes] = st_specification_input_lines(scenario)
+function [text, notes, maxTime] = st_specification_input_lines(scenario)
 %ST_SPECIFICATION_INPUT_LINES Last stored sample, one scalar leaf per line.
 % No interpolation, model evaluation, or verify-target filtering is performed.
 lines = cell(0,1);
 notes = cell(0,1);
+storedTimes = zeros(0,1);
+invalidTime = false;
 walk(scenario, '');
 text = string(strjoin(lines, newline));
 notes = string(strjoin(notes, ' | '));
+maxTime = NaN;
+if ~invalidTime && ~isempty(storedTimes), maxTime = max(storedTimes); end
 
     function walk(value, path)
         try
@@ -25,12 +29,14 @@ notes = string(strjoin(notes, ' | '));
             elseif isa(value, 'Simulink.SimulationData.Signal')
                 walk(value.Values, path);
             elseif isa(value, 'timeseries')
+                collect_time(value.Time, value.TimeInfo.Units, path);
                 if isempty(value.Time)
                     error('simtest:EmptyInput', 'No stored time samples.');
                 end
                 % getdatasamples respects IsTimeFirst for matrix signals.
                 walk(getdatasamples(value, numel(value.Time)), path);
             elseif istimetable(value)
+                collect_time(value.Properties.RowTimes, '', path);
                 if height(value) == 0
                     error('simtest:EmptyInput', 'No stored timetable rows.');
                 end
@@ -70,6 +76,36 @@ notes = string(strjoin(notes, ' | '));
         catch ME
             lines{end+1,1} = sprintf('%s: <읽기 실패>', path);
             notes{end+1,1} = sprintf('%s: %s', path, ME.message);
+        end
+    end
+
+    function collect_time(times, units, path)
+        try
+            if isempty(times)
+                error('simtest:SpecificationTime', 'No stored time samples.');
+            end
+            if isduration(times)
+                times = seconds(times);
+            elseif isnumeric(times)
+                names = {'weeks','days','hours','minutes','seconds', ...
+                    'milliseconds','microseconds','nanoseconds'};
+                scales = [604800 86400 3600 60 1 1e-3 1e-6 1e-9];
+                index = find(strcmpi(char(units), names), 1);
+                if isempty(index)
+                    error('simtest:SpecificationTime', 'Unsupported time units: %s', string(units));
+                end
+                times = double(times) * scales(index);
+            else
+                error('simtest:SpecificationTime', ...
+                    'MaxTime requires elapsed time, not %s timestamps.', class(times));
+            end
+            if any(~isfinite(times(:)))
+                error('simtest:SpecificationTime', 'Nonfinite time samples.');
+            end
+            storedTimes(end+1,1) = max(times(:));
+        catch ME
+            invalidTime = true;
+            notes{end+1,1} = sprintf('%s MaxTime: %s', path, ME.message);
         end
     end
 end

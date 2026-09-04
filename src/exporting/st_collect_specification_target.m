@@ -1,8 +1,12 @@
-function [rows, details, inputFiles] = st_collect_specification_target(target, cfg, suite)
+function [rows, details, inputFiles, verifyCells, maxTimes] = st_collect_specification_target( ...
+        target, cfg, suite, verifyMode)
 %ST_COLLECT_SPECIFICATION_TARGET Inspect a loaded Harness; never activate/edit.
 % Columns are assigned public Korean headers by the export entry point.
+if nargin < 4, verifyMode = 'STEP2'; end
 rows = strings(0,13);
-details = strings(0,8);
+details = strings(0,10);
+verifyCells = cell(0,1);
+maxTimes = zeros(0,1);
 inputFiles = strings(0,1);
 base = strings(1,13);
 base([1 2 3 8 9 12]) = [target.TestCaseName target.CUTName ...
@@ -115,8 +119,11 @@ for s = 1:numel(scenarios)
     row = base;
     row(5) = scenarios(s);
     row(13) = join_notes(bindingNotes, signalNote);
+    group = "<verify 읽기 실패>";
     try
-        [row(7), stepDetails, note] = read_assessment(assessment, scenarios(s), target);
+        [group, stepDetails, note] = st_read_specification_assessment( ...
+            assessment, scenarios(s), target, cfg, verifyMode);
+        row(7) = group(1);
         details = [details; stepDetails]; %#ok<AGROW>
         row(13) = join_notes(row(13), note);
     catch ME
@@ -127,6 +134,7 @@ for s = 1:numel(scenarios)
     if isempty(selected), selected = 0; end
     for b = selected(:).'
         linked = row;
+        maxTime = NaN;
         if b == 0
             linked(6) = "연결 없음";
             linked(13) = join_notes(linked(13), "Assessment scenario has no readable Test Manager input binding.");
@@ -148,11 +156,14 @@ for s = 1:numel(scenarios)
                         if ~isfield(data, name)
                             error('simtest:SpecificationInputMissing', 'MAT scenario variable missing: %s', name);
                         end
-                        [content, note] = st_specification_input_lines(data.(name));
-                        inputCache(name) = {content, note};
+                        [content, note, inputMaxTime] = st_specification_input_lines(data.(name));
+                        if isnan(inputMaxTime)
+                            note = join_notes(note, "MaxTime unavailable for this input scenario.");
+                        end
+                        inputCache(name) = {content, note, inputMaxTime};
                         st_log(cfg, 'DEBUG', 'Specification MAT read end | Scenario=%s', name);
                     catch ME
-                        inputCache(name) = {"<읽기 실패>", string(ME.message)};
+                        inputCache(name) = {"<읽기 실패>", string(ME.message), NaN};
                         st_log(cfg, 'ERROR', 'Specification MAT read failed | File=%s | Scenario=%s | %s', ...
                             inputPath, name, ME.message);
                     end
@@ -160,6 +171,7 @@ for s = 1:numel(scenarios)
                 item = inputCache(name);
                 linked(6) = item{1};
                 linked(13) = join_notes(linked(13), item{2});
+                maxTime = item{3};
             else
                 linked(6) = "<읽기 실패>";
             end
@@ -173,6 +185,8 @@ for s = 1:numel(scenarios)
                 linked(1), linked(5), linked(13));
         end
         rows(end+1,:) = linked; %#ok<AGROW>
+        verifyCells{end+1,1} = group; %#ok<AGROW>
+        maxTimes(end+1,1) = maxTime; %#ok<AGROW>
     end
 end
 if ~isempty(inputSignature)
@@ -182,39 +196,6 @@ if ~isempty(inputSignature)
     end
 end
 st_log(cfg, 'INFO', 'Specification Assessment read end | Block=%s | Rows=%d', assessment, size(rows,1));
-end
-
-function [text, details, notes] = read_assessment(block, scenario, target)
-steps = string(sltest.testsequence.findStep(block));
-steps = steps(startsWith(steps, scenario + ".") | steps == scenario);
-% Sort hierarchy by the actual sibling Index, not by alphabetic step names.
-keys = strings(numel(steps),1);
-for k = 1:numel(steps)
-    parts = split(steps(k), '.');
-    for depth = 1:numel(parts)
-        info = sltest.testsequence.readStep(block, char(strjoin(parts(1:depth), '.')));
-        keys(k) = keys(k) + sprintf('%010d/', info.Index);
-    end
-end
-[~, order] = sort(keys);
-steps = steps(order);
-details = strings(0,8);
-lines = strings(0,1);
-notes = "";
-for k = 1:numel(steps)
-    info = sltest.testsequence.readStep(block, char(steps(k)));
-    [summary, note] = st_specification_verify_lines(info.Action);
-    if strlength(summary) > 0, lines(end+1,1) = summary; end %#ok<AGROW>
-    notes = join_notes(notes, note);
-    transitions = strings(0,1);
-    for t = 1:double(info.TransitionCount)
-        transition = sltest.testsequence.readTransition(block, char(steps(k)), t);
-        transitions(end+1,1) = string(transition.Condition) + " -> " + string(transition.NextStep); %#ok<AGROW>
-    end
-    details(end+1,:) = [target.TestCaseName target.HarnessName string(block) ...
-        scenario steps(k) string(info.Action) strjoin(transitions, newline) summary]; %#ok<AGROW>
-end
-text = strjoin(lines, newline);
 end
 
 function value = join_notes(a, b)

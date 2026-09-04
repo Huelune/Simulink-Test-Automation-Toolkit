@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Specification export now defaults to the direct Assessment `step2` verify.
+  `VerifyMode=ALL_STEPS_COLUMNS` puts each verify-bearing step in a separate
+  column. Partial step/transition failures preserve readable verify content,
+  and both modes retain full step details and per-step diagnostics.
+- Added a numeric `MaxTime` specification column with the input scenario's
+  maximum stored signal time in seconds; unavailable times remain blank in Excel.
 - Fixed specification-export cleanup after an early error: cleanup callbacks
   now capture their arguments instead of reading cleared nested-workspace
   variables. Unsaved-model rejection still preserves the user's changes.

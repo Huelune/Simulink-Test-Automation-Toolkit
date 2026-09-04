@@ -3,10 +3,19 @@ function [specification, outputFile] = st_export_test_specification(varargin)
 %   [T, PATH] = st_export_test_specification('OutputFile', 'specification.xlsx')
 %   Default: result/test_specification_<timestamp>.xlsx. Existing output files
 %   are refused. This independent command never invokes the test workflow.
+%   VerifyMode: 'STEP2' (default), or 'ALL_STEPS_COLUMNS' to put each
+%   verify-bearing step in a separate column with its relative step path.
+%   MaxTime is the input scenario's maximum stored signal time in seconds.
 p = inputParser;
 addParameter(p, 'OutputFile', '', @(v) (ischar(v) && isrow(v)) || ...
     (isstring(v) && isscalar(v)) || isempty(v));
+addParameter(p, 'VerifyMode', 'STEP2', @(v) ...
+    (ischar(v) && isrow(v)) || (isstring(v) && isscalar(v)));
 parse(p, varargin{:});
+verifyMode = upper(strtrim(char(p.Results.VerifyMode)));
+if ~ismember(verifyMode, {'STEP2', 'ALL_STEPS_COLUMNS'})
+    error('simtest:SpecificationVerifyMode', 'VerifyMode must be STEP2 or ALL_STEPS_COLUMNS.');
+end
 cfg = st_config();
 outputFile = char(p.Results.OutputFile);
 if isempty(outputFile)
@@ -21,7 +30,7 @@ end
 if isfile(outputFile)
     error('simtest:SpecificationOutputExists', 'Output already exists: %s', outputFile);
 end
-st_log(cfg, 'INFO', 'Specification export start | Output=%s', outputFile);
+st_log(cfg, 'INFO', 'Specification export start | VerifyMode=%s | Output=%s', verifyMode, outputFile);
 timer = tic;
 initialModels = string(find_system('SearchDepth', 0, 'Type', 'block_diagram'));
 initialModels = initialModels(:);
@@ -77,7 +86,9 @@ try
     end
 
     rows = strings(0,13);
-    details = strings(0,8);
+    details = strings(0,10);
+    verifyCells = cell(0,1);
+    maxTimes = zeros(0,1);
     for i = 1:height(targets)
         target = targets(i,:);
         harness = char(target.HarnessName);
@@ -103,11 +114,14 @@ try
             if harnessInfo.saveExternally
                 track_source(get_param(harness, 'FileName'));
             end
-            [targetRows, targetDetails, inputFiles] = st_collect_specification_target(target, cfg, suite);
+            [targetRows, targetDetails, inputFiles, targetVerifyCells, targetMaxTimes] = ...
+                st_collect_specification_target(target, cfg, suite, verifyMode);
             check_model(harness, '');
             for f = 1:numel(inputFiles), track_source(inputFiles(f)); end
             rows = [rows; targetRows]; %#ok<AGROW>
             details = [details; targetDetails]; %#ok<AGROW>
+            verifyCells = [verifyCells; targetVerifyCells]; %#ok<AGROW>
+            maxTimes = [maxTimes; targetMaxTimes]; %#ok<AGROW>
         catch ME
             if any(strcmp(ME.identifier, {'simtest:SpecificationUnsaved', ...
                     'simtest:SpecificationSourceChanged'}))
@@ -117,6 +131,8 @@ try
             failed([1 2 3 8 9 12 13]) = [target.TestCaseName target.CUTName ...
                 target.HarnessName string(cfg.TopModel) string(owner) "FAIL" string(ME.message)];
             rows(end+1,:) = failed; %#ok<AGROW>
+            verifyCells{end+1,1} = "<verify 읽기 실패>"; %#ok<AGROW>
+            maxTimes(end+1,1) = NaN; %#ok<AGROW>
             st_log(cfg, 'ERROR', 'Specification target failed | Case=%s | Harness=%s | %s', ...
                 target.TestCaseName, harness, ME.message);
         end
@@ -130,13 +146,10 @@ try
     clear cleanupTestFile;
     clear cleanupModels;
     verify_sources();
-    headers = {'테스트 케이스명','대상 모델명','하네스명','하네스 input 파일명', ...
-        'Test Sequence scenario 명','input 시나리오 내용','verify 내용', ...
-        'TopModel','CUTPath','Iteration명','InputScenario명','추출상태','비고'};
-    specification = array2table(rows, 'VariableNames', headers);
+    specification = st_specification_table(rows, verifyCells, maxTimes);
     detailTable = array2table(details, 'VariableNames', {'TestCaseName', ...
         'HarnessName','AssessmentBlock','ScenarioName','StepPath', ...
-        'OriginalAction','Transitions','VerifySummary'});
+        'OriginalAction','Transitions','VerifySummary','ReadStatus','Message'});
     st_log(cfg, 'INFO', 'Specification workbook write start | Rows=%d | File=%s', ...
         height(specification), outputFile);
     st_write_specification_workbook(specification, detailTable, outputFile);

@@ -578,9 +578,13 @@ result/verification/
 
 ```matlab
 [T, outputFile] = st_export_test_specification();
+
+% 기본은 step2만 출력. 전체 스텝은 각각 오른쪽 열에 표시
+[T, outputFile] = st_export_test_specification('VerifyMode', 'ALL_STEPS_COLUMNS');
 ```
 
 시나리오 연결과 예외 처리 기준은 [테스트 명세서 추출](docs/test-specification.md)을 참조하십시오.
+`MaxTime` 열에는 입력 시나리오의 모든 신호 시간 중 최댓값을 초 단위로 기록합니다.
 
 현재 Test Manager 결과나 저장된 toolkit run을 선택해 자산을 모으려면:
 
