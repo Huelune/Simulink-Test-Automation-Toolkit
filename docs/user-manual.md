@@ -19,6 +19,8 @@
 - 기대값 `APPLY` 갱신과 명시적 `OFF` 보존
 - 대상별 증분 캐시, 손상 상태 복구와 부분 실패 처리
 - Decision 및 Block Execution coverage
+- 내부 Harness 실행과 독립 Harness SLX Model SUT 실행
+- Harness 인프라 CVF와 CUT 정책 CVF의 분리 적용·복원
 - Excel, PDF, HTML, MLDATX 통합 보고서
 - 재실행 가능한 내보내기 bundle과 template 불변성
 - 대화상자, CUT highlight와 보고서 화면의 수동 확인 증거
@@ -28,6 +30,7 @@
 | 목적 | 명령 |
 | --- | --- |
 | Harness 준비와 테스트 실행 | `st_run_from_harness` 또는 `st_run_after_harness` |
+| 준비된 Test File의 CUT별 직접 실행 | `st_run_tests_per_cut` |
 | 구현·환경·산출물 검증 | `st_verify_all` |
 
 ## 2. 세 가지 Profile 이해하기
@@ -240,6 +243,107 @@ summary = st_verify_all( ...
 결과가 `PASS`이면 같은 입력으로 `FailOnNonPass=true`를 사용해 최종 인증
 명령을 한 번 더 실행할 필요는 없습니다. `false`는 오류 throw 여부만 바꾸며
 검사 판정과 결과 내용은 바꾸지 않습니다.
+
+### 5.5 독립 Harness 모델로 실제 테스트 실행
+
+기본 workflow는 Top Model의 내부 Harness를 Test Manager SUT로 사용합니다.
+내부 Harness를 독립 SLX로 내보내 Model SUT로 실행하려면 호출 전체에
+`SystemUnderTestMode='EXPORTED_MODEL'`을 지정합니다.
+
+```matlab
+[results, updates, workflow, report] = st_run_from_harness( ...
+    'SystemUnderTestMode', 'EXPORTED_MODEL', ...
+    'ExecutionMode', 'AUTO', ...
+    'ReportMode', 'SUMMARY', ...
+    'ContinueOnFailure', true, ...
+    'FailOnNonPass', false);
+```
+
+Harness 준비가 이미 끝났다면 `st_run_after_harness`에 같은 옵션을 사용합니다.
+Test File과 Harness가 모두 준비돼 있다면 다음처럼 실행 단계만 직접 호출할 수
+있습니다.
+
+```matlab
+[results, updates, report] = st_run_tests_per_cut( ...
+    'SystemUnderTestMode', 'EXPORTED_MODEL', ...
+    'ReportMode', 'FULL', ...
+    'ContinueOnFailure', true, ...
+    'FailOnNonPass', false);
+```
+
+실행 전에는 다음 조건을 확인합니다.
+
+- 원본 모델, 열린 Harness, Test File, Excel과 입력 파일을 저장합니다.
+- `cfg.CoverageFilterApplicationMode`은 `RUNTIME`이어야 합니다.
+- 현재 지원 CUT은 Subsystem입니다. Model Reference CUT은 아직 지원하지 않습니다.
+- `EXPORTED_MODEL`은 항상 CUT별 순차 실행입니다. `ExecutionMode='BATCH'`는
+  실행 전에 거부됩니다.
+- `SystemUnderTestMode`는 실행 전체 옵션이며 Excel 행별 혼합은 지원하지 않습니다.
+
+각 CUT은 다음 순서로 처리됩니다.
+
+```text
+내부 Harness 준비
+→ Initial 독립 SLX 내보내기
+→ 실행 전용 Test Case의 Model SUT 연결
+→ Harness 범위 CVF와 선택적 CUT 정책 CVF 적용
+→ Initial 실행·보고서·CVF 복원
+→ APPLY 기대값 갱신
+→ Final SLX·CVF 재생성 및 재실행
+→ 모델·Harness·MATLAB path 복원
+```
+
+`harness-scope.cvf`는 CUT을 제외한 독립 모델의 최상위 Harness 구성요소를
+제외합니다. `target-policy.cvf`는 Excel의 `CoverageFilterMode`가 `OFF`가 아닐
+때만 생성하며, CUT 자체가 아니라 CUT의 직계 자식 Subsystem에 정책을 적용합니다.
+원본 Test File의 수동 CVF는 실행용 Test File에 복사하지만, 툴킷이 과거에 만든
+자동 CVF는 승계하지 않습니다.
+
+`SUMMARY`는 기본 보고서이며 `FULL`은 공식 PDF와 상세 Coverage HTML을 추가합니다.
+실패한 CUT이 있어도 CVF 복원이 확인되면 다음 CUT을 계속 처리합니다. 복원 실패,
+모델 unload 실패 또는 MATLAB path 복원 실패는 설정 누출 위험 때문에 즉시 전체
+실행을 중단합니다.
+
+실행 결과는 기존 BATCH/PER_CUT 결과와 분리됩니다.
+
+```text
+result/standalone_runs/{run-id}/
+├── TestSummary.xlsx
+├── manifest.json
+├── test_manager/StandaloneHarnessTests.mldatx
+├── logs/execution.log
+└── targets/{No}_{CUTName}_{hash}/
+    ├── target-manifest.json
+    ├── inputs/
+    ├── initial/
+    │   ├── model/{standalone-model}.slx
+    │   ├── filters/
+    │   ├── raw/InitialResults.mldatx
+    │   └── coverage/
+    └── final/                  # 기대값 갱신 후 재실행한 경우
+```
+
+최신 실행은 `result/standalone_latest.json`이 가리킵니다. 실행이 끝나면 다음
+자가 점검을 수행합니다.
+
+```matlab
+[code, details] = st_check_standalone_run();
+disp(code)
+disp(details)
+```
+
+| 비트 | 확인 항목 |
+| --- | --- |
+| S1 | latest pointer, manifest, Excel과 실행용 Test File 일치 |
+| S2 | CUT별 Initial/Final 모델과 SHA-256 일치 |
+| S3 | Harness CVF가 CUT을 제외한 최상위 요소와 selector 정책까지 일치 |
+| S4 | CUT 정책 CVF가 `OFF`이거나 직계 자식 Subsystem 정책과 일치 |
+| S5 | 기대값 갱신, Final 재내보내기와 재실행 연결 일치 |
+| S6 | 실행 PASS, CVF 복원, 원본 상태와 산출물 무결성 통과 |
+
+`STANDALONE-CHECK-v1 CODE=111111`만 여섯 항목 전체 통과입니다. 0이 있으면
+출력 한 줄, `details` 표, 해당 실행의 `manifest.json`, 실패 CUT의
+`target-manifest.json`과 `logs/execution.log`를 함께 전달하십시오.
 
 ## 6. 수동 증거 만들기
 
@@ -492,6 +596,19 @@ cfg = st_require_runtime_target();
 `Artifacts` 시트와 `manifest.json`에서 실패한 산출물의 메시지를 확인합니다.
 부분 산출물이 존재하더라도 전체 상태가 PASS라는 의미는 아닙니다.
 
+### 독립 모델 실행이 시작 전에 거부되는 경우
+
+| 오류 조건 | 조치 |
+| --- | --- |
+| `BATCH` 지정 | `ExecutionMode='AUTO'` 또는 `PER_CUT` 사용 |
+| `CoverageFilterApplicationMode=PERSIST` | `st_config`에서 `RUNTIME`으로 변경 |
+| 독립 모델에서 CUT을 하나로 식별하지 못함 | 원본 CUT 이름과 export된 최상위 Subsystem 이름 확인 |
+| model shadowing | `which <모델명> -all`로 중복 경로 제거 |
+| 저장되지 않은 원본 모델 또는 Harness | 저장한 뒤 다시 실행 |
+
+CVF 복원이나 모델/path 정리에 실패한 경우에는 다음 CUT을 임의로 실행하지
+마십시오. 오류에 기록된 실행 폴더와 Test Manager 필터 상태를 먼저 확인합니다.
+
 ## 11. 운영 권장 주기
 
 | 시점 | 실행 |
@@ -520,6 +637,8 @@ cfg = st_require_runtime_target();
 - [ ] 최초·최종 PDF, HTML, Excel, MLDATX를 확인했다.
 - [ ] source checksum 불변을 확인했다.
 - [ ] 내보내기 bundle 두 번 재실행과 template 불변을 확인했다.
+- [ ] `EXPORTED_MODEL`의 Model SUT, 이중 CVF와 Final 재내보내기를 확인했다.
+- [ ] `STANDALONE-CHECK-v1 CODE=111111`을 보관했다.
 - [ ] 전체 상태가 `PASS`인지 확인했다.
 - [ ] `RunId`, manifest, reviewer와 검증일을 보관했다.
 
@@ -542,6 +661,18 @@ runtime = st_verify_all( ...
 fixture = st_verify_all( ...
     'Profile', 'CERTIFY', 'Target', 'FIXTURE', ...
     'FailOnNonPass', false);
+
+% 독립 Harness SLX를 Model SUT로 CUT별 실행
+[results, updates, workflow, standalone] = st_run_from_harness( ...
+    'SystemUnderTestMode', 'EXPORTED_MODEL', ...
+    'ExecutionMode', 'AUTO', ...
+    'ReportMode', 'SUMMARY', ...
+    'FailOnNonPass', false);
+
+% 최신 독립 모델 실행의 6비트 점검
+[standaloneCode, standaloneDetails] = st_check_standalone_run();
+disp(standaloneCode)
+disp(standaloneDetails)
 
 % 공식 통합 인증
 certification = st_verify_all( ...

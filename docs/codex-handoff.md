@@ -55,7 +55,7 @@ f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사
 | --- | --- | --- |
 | main | 0a0ace5 | 파일 구조 정리까지만 반영된 안정 기준. R2025b 검증 전 기능을 임의 backport하지 않는다. |
 | feat/per-cut-filtered-execution | a48ec9e | 검증되지 않은 독립 모델 변경을 포함하지 않는 안정 부모 브랜치. |
-| feat/standalone-harness-model-execution | cc10729 (로컬) | 현재 활성 실험 브랜치. 내부 Harness를 독립 Model SUT로 실행하며 R2025b 결과 전에는 부모 브랜치를 대체하지 않는다. 아직 push하지 않았다. |
+| feat/standalone-harness-model-execution | 3b0d798 이후 | 현재 활성 원격 기능 브랜치. 내부 Harness를 독립 Model SUT로 실행하며 R2025b 결과 전에는 부모 브랜치를 대체하지 않는다. |
 
 ## 정리된 과거 브랜치
 

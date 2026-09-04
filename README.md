@@ -771,7 +771,7 @@ st_diagnose_excel_access(true)   % disposable workbook 쓰기까지 확인
 | 문서 | 사용할 때 |
 | --- | --- |
 | [운영자 매뉴얼](docs/operator-manual.md) | 명령별 전제조건, 부작용, 결과와 복구 방법 확인 |
-| [종합 검증 사용자 매뉴얼](docs/user-manual.md) | QUICK부터 CERTIFY까지 단계별 실행 |
+| [종합 검증 사용자 매뉴얼](docs/user-manual.md) | QUICK부터 CERTIFY, 독립 Harness Model SUT까지 단계별 실행 |
 | [검증 기술 문서](docs/verification.md) | 검사 catalog, 상태와 결과 schema 확인 |
 | [내보내기 설계 문서](docs/export-bundle.md) | 번들 구조, checksum과 재현성 범위 확인 |
 | [저장소 아키텍처](docs/architecture.md) | 모듈 책임과 향후 `+simtest` 이전 방향 확인 |
