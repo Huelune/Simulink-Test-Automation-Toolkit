@@ -102,6 +102,50 @@ st_run_after_harness
 `SldvDataFile` 상대경로는 MATLAB Current Folder가 아니라
 `TestManagement.xlsx`가 있는 폴더를 기준으로 해석합니다.
 
+### 3.1 기존 Harness 내용 가져오기
+
+같은 Top Model 안의 동명 CUT에 이미 만들어진 Harness 테스트를 복사하려면 대상
+행에 다음 선택 열을 사용합니다.
+
+| 열 | 값 |
+| --- | --- |
+| `TestPreparationSource` | `HARNESS_IMPORT` |
+| `SourceCUTPath` | 기준 CUT의 전체 또는 Top Model 기준 상대 경로 |
+| `SourceHarnessName` | 기준 CUT의 기존 Harness 이름 |
+
+기준 CUT 행은 `Enabled=false`로 두어 생성 단계가 기준 Harness를 바꾸지 않게 합니다.
+기준과 대상 Harness를 저장하고 닫은 상태에서 실행해야 하며, 이전에 가져오기 대상으로
+사용된 Harness를 다시 기준으로 연결하는 연쇄 가져오기는 지원하지 않습니다.
+대상 행의 `SldvMode`, `SldvDataFile`, `ExpectedUpdateMode`는 무시되고 각각 OFF로
+정규화됩니다. 가져온 테스트는 SLDV를 실행하거나 SLDV manifest를 읽지 않습니다.
+
+지원 범위는 툴킷의 표준 Harness입니다. Signal Editor 입력 파일과 모든 시나리오,
+Test Sequence/Test Assessment 블록의 단계·전이·심볼·기대값, Harness solver와 시간
+설정을 복사합니다. CUT 블록, Harness 소유 관계, 모델 workspace, 사용자 callback,
+Test Manager override는 복사하지 않습니다. 대상별 Signal Editor MAT 파일은
+`result/harness_import/transactions/` 아래에 독립 사본으로 저장됩니다.
+
+먼저 변경 없이 검사할 수 있습니다.
+
+```matlab
+st_import_harness_contents('DryRun', true)
+```
+
+정상 workflow에서는 가져오기를 자동 실행합니다. 기준과 대상 fingerprint가 같으면
+`CACHED`, 달라지면 전체 대상의 사전 검사를 마친 후 `IMPORTED`가 됩니다. 강제로
+다시 가져오려면 다음을 사용합니다.
+
+```matlab
+st_import_harness_contents('Force', true)
+```
+
+컴파일된 입출력 자료형·차원·복소성·샘플 시간·버스 요소 또는 표준 배선이 다르면
+변경 전에 중단합니다. 적용 중 오류가 나면 호출에서 변경한 모델·외부 Harness·기존
+manifest를 transaction 백업으로 복원합니다. 복원 실패 시 그 백업 경로가 오류와
+로그에 남습니다. 준비 사본을 지우려면 `st_cleanup_results('Scope','IMPORTS',
+'Apply',true)`를 사용합니다. 물리 연결 포트와 이벤트 포트가 있는 CUT은 현재
+가져오기 범위에서 제외됩니다.
+
 ## 4. 초기화와 설정
 
 ### 4.1 `st_setup`
@@ -410,6 +454,7 @@ st_cleanup_results('Scope', 'STATE', 'Apply', true);
 | 명령 | 역할 | 주요 결과 |
 | --- | --- | --- |
 | `st_create_harnesses` | 누락 Harness 생성 | `HarnessCreateResult.ini` |
+| `st_import_harness_contents` | 동명 CUT의 기존 Harness 테스트 내용 가져오기 | `HarnessImportResult.ini`, `result/harness_import` |
 | `st_prepare_sldv_targets` | OFF/FILE/GENERATE 준비와 manifest 생성 | `SldvGenerationResult.ini`, `SldvScenarioResult.ini` |
 | `st_configure_harnesses` | StopTime 등 Harness 설정 | `HarnessConfigResult.ini` |
 | `st_configure_signal_editors` | Scenario MAT 생성·연결 | `SignalEditorResult.ini` |

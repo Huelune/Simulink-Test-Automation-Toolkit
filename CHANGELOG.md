@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added `HARNESS_IMPORT` preparation for copying saved Signal Editor scenarios,
+  Test Sequence/Assessment logic and expected values, and Harness runtime settings
+  between compatible, same-named CUTs in one model. Imported targets bypass SLDV
+  and expected-value regeneration, use independent input files, rebuild Test
+  Manager iterations from copied scenarios, and roll back file changes on failure.
+
 - Fixed specification workbook writing when MaxTime is NaN or text is missing.
   Overflow checks now preserve numeric cells and normalize missing strings to
   empty cells before character conversion.

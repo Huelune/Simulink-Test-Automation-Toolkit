@@ -6,9 +6,9 @@
 
 ## 현재 기준
 
-- 기준일: 2026-09-03
-- 활성 개발 브랜치: feat/per-cut-filtered-execution
-- 필수 기능 기준: d109472
+- 기준일: 2026-09-07
+- 활성 개발 브랜치: feat/harness-content-import
+- 필수 기능 기준: feat/per-cut-filtered-execution의 7f0825e
 - 필수 handoff 기준: 2b3ba09 이후
 - 필수 진단 기준: 현재 브랜치 최신 커밋의 st_check_actual_system 포함
 - MATLAB R2025b 검증: 미수행
@@ -39,6 +39,7 @@ f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사
 | --- | --- | --- |
 | main | 0a0ace5 | 파일 구조 정리까지만 반영된 안정 기준. R2025b 검증 전 기능을 임의 backport하지 않는다. |
 | feat/per-cut-filtered-execution | d109472 이후 | 현재 활성 통합 브랜치. 다른 작업은 이 브랜치 최신 원격을 fetch한 뒤 이어간다. |
+| feat/harness-content-import | 7f0825e 기반 | 동명 CUT의 Harness 테스트 내용 가져오기 개발 브랜치. R2025b 검증 전 통합 브랜치에 병합하지 않는다. |
 
 ## 정리된 과거 브랜치
 
@@ -139,6 +140,24 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 8. 새 런타임 결과와 결정이 생기면 이 문서의 기준일, 커밋, 검증 상태를 갱신한다.
 
 ## 다음 작업 순서
+
+### 2026-09-07 동명 CUT Harness 내용 가져오기
+
+- 개발 브랜치 `feat/harness-content-import`에서 `HARNESS_IMPORT` 준비 방식을 추가했다.
+  `TestPreparationSource`, `SourceCUTPath`, `SourceHarnessName`으로 기준을 지정하며 기준
+  Targets 행은 비활성화해야 한다.
+- 대상은 SLDV·Signal Editor 생성·Assessment 생성·기대값 갱신을 건너뛰고, 저장된
+  기준 Harness의 테스트 블록과 독립 입력 MAT, 실행 설정을 사용한다. Test Manager는
+  복사하지 않고 가져온 시나리오 순서로 다시 만든다.
+- 적용 전에 컴파일된 CUT interface, 버스 요소, 표준 Harness 구조·배선을 검사한다.
+  모든 대상 사전 검사가 끝난 뒤에만 변경하며 실패 시 모델·외부 Harness·manifest를
+  `result/harness_import/transactions` 백업에서 복원한다.
+- MISS_HIT로 새 파일과 수정 연결부의 정적 구문 검사를 통과했다. 전체 저장소 검사에서
+  보고되는 `import(reader)`와 `arguments` 식별자 오류는 기준 브랜치에도 있는 도구의
+  최신 MATLAB 문법 오인이다.
+- 현재 PC에는 MATLAB이 없어 R2025b 런타임 검증은 미수행이다. 실제 PC에서
+  `tests/integration/test_harness_import_runtime.m`을 실행하고 내부/외부 Harness,
+  복수 시나리오, 버스, 중간 실패 rollback, bundle 재실행을 확인해야 한다.
 
 ### 2026-09-04 테스트 명세서 추출 추가
 

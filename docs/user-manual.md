@@ -127,6 +127,14 @@ disp(cfg.ManagementExcel)
 `ExpectedUpdateMode`, `CoverageFilterMode`, `CoverageFilterAction`,
 `CoverageFilterRationale`, `PreparationMode`, `PreparationFromStage`를 사용합니다.
 
+같은 모델 안에서 기준 CUT의 완성된 Harness 테스트를 동명 CUT의 기존 Harness에
+가져오려면 대상 행에 `TestPreparationSource=HARNESS_IMPORT`, `SourceCUTPath`,
+`SourceHarnessName`을 입력합니다. 기준 CUT 행은 비활성화합니다. 이 대상은 SLDV와
+기대값 자동 갱신 대신 복사된 Signal Editor 시나리오, Assessment 검증 로직·기대값,
+Harness 실행 설정을 사용합니다. 실행 전에 `st_import_harness_contents('DryRun',true)`로
+호환성을 확인할 수 있습니다. 자세한 지원 범위와 복원 절차는 운영자 매뉴얼 3.1을
+참조하십시오.
+
 Coverage 자동 필터를 사용하려면 `CoverageFilterMode`를 `SUBSYSTEM` 또는
 `ALL_CONTENT`로 정하고, `CoverageFilterAction`과
 `CoverageFilterRationale`을 함께 입력합니다. `SUBSYSTEM`은 CUT의 직속 하위

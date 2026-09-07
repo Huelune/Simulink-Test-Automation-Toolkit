@@ -53,6 +53,7 @@ addpath(genpath(fullfile(workRoot, 'workspace')), '-begin');
 
 rewrite_sldv_manifest(bundleRoot, workRoot, manifest);
 rewrite_signal_editor_paths(bundleRoot, workRoot, manifest, modelFile);
+rewrite_import_profiles(bundleRoot, workRoot);
 
 [~, ~, runContext] = st_run_generated_tests();
 workflowResult = table( ...
@@ -81,6 +82,23 @@ if isfield(manifest, 'ReferenceReport') && ...
         fullfile(bundleRoot, char(manifest.ReferenceReport)));
 else
     fprintf('Reference : NONE (verification snapshot)\n');
+end
+end
+
+function rewrite_import_profiles(bundleRoot,workRoot)
+files = dir(fullfile(workRoot,'result','harness_import','manifests','*.mat'));
+cfg = st_config();
+for i = 1:numel(files)
+    path = fullfile(files(i).folder,files(i).name);
+    data = load(path,'manifest');
+    manifest = data.manifest;
+    st_log(cfg,'DEBUG','Import profile relocation start | Harness=%s',manifest.Harness);
+    if manifest.Profile.HasSignalEditor
+        manifest.Profile.SignalEditorDataFile = work_path(bundleRoot,workRoot, ...
+            manifest.Profile.SignalEditorDataFile);
+    end
+    save(path,'manifest');
+    st_log(cfg,'DEBUG','Import profile relocation end | Harness=%s',manifest.Harness);
 end
 end
 

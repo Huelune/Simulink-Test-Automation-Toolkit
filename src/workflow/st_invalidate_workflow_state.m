@@ -2,7 +2,7 @@ function state = st_invalidate_workflow_state(state, plan)
 %ST_INVALIDATE_WORKFLOW_STATE Clear checkpoints selected to run.
 
 stages = {'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR', ...
-    'ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT'};
+    'ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT','HARNESS_IMPORT'};
 for i = 1:height(plan)
     index = find_target(state, char(plan.Key(i)));
     if isempty(index)
@@ -11,7 +11,8 @@ for i = 1:height(plan)
     end
     for s = 1:numel(stages)
         stage = stages{s};
-        if plan.(sprintf('Run%s', stage))(i) && ...
+        if ismember(['Run' stage],plan.Properties.VariableNames) && ...
+                plan.(sprintf('Run%s', stage))(i) && ...
                 isfield(state.Targets(index).StageSignatures, stage)
             state.Targets(index).StageSignatures = ...
                 rmfield(state.Targets(index).StageSignatures, stage);

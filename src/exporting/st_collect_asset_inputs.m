@@ -14,7 +14,10 @@ for i = 1:height(targets)
     item.SldvMode = char(row.SldvMode);
 
     needsSignalInput = true;
-    if strcmpi(item.SldvMode, 'OFF')
+    if st_is_harness_import(row)
+        importedProfile = st_get_test_profile(row,cfg);
+        needsSignalInput = importedProfile.HasSignalEditor;
+    elseif strcmpi(item.SldvMode, 'OFF')
         directInports = find_system(item.CUTPath, ...
             'SearchDepth', 1, 'Type', 'Block', 'BlockType', 'Inport');
         needsSignalInput = ~isempty(directInports);

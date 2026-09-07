@@ -9,6 +9,7 @@ if nargin < 6
 end
 scenario = string(scenario);
 step2 = scenario + ".step2";
+if strlength(scenario) == 0, step2 = "step2"; end
 notes = "";
 cells = strings(1,0);
 details = strings(0,10);
@@ -28,7 +29,9 @@ enumerated = true;
 try
     paths = string(reader.FindSteps(block));
     paths = unique(paths(:), 'stable');
-    paths = paths(startsWith(paths, scenario + ".") | paths == scenario);
+    if strlength(scenario) > 0
+        paths = paths(startsWith(paths, scenario + ".") | paths == scenario);
+    end
 catch ME
     enumerated = false;
     paths = strings(0,1);

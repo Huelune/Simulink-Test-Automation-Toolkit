@@ -133,6 +133,11 @@ for i = 1:n
 
         else
 
+            if st_is_harness_import(T(i,:))
+                error('simtest:ImportHarnessMissing', ...
+                    'HARNESS_IMPORT requires an existing Harness: %s', harnessName);
+            end
+
             st_log(cfg, 'DEBUG', ...
                 '[HarnessCreate %d/%d] forcing model stopped', ...
                 i, n);

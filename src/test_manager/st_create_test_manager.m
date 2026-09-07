@@ -229,7 +229,7 @@ for i = 1:n
         char( ...
             T.TestCaseName(i));
 
-    profile = st_get_sldv_profile(T(i,:), cfg);
+    profile = st_get_test_profile(T(i,:), cfg);
     scenarioNames = profile.ScenarioNames;
     scenarioName = scenarioNames{1};
 
@@ -324,7 +324,14 @@ for i = 1:n
             end
             ExistingTestCase(i) = true;
             tc = existingTc(1);
-            Action(i) = 'UPDATED_SLDV';
+            Action(i) = "UPDATED_" + string(profile.Mode);
+        end
+
+        if strcmp(profile.Mode,'HARNESS_IMPORT') && ~isempty(tc)
+            st_log(cfg,'WARN', ...
+                'Recreate imported Test Case to remove stale overrides | TestCase=%s',testCaseName);
+            remove(tc);
+            tc = [];
         end
 
 
@@ -349,7 +356,9 @@ for i = 1:n
         HasDirectInport(i) = ...
             hasDirectInport;
 
-        if strcmp(profile.Mode, 'OFF')
+        if strcmp(profile.Mode, 'HARNESS_IMPORT')
+            applySignalEditorScenario = profile.HasSignalEditor;
+        elseif strcmp(profile.Mode, 'OFF')
             applySignalEditorScenario = hasDirectInport;
         else
             HarnessScenarioInputCount(i) = ...
@@ -450,12 +459,20 @@ for i = 1:n
             iter.Enabled = true;
 
             if applySignalEditorScenario
-                setTestParam(iter, 'SignalEditorScenario', currentScenario);
+                inputScenario = currentScenario;
+                if strcmp(profile.Mode,'HARNESS_IMPORT')
+                    inputScenario = profile.SignalScenarioNames{scenarioIndex};
+                end
+                setTestParam(iter, 'SignalEditorScenario', inputScenario);
                 SignalEditorScenarioApplied(i) = true;
             end
-            setTestParam(iter, 'TestSequenceScenario', currentScenario);
+            if ~strcmp(profile.Mode,'HARNESS_IMPORT') || profile.UsesScenarios
+                setTestParam(iter, 'TestSequenceScenario', currentScenario);
+            end
 
-            if strcmp(profile.Mode, 'OFF')
+            if strcmp(profile.Mode,'HARNESS_IMPORT')
+                iterationName = currentScenario;
+            elseif strcmp(profile.Mode, 'OFF')
                 iterationName = 'Iteration 1';
             else
                 [~, params] = sldvsimdata(profile.EffectiveDataFile, ...
@@ -515,7 +532,10 @@ for i = 1:n
             'OK';
 
 
-        if ~strcmp(profile.Mode, 'OFF')
+        if strcmp(profile.Mode,'HARNESS_IMPORT')
+            Message(i) = sprintf('Imported Harness; iterations=%d; no SLDV overrides', ...
+                IterationCount(i));
+        elseif ~strcmp(profile.Mode, 'OFF')
 
             Message(i) = sprintf(['SLDV target initialized; iterations=%d, ' ...
                 'parameterOverrides=%d, harnessScenarioInputs=%d'], ...

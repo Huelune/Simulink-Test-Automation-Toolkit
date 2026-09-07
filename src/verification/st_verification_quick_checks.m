@@ -117,7 +117,12 @@ for i = 1:height(T)
     end
     directInports = find_system(owner, 'SearchDepth', 1, ...
         'Type', 'Block', 'BlockType', 'Inport');
-    if isempty(directInports) && strcmpi(char(T.SldvMode(i)), 'OFF')
+    needsSignal = ~isempty(directInports) || ~strcmpi(char(T.SldvMode(i)), 'OFF');
+    if st_is_harness_import(T(i,:))
+        importedProfile = st_get_test_profile(T(i,:),cfg);
+        needsSignal = importedProfile.HasSignalEditor;
+    end
+    if ~needsSignal
         signalStatus = 'SKIP';
         signalMessage = 'No direct Inport; Signal Editor is not applicable';
     else

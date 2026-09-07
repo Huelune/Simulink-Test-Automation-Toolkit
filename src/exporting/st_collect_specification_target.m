@@ -14,7 +14,11 @@ base([1 2 3 8 9 12]) = [target.TestCaseName target.CUTName ...
     string(st_normalize_cut_path(target.CUTPath, cfg.TopModel)) "OK"];
 harness = char(target.HarnessName);
 assessment = st_find_assessment_block(harness);
-scenarios = string(sltest.testsequence.getAllScenarios(assessment));
+if st_is_harness_import(target) && ~sltest.testsequence.isUsingScenarios(assessment)
+    scenarios = ""; % One run without a TestSequenceScenario override.
+else
+    scenarios = string(sltest.testsequence.getAllScenarios(assessment));
+end
 scenarios = scenarios(:);
 if isempty(scenarios)
     error('simtest:SpecificationNoScenarios', 'Assessment has no scenarios: %s', assessment);
@@ -29,6 +33,10 @@ signalNote = "";
 ports = find_system(char(base(9)), 'SearchDepth', 1, ...
     'Type', 'Block', 'BlockType', 'Inport');
 noInput = isempty(ports) && strcmpi(target.SldvMode, 'OFF');
+if st_is_harness_import(target)
+    importedProfile = st_get_test_profile(target,cfg);
+    noInput = ~importedProfile.HasSignalEditor;
+end
 try
     if noInput
         base(4) = "해당 없음";
@@ -118,6 +126,7 @@ end
 for s = 1:numel(scenarios)
     row = base;
     row(5) = scenarios(s);
+    if strlength(scenarios(s)) == 0, row(5) = "(단일 실행)"; end
     row(13) = join_notes(bindingNotes, signalNote);
     group = "<verify 읽기 실패>";
     try

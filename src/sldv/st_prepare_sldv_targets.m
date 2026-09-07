@@ -67,6 +67,12 @@ fprintf('Prepare Simulink Design Verifier Data\n');
 fprintf('============================================\n');
 
 for i = 1:n
+    if st_is_harness_import(T(i,:))
+        Status(i) = 'SKIP';
+        Message(i) = 'HARNESS_IMPORT does not prepare or read SLDV data';
+        st_log(cfg, 'INFO', '%s | CUT=%s', Message(i), T.CUTPath(i));
+        continue;
+    end
     timerValue = tic;
     ownerPath = st_normalize_cut_path(T.CUTPath(i), cfg.TopModel);
     mode = upper(strtrim(char(T.SldvMode(i))));

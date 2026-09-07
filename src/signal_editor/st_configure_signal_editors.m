@@ -13,6 +13,7 @@ if nargin < 1
     stageSelection = [];
 end
 selection = st_normalize_stage_selection(T, stageSelection);
+selection = st_skip_import_preparation(T, selection, cfg);
 st_force_model_stopped(cfg.TopModel);
 
 n = height(T);

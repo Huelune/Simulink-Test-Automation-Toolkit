@@ -111,7 +111,7 @@ for i = 1:n
         char(T.TestCaseName(i));
 
     profile = ...
-        st_get_sldv_profile( ...
+        st_get_test_profile( ...
             T(i,:), ...
             cfg);
 
@@ -175,6 +175,9 @@ for i = 1:n
             '[ScenarioAlign %d/%d] harness.load done', ...
             i, n);
 
+        if strcmp(profile.Mode,'HARNESS_IMPORT') && ~profile.HasSignalEditor
+            signalEditorNames = expected;
+        else
         sigBlock = ...
             st_find_signal_editor_block( ...
                 harnessName);
@@ -188,6 +191,13 @@ for i = 1:n
         signalEditorNames = ...
             normalize_cellstr( ...
                 signalEditorNames);
+        if strcmp(profile.Mode,'HARNESS_IMPORT') && ~profile.UsesScenarios
+            if ~ismember(profile.SignalScenarioNames{1},signalEditorNames)
+                error('simtest:ImportScenarioMismatch','Imported active input scenario is missing.');
+            end
+            signalEditorNames = expected;
+        end
+        end
 
         SignalEditorScenarioCount(i) = ...
             numel(signalEditorNames);
@@ -214,17 +224,22 @@ for i = 1:n
             st_find_assessment_block( ...
                 harnessName);
 
-        if ~sltest.testsequence.isUsingScenarios(assess)
+        usesScenarios = sltest.testsequence.isUsingScenarios(assess);
+        if ~usesScenarios && ~(strcmp(profile.Mode,'HARNESS_IMPORT') && ~profile.UsesScenarios)
 
             error( ...
                 'Test Assessment is not using scenarios: %s', ...
                 assess);
         end
 
+        if ~usesScenarios
+            assessmentNames = expected;
+        else
         assessmentNames = ...
             normalize_cellstr( ...
                 sltest.testsequence.getAllScenarios( ...
                     assess));
+        end
 
         AssessmentScenarioCount(i) = ...
             numel(assessmentNames);
@@ -299,7 +314,7 @@ for i = 1:n
          TestSequenceScenarioParameterCount(i)] = ...
             assert_iteration_scenario_parameters( ...
                 iterations, ...
-                expected);
+                expected, profile);
 
 
         %% ====================================================
@@ -432,13 +447,18 @@ end
 
 
 function [signalEditorCount, testSequenceCount] = ...
-        assert_iteration_scenario_parameters(iterations, expected)
+        assert_iteration_scenario_parameters(iterations, expected, profile)
 %ASSERT_ITERATION_SCENARIO_PARAMETERS
 % Every SLDV iteration must bind both scenario consumers to its own name.
 
 signalEditorCount = 0;
 testSequenceCount = 0;
 expected = normalize_cellstr(expected);
+imported = strcmp(profile.Mode,'HARNESS_IMPORT');
+if imported
+    [signalEditorCount,testSequenceCount] = st_validate_import_iterations(iterations,profile);
+    return;
+end
 
 for i = 1:numel(iterations)
     scenarioName = char(iterations(i).Name);
@@ -450,14 +470,18 @@ for i = 1:numel(iterations)
     end
 
     testParams = iterations(i).TestParams;
+    signalScenario = scenarioName;
+    if imported && profile.HasSignalEditor
+        signalScenario = profile.SignalScenarioNames{i};
+    end
 
     % R2025b exposes the Signal Editor scenario iteration parameter as
     % SignalBuilderGroup in TestParams.  Earlier releases and the creation
     % API use SignalEditorScenario. Both names represent the same binding.
-    if ~test_param_matches_any_scenario( ...
+    if (~imported || profile.HasSignalEditor) && ~test_param_matches_any_scenario( ...
             testParams, ...
             {'SignalEditorScenario', 'SignalBuilderGroup'}, ...
-            scenarioName)
+            signalScenario)
         error( ...
             ['Test Manager Iteration %s does not bind ' ...
              'the Signal Editor scenario to the same scenario. TestParams=%s'], ...
@@ -465,7 +489,7 @@ for i = 1:numel(iterations)
             test_params_to_text(testParams));
     end
 
-    if ~test_param_matches_scenario( ...
+    if (~imported || profile.UsesScenarios) && ~test_param_matches_scenario( ...
             testParams, ...
             'TestSequenceScenario', ...
             scenarioName)
@@ -476,8 +500,8 @@ for i = 1:numel(iterations)
             test_params_to_text(testParams));
     end
 
-    signalEditorCount = signalEditorCount + 1;
-    testSequenceCount = testSequenceCount + 1;
+    signalEditorCount = signalEditorCount + double(~imported || profile.HasSignalEditor);
+    testSequenceCount = testSequenceCount + double(~imported || profile.UsesScenarios);
 end
 
 end

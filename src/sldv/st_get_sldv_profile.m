@@ -5,6 +5,11 @@ if nargin < 2
     cfg = st_config();
 end
 
+if st_is_harness_import(targetRow)
+    error('simtest:ImportHasNoSldvProfile', ...
+        'HARNESS_IMPORT must use st_get_test_profile, not SLDV.');
+end
+
 mode = upper(strtrim(char(targetRow.SldvMode)));
 if isempty(mode)
     mode = 'OFF';

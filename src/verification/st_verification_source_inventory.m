@@ -41,6 +41,11 @@ for i = 1:height(targets)
         'Type', 'Block', 'BlockType', 'Inport');
     needsSignalInput = ~isempty(directInports) || ...
         ~strcmpi(char(row.SldvMode), 'OFF');
+    if st_is_harness_import(row)
+        importedProfile = st_get_test_profile(row,cfg);
+        needsSignalInput = importedProfile.HasSignalEditor;
+        paths{end+1,1} = st_harness_import_file(row,cfg); %#ok<AGROW>
+    end
     if needsSignalInput
         wasLoaded = bdIsLoaded(char(row.HarnessName));
         loadedHere = false;

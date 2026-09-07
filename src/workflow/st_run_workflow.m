@@ -5,6 +5,7 @@ function [resultObj, updateResult, workflowResult, reportInfo] = ...
 cfg = st_require_runtime_target();
 options = st_parse_workflow_options(varargin{:});
 T = st_load_targets(cfg.OnlyEnabled);
+if any(st_is_harness_import(T)), st_validate_import_mapping(T,cfg); end
 requestedExecutionMode = options.ExecutionMode;
 if isempty(requestedExecutionMode)
     requestedExecutionMode = cfg.ExecutionMode;
@@ -67,6 +68,26 @@ else
         'Validate CUT / Harness Mapping', @() st_validate_targets());
     require_success(validationResult, ...
         'Validation failed. Check ValidationResult.');
+end
+
+% Content inspection always runs; only changed copies invalidate consumers.
+importStages = ["HARNESS","SLDV","HARNESS_CONFIG","SIGNAL_EDITOR", ...
+    "ASSESSMENT","HARNESS_IMPORT"];
+importForce = st_is_harness_import(T) & plan.PreparationMode == "FORCE" & ...
+    ismember(plan.PreparationFromStage,importStages);
+importResult = execute_timed_step('Import Harness Contents', ...
+    @() st_import_harness_contents('Force',importForce));
+require_success(importResult, 'Harness import failed.');
+state = st_checkpoint_workflow_state(state,plan,'HARNESS_IMPORT',importResult,cfg);
+importedRows = importResult.Status == "IMPORTED";
+if any(importedRows)
+    rows = importedRows;
+    if cfg.OverwriteTestFile, rows(:) = true; end
+    plan = st_force_plan_downstream(plan,rows,'COVERAGE_FILTER', ...
+        'Imported Harness content changed');
+    state = st_invalidate_workflow_state(state,plan);
+    st_save_workflow_state(state,cfg);
+    st_write_result('WorkflowPlanResult',plan);
 end
 
 stageNames = {'SLDV','HARNESS_CONFIG','SIGNAL_EDITOR', ...
@@ -140,6 +161,9 @@ for s = 1:numel(stageNames)
     FailCount(s) = sum(strcmpi(string(stageResults{s}.Status), 'FAIL'));
 end
 workflowResult = table(Stage, RunCount, CachedCount, FailCount);
+workflowResult = [table("Import Harness Contents",sum(importedRows), ...
+    sum(importResult.Status == "CACHED"),sum(importResult.Status == "FAIL"), ...
+    'VariableNames',workflowResult.Properties.VariableNames); workflowResult];
 st_write_result('WorkflowResult', workflowResult);
 
 if cfg.RunGeneratedTests && strcmp(executionMode, 'PER_CUT')
@@ -192,7 +216,7 @@ end
 
 function print_plan(plan)
 stages = {'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR', ...
-    'ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT'};
+    'ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT','HARNESS_IMPORT'};
 for s = 1:numel(stages)
     runCount = sum(plan.(sprintf('Run%s', stages{s})));
     fprintf('%-16s RUN=%d CACHED=%d\n', stages{s}, ...
