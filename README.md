@@ -584,7 +584,8 @@ result/verification/
 ```
 
 시나리오 연결과 예외 처리 기준은 [테스트 명세서 추출](docs/test-specification.md)을 참조하십시오.
-`MaxTime` 열에는 입력 시나리오의 모든 신호 시간 중 최댓값을 초 단위로 기록합니다.
+`MaxTime` 열은 SLDV `FILE/GENERATE` 테스트에는 TC별 입력 Tmax를, 기본 생성 및
+가져온 하네스에는 Harness Solver `StopTime`을 초 단위로 기록합니다.
 
 현재 Test Manager 결과나 저장된 toolkit run을 선택해 자산을 모으려면:
 

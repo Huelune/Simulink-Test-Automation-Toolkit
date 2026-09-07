@@ -13,6 +13,10 @@ base([1 2 3 8 9 12]) = [target.TestCaseName target.CUTName ...
     target.HarnessName string(cfg.TopModel) ...
     string(st_normalize_cut_path(target.CUTPath, cfg.TopModel)) "OK"];
 harness = char(target.HarnessName);
+harnessStopTime = get_param(harness, 'StopTime');
+[~, maxTimeSource] = st_specification_max_time(target.SldvMode, harnessStopTime, NaN);
+st_log(cfg, 'INFO', 'Specification MaxTime source selected | Case=%s | Mode=%s | Source=%s | HarnessStopTime=%s', ...
+    target.TestCaseName, target.SldvMode, maxTimeSource, string(harnessStopTime));
 assessment = st_find_assessment_block(harness);
 if st_is_harness_import(target) && ~sltest.testsequence.isUsingScenarios(assessment)
     scenarios = ""; % One run without a TestSequenceScenario override.
@@ -143,7 +147,7 @@ for s = 1:numel(scenarios)
     if isempty(selected), selected = 0; end
     for b = selected(:).'
         linked = row;
-        maxTime = NaN;
+        inputMaxTime = NaN;
         if b == 0
             linked(6) = "연결 없음";
             linked(13) = join_notes(linked(13), "Assessment scenario has no readable Test Manager input binding.");
@@ -166,9 +170,6 @@ for s = 1:numel(scenarios)
                             error('simtest:SpecificationInputMissing', 'MAT scenario variable missing: %s', name);
                         end
                         [content, note, inputMaxTime] = st_specification_input_lines(data.(name));
-                        if isnan(inputMaxTime)
-                            note = join_notes(note, "MaxTime unavailable for this input scenario.");
-                        end
                         inputCache(name) = {content, note, inputMaxTime};
                         st_log(cfg, 'DEBUG', 'Specification MAT read end | Scenario=%s', name);
                     catch ME
@@ -180,12 +181,17 @@ for s = 1:numel(scenarios)
                 item = inputCache(name);
                 linked(6) = item{1};
                 linked(13) = join_notes(linked(13), item{2});
-                maxTime = item{3};
+                inputMaxTime = item{3};
             else
                 linked(6) = "<읽기 실패>";
             end
         end
         if noInput, linked(6) = "해당 없음"; end
+        [maxTime, rowMaxTimeSource, maxTimeNote] = st_specification_max_time( ...
+            target.SldvMode, harnessStopTime, inputMaxTime);
+        linked(13) = join_notes(linked(13), maxTimeNote);
+        st_log(cfg, 'DEBUG', 'Specification MaxTime resolved | Case=%s | Scenario=%s | Source=%s | Value=%.17g', ...
+            linked(1), linked(5), rowMaxTimeSource, maxTime);
         if strlength(linked(13)) > 0 && linked(12) == "OK", linked(12) = "WARN"; end
         if linked(12) ~= "OK"
             level = 'WARN';

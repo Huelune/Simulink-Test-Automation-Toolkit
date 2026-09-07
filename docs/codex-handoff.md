@@ -166,8 +166,13 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   step2 내용이 사라지지 않도록 수집을 분리했고, 상세 시트에 ReadStatus/Message를 추가했다.
 - `test_specification_verify_modes.m`에 스텝 선택·순서·부분 실패·동적 열/overflow
   회귀 검사를 추가했다. MATLAB 없는 PC에서 정적 검사만 가능하며 실제 대상은 실행하지 않는다.
-- 추가 요청으로 MaxTime 열을 넣었다. 연결된 입력 시나리오의 모든 신호 시간 중
-  최댓값을 초 단위로 기록하며 확인 불가/입력 없음은 NaN(Excel 빈 셀)이다.
+- 추가 요청으로 MaxTime 열을 넣었다. 이후 의미를 생성 방식별로 바로잡아 SLDV
+  `FILE/GENERATE`는 연결된 TC 입력 시나리오의 Tmax를, `OFF` 및 가져온 하네스는
+  실제 Harness Solver `StopTime`을 기록한다. 해당 기준값을 확인할 수 없으면
+  NaN(Excel 빈 셀)과 비고를 남기며 다른 기준으로 자동 대체하지 않는다.
+- 시간값 선택은 `st_specification_max_time`으로 분리했고, OFF에 시간 입력이 있어도
+  입력 Tmax를 쓰지 않는 회귀 검사와 SLDV의 StopTime fallback 금지 검사를 추가했다.
+  현재 PC에는 MATLAB이 없어 이 변경도 정적 검사만 수행했다.
 - 실제 PC에서 9행 수집 후 split_cells의 char(string(...))에서 missing 변환 오류가
   보고됐다. MaxTime NaN을 포함한 숫자 셀은 텍스트 검사에서 제외하고 문자열 missing은
   빈 셀로 정규화했다. NaN·0·유효 시간·문자열 missing의 저장/읽기 회귀 검사를 추가했다.

@@ -35,11 +35,17 @@ CUTPath, Iteration명, InputScenario명, MaxTime, 추출상태, 비고가 붙는
 `verify 내용 2`, `verify 내용 3` 등의 열이 보조 열 앞에 추가된다. 반환 table도
 같은 열 구성을 사용하며, 스텝 수가 적은 행의 남는 셀은 비워 둔다.
 
-`MaxTime`은 연결된 입력 시나리오의 모든 신호에 저장된 시간 중 최댓값을 초 단위의
-숫자로 기록한다. Test Manager StopTime이나 verify 실행 시간은 사용하지 않는다.
-입력이 없거나 연결/시간을 확인할 수 없으면 Excel에서는 빈 셀, 반환 table에서는
-NaN이다. 시간을 가진 입력을 읽었지만 시간 단위를 변환할 수 없는 경우에도 NaN과
-비고를 남긴다. 절대 datetime은 임의의 시작 시각을 정해 초로 변환하지 않는다.
+`MaxTime`의 기준은 테스트 데이터 생성 방식에 따라 다르다. `SldvMode=FILE` 또는
+`GENERATE`이면 연결된 TC 입력 시나리오의 모든 신호에 저장된 시간 중 최댓값(Tmax)을
+초 단위 숫자로 기록한다. `SldvMode=OFF`인 기본 생성 하네스와 가져온 하네스는 입력
+시간을 사용하지 않고 해당 Harness의 Solver `StopTime`을 기록한다. verify 실행 시간은
+어느 모드에서도 사용하지 않는다.
+
+SLDV 입력이 없거나 연결/시간을 확인할 수 없으면 Excel에서는 빈 셀, 반환 table에서는
+NaN이며 비고를 남긴다. 시간을 가진 SLDV 입력을 읽었지만 시간 단위를 변환할 수 없는
+경우에도 동일하다. 절대 datetime은 임의의 시작 시각을 정해 초로 변환하지 않는다.
+Harness `StopTime`이 숫자로 직접 해석되지 않거나 유한한 0 이상 값이 아니면 NaN과
+비고를 기록한다.
 
 입력 내용은 각 신호의 마지막 저장 샘플이다. 신호마다 시간이 달라도 각자의 마지막
 샘플을 사용하며, StopTime에 대한 보간이나 외삽은 하지 않는다. 숫자 배열은 기존
@@ -100,6 +106,8 @@ st_setup
 results = runtests('tests/unit/test_export_test_specification.m');
 assertSuccess(results)
 results = runtests('tests/unit/test_specification_verify_modes.m');
+assertSuccess(results)
+results = runtests('tests/unit/test_specification_max_time.m');
 assertSuccess(results)
 ```
 

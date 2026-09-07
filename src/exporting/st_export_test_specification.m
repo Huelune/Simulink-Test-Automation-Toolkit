@@ -5,7 +5,8 @@ function [specification, outputFile] = st_export_test_specification(varargin)
 %   are refused. This independent command never invokes the test workflow.
 %   VerifyMode: 'STEP2' (default), or 'ALL_STEPS_COLUMNS' to put each
 %   verify-bearing step in a separate column with its relative step path.
-%   MaxTime is the input scenario's maximum stored signal time in seconds.
+%   MaxTime is the input scenario Tmax for SLDV FILE/GENERATE cases, and
+%   the Harness solver StopTime for OFF and imported-Harness cases.
 p = inputParser;
 addParameter(p, 'OutputFile', '', @(v) (ischar(v) && isrow(v)) || ...
     (isstring(v) && isscalar(v)) || isempty(v));
