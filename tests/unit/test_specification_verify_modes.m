@@ -81,17 +81,19 @@ rows(:,8:13) = repmat(["Top" "Top/CUT" "Iteration" "Input" "OK" "note"],3,1);
 groups = {"[step2]" + newline + "A: 1"; ...
     ["[step1]" + newline + "A: 2", "[step2]" + newline + "A: 3"]; ...
     ["[step1]" + newline + "A: 2", "[step2]" + newline + "A: 3"]};
-output = st_specification_table(rows, groups, [2;4;4]);
+decisionLists = ["[]"; "Decision2"; "Decision3"];
+output = st_specification_table(rows, groups, [2;4;4], decisionLists);
 verifyEqual(testCase, height(output), 3);
 verifyEqual(testCase, output.Properties.VariableNames(7:9), {'verify 내용','verify 내용 2','TopModel'});
 verifyEqual(testCase, output{1,8}, "");
 verifyEqual(testCase, output{2,7:8}, groups{2});
 verifyEqual(testCase, output{3,7:8}, groups{3});
-verifyEqual(testCase, output{:, [9:12 14:15]}, rows(:,8:13));
+verifyEqual(testCase, output{:, [9:10 12:13 15:16]}, rows(:,8:13));
+verifyEqual(testCase, output.DecisionBlocks, decisionLists);
 verifyEqual(testCase, output.MaxTime, [2;4;4]);
-verifyEqual(testCase, output.Properties.VariableNames{13}, 'MaxTime');
+verifyEqual(testCase, output.Properties.VariableNames{14}, 'MaxTime');
 singleStepTable = st_specification_table(rows, {"A: 1"; "A: 2"; "A: 3"});
-verifyEqual(testCase, width(singleStepTable), 14);
+verifyEqual(testCase, width(singleStepTable), 15);
 verifyEqual(testCase, singleStepTable.Properties.VariableNames{8}, 'TopModel');
 end
 

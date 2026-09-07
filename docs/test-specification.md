@@ -31,7 +31,7 @@ Assessment 시나리오도 남기고 `연결 없음`으로 표시한다. 동적 
 
 처음 7개 열은 테스트 케이스명, 대상 모델명(CUTName), 하네스명, 하네스 input 파일명,
 Test Sequence scenario 명, input 시나리오 내용, verify 내용이다. 그 뒤에 TopModel,
-CUTPath, Iteration명, InputScenario명, MaxTime, 추출상태, 비고가 붙는다. 전체 스텝 모드에서는
+CUTPath, DecisionBlocks, Iteration명, InputScenario명, MaxTime, 추출상태, 비고가 붙는다. 전체 스텝 모드에서는
 `verify 내용 2`, `verify 내용 3` 등의 열이 보조 열 앞에 추가된다. 반환 table도
 같은 열 구성을 사용하며, 스텝 수가 적은 행의 남는 셀은 비워 둔다.
 
@@ -46,6 +46,24 @@ NaN이며 비고를 남긴다. 시간을 가진 SLDV 입력을 읽었지만 시�
 경우에도 동일하다. 절대 datetime은 임의의 시작 시각을 정해 초로 변환하지 않는다.
 Harness `StopTime`이 숫자로 직접 해석되지 않거나 유한한 0 이상 값이 아니면 NaN과
 비고를 기록한다.
+
+`DecisionBlocks`는 CUT 아래에서 정적으로 찾은 `If`, `MinMax`, `Switch`,
+`MultiPortSwitch`, `SwitchCase` 블록을 JSON 배열 하나로 기록한다. 각 항목은
+`BlockType`과 전체 Simulink `Path`를 가지며 Path, BlockType 순으로 정렬하고 중복을
+제거한다. 빈 목록은 `[]`이다. 한 셀의 예시는 다음과 같고 MATLAB에서는
+`jsondecode(T.DecisionBlocks(1))`로 다시 가공할 수 있다.
+
+```json
+[
+  {"BlockType":"If","Path":"Top/CUT/Logic/If"},
+  {"BlockType":"Switch","Path":"Top/CUT/Logic/Switch"}
+]
+```
+
+이 값은 실행·컴파일 없이 만드는 제어 분기 후보 블록 목록이다. 실제 Decision
+coverage objective 개수나 Stateflow/MATLAB Function 내부 분기 수를 의미하지 않는다.
+마스크와 라이브러리 링크 내부 및 비활성 Variant의 해당 블록도 포함하지만 참조 모델
+내부는 포함하지 않는다.
 
 입력 내용은 각 신호의 마지막 저장 샘플이다. 신호마다 시간이 달라도 각자의 마지막
 샘플을 사용하며, StopTime에 대한 보간이나 외삽은 하지 않는다. 숫자 배열은 기존
@@ -108,6 +126,8 @@ assertSuccess(results)
 results = runtests('tests/unit/test_specification_verify_modes.m');
 assertSuccess(results)
 results = runtests('tests/unit/test_specification_max_time.m');
+assertSuccess(results)
+results = runtests('tests/unit/test_specification_decision_blocks.m');
 assertSuccess(results)
 ```
 

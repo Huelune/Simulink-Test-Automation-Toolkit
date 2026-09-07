@@ -173,6 +173,10 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - 시간값 선택은 `st_specification_max_time`으로 분리했고, OFF에 시간 입력이 있어도
   입력 Tmax를 쓰지 않는 회귀 검사와 SLDV의 StopTime fallback 금지 검사를 추가했다.
   현재 PC에는 MATLAB이 없어 이 변경도 정적 검사만 수행했다.
+- 명세서의 `DecisionBlocks` 열은 CUT 아래 If/MinMax/Switch/MultiPortSwitch/SwitchCase
+  후보를 전체 경로와 BlockType을 가진 단일 JSON 배열 셀로 기록한다. 정렬·중복 제거하며
+  마스크·라이브러리 링크·비활성 Variant 안은 포함하고 참조 모델 내부 및
+  Stateflow/MATLAB Function 내부 분기 objective는 포함하지 않는다.
 - 실제 PC에서 9행 수집 후 split_cells의 char(string(...))에서 missing 변환 오류가
   보고됐다. MaxTime NaN을 포함한 숫자 셀은 텍스트 검사에서 제외하고 문자열 missing은
   빈 셀로 정규화했다. NaN·0·유효 시간·문자열 missing의 저장/읽기 회귀 검사를 추가했다.

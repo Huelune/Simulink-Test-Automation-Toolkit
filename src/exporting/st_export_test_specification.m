@@ -7,6 +7,8 @@ function [specification, outputFile] = st_export_test_specification(varargin)
 %   verify-bearing step in a separate column with its relative step path.
 %   MaxTime is the input scenario Tmax for SLDV FILE/GENERATE cases, and
 %   the Harness solver StopTime for OFF and imported-Harness cases.
+%   DecisionBlocks is one JSON array cell containing static If/MinMax and
+%   Switch-family candidate BlockTypes and their full Simulink paths.
 p = inputParser;
 addParameter(p, 'OutputFile', '', @(v) (ischar(v) && isrow(v)) || ...
     (isstring(v) && isscalar(v)) || isempty(v));
@@ -90,6 +92,7 @@ try
     details = strings(0,10);
     verifyCells = cell(0,1);
     maxTimes = zeros(0,1);
+    decisionBlockLists = strings(0,1);
     for i = 1:height(targets)
         target = targets(i,:);
         harness = char(target.HarnessName);
@@ -115,7 +118,7 @@ try
             if harnessInfo.saveExternally
                 track_source(get_param(harness, 'FileName'));
             end
-            [targetRows, targetDetails, inputFiles, targetVerifyCells, targetMaxTimes] = ...
+            [targetRows, targetDetails, inputFiles, targetVerifyCells, targetMaxTimes, targetDecisionBlocks] = ...
                 st_collect_specification_target(target, cfg, suite, verifyMode);
             check_model(harness, '');
             for f = 1:numel(inputFiles), track_source(inputFiles(f)); end
@@ -123,6 +126,7 @@ try
             details = [details; targetDetails]; %#ok<AGROW>
             verifyCells = [verifyCells; targetVerifyCells]; %#ok<AGROW>
             maxTimes = [maxTimes; targetMaxTimes]; %#ok<AGROW>
+            decisionBlockLists = [decisionBlockLists; targetDecisionBlocks]; %#ok<AGROW>
         catch ME
             if any(strcmp(ME.identifier, {'simtest:SpecificationUnsaved', ...
                     'simtest:SpecificationSourceChanged'}))
@@ -134,6 +138,7 @@ try
             rows(end+1,:) = failed; %#ok<AGROW>
             verifyCells{end+1,1} = "<verify 읽기 실패>"; %#ok<AGROW>
             maxTimes(end+1,1) = NaN; %#ok<AGROW>
+            decisionBlockLists(end+1,1) = "[]"; %#ok<AGROW>
             st_log(cfg, 'ERROR', 'Specification target failed | Case=%s | Harness=%s | %s', ...
                 target.TestCaseName, harness, ME.message);
         end
@@ -147,7 +152,7 @@ try
     clear cleanupTestFile;
     clear cleanupModels;
     verify_sources();
-    specification = st_specification_table(rows, verifyCells, maxTimes);
+    specification = st_specification_table(rows, verifyCells, maxTimes, decisionBlockLists);
     detailTable = array2table(details, 'VariableNames', {'TestCaseName', ...
         'HarnessName','AssessmentBlock','ScenarioName','StepPath', ...
         'OriginalAction','Transitions','VerifySummary','ReadStatus','Message'});

@@ -1,4 +1,4 @@
-function [rows, details, inputFiles, verifyCells, maxTimes] = st_collect_specification_target( ...
+function [rows, details, inputFiles, verifyCells, maxTimes, decisionBlockLists] = st_collect_specification_target( ...
         target, cfg, suite, verifyMode)
 %ST_COLLECT_SPECIFICATION_TARGET Inspect a loaded Harness; never activate/edit.
 % Columns are assigned public Korean headers by the export entry point.
@@ -7,6 +7,7 @@ rows = strings(0,13);
 details = strings(0,10);
 verifyCells = cell(0,1);
 maxTimes = zeros(0,1);
+decisionBlockLists = strings(0,1);
 inputFiles = strings(0,1);
 base = strings(1,13);
 base([1 2 3 8 9 12]) = [target.TestCaseName target.CUTName ...
@@ -17,6 +18,7 @@ harnessStopTime = get_param(harness, 'StopTime');
 [~, maxTimeSource] = st_specification_max_time(target.SldvMode, harnessStopTime, NaN);
 st_log(cfg, 'INFO', 'Specification MaxTime source selected | Case=%s | Mode=%s | Source=%s | HarnessStopTime=%s', ...
     target.TestCaseName, target.SldvMode, maxTimeSource, string(harnessStopTime));
+[decisionBlockList, ~, decisionBlockNote] = st_specification_decision_blocks(base(9), cfg);
 assessment = st_find_assessment_block(harness);
 if st_is_harness_import(target) && ~sltest.testsequence.isUsingScenarios(assessment)
     scenarios = ""; % One run without a TestSequenceScenario override.
@@ -131,7 +133,7 @@ for s = 1:numel(scenarios)
     row = base;
     row(5) = scenarios(s);
     if strlength(scenarios(s)) == 0, row(5) = "(단일 실행)"; end
-    row(13) = join_notes(bindingNotes, signalNote);
+    row(13) = join_notes(join_notes(bindingNotes, signalNote), decisionBlockNote);
     group = "<verify 읽기 실패>";
     try
         [group, stepDetails, note] = st_read_specification_assessment( ...
@@ -202,6 +204,7 @@ for s = 1:numel(scenarios)
         rows(end+1,:) = linked; %#ok<AGROW>
         verifyCells{end+1,1} = group; %#ok<AGROW>
         maxTimes(end+1,1) = maxTime; %#ok<AGROW>
+        decisionBlockLists(end+1,1) = decisionBlockList; %#ok<AGROW>
     end
 end
 if ~isempty(inputSignature)
