@@ -67,6 +67,9 @@ model = testCase.TestData.Model;
 owners = string(model) + ["/A/CUT";"/B/CUT";"/C/CUT"];
 interfaces = st_import_cut_interfaces(owners,cfg);
 verifyEqual(testCase,interfaces(char(owners(1))),interfaces(char(owners(2))));
+staticInterfaces = st_import_cut_interfaces(owners,cfg,true);
+verifyEqual(testCase,staticInterfaces(char(owners(1))), ...
+    staticInterfaces(char(owners(2))));
 store = [model '_snapshot']; new_system(store);
 cleanup = onCleanup(@() close_system(store,0)); %#ok<NASGU>
 add_block('built-in/SubSystem',[store '/source']);

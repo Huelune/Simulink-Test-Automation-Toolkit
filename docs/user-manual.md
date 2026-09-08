@@ -133,7 +133,8 @@ disp(cfg.ManagementExcel)
 기대값 자동 갱신 대신 복사된 Signal Editor 시나리오, Assessment 검증 로직·기대값,
 Harness 실행 설정을 사용합니다. 실행 전에 `st_import_harness_contents('DryRun',true)`로
 호환성을 확인할 수 있습니다. 자세한 지원 범위와 복원 절차는 운영자 매뉴얼 3.1을
-참조하십시오.
+참조하십시오. 컴파일 시간이 긴 모델은 CUT 인터페이스가 같음을 별도로 확인한 뒤
+`st_run_after_harness('SkipImportCompile',true)`로 정적 검사만 사용할 수 있습니다.
 
 Coverage 자동 필터를 사용하려면 `CoverageFilterMode`를 `SUBSYSTEM` 또는
 `ALL_CONTENT`로 정하고, `CoverageFilterAction`과

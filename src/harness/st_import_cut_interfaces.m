@@ -1,8 +1,20 @@
-function signatures = st_import_cut_interfaces(owners, cfg)
-%ST_IMPORT_CUT_INTERFACES Compare compiled context, not only displayed CUT names.
+function signatures = st_import_cut_interfaces(owners, cfg, skipCompile)
+%ST_IMPORT_CUT_INTERFACES Compare compiled or declared CUT interfaces.
+if nargin < 3, skipCompile = false; end
 owners = cellstr(unique(string(owners(:))));
 owners(cellfun(@isempty, owners)) = [];
 signatures = containers.Map('KeyType','char','ValueType','char');
+if skipCompile
+    st_log(cfg, 'WARN', ...
+        ['Import compile validation skipped | Model=%s | ' ...
+         'using declared-port checks only'], cfg.TopModel);
+    st_log(cfg, 'INFO', 'Import static interface check start | Model=%s', cfg.TopModel);
+    for i = 1:numel(owners)
+        signatures(owners{i}) = static_signature(owners{i});
+    end
+    st_log(cfg, 'INFO', 'Import static interface check end | Model=%s', cfg.TopModel);
+    return;
+end
 st_log(cfg, 'INFO', 'Import interface compile start | Model=%s', cfg.TopModel);
 try
     feval(cfg.TopModel, [], [], [], 'compile');
@@ -18,15 +30,7 @@ for i = 1:numel(owners)
         error('simtest:ImportCUTType', 'Import requires a Subsystem CUT: %s', owner);
     end
     ports = get_param(owner, 'PortHandles');
-    unsupported = {'LConn','RConn','Event'};
-    for j = 1:numel(unsupported)
-        name = unsupported{j};
-        if isfield(ports, name) && ~isempty(ports.(name))
-            error('simtest:ImportUnsupportedPort', ...
-                'Import does not support physical or event CUT ports: %s / %s', ...
-                owner, name);
-        end
-    end
+    assert_supported_ports(owner, ports);
     content = struct();
     for field = {'Inport','Outport','Enable','Trigger','Ifaction','Reset'}
         name = field{1};
@@ -63,6 +67,57 @@ for i = 1:numel(owners)
     end
     content.SampleTime = get_param(owner,'CompiledSampleTime');
     signatures(owner) = st_hash_value(content);
+end
+end
+
+function signature = static_signature(owner)
+if ~strcmp(get_param(owner, 'BlockType'), 'SubSystem')
+    error('simtest:ImportCUTType', 'Import requires a Subsystem CUT: %s', owner);
+end
+ports = get_param(owner, 'PortHandles');
+assert_supported_ports(owner, ports);
+content = struct();
+for field = {'Inport','Outport','Enable','Trigger','Ifaction','Reset'}
+    name = field{1};
+    count = 0;
+    if isfield(ports,name), count = numel(ports.(name)); end
+    content.([name 'Count']) = count;
+end
+for field = {'Inport','Outport'}
+    name = field{1};
+    blocks = find_system(owner, 'SearchDepth', 1, 'BlockType', name);
+    numbers = cellfun(@(b) str2double(get_param(b,'Port')), blocks);
+    [~, order] = sort(numbers);
+    blocks = blocks(order);
+    values = cell(numel(blocks),1);
+    for i = 1:numel(blocks)
+        block = blocks{i};
+        values{i} = struct('Name',get_param(block,'Name'), ...
+            'Port',get_param(block,'Port'), ...
+            'Parameters',dialog_values(block));
+    end
+    content.(name) = values;
+end
+signature = st_hash_value(content);
+end
+
+function values = dialog_values(block)
+values = struct();
+names = fieldnames(get_param(block,'DialogParameters'));
+for i = 1:numel(names)
+    values.(names{i}) = get_param(block,names{i});
+end
+end
+
+function assert_supported_ports(owner, ports)
+unsupported = {'LConn','RConn','Event'};
+for i = 1:numel(unsupported)
+    name = unsupported{i};
+    if isfield(ports, name) && ~isempty(ports.(name))
+        error('simtest:ImportUnsupportedPort', ...
+            'Import does not support physical or event CUT ports: %s / %s', ...
+            owner, name);
+    end
 end
 end
 

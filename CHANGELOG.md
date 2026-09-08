@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added opt-in compile skipping for Harness content import. `SkipCompile=true`
+  on the direct API or `SkipImportCompile=true` on workflows retains declared
+  port, Harness structure, wiring, and fingerprint checks while skipping the
+  Top Model compile and post-import Harness update. Results report
+  `InterfaceCheck=STATIC_ONLY` and the safe default remains compiled validation.
+
 - Added `HARNESS_IMPORT` preparation for copying saved Signal Editor scenarios,
   Test Sequence/Assessment logic and expected values, and Harness runtime settings
   between compatible, same-named CUTs in one model. Imported targets bypass SLDV

@@ -298,6 +298,12 @@ cfg.PreparationMode = 'AUTO';
 % workflow and SLDV for the existing-Harness workflow.
 cfg.PreparationFromStage = 'START';
 
+% false (default): compile source/destination CUT interfaces and update each
+% imported Harness after applying content.
+% true: use declared-port/static structure checks only. This is faster, but
+% cannot verify inherited data types, dimensions, sample times, or Bus types.
+cfg.SkipImportCompile = false;
+
 cfg.WorkflowStateFile = ...
     fullfile(rootDir, 'result', 'state', 'workflow_state.mat');
 

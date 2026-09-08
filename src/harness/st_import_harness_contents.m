@@ -2,10 +2,12 @@ function R = st_import_harness_contents(varargin)
 %ST_IMPORT_HARNESS_CONTENTS Transactional import for selected Targets rows.
 % st_import_harness_contents('DryRun',true)
 % st_import_harness_contents('Force',true)
+% st_import_harness_contents('SkipCompile',true)
 % Uses saved source/destination Harnesses; no SLDV or expected-value updates.
 p = inputParser;
 addParameter(p, 'DryRun', false, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'Force', false, @(x) islogical(x) && isvector(x));
+addParameter(p, 'SkipCompile', false, @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 cfg = st_require_runtime_target();
 T = st_load_targets(cfg.OnlyEnabled);
@@ -19,11 +21,15 @@ elseif numel(forceRows) ~= height(T)
 end
 Status = repmat("SKIP",height(T),1);
 Message = repmat("Existing preparation source",height(T),1);
-R = table(T.No, T.CUTPath, T.HarnessName, Status, Message, ...
-    'VariableNames', {'No','CUTPath','HarnessName','Status','Message'});
+InterfaceCheck = repmat("NOT_APPLICABLE",height(T),1);
+InterfaceCheck(mask) = "COMPILED";
+if p.Results.SkipCompile, InterfaceCheck(mask) = "STATIC_ONLY"; end
+R = table(T.No, T.CUTPath, T.HarnessName, InterfaceCheck, Status, Message, ...
+    'VariableNames', {'No','CUTPath','HarnessName','InterfaceCheck','Status','Message'});
 if ~any(mask), return; end
-st_log(cfg, 'INFO', 'Harness import start | count=%d | DryRun=%d | Forced=%d', ...
-    sum(mask), p.Results.DryRun, sum(mask & forceRows));
+st_log(cfg, 'INFO', ...
+    'Harness import start | count=%d | DryRun=%d | Forced=%d | SkipCompile=%d', ...
+    sum(mask), p.Results.DryRun, sum(mask & forceRows), p.Results.SkipCompile);
 preflightIndex = 0;
 try
 owners = st_validate_import_mapping(T, cfg);
@@ -57,7 +63,7 @@ end
 if ~isempty(openHarnesses)
     error('simtest:ImportOpenHarness', 'Close open Harnesses before import; no session changes applied.');
 end
-interfaces = st_import_cut_interfaces(owners, cfg);
+interfaces = st_import_cut_interfaces(owners, cfg, p.Results.SkipCompile);
 [~, tempName] = fileparts(tempname);
 tempName = ['st_import_' tempName];
 new_system(tempName);
@@ -71,7 +77,10 @@ for i = find(mask).'
         error('simtest:ImportCUTName', 'Source and destination CUT names differ: %s', owners(i,2));
     end
     if ~strcmp(interfaces(char(owners(i,1))), interfaces(char(owners(i,2))))
-        error('simtest:ImportInterfaceMismatch', 'Compiled CUT interface differs: %s', owners(i,2));
+        kind = 'Compiled';
+        if p.Results.SkipCompile, kind = 'Declared'; end
+        error('simtest:ImportInterfaceMismatch', ...
+            '%s CUT interface differs: %s', kind, owners(i,2));
     end
     storage = sprintf('%s/source_%d', tempName, i);
     add_block('built-in/SubSystem', storage);
@@ -83,12 +92,16 @@ for i = find(mask).'
     if ~isequal(a.Structure, b.Structure) || ~isequal(wiring(a.Connections), wiring(b.Connections))
         error('simtest:ImportStructureMismatch', 'Standard block/port wiring differs: %s', owners(i,2));
     end
-    changed(i) = forceRows(i) || ~cache_matches(T(i,:), a, b, cfg);
+    changed(i) = forceRows(i) || ~cache_matches( ...
+        T(i,:), a, b, cfg, ~p.Results.SkipCompile);
     R.Status(i) = "CACHED";
     R.Message(i) = "Source and copied content unchanged";
     if changed(i)
         R.Status(i) = "READY";
         R.Message(i) = "Compatible; test blocks, inputs and settings will be replaced";
+        if p.Results.SkipCompile
+            R.Message(i) = "Static checks passed; content will be replaced without compile";
+        end
     end
     st_log(cfg, 'DEBUG', 'Import preflight end | CUT=%s | Changed=%d', owners(i,2), changed(i));
 end
@@ -137,17 +150,23 @@ try
         if ~strcmp(actual.Fingerprint, source.Fingerprint)
             error('simtest:ImportReadbackMismatch', 'Saved Harness content differs: %s', owners(i,2));
         end
-        % Compile the newly imported Harness before committing its manifest.
-        st_log(cfg,'DEBUG','Import saved Harness update start | Harness=%s',T.HarnessName(i));
-        sltest.harness.load(char(owners(i,2)),char(T.HarnessName(i)));
-        set_param(char(T.HarnessName(i)), 'SimulationCommand','update');
-        sltest.harness.close(char(owners(i,2)),char(T.HarnessName(i)));
-        st_log(cfg,'DEBUG','Import saved Harness update end | Harness=%s',T.HarnessName(i));
+        if p.Results.SkipCompile
+            st_log(cfg,'WARN', ...
+                'Import saved Harness update skipped | Harness=%s',T.HarnessName(i));
+        else
+            % Compile the newly imported Harness before committing its manifest.
+            st_log(cfg,'DEBUG','Import saved Harness update start | Harness=%s',T.HarnessName(i));
+            sltest.harness.load(char(owners(i,2)),char(T.HarnessName(i)));
+            set_param(char(T.HarnessName(i)), 'SimulationCommand','update');
+            sltest.harness.close(char(owners(i,2)),char(T.HarnessName(i)));
+            st_log(cfg,'DEBUG','Import saved Harness update end | Harness=%s',T.HarnessName(i));
+        end
         manifest = struct('Version',1,'Owner',char(owners(i,2)), ...
             'Harness',char(T.HarnessName(i)), 'SourceOwner',char(owners(i,1)), ...
             'SourceHarness',char(T.SourceHarnessName(i)), ...
             'SourceFingerprint',source.Fingerprint, 'TargetFingerprint',actual.Fingerprint, ...
-            'InputSHA256',source.InputSHA256, 'Profile',source.Profile);
+            'InputSHA256',source.InputSHA256, 'Profile',source.Profile, ...
+            'CompileValidated',~p.Results.SkipCompile);
         manifest.Profile.SignalEditorDataFile = inputFile;
         manifest.Profile.Tmax = str2double(source.Settings.StopTime);
         path = st_harness_import_file(T(i,:),cfg);
@@ -155,6 +174,10 @@ try
         save(path,'manifest');
         R.Status(i) = "IMPORTED";
         R.Message(i) = "Saved content verified; backup: " + string(transaction);
+        if p.Results.SkipCompile
+            R.Message(i) = "Saved content verified without compile; backup: " + ...
+                string(transaction);
+        end
     end
     for i = find(mask).'
         sourceNow = st_harness_content_snapshot(owners(i,1), T.SourceHarnessName(i), cfg);
@@ -211,13 +234,16 @@ function value = wiring(value)
 for i = 1:numel(value), value{i} = rmfield(value{i},'Logging'); end
 end
 
-function tf = cache_matches(row, source, target, cfg)
+function tf = cache_matches(row, source, target, cfg, requireCompileValidation)
 tf = false;
 try
     profile = st_get_test_profile(row,cfg);
     data = load(st_harness_import_file(row,cfg),'manifest');
     tf = strcmp(data.manifest.SourceFingerprint,source.Fingerprint) && ...
         strcmp(data.manifest.TargetFingerprint,target.Fingerprint);
+    if requireCompileValidation && isfield(data.manifest,'CompileValidated')
+        tf = tf && logical(data.manifest.CompileValidated);
+    end
     if profile.HasSignalEditor
         tf = tf && strcmpi(char(java.io.File(target.InputFile).getCanonicalPath()), ...
             char(java.io.File(profile.SignalEditorDataFile).getCanonicalPath()));

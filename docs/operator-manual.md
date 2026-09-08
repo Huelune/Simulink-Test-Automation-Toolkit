@@ -139,6 +139,26 @@ st_import_harness_contents('DryRun', true)
 st_import_harness_contents('Force', true)
 ```
 
+Top Model 컴파일과 적용 후 Harness update가 오래 걸리고 CUT 인터페이스가 같다는
+사실을 별도로 확인했다면 다음처럼 컴파일을 생략할 수 있습니다.
+
+```matlab
+st_import_harness_contents('DryRun', true, 'SkipCompile', true)
+st_import_harness_contents('SkipCompile', true)
+```
+
+정상 workflow에서 생략하려면 다음 옵션을 사용합니다.
+
+```matlab
+st_run_after_harness('SkipImportCompile', true)
+```
+
+이 모드는 선언된 Inport/Outport의 이름·번호·블록 파라미터와 Harness 구조·배선·내용
+fingerprint는 계속 비교하지만, 상속된 자료형·차원·샘플 시간과 컴파일된 Bus 정의는
+검사하지 않습니다. 적용 후 `SimulationCommand='update'`도 실행하지 않습니다.
+`HarnessImportResult`의 `InterfaceCheck`에는 `STATIC_ONLY`가 기록됩니다. 저장소 기본값
+`cfg.SkipImportCompile`은 `false`입니다.
+
 컴파일된 입출력 자료형·차원·복소성·샘플 시간·버스 요소 또는 표준 배선이 다르면
 변경 전에 중단합니다. 적용 중 오류가 나면 호출에서 변경한 모델·외부 Harness·기존
 manifest를 transaction 백업으로 복원합니다. 복원 실패 시 그 백업 경로가 오류와
@@ -181,6 +201,7 @@ cfg.ExpectedUpdateMode
 cfg.CoverageFilterApplicationMode
 cfg.CoverageFilterExistingPolicy
 cfg.PreparationMode
+cfg.SkipImportCompile
 cfg.CheckSharedSignalEditorDataFile
 cfg.IgnoreUnexpectedSldvInputs
 cfg.SaveResultFiles

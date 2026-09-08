@@ -22,6 +22,13 @@ st_setup
 st_run_after_harness('ExecutionMode', 'PER_CUT')
 ```
 
+HARNESS_IMPORT 대상의 CUT 인터페이스가 같음을 별도로 확인했고 긴 컴파일을 생략해야
+하면 다음처럼 실행한다. 선언 포트와 Harness 구조 검사는 계속 수행한다.
+
+```matlab
+st_run_after_harness('SkipImportCompile', true)
+```
+
 준비 없이 CUT별 테스트만 실행:
 
 ```matlab

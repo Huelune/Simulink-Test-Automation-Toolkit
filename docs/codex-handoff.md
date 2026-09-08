@@ -152,6 +152,10 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - 적용 전에 컴파일된 CUT interface, 버스 요소, 표준 Harness 구조·배선을 검사한다.
   모든 대상 사전 검사가 끝난 뒤에만 변경하며 실패 시 모델·외부 Harness·manifest를
   `result/harness_import/transactions` 백업에서 복원한다.
+- 2026-09-08에 긴 컴파일을 피하는 명시적 옵션을 추가했다. 직접 API의
+  `SkipCompile=true`와 workflow의 `SkipImportCompile=true`는 Top Model compile과
+  적용 후 Harness update를 모두 생략하며 선언 포트·구조·배선·fingerprint만 검사한다.
+  기본값은 false이고 결과의 `InterfaceCheck=STATIC_ONLY`로 미검증 범위를 남긴다.
 - MISS_HIT로 새 파일과 수정 연결부의 정적 구문 검사를 통과했다. 전체 저장소 검사에서
   보고되는 `import(reader)`와 `arguments` 식별자 오류는 기준 브랜치에도 있는 도구의
   최신 MATLAB 문법 오인이다.
