@@ -179,6 +179,9 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   Name은 경로 문자열을 분리하지 않고 `get_param(path,'Name')`으로 읽는다. `SearchDepth=1`로
   CUT의 직계 자식만 정렬·중복 제거하며 하위 Subsystem, 마스크, 라이브러리 링크,
   Variant, 참조 모델 내부 및 Stateflow/MATLAB Function 내부 분기는 포함하지 않는다.
+- 명세서 Excel의 첫 번째 시트는 `사용법`이다. 사용자 실행 진입점과 단계별 고급
+  명령의 역할, 사용 시점, 대표 호출을 기록하며 같은 내용은
+  `docs/execution-commands.md`에도 유지한다.
 - `OverflowDetails` 시트는 overflow가 없어도 생성하며, Excel 셀 한도 초과 값은
   계속 해당 시트에 전체 분할 보존한다. 단,
   `input 시나리오 내용`과 `verify 내용*`은 원래 셀에 첫 분할 조각을 표시하고 같은

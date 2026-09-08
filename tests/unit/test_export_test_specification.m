@@ -217,6 +217,30 @@ verifyTrue(testCase, any(string(sheetnames(path)) == "DecisionBlockDetails"));
 verifyTrue(testCase, any(string(sheetnames(path)) == "OverflowDetails"));
 end
 
+function testWorkbookStartsWithUsageSheetAndListsExecutionUnits(testCase)
+folder = tempname;
+mkdir(folder);
+cleanup = onCleanup(@() rmdir(folder, 's')); %#ok<NASGU>
+path = fullfile(folder, 'usage.xlsx');
+specification = table("Case1", "", 'VariableNames', {'Case','비고'});
+assessmentDetails = table(strings(0,1), 'VariableNames', {'Message'});
+st_write_specification_workbook(specification, assessmentDetails, path);
+sheets = string(sheetnames(path));
+verifyEqual(testCase, sheets(:), ["사용법"; "TestSpecification"; ...
+    "AssessmentDetails"; "DecisionBlockDetails"; "OverflowDetails"]);
+usage = readtable(path, 'Sheet', '사용법', 'TextType', 'string', ...
+    'VariableNamingRule', 'preserve');
+verifyEqual(testCase, usage.Properties.VariableNames, ...
+    {'구분','실행파일','직접실행','역할','사용시점','대표사용법'});
+files = usage{:,'실행파일'};
+verifyTrue(testCase, any(files == "st_run_from_harness.m"));
+verifyTrue(testCase, any(files == "st_run_after_harness.m"));
+verifyTrue(testCase, any(files == "st_run_tests_per_cut.m"));
+verifyTrue(testCase, any(files == "st_export_test_specification.m"));
+verifyTrue(testCase, any(files == "st_check_actual_system.m"));
+verifyFalse(testCase, any(files == "st_run_workflow.m"));
+end
+
 function testExporterHasNoSimulationOrSourceMutationCalls(testCase)
 folder = fullfile(st_project_root(), 'src', 'exporting');
 files = [dir(fullfile(folder, 'st_*specification*.m')); ...

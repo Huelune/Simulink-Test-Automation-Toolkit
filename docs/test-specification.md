@@ -21,6 +21,9 @@ st_setup
 ActiveX는 필요 없다. 기존 `cfg.OnlyEnabled`, 관리 엑셀 및 `cfg.TestSuiteName`을
 사용한다. 테스트 워크플로에 자동으로 삽입되지 않는 독립 명령이다.
 
+첫 번째 `사용법` 탭에는 주요 실행 파일, 역할, 사용 시점과 대표 명령을 기록한다.
+일반 사용 명령과 단계별 진단용 고급 명령을 구분하며 내부 helper는 제외한다.
+
 ## 행과 셀의 의미
 
 `TestSpecification`은 테스트 케이스 × Assessment 블록의 실제 시나리오마다

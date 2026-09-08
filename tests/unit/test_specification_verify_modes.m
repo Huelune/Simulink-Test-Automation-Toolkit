@@ -121,7 +121,7 @@ overflow = readtable(file, 'Sheet', 'OverflowDetails', 'TextType', 'string');
 verifyEqual(testCase, strjoin(overflow.Text(overflow.Column == "verify 내용 3"), ''), longText);
 package = fullfile(folder, 'unpacked');
 unzip(file, package);
-sheet = xmlread(fullfile(package, 'xl', 'worksheets', 'sheet1.xml'));
+sheet = xmlread(fullfile(package, 'xl', 'worksheets', 'sheet2.xml'));
 cols = sheet.getElementsByTagName('col');
 verifyEqual(testCase, cols.getLength(), width(spec));
 for k = 6:8

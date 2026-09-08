@@ -139,6 +139,9 @@ st_find_target_paths              % 같은 이름의 후보를 문맥으로 순�
 
 ### 5.1 공개 진입점
 
+전체 실행 명령과 단계별 역할은 [실행 명령 사용법](docs/execution-commands.md)에
+정리되어 있으며, 테스트 명세 Excel의 첫 번째 `사용법` 탭에도 포함됩니다.
+
 | 명령 | 용도 |
 | --- | --- |
 | `st_run_from_harness` | Harness가 없을 수 있는 전체 workflow |

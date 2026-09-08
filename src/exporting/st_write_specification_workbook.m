@@ -6,8 +6,11 @@ if isfile(outputFile)
     error('simtest:SpecificationOutputExists', 'Output already exists: %s', outputFile);
 end
 overflow = strings(0,5);
+usage = st_specification_usage_table(cfg);
 [specification, decisionDetails] = ...
     st_format_specification_decision_blocks(specification, cfg);
+[usage, overflow] = split_cells( ...
+    usage, '사용법', overflow, cfg, false);
 [specification, overflow] = split_cells( ...
     specification, 'TestSpecification', overflow, cfg, true);
 [details, overflow] = split_cells( ...
@@ -16,8 +19,8 @@ overflow = strings(0,5);
     decisionDetails, 'DecisionBlockDetails', overflow, cfg, false);
 overflow = array2table(overflow, ...
     'VariableNames', {'Sheet','ExcelRow','Column','Part','Text'});
-tables = {specification, details, decisionDetails, overflow};
-sheets = {'TestSpecification', 'AssessmentDetails', ...
+tables = {usage, specification, details, decisionDetails, overflow};
+sheets = {'사용법', 'TestSpecification', 'AssessmentDetails', ...
     'DecisionBlockDetails', 'OverflowDetails'};
 for i = 1:numel(tables)
     if height(tables{i}) > 1048575
@@ -196,9 +199,12 @@ for n = 1:numel(files)
         item.setAttribute('min', num2str(col));
         item.setAttribute('max', num2str(col));
         w = 26;
+        if ismember(headers(col), ["구분","직접실행"]), w = 18; end
+        if headers(col) == "실행파일", w = 38; end
         if startsWith(headers(col), "verify 내용") || ismember(headers(col), ...
                 ["input 시나리오 내용","DecisionBlocks","비고","OriginalAction","Transitions", ...
-                "VerifySummary","Message","Name","Path","JSON","Text"])
+                "VerifySummary","Message","Name","Path","JSON","Text", ...
+                "역할","사용시점","대표사용법"])
             w = 60;
         end
         item.setAttribute('width', num2str(w));
