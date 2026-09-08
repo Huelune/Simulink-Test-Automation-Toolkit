@@ -179,6 +179,44 @@ after = st_file_signature(path);
 verifyEqual(testCase, after.SHA256, signature.SHA256);
 end
 
+function testWorkbookShowsDecisionNamesAndWritesJsonDetailSheet(testCase)
+folder = tempname;
+mkdir(folder);
+cleanup = onCleanup(@() rmdir(folder, 's')); %#ok<NASGU>
+path = fullfile(folder, 'decision_blocks.xlsx');
+raw = "[" + newline + ...
+    '{"BlockType":"Switch","Name":"Switch","Path":"Top/CUT/Switch"},' + newline + ...
+    '{"BlockType":"Switch","Name":"Switch2","Path":"Top/CUT/Switch2"},' + newline + ...
+    '{"BlockType":"If","Name":"If (a==1)","Path":"Top/CUT/If"},' + newline + ...
+    '{"BlockType":"If","Name":"elseIF(a!=1)","Path":"Top/CUT/ElseIf"},' + newline + ...
+    '{"BlockType":"If","Name":"else","Path":"Top/CUT/Else"}' + newline + "]";
+specification = table(["Case1"; "Case2"], ["Top/CUT"; "Top/Empty"], ...
+    [raw; "[]"], strings(2,1), 'VariableNames', ...
+    {'테스트 케이스명','CUTPath','DecisionBlocks','비고'});
+assessmentDetails = table(strings(0,1), 'VariableNames', {'Message'});
+[written, ~] = st_write_specification_workbook( ...
+    specification, assessmentDetails, path);
+expected = strjoin(["D1 Switch"; "D2 Switch2"; "D3 If (a==1)"; ...
+    "D4 elseIF(a!=1)"; "D5 else"], newline);
+verifyEqual(testCase, written.DecisionBlocks(1), expected);
+verifyEqual(testCase, written.DecisionBlocks(2), "");
+readback = readtable(path, 'Sheet', 'TestSpecification', 'TextType', 'string', ...
+    'VariableNamingRule', 'preserve');
+verifyEqual(testCase, readback.DecisionBlocks(1), expected);
+decisionDetails = readtable(path, 'Sheet', 'DecisionBlockDetails', 'TextType', 'string');
+verifyEqual(testCase, decisionDetails.Decision(1:5), compose("D%d", (1:5).'));
+verifyEqual(testCase, decisionDetails.Name(1:5), ...
+    ["Switch"; "Switch2"; "If (a==1)"; "elseIF(a!=1)"; "else"]);
+verifyEqual(testCase, decisionDetails.JSON(6), "[]");
+decoded = jsondecode(char(decisionDetails.JSON(4)));
+verifyEqual(testCase, string(decoded.BlockType), "If");
+verifyEqual(testCase, string(decoded.Name), "elseIF(a!=1)");
+verifyEqual(testCase, string(decoded.Path), "Top/CUT/ElseIf");
+verifyTrue(testCase, all(decisionDetails.ReadStatus == "OK"));
+verifyTrue(testCase, any(string(sheetnames(path)) == "DecisionBlockDetails"));
+verifyTrue(testCase, any(string(sheetnames(path)) == "OverflowDetails"));
+end
+
 function testExporterHasNoSimulationOrSourceMutationCalls(testCase)
 folder = fullfile(st_project_root(), 'src', 'exporting');
 files = [dir(fullfile(folder, 'st_*specification*.m')); ...

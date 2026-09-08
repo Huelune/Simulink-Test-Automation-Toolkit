@@ -48,16 +48,24 @@ Harness `StopTime`이 숫자로 직접 해석되지 않거나 유한한 0 이상
 비고를 기록한다.
 
 `DecisionBlocks`는 CUT 바로 아래(`SearchDepth=1`)에서 정적으로 찾은 `If`, `MinMax`, `Switch`,
-`MultiPortSwitch`, `SwitchCase` 블록을 JSON 배열 하나로 기록한다. 각 항목은
-`BlockType`, 실제 블록 `Name`, 전체 Simulink `Path`를 가지며 Path, BlockType 순으로 정렬하고 중복을
-제거한다. 빈 목록은 `[]`이다. 한 셀의 예시는 다음과 같고 MATLAB에서는
-`jsondecode(T.DecisionBlocks(1))`로 다시 가공할 수 있다.
+`MultiPortSwitch`, `SwitchCase` 블록을 사람이 바로 읽을 수 있도록 `D번호 실제 블록 Name`
+형식으로 한 줄씩 기록한다. Path, BlockType 순으로 정렬하고 중복을 제거하며 빈 목록은
+빈 셀이다. 예를 들어 블록 이름이 `Switch`, `Switch2`, `If (a==1)`이면 메인 시트에는
+다음처럼 표시된다.
+
+```text
+D1 Switch
+D2 Switch2
+D3 If (a==1)
+```
+
+`DecisionBlockDetails` 시트에는 메인 시트 행, 테스트 케이스명, CUTPath, D번호,
+`BlockType`, 원본 `Name`, 전체 Simulink `Path`, 개별 JSON 객체를 행 단위로 기록한다.
+따라서 표시용 셀을 다시 파싱하지 않고 구조화된 열이나 `JSON` 열을 사용할 수 있다.
+블록이 없는 테스트 케이스도 `JSON=[]`인 행으로 남긴다. JSON 객체의 예시는 다음과 같다.
 
 ```json
-[
-  {"BlockType":"If","Name":"If","Path":"Top/CUT/Logic/If"},
-  {"BlockType":"Switch","Name":"Switch","Path":"Top/CUT/Logic/Switch"}
-]
+{"BlockType":"If","Name":"If","Path":"Top/CUT/Logic/If"}
 ```
 
 CUT의 직계 자식만 포함하므로 `CUT/Subsystem/Switch`처럼 하위 Subsystem 안에 있는
@@ -107,7 +115,7 @@ BBB(1,2).CC: uint8(2)
 기록한다. 다만 `input 시나리오 내용`과 모든
 `verify 내용*` 열은 원래 셀에 첫 번째 분할 조각의 내용을 표시하고, 같은 행의
 `비고`에 열 이름과 `[OverflowDetails!E시작:E끝]` 참조를 기록한다. 반환 table `T`도
-Excel과 같은 첫 조각과 비고를 사용한다. `DecisionBlocks`를 포함한 나머지 열은
+Excel과 같은 첫 조각과 비고를 사용한다. `DecisionBlocks` 표시값을 포함한 나머지 열은
 기존처럼 원래 셀에 OverflowDetails 참조 문자열을 표시한다.
 
 ## 실패 및 검증 경계

@@ -6,14 +6,19 @@ if isfile(outputFile)
     error('simtest:SpecificationOutputExists', 'Output already exists: %s', outputFile);
 end
 overflow = strings(0,5);
+[specification, decisionDetails] = ...
+    st_format_specification_decision_blocks(specification, cfg);
 [specification, overflow] = split_cells( ...
     specification, 'TestSpecification', overflow, cfg, true);
 [details, overflow] = split_cells( ...
     details, 'AssessmentDetails', overflow, cfg, false);
+[decisionDetails, overflow] = split_cells( ...
+    decisionDetails, 'DecisionBlockDetails', overflow, cfg, false);
 overflow = array2table(overflow, ...
     'VariableNames', {'Sheet','ExcelRow','Column','Part','Text'});
-tables = {specification, details, overflow};
-sheets = {'TestSpecification', 'AssessmentDetails', 'OverflowDetails'};
+tables = {specification, details, decisionDetails, overflow};
+sheets = {'TestSpecification', 'AssessmentDetails', ...
+    'DecisionBlockDetails', 'OverflowDetails'};
 for i = 1:numel(tables)
     if height(tables{i}) > 1048575
         error('simtest:SpecificationRowLimit', 'Excel row limit exceeded: %s', sheets{i});
@@ -193,7 +198,7 @@ for n = 1:numel(files)
         w = 26;
         if startsWith(headers(col), "verify 내용") || ismember(headers(col), ...
                 ["input 시나리오 내용","DecisionBlocks","비고","OriginalAction","Transitions", ...
-                "VerifySummary","Message","Text"])
+                "VerifySummary","Message","Name","Path","JSON","Text"])
             w = 60;
         end
         item.setAttribute('width', num2str(w));

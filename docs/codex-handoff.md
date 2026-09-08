@@ -174,7 +174,8 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   입력 Tmax를 쓰지 않는 회귀 검사와 SLDV의 StopTime fallback 금지 검사를 추가했다.
   현재 PC에는 MATLAB이 없어 이 변경도 정적 검사만 수행했다.
 - 명세서의 `DecisionBlocks` 열은 CUT 아래 If/MinMax/Switch/MultiPortSwitch/SwitchCase
-  후보를 BlockType, 실제 블록 Name, 전체 경로를 가진 단일 JSON 배열 셀로 기록한다.
+  후보를 `D번호 실제 블록 Name` 형식의 줄 목록으로 기록한다. 원본 BlockType, Name,
+  전체 경로와 개별 JSON 객체는 `DecisionBlockDetails` 시트에 블록별 행으로 기록한다.
   Name은 경로 문자열을 분리하지 않고 `get_param(path,'Name')`으로 읽는다. `SearchDepth=1`로
   CUT의 직계 자식만 정렬·중복 제거하며 하위 Subsystem, 마스크, 라이브러리 링크,
   Variant, 참조 모델 내부 및 Stateflow/MATLAB Function 내부 분기는 포함하지 않는다.

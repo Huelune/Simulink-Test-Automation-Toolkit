@@ -586,8 +586,9 @@ result/verification/
 시나리오 연결과 예외 처리 기준은 [테스트 명세서 추출](docs/test-specification.md)을 참조하십시오.
 `MaxTime` 열은 SLDV `FILE/GENERATE` 테스트에는 TC별 입력 Tmax를, 기본 생성 및
 가져온 하네스에는 Harness Solver `StopTime`을 초 단위로 기록합니다.
-`DecisionBlocks` 열에는 CUT의 직계 자식인 If/MinMax/Switch 계열 블록 종류, 이름과 전체 경로를
-나중에 `jsondecode`로 가공할 수 있는 단일 JSON 셀로 기록합니다.
+`DecisionBlocks` 열에는 CUT의 직계 자식인 If/MinMax/Switch 계열 블록 이름을
+`D1 이름`, `D2 이름` 형식으로 표시합니다. 종류, 전체 경로와 JSON 객체는
+`DecisionBlockDetails` 시트에 블록별 행으로 따로 기록합니다.
 
 현재 Test Manager 결과나 저장된 toolkit run을 선택해 자산을 모으려면:
 
