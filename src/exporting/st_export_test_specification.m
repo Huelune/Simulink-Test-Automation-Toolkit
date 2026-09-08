@@ -3,7 +3,8 @@ function [specification, outputFile] = st_export_test_specification(varargin)
 %   [T, PATH] = st_export_test_specification('OutputFile', 'specification.xlsx')
 %   Default: result/test_specification_<timestamp>.xlsx. Existing output files
 %   are refused. This independent command never invokes the test workflow.
-%   VerifyMode: 'STEP2' (default), or 'ALL_STEPS_COLUMNS' to put each
+%   VerifyMode: 'STEP2' (default) accepts direct Step 2 names such as
+%   step2, step_2, Step 2, or STEP-02. 'ALL_STEPS_COLUMNS' puts each
 %   verify-bearing step in a separate column with its relative step path.
 %   MaxTime is the input scenario Tmax for SLDV FILE/GENERATE cases, and
 %   the Harness solver StopTime for OFF and imported-Harness cases.

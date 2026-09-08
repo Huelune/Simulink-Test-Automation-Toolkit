@@ -14,6 +14,40 @@ verifyEqual(testCase, notes, "");
 % Reader deliberately provides no active-step/scenario API or activation API.
 end
 
+function testDirectStep2NameVariantsAreNormalized(testCase)
+variants = ["step_2"; "Step 2"; "STEP-02"; "step002"];
+for k = 1:numel(variants)
+    path = "S." + variants(k);
+    [reader, calls] = fixture_reader(path, ...
+        {step_info(2, sprintf('verify(A == %d);', k))});
+    [cells, details, notes] = read_fixture(reader, 'STEP2');
+    verifyEqual(testCase, cells, "A: " + string(k));
+    verifyEqual(testCase, calls('paths'), path);
+    verifyEqual(testCase, details(1,5), path);
+    verifyEqual(testCase, notes, "");
+end
+end
+
+function testExactStep2WinsWhenNormalizedAliasAlsoExists(testCase)
+[reader, calls] = fixture_reader(["S.step_2"; "S.step2"], ...
+    {step_info(1, 'verify(A == 99);'), step_info(2, 'verify(A == 22);')});
+[cells, ~, notes] = read_fixture(reader, 'STEP2');
+verifyEqual(testCase, cells, "A: 22");
+readPaths = calls('paths');
+verifyEqual(testCase, readPaths(1), "S.step2");
+verifyTrue(testCase, contains(notes, 'Multiple direct Step 2 names found'));
+end
+
+function testStep2VariantWithoutScenarioPrefix(testCase)
+[reader, calls] = fixture_reader("step_2", ...
+    {step_info(2, 'verify(A == 22);')});
+[cells, details, notes] = read_fixture(reader, 'STEP2', "");
+verifyEqual(testCase, cells, "A: 22");
+verifyEqual(testCase, calls('paths'), "step_2");
+verifyEqual(testCase, details(1,5), "step_2");
+verifyEqual(testCase, notes, "");
+end
+
 function testAllStepsFollowIndexAndKeepNestedPaths(testCase)
 paths = ["S.step3.child"; "S.step2"; "S.step10"; "S.step3"];
 [reader, ~] = fixture_reader(paths, {step_info(1, 'verify(A == 33);'), ...
@@ -26,11 +60,12 @@ verifyEqual(testCase, notes, "");
 end
 
 function testMissingDirectStep2DoesNotFallBackToNestedStep2(testCase)
-[reader, ~] = fixture_reader(["S.step1"; "S.parent"; "S.parent.step2"], ...
-    {step_info(1, 'verify(A == 11);'), step_info(2, ''), step_info(1, 'verify(A == 99);')});
+[reader, ~] = fixture_reader(["S.step1"; "S.parent"; "S.parent.step2"; "S.parent.step_2"], ...
+    {step_info(1, 'verify(A == 11);'), step_info(2, ''), ...
+    step_info(1, 'verify(A == 98);'), step_info(2, 'verify(A == 99);')});
 [cells, details, notes] = read_fixture(reader, 'STEP2');
 verifyEqual(testCase, cells, "step2 없음");
-verifyTrue(testCase, contains(notes, 'Direct step2 missing'));
+verifyTrue(testCase, contains(notes, 'Direct Step 2 missing'));
 verifyTrue(testCase, any(details(:,8) == "A: 99"));
 end
 
@@ -39,7 +74,7 @@ function testEmptyStep2DoesNotUseAnotherStep(testCase)
     {step_info(1, 'verify(A == 11);'), step_info(2, '% no verification')});
 [cells, ~, notes] = read_fixture(reader, 'STEP2');
 verifyEqual(testCase, cells, "verify 없음");
-verifyTrue(testCase, contains(notes, 'No verify in direct step2'));
+verifyTrue(testCase, contains(notes, 'No verify in direct Step 2'));
 end
 
 function testStep1FailureCannotDiscardStep2(testCase)
@@ -213,11 +248,12 @@ function info = step_info(index, action)
 info = struct('Index', index, 'Action', action, 'TransitionCount', 0);
 end
 
-function [cells, details, notes] = read_fixture(reader, mode)
+function [cells, details, notes] = read_fixture(reader, mode, scenario)
+if nargin < 3, scenario = "S"; end
 target = struct('TestCaseName', "Case", 'HarnessName', "Harness");
 cfg = struct('VerboseLogging', false);
 [cells, details, notes] = st_read_specification_assessment( ...
-    'Harness/Assessment', "S", target, cfg, mode, reader);
+    'Harness/Assessment', scenario, target, cfg, mode, reader);
 end
 
 function value = fail_enumeration(~)

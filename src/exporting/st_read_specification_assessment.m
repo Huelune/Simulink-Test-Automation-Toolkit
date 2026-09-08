@@ -1,6 +1,6 @@
 function [cells, details, notes] = st_read_specification_assessment( ...
         block, scenario, target, cfg, mode, reader)
-%ST_READ_SPECIFICATION_ASSESSMENT Read step2 independently of other step failures.
+%ST_READ_SPECIFICATION_ASSESSMENT Read the direct Step 2 independently.
 % Reader injection supports non-simulation regression tests of API failures.
 if nargin < 6
     reader = struct('FindSteps', @sltest.testsequence.findStep, ...
@@ -8,8 +8,8 @@ if nargin < 6
         'ReadTransition', @sltest.testsequence.readTransition);
 end
 scenario = string(scenario);
-step2 = scenario + ".step2";
-if strlength(scenario) == 0, step2 = "step2"; end
+canonicalStep2 = scenario + ".step2";
+if strlength(scenario) == 0, canonicalStep2 = "step2"; end
 notes = "";
 cells = strings(1,0);
 details = strings(0,10);
@@ -17,14 +17,6 @@ st_log(cfg, 'DEBUG', 'Specification verify start | Mode=%s | Block=%s | Scenario
     mode, block, scenario);
 cached = [];
 step2Error = "";
-% Do not let findStep, a parent step, or step1 prevent reading the exact step2.
-if strcmp(mode, 'STEP2')
-    try
-        cached = read_info(reader, block, step2, cfg, mode);
-    catch ME
-        step2Error = string(ME.message);
-    end
-end
 enumerated = true;
 try
     paths = string(reader.FindSteps(block));
@@ -38,10 +30,35 @@ catch ME
     notes = append_note(notes, "Step enumeration failed: " + string(ME.message));
     st_log(cfg, 'WARN', 'Specification findStep failed | Scenario=%s | %s', scenario, ME.message);
 end
-hasStep2 = any(paths == step2);
-if strcmp(mode, 'STEP2') && ~hasStep2
-    if ~isempty(cached) || ~enumerated
-        paths(end+1,1) = step2;
+selectedStep2 = canonicalStep2;
+if strcmp(mode, 'STEP2')
+    [candidate, candidates] = select_direct_step_two(paths, scenario, canonicalStep2);
+    candidateEnumerated = strlength(candidate) > 0;
+    if candidateEnumerated
+        selectedStep2 = candidate;
+        if selectedStep2 ~= canonicalStep2
+            st_log(cfg, 'DEBUG', ...
+                'Specification Step 2 name normalized | Scenario=%s | Step=%s | Canonical=%s', ...
+                scenario, selectedStep2, canonicalStep2);
+        end
+        if numel(candidates) > 1
+            message = "Multiple direct Step 2 names found; selected " + ...
+                selectedStep2 + ": " + strjoin(candidates, ', ');
+            notes = append_note(notes, message);
+            st_log(cfg, 'WARN', 'Specification Step 2 name ambiguous | Scenario=%s | Selected=%s | Candidates=%s', ...
+                scenario, selectedStep2, strjoin(candidates, ', '));
+        end
+    end
+    % Read the selected direct Step 2 before other steps so an unrelated
+    % step failure cannot discard its verify Action. If enumeration failed,
+    % retain the legacy exact-step probe as a recovery path.
+    try
+        cached = read_info(reader, block, selectedStep2, cfg, mode);
+    catch ME
+        step2Error = string(ME.message);
+    end
+    if ~candidateEnumerated && (~isempty(cached) || ~enumerated)
+        paths(end+1,1) = selectedStep2;
     end
 end
 records = repmat(struct('Path', "", 'Index', NaN, 'Action', "", ...
@@ -50,7 +67,7 @@ for k = 1:numel(paths)
     record = records(k);
     record.Path = paths(k);
     try
-        if strcmp(mode, 'STEP2') && paths(k) == step2
+        if strcmp(mode, 'STEP2') && paths(k) == selectedStep2
             if isempty(cached)
                 error('simtest:SpecificationStepRead', '%s', step2Error);
             end
@@ -101,7 +118,8 @@ for k = 1:numel(records)
     if strlength(relative) == 0, continue; end
     parts = split(relative, '.');
     for depth = 1:numel(parts)
-        ancestor = scenario + "." + strjoin(parts(1:depth), '.');
+        ancestor = strjoin(parts(1:depth), '.');
+        if strlength(scenario) > 0, ancestor = scenario + "." + ancestor; end
         a = find(paths == ancestor, 1);
         index = 1e9 + k;
         if ~isempty(a)
@@ -132,16 +150,16 @@ for k = 1:numel(records)
     end
 end
 if strcmp(mode, 'STEP2')
-    selected = find(string({records.Path}) == step2, 1);
+    selected = find(string({records.Path}) == selectedStep2, 1);
     if isempty(selected) && enumerated
         cells = "step2 없음";
-        notes = append_note(notes, "Direct step2 missing: " + step2);
+        notes = append_note(notes, "Direct Step 2 missing: " + canonicalStep2);
     elseif isempty(selected) || ~records(selected).Readable
         cells = "<step2 읽기 실패>";
-        notes = append_note(notes, "Cannot read direct step2: " + step2 + " | " + step2Error);
+        notes = append_note(notes, "Cannot read direct Step 2: " + selectedStep2 + " | " + step2Error);
     elseif strlength(records(selected).Summary) == 0
         cells = "verify 없음";
-        notes = append_note(notes, "No verify in direct step2: " + step2);
+        notes = append_note(notes, "No verify in direct Step 2: " + selectedStep2);
     else
         cells = records(selected).Summary;
     end
@@ -171,8 +189,31 @@ end
 end
 
 function relative = erase_prefix(path, scenario)
-if path == scenario, relative = "";
-else, relative = extractAfter(path, strlength(scenario) + 1); end
+if strlength(scenario) == 0
+    relative = path;
+elseif path == scenario
+    relative = "";
+else
+    relative = extractAfter(path, strlength(scenario) + 1);
+end
+end
+
+function [selected, candidates] = select_direct_step_two(paths, scenario, canonical)
+candidates = strings(0,1);
+for k = 1:numel(paths)
+    relative = erase_prefix(paths(k), scenario);
+    if strlength(relative) == 0 || contains(relative, '.'), continue; end
+    normalized = lower(regexprep(relative, '[^a-zA-Z0-9]', ''));
+    token = regexp(char(normalized), '^step0*([0-9]+)$', 'tokens', 'once');
+    if ~isempty(token) && str2double(token{1}) == 2
+        candidates(end+1,1) = paths(k); %#ok<AGROW>
+    end
+end
+selected = "";
+if isempty(candidates), return; end
+exact = find(candidates == canonical, 1);
+if isempty(exact), selected = candidates(1);
+else, selected = candidates(exact); end
 end
 
 function text = append_note(a, b)

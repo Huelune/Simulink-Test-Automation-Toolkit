@@ -161,7 +161,9 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 
 ### 2026-09-04 테스트 명세서 추출 추가
 
-- verify 기본 모드는 직계 `step2`이며 `VerifyMode=ALL_STEPS_COLUMNS`를 지정하면
+- verify 기본 모드는 직계 Step 2이며, 이름의 대소문자와 `_`, 공백, `-`, 앞자리 0을
+  정규화해 `step2`, `step_2`, `Step 2`, `STEP-02` 등을 같은 단계로 인식한다. 정확한
+  `step2`가 있으면 우선하고 중첩 단계는 선택하지 않는다. `VerifyMode=ALL_STEPS_COLUMNS`를 지정하면
   verify가 있는 스텝마다 오른쪽 열을 추가한다. 실패한 다른 스텝·전이 때문에 정상
   step2 내용이 사라지지 않도록 수집을 분리했고, 상세 시트에 ReadStatus/Message를 추가했다.
 - `test_specification_verify_modes.m`에 스텝 선택·순서·부분 실패·동적 열/셀 제한

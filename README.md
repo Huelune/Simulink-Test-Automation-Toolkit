@@ -582,7 +582,7 @@ result/verification/
 ```matlab
 [T, outputFile] = st_export_test_specification();
 
-% 기본은 step2만 출력. 전체 스텝은 각각 오른쪽 열에 표시
+% 기본은 직계 Step 2(step2, step_2 등)만 출력. 전체 스텝은 각각 오른쪽 열에 표시
 [T, outputFile] = st_export_test_specification('VerifyMode', 'ALL_STEPS_COLUMNS');
 ```
 

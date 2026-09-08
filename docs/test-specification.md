@@ -93,8 +93,11 @@ DDD.EE(1): 6
 ```
 
 `VerifyMode` 기본값은 `STEP2`이다. 현재 활성 스텝과 관계없이 각 시나리오의 직계
-`step2` Action을 먼저 읽는다. step2가 없으면 `step2 없음`, verify가 없으면
-`verify 없음`으로 표시하고 WARN과 비고를 남긴다. 다른 스텝으로 대체하지 않는다.
+Step 2 Action을 먼저 읽는다. 이름은 대소문자와 `_`, 공백, `-`를 무시하고 숫자를
+비교하므로 `step2`, `step_2`, `Step 2`, `STEP-02`를 같은 이름으로 인식한다. 정확한
+`step2`와 변형 이름이 함께 있으면 `step2`를 우선하며 비고와 WARN에 중복을 남긴다.
+직계 Step 2가 없으면 `step2 없음`, verify가 없으면 `verify 없음`으로 표시한다.
+`parent.step_2` 같은 하위 스텝이나 다른 번호의 스텝으로 대체하지 않는다.
 
 `ALL_STEPS_COLUMNS`는 하위 스텝을 포함하여 verify가 있는 각 스텝을 별도 열에
 기록한다. 스텝의 계층·Index 순서를 따르며 첫 줄에 `[step2]`, `[step3.child]` 같은
@@ -112,7 +115,7 @@ BBB(1,2).CC: uint8(2)
 각 항목은 하나의 Excel 셀 안에서 줄바꿈된다. `AssessmentDetails`에는 원본 Action,
 스텝 경로 및 전이 조건을 두 모드 모두 보존하므로 조건부 verify의 실행 맥락을
 확인할 수 있다. `ReadStatus`와 `Message`에는 스텝별 상세 읽기 실패를 기록한다.
-다른 스텝이나 전이 조건을 읽는 데 실패해도 정상적으로 읽은 step2 verify는 유지한다.
+다른 스텝이나 전이 조건을 읽는 데 실패해도 정상적으로 읽은 Step 2 verify는 유지한다.
 `OverflowDetails` 시트는 overflow 유무와 관계없이 생성한다. 셀의 문자 수 또는
 줄바꿈 수가 Excel 한도를 넘으면 전체 내용은 기존처럼 해당 시트에 순번별로 나누어
 기록한다. 다만 `input 시나리오 내용`과 모든
