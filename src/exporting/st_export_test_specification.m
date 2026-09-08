@@ -8,7 +8,7 @@ function [specification, outputFile] = st_export_test_specification(varargin)
 %   MaxTime is the input scenario Tmax for SLDV FILE/GENERATE cases, and
 %   the Harness solver StopTime for OFF and imported-Harness cases.
 %   DecisionBlocks is one JSON array cell containing static If/MinMax and
-%   Switch-family candidate BlockTypes and their full Simulink paths.
+%   Switch-family candidate BlockTypes, Names, and full Simulink paths.
 p = inputParser;
 addParameter(p, 'OutputFile', '', @(v) (ischar(v) && isrow(v)) || ...
     (isstring(v) && isscalar(v)) || isempty(v));

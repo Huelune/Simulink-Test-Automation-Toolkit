@@ -6,7 +6,7 @@
 
 ## 현재 기준
 
-- 기준일: 2026-09-07
+- 기준일: 2026-09-08
 - 활성 개발 브랜치: feat/harness-content-import
 - 필수 기능 기준: feat/per-cut-filtered-execution의 7f0825e
 - 필수 handoff 기준: 2b3ba09 이후
@@ -174,7 +174,8 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   입력 Tmax를 쓰지 않는 회귀 검사와 SLDV의 StopTime fallback 금지 검사를 추가했다.
   현재 PC에는 MATLAB이 없어 이 변경도 정적 검사만 수행했다.
 - 명세서의 `DecisionBlocks` 열은 CUT 아래 If/MinMax/Switch/MultiPortSwitch/SwitchCase
-  후보를 전체 경로와 BlockType을 가진 단일 JSON 배열 셀로 기록한다. 정렬·중복 제거하며
+  후보를 BlockType, 실제 블록 Name, 전체 경로를 가진 단일 JSON 배열 셀로 기록한다.
+  Name은 경로 문자열을 분리하지 않고 `get_param(path,'Name')`으로 읽는다. 정렬·중복 제거하며
   마스크·라이브러리 링크·비활성 Variant 안은 포함하고 참조 모델 내부 및
   Stateflow/MATLAB Function 내부 분기 objective는 포함하지 않는다.
 - 실제 PC에서 9행 수집 후 split_cells의 char(string(...))에서 missing 변환 오류가

@@ -49,14 +49,14 @@ Harness `StopTime`이 숫자로 직접 해석되지 않거나 유한한 0 이상
 
 `DecisionBlocks`는 CUT 아래에서 정적으로 찾은 `If`, `MinMax`, `Switch`,
 `MultiPortSwitch`, `SwitchCase` 블록을 JSON 배열 하나로 기록한다. 각 항목은
-`BlockType`과 전체 Simulink `Path`를 가지며 Path, BlockType 순으로 정렬하고 중복을
+`BlockType`, 실제 블록 `Name`, 전체 Simulink `Path`를 가지며 Path, BlockType 순으로 정렬하고 중복을
 제거한다. 빈 목록은 `[]`이다. 한 셀의 예시는 다음과 같고 MATLAB에서는
 `jsondecode(T.DecisionBlocks(1))`로 다시 가공할 수 있다.
 
 ```json
 [
-  {"BlockType":"If","Path":"Top/CUT/Logic/If"},
-  {"BlockType":"Switch","Path":"Top/CUT/Logic/Switch"}
+  {"BlockType":"If","Name":"If","Path":"Top/CUT/Logic/If"},
+  {"BlockType":"Switch","Name":"Switch","Path":"Top/CUT/Logic/Switch"}
 ]
 ```
 
