@@ -158,7 +158,8 @@ try
         'OriginalAction','Transitions','VerifySummary','ReadStatus','Message'});
     st_log(cfg, 'INFO', 'Specification workbook write start | Rows=%d | File=%s', ...
         height(specification), outputFile);
-    st_write_specification_workbook(specification, detailTable, outputFile);
+    [specification, detailTable] = st_write_specification_workbook( ...
+        specification, detailTable, outputFile, cfg); %#ok<ASGLU>
     st_log(cfg, 'INFO', 'Specification workbook write end | File=%s', outputFile);
     st_log(cfg, 'INFO', 'Specification export end | Rows=%d | Elapsed=%.3fs', ...
         height(specification), toc(timer));

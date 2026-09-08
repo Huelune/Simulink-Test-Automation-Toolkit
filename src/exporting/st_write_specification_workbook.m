@@ -1,13 +1,17 @@
-function st_write_specification_workbook(specification, details, outputFile)
-%ST_WRITE_SPECIFICATION_WORKBOOK Write wrapped XLSX with lossless cell overflow.
+function [specification, details] = st_write_specification_workbook(specification, details, outputFile, cfg)
+%ST_WRITE_SPECIFICATION_WORKBOOK Write wrapped XLSX with overflow references.
 % Use native XLSX writing and OpenXML styles; Excel/ActiveX is not required.
+if nargin < 4, cfg = []; end
 if isfile(outputFile)
     error('simtest:SpecificationOutputExists', 'Output already exists: %s', outputFile);
 end
 overflow = strings(0,5);
-[specification, overflow] = split_cells(specification, 'TestSpecification', overflow);
-[details, overflow] = split_cells(details, 'AssessmentDetails', overflow);
-overflow = array2table(overflow, 'VariableNames', {'Sheet','ExcelRow','Column','Part','Text'});
+[specification, overflow] = split_cells( ...
+    specification, 'TestSpecification', overflow, cfg, true);
+[details, overflow] = split_cells( ...
+    details, 'AssessmentDetails', overflow, cfg, false);
+overflow = array2table(overflow, ...
+    'VariableNames', {'Sheet','ExcelRow','Column','Part','Text'});
 tables = {specification, details, overflow};
 sheets = {'TestSpecification', 'AssessmentDetails', 'OverflowDetails'};
 for i = 1:numel(tables)
@@ -43,10 +47,18 @@ end
 if ~ok, error('simtest:SpecificationWrite', '%s', message); end
 end
 
-function [output, overflow] = split_cells(input, sheet, overflow)
+function [output, overflow] = split_cells(input, sheet, overflow, cfg, keepFirstForPrimary)
 output = input;
+headers = string(input.Properties.VariableNames);
+noteIndex = find(headers == "비고", 1);
+if keepFirstForPrimary && isempty(noteIndex)
+    error('simtest:SpecificationNoteColumn', ...
+        'TestSpecification requires a 비고 column for overflow references.');
+end
+rowNotes = strings(height(input),1);
 for row = 1:height(input)
     for col = 1:width(input)
+        if col == noteIndex, continue; end
         value = input{row,col};
         % Numeric cells cannot overflow the text limits. Preserve their types,
         % especially MaxTime NaN, which writetable writes as an empty cell.
@@ -58,28 +70,72 @@ for row = 1:height(input)
             continue;
         end
         text = char(textValue);
-        % Excel also limits the number of line feeds per cell to 253.
         if numel(text) <= 32767 && sum(text == newline) <= 253, continue; end
-        part = 0;
-        start = 1;
-        firstRow = size(overflow,1) + 2;
-        while start <= numel(text)
-            last = min(start + 29999, numel(text));
-            breaks = find(text(start:last) == newline);
-            if numel(breaks) > 250, last = start + breaks(250) - 1; end
-            % Do not split a UTF-16 surrogate pair between continuation rows.
-            if last < numel(text) && double(text(last)) >= 55296 && double(text(last)) <= 56319
-                last = last - 1;
-            end
-            part = part + 1;
-            overflow(end+1,:) = [string(sheet) string(row+1) ...
-                string(input.Properties.VariableNames{col}) string(part) string(text(start:last))]; %#ok<AGROW>
-            start = last + 1;
+        [overflow, firstPart, reference] = store_overflow( ...
+            overflow, sheet, row, headers(col), text);
+        primary = keepFirstForPrimary && ...
+            (headers(col) == "input 시나리오 내용" || startsWith(headers(col), "verify 내용"));
+        if primary
+            output{row,col} = firstPart;
+            rowNotes(row) = join_notes(rowNotes(row), headers(col) + " " + reference);
+        else
+            output{row,col} = reference;
         end
-        output{row,col} = string(sprintf('[OverflowDetails!E%d:E%d]', ...
-            firstRow, size(overflow,1)+1));
+        if ~isempty(cfg)
+            st_log(cfg, 'WARN', ...
+                'Specification cell overflow | Sheet=%s | Row=%d | Column=%s | PrimaryPreview=%d | Reference=%s', ...
+                sheet, row + 1, headers(col), primary, reference);
+        end
     end
 end
+if isempty(noteIndex), return; end
+for row = 1:height(output)
+    existing = string(output{row,noteIndex});
+    if ismissing(existing), existing = ""; end
+    combined = join_notes(rowNotes(row), existing);
+    text = char(combined);
+    if numel(text) <= 32767 && sum(text == newline) <= 253
+        output{row,noteIndex} = combined;
+        continue;
+    end
+    [overflow, firstPart, reference] = store_overflow( ...
+        overflow, sheet, row, headers(noteIndex), text);
+    output{row,noteIndex} = reference + " | " + firstPart;
+    if ~isempty(cfg)
+        st_log(cfg, 'WARN', ...
+            'Specification note overflow | Sheet=%s | Row=%d | Reference=%s', ...
+            sheet, row + 1, reference);
+    end
+end
+end
+
+function [overflow, firstPart, reference] = store_overflow(overflow, sheet, row, column, text)
+start = 1;
+part = 0;
+firstRow = size(overflow,1) + 2;
+firstPart = "";
+while start <= numel(text)
+    last = min(start + 29999, numel(text));
+    breaks = find(text(start:last) == newline);
+    if numel(breaks) > 250, last = start + breaks(250) - 1; end
+    % Do not split a UTF-16 surrogate pair between continuation rows.
+    if last < numel(text) && double(text(last)) >= 55296 && double(text(last)) <= 56319
+        last = last - 1;
+    end
+    part = part + 1;
+    chunk = string(text(start:last));
+    if part == 1, firstPart = chunk; end
+    overflow(end+1,:) = [string(sheet) string(row+1) ...
+        string(column) string(part) chunk]; %#ok<AGROW>
+    start = last + 1;
+end
+reference = string(sprintf('[OverflowDetails!E%d:E%d]', ...
+    firstRow, size(overflow,1)+1));
+end
+
+function value = join_notes(a, b)
+parts = [string(a); string(b)];
+value = strjoin(parts(strlength(parts) > 0), ' | ');
 end
 
 function wrap_styles(package, tables)

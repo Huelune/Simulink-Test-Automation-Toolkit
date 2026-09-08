@@ -164,7 +164,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - verify 기본 모드는 직계 `step2`이며 `VerifyMode=ALL_STEPS_COLUMNS`를 지정하면
   verify가 있는 스텝마다 오른쪽 열을 추가한다. 실패한 다른 스텝·전이 때문에 정상
   step2 내용이 사라지지 않도록 수집을 분리했고, 상세 시트에 ReadStatus/Message를 추가했다.
-- `test_specification_verify_modes.m`에 스텝 선택·순서·부분 실패·동적 열/overflow
+- `test_specification_verify_modes.m`에 스텝 선택·순서·부분 실패·동적 열/셀 제한
   회귀 검사를 추가했다. MATLAB 없는 PC에서 정적 검사만 가능하며 실제 대상은 실행하지 않는다.
 - 추가 요청으로 MaxTime 열을 넣었다. 이후 의미를 생성 방식별로 바로잡아 SLDV
   `FILE/GENERATE`는 연결된 TC 입력 시나리오의 Tmax를, `OFF` 및 가져온 하네스는
@@ -178,7 +178,12 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   Name은 경로 문자열을 분리하지 않고 `get_param(path,'Name')`으로 읽는다. `SearchDepth=1`로
   CUT의 직계 자식만 정렬·중복 제거하며 하위 Subsystem, 마스크, 라이브러리 링크,
   Variant, 참조 모델 내부 및 Stateflow/MATLAB Function 내부 분기는 포함하지 않는다.
-- 실제 PC에서 9행 수집 후 split_cells의 char(string(...))에서 missing 변환 오류가
+- `OverflowDetails` 시트는 overflow가 없어도 생성하며, Excel 셀 한도 초과 값은
+  계속 해당 시트에 전체 분할 보존한다. 단,
+  `input 시나리오 내용`과 `verify 내용*`은 원래 셀에 첫 분할 조각을 표시하고 같은
+  행의 `비고`에 열 이름과 `[OverflowDetails!E시작:E끝]` 참조를 기록한다.
+  DecisionBlocks 등 나머지 열은 기존처럼 원래 셀에 참조 문자열을 표시한다.
+- 실제 PC에서 9행 수집 후 셀 제한 처리 중 char(string(...))에서 missing 변환 오류가
   보고됐다. MaxTime NaN을 포함한 숫자 셀은 텍스트 검사에서 제외하고 문자열 missing은
   빈 셀로 정규화했다. NaN·0·유효 시간·문자열 missing의 저장/읽기 회귀 검사를 추가했다.
   수정 후 MATLAB 실행 검증은 미수행이다.

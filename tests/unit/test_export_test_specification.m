@@ -123,7 +123,7 @@ verifyEqual(testCase, st_indexed_expressions('A', [2 2], true), ...
     {'A(1,1)'; 'A(2,1)'; 'A(1,2)'; 'A(2,2)'});
 end
 
-function testWorkbookWrapAndLosslessOverflow(testCase)
+function testWorkbookKeepsFirstPrimaryOverflowPartAndAddsRowNote(testCase)
 folder = tempname;
 mkdir(folder);
 cleanup = onCleanup(@() rmdir(folder, 's')); %#ok<NASGU>
@@ -131,15 +131,38 @@ path = fullfile(folder, 'spec.xlsx');
 longText = string(repmat('가', 1, 33000));
 manyLines = strjoin(repmat("ABC(1): 2", 300, 1), newline);
 original = table(["케이스1"; "케이스2"], ["ABC: 1" + newline + "DDD: 2"; longText], ...
-    ["AAA(1): 0"; manyLines], 'VariableNames', {'Case','Input','Verify'});
-details = table("step1", "verify(AAA(1) == 0);", 'VariableNames', {'Step','Action'});
-st_write_specification_workbook(original, details, path);
-readback = readtable(path, 'Sheet', 'TestSpecification', 'TextType', 'string');
-verifyEqual(testCase, readback.Input(1), original.Input(1));
-verifyTrue(testCase, startsWith(readback.Input(2), '[OverflowDetails!'));
+    ["AAA(1): 0"; manyLines], [""; ""], ...
+    'VariableNames', {'Case','input 시나리오 내용','verify 내용','비고'});
+details = table("step1", longText, "", ...
+    'VariableNames', {'Step','Action','Message'});
+[written, writtenDetails] = st_write_specification_workbook(original, details, path);
+readback = readtable(path, 'Sheet', 'TestSpecification', 'TextType', 'string', ...
+    'VariableNamingRule', 'preserve');
+verifyEqual(testCase, readback{1,'input 시나리오 내용'}, original{1,'input 시나리오 내용'});
+longCharacters = char(longText);
+verifyEqual(testCase, char(readback{2,'input 시나리오 내용'}), longCharacters(1:30000));
+verifyLessThanOrEqual(testCase, sum(char(readback{2,'verify 내용'}) == newline), 250);
+verifyTrue(testCase, contains(readback{2,'비고'}, "input 시나리오 내용"));
+verifyTrue(testCase, contains(readback{2,'비고'}, "verify 내용"));
+verifyTrue(testCase, contains(readback{2,'비고'}, "[OverflowDetails!E"));
+verifyEqual(testCase, written{:,'input 시나리오 내용'}, readback{:,'input 시나리오 내용'});
+verifyEqual(testCase, written{2,'비고'}, readback{2,'비고'});
+detailReadback = readtable(path, 'Sheet', 'AssessmentDetails', 'TextType', 'string');
+verifyTrue(testCase, startsWith(writtenDetails.Action, "[OverflowDetails!E"));
+verifyEqual(testCase, writtenDetails.Action, detailReadback.Action);
+verifyEqual(testCase, writtenDetails.Message, detailReadback.Message);
 overflow = readtable(path, 'Sheet', 'OverflowDetails', 'TextType', 'string');
-verifyEqual(testCase, strjoin(overflow.Text(overflow.Column == "Input"), ''), longText);
-verifyEqual(testCase, strjoin(overflow.Text(overflow.Column == "Verify"), ''), manyLines);
+inputOverflowRows = find(overflow.Column == "input 시나리오 내용");
+verifyOverflowRows = find(overflow.Column == "verify 내용");
+verifyEqual(testCase, readback{2,'input 시나리오 내용'}, overflow.Text(inputOverflowRows(1)));
+verifyEqual(testCase, readback{2,'verify 내용'}, overflow.Text(verifyOverflowRows(1)));
+verifyTrue(testCase, contains(readback{2,'비고'}, sprintf( ...
+    '[OverflowDetails!E%d:E%d]', inputOverflowRows(1) + 1, inputOverflowRows(end) + 1)));
+verifyTrue(testCase, contains(readback{2,'비고'}, sprintf( ...
+    '[OverflowDetails!E%d:E%d]', verifyOverflowRows(1) + 1, verifyOverflowRows(end) + 1)));
+verifyEqual(testCase, strjoin(overflow.Text(overflow.Column == "input 시나리오 내용"), ''), longText);
+verifyEqual(testCase, strjoin(overflow.Text(overflow.Column == "verify 내용"), ''), manyLines);
+verifyEqual(testCase, strjoin(overflow.Text(overflow.Column == "Action"), ''), longText);
 package = fullfile(folder, 'unpacked');
 unzip(path, package);
 style = xmlread(fullfile(package, 'xl', 'styles.xml'));

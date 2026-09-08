@@ -97,7 +97,7 @@ verifyEqual(testCase, width(singleStepTable), 15);
 verifyEqual(testCase, singleStepTable.Properties.VariableNames{8}, 'TopModel');
 end
 
-function testAdditionalVerifyColumnsWrapAndOverflow(testCase)
+function testAdditionalVerifyColumnsWrapAndCellLimit(testCase)
 folder = tempname;
 mkdir(folder);
 cleanup = onCleanup(@() rmdir(folder, 's')); %#ok<NASGU>
@@ -105,7 +105,7 @@ rows = strings(1,13);
 longText = "[step3]" + newline + strjoin(repmat("A: 1", 260, 1), newline);
 groups = {["[step1]" + newline + "A: 0", "[step2]" + newline + "A: 1", longText]};
 spec = st_specification_table(rows, groups, 7);
-details = table("S.step3", 'VariableNames', {'StepPath'});
+details = table("S.step3", "", 'VariableNames', {'StepPath','Message'});
 file = fullfile(folder, 'verify_columns.xlsx');
 st_write_specification_workbook(spec, details, file);
 readback = readtable(file, 'Sheet', 'TestSpecification', 'TextType', 'string', ...
@@ -113,7 +113,10 @@ readback = readtable(file, 'Sheet', 'TestSpecification', 'TextType', 'string', .
 verifyEqual(testCase, readback.Properties.VariableNames, spec.Properties.VariableNames);
 verifyEqual(testCase, readback{1,7:8}, spec{1,7:8});
 verifyEqual(testCase, readback.MaxTime, 7);
-verifyTrue(testCase, startsWith(readback{1,9}, '[OverflowDetails!'));
+verifyTrue(testCase, startsWith(readback{1,9}, "[step3]"));
+verifyLessThanOrEqual(testCase, sum(char(readback{1,9}) == newline), 250);
+verifyTrue(testCase, contains(readback{1,'비고'}, "verify 내용 3"));
+verifyTrue(testCase, contains(readback{1,'비고'}, "[OverflowDetails!E"));
 overflow = readtable(file, 'Sheet', 'OverflowDetails', 'TextType', 'string');
 verifyEqual(testCase, strjoin(overflow.Text(overflow.Column == "verify 내용 3"), ''), longText);
 package = fullfile(folder, 'unpacked');
@@ -137,10 +140,10 @@ mkdir(folder);
 cleanup = onCleanup(@() rmdir(folder, 's')); %#ok<NASGU>
 file = fullfile(folder, 'missing_values.xlsx');
 original = table(["Case1"; "Case2"; "Case3"; "Case4"], ...
-    [string(missing); ""; "<missing>"; "A: 1"], [NaN; 0; 7.5; NaN], ...
-    'VariableNames', {'Case','Input','MaxTime'});
-details = table("S.step2", string(missing), ...
-    'VariableNames', {'StepPath','OriginalAction'});
+    [string(missing); ""; "<missing>"; "A: 1"], [NaN; 0; 7.5; NaN], strings(4,1), ...
+    'VariableNames', {'Case','Input','MaxTime','비고'});
+details = table("S.step2", string(missing), "", ...
+    'VariableNames', {'StepPath','OriginalAction','Message'});
 st_write_specification_workbook(original, details, file);
 readback = readtable(file, 'Sheet', 'TestSpecification', 'TextType', 'string');
 verifyEqual(testCase, height(readback), 4);
