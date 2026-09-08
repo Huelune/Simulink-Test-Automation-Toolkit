@@ -21,14 +21,18 @@ end
 function testNoCandidatesProducesEmptyJsonArray(testCase)
 cfg = struct('VerboseLogging', false);
 [text, count, note] = st_specification_decision_blocks( ...
-    'Top/EmptyCUT', cfg, @(~, ~) strings(0,1), @(~) "unused");
+    'Top/EmptyCUT', cfg, @empty_finder, @(~) "unused");
 verifyEqual(testCase, text, "[]");
 verifyEqual(testCase, count, 0);
 verifyEqual(testCase, note, "");
 verifyEmpty(testCase, jsondecode(char(text)));
 end
 
-function paths = fixture_finder(~, blockType)
+function paths = fixture_finder(~, varargin)
+[depth, blockType] = search_options(varargin);
+if depth ~= 1
+    error('fixture:SearchDepth', 'Expected SearchDepth=1.');
+end
 switch blockType
     case 'If'
         paths = "Top/CUT/A//If";
@@ -39,6 +43,25 @@ switch blockType
     otherwise
         paths = strings(0,1);
 end
+end
+
+function paths = empty_finder(~, varargin)
+[depth, ~] = search_options(varargin);
+if depth ~= 1
+    error('fixture:SearchDepth', 'Expected SearchDepth=1.');
+end
+paths = strings(0,1);
+end
+
+function [depth, blockType] = search_options(options)
+names = string(options(1:2:end));
+depthIndex = find(names == "SearchDepth", 1);
+typeIndex = find(names == "BlockType", 1);
+if isempty(depthIndex) || isempty(typeIndex)
+    error('fixture:SearchOptions', 'Required search options are missing.');
+end
+depth = options{2 * depthIndex};
+blockType = options{2 * typeIndex};
 end
 
 function name = fixture_name(path)

@@ -175,9 +175,9 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   현재 PC에는 MATLAB이 없어 이 변경도 정적 검사만 수행했다.
 - 명세서의 `DecisionBlocks` 열은 CUT 아래 If/MinMax/Switch/MultiPortSwitch/SwitchCase
   후보를 BlockType, 실제 블록 Name, 전체 경로를 가진 단일 JSON 배열 셀로 기록한다.
-  Name은 경로 문자열을 분리하지 않고 `get_param(path,'Name')`으로 읽는다. 정렬·중복 제거하며
-  마스크·라이브러리 링크·비활성 Variant 안은 포함하고 참조 모델 내부 및
-  Stateflow/MATLAB Function 내부 분기 objective는 포함하지 않는다.
+  Name은 경로 문자열을 분리하지 않고 `get_param(path,'Name')`으로 읽는다. `SearchDepth=1`로
+  CUT의 직계 자식만 정렬·중복 제거하며 하위 Subsystem, 마스크, 라이브러리 링크,
+  Variant, 참조 모델 내부 및 Stateflow/MATLAB Function 내부 분기는 포함하지 않는다.
 - 실제 PC에서 9행 수집 후 split_cells의 char(string(...))에서 missing 변환 오류가
   보고됐다. MaxTime NaN을 포함한 숫자 셀은 텍스트 검사에서 제외하고 문자열 missing은
   빈 셀로 정규화했다. NaN·0·유효 시간·문자열 missing의 저장/읽기 회귀 검사를 추가했다.

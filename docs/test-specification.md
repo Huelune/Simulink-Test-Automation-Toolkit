@@ -47,7 +47,7 @@ NaN이며 비고를 남긴다. 시간을 가진 SLDV 입력을 읽었지만 시�
 Harness `StopTime`이 숫자로 직접 해석되지 않거나 유한한 0 이상 값이 아니면 NaN과
 비고를 기록한다.
 
-`DecisionBlocks`는 CUT 아래에서 정적으로 찾은 `If`, `MinMax`, `Switch`,
+`DecisionBlocks`는 CUT 바로 아래(`SearchDepth=1`)에서 정적으로 찾은 `If`, `MinMax`, `Switch`,
 `MultiPortSwitch`, `SwitchCase` 블록을 JSON 배열 하나로 기록한다. 각 항목은
 `BlockType`, 실제 블록 `Name`, 전체 Simulink `Path`를 가지며 Path, BlockType 순으로 정렬하고 중복을
 제거한다. 빈 목록은 `[]`이다. 한 셀의 예시는 다음과 같고 MATLAB에서는
@@ -60,10 +60,10 @@ Harness `StopTime`이 숫자로 직접 해석되지 않거나 유한한 0 이상
 ]
 ```
 
-이 값은 실행·컴파일 없이 만드는 제어 분기 후보 블록 목록이다. 실제 Decision
+CUT의 직계 자식만 포함하므로 `CUT/Subsystem/Switch`처럼 하위 Subsystem 안에 있는
+블록은 포함하지 않는다. 이 값은 실행·컴파일 없이 만드는 제어 분기 후보 블록 목록이다. 실제 Decision
 coverage objective 개수나 Stateflow/MATLAB Function 내부 분기 수를 의미하지 않는다.
-마스크와 라이브러리 링크 내부 및 비활성 Variant의 해당 블록도 포함하지만 참조 모델
-내부는 포함하지 않는다.
+마스크, 라이브러리 링크, Variant 또는 참조 모델 내부로 내려가서 탐색하지 않는다.
 
 입력 내용은 각 신호의 마지막 저장 샘플이다. 신호마다 시간이 달라도 각자의 마지막
 샘플을 사용하며, StopTime에 대한 보간이나 외삽은 하지 않는다. 숫자 배열은 기존
