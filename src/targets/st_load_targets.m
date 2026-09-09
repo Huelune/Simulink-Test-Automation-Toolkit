@@ -4,7 +4,8 @@ function T = st_load_targets(onlyEnabled)
 % Required logical columns (aliases accepted):
 %   CUTName, CUTPath, HarnessName, TestCaseName
 % Optional:
-%   No, Enabled, SldvMode, SldvDataFile, ExpectedUpdateMode,
+%   No, Enabled, SldvMode, SldvDataFile, DataFileFormat,
+%   MatVariableName, ExpectedUpdateMode,
 %   CoverageFilterMode, CoverageFilterAction, CoverageFilterRationale,
 %   CoverageBoundaryMode,
 %   PreparationMode, PreparationFromStage
@@ -62,6 +63,12 @@ idxSldvMode = find_column_optional(names, ...
 
 idxSldvDataFile = find_column_optional(names, ...
     {'SldvDataFile','SLDVDataFile','SLDV Data File'});
+
+idxDataFileFormat = find_column_optional(names, ...
+    {'DataFileFormat','Data File Format','데이터파일형식'});
+
+idxMatVariableName = find_column_optional(names, ...
+    {'MatVariableName','MATVariableName','MAT Variable Name','MAT변수명'});
 
 idxExpectedUpdateMode = find_column_optional(names, ...
     {'ExpectedUpdateMode','Expected Update Mode','기대값갱신모드'});
@@ -135,6 +142,19 @@ if ~isempty(idxCoverageFilterAction)
 end
 if ~isempty(idxCoverageFilterRationale)
     CoverageFilterRationale = string(raw{:, idxCoverageFilterRationale});
+end
+
+DataFileFormat = repmat("SLDV", n, 1);
+if ~isempty(idxDataFileFormat)
+    DataFileFormat = string(raw{:, idxDataFileFormat});
+end
+DataFileFormat = upper(strtrim(DataFileFormat));
+DataFileFormat(ismissing(DataFileFormat) | strlength(DataFileFormat) == 0) = "SLDV";
+
+MatVariableName = strings(n,1);
+if ~isempty(idxMatVariableName)
+    MatVariableName = strtrim(string(raw{:, idxMatVariableName}));
+    MatVariableName(ismissing(MatVariableName)) = "";
 end
 if ~isempty(idxCoverageBoundaryMode)
     CoverageBoundaryMode = string(raw{:, idxCoverageBoundaryMode});
@@ -214,6 +234,8 @@ HarnessName = HarnessName(keep);
 TestCaseName = TestCaseName(keep);
 SldvMode = SldvMode(keep);
 SldvDataFile = SldvDataFile(keep);
+DataFileFormat = DataFileFormat(keep);
+MatVariableName = MatVariableName(keep);
 ExpectedUpdateMode = ExpectedUpdateMode(keep);
 CoverageFilterMode = CoverageFilterMode(keep);
 CoverageFilterAction = CoverageFilterAction(keep);
@@ -221,6 +243,9 @@ CoverageFilterRationale = CoverageFilterRationale(keep);
 CoverageBoundaryMode = CoverageBoundaryMode(keep);
 PreparationMode = PreparationMode(keep);
 PreparationFromStage = PreparationFromStage(keep);
+
+DataFileFormat = st_resolve_data_file_formats(SldvMode, DataFileFormat);
+MatVariableName(~(SldvMode == "FILE" & DataFileFormat == "MAT")) = "";
 
 [CoverageFilterMode, CoverageFilterAction, CoverageFilterRationale] = ...
     st_resolve_coverage_filter_settings( ...
@@ -265,6 +290,8 @@ T = table( ...
     TestCaseName, ...
     SldvMode, ...
     SldvDataFile, ...
+    DataFileFormat, ...
+    MatVariableName, ...
     ExpectedUpdateMode, ...
     CoverageFilterMode, ...
     CoverageFilterAction, ...

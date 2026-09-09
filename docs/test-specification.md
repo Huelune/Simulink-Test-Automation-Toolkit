@@ -53,7 +53,7 @@ CUTPath, DecisionBlocks, Iteration명, InputScenario명, MaxTime, 추출상태, 
 시간을 사용하지 않고 해당 Harness의 Solver `StopTime`을 기록한다. verify 실행 시간은
 어느 모드에서도 사용하지 않는다.
 
-SLDV 입력이 없거나 연결/시간을 확인할 수 없으면 Excel에서는 빈 셀, 반환 table에서는
+FILE/GENERATE 입력이 없거나 연결/시간을 확인할 수 없으면 Excel에서는 빈 셀, 반환 table에서는
 NaN이며 비고를 남긴다. 시간을 가진 SLDV 입력을 읽었지만 시간 단위를 변환할 수 없는
 경우에도 동일하다. 절대 datetime은 임의의 시작 시각을 정해 초로 변환하지 않는다.
 Harness `StopTime`이 숫자로 직접 해석되지 않거나 유한한 0 이상 값이 아니면 NaN과

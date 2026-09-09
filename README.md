@@ -64,7 +64,7 @@ TestManagement.xlsx
 - 저장소 루트의 `TestManagement.xlsx`
 - 기존 Harness를 사용할 경우 Harness가 저장된 모델
 - 기존 Test Manager 파일을 사용할 경우 `{TopModel}.mldatx`
-- `SldvMode=FILE` 행에서 지정한 SLDV MAT 파일
+- `SldvMode=FILE` 행에서 지정한 SLDV 결과 MAT 또는 일반 Dataset MAT 파일
 
 실제 모델, 관리 Excel, MAT, MLDATX와 실행 결과는 업무 정보가 포함될 수 있으므로
 Git에 추가하지 않습니다.
@@ -125,6 +125,8 @@ st_find_target_paths              % 같은 이름의 후보를 문맥으로 순�
 | `Enabled` | 아니요 | `true` | `cfg.OnlyEnabled=true`일 때 대상 선택 |
 | `SldvMode` | 아니요 | `OFF` | `OFF`, `FILE`, `GENERATE` |
 | `SldvDataFile` | 조건부 | 빈 값 | `FILE`에서 필수인 절대 또는 workbook 상대 경로 |
+| `DataFileFormat` | 아니요 | `SLDV` | `FILE` 입력 형식: `SLDV` 또는 `MAT`; 확장자로 자동 판별하지 않음 |
+| `MatVariableName` | 아니요 | 빈 값 | `FILE+MAT`에서 사용할 Dataset 변수 하나를 선택; 빈 값이면 모든 Dataset 변수를 이름순 사용 |
 | `ExpectedUpdateMode` | 아니요 | `DEFAULT` | `DEFAULT`, `OFF`, `APPLY` |
 | `CoverageFilterMode` | 아니요 | `OFF` | `OFF`, `SUBSYSTEM`, `ALL_CONTENT` |
 | `CoverageBoundaryMode` | 아니요 | `OFF` | `OFF`, `CUT_ONLY` |
@@ -265,7 +267,7 @@ st_run_from_harness( ...
 | `SldvMode` | 동작 |
 | --- | --- |
 | `OFF` | 기존 단일 `UT_REQ_{CUTName}_001` Scenario 사용 |
-| `FILE` | 지정된 `sldvData` MAT를 검증하고 Dataset Scenario로 변환 |
+| `FILE` | `DataFileFormat`에 따라 `sldvData` 결과 또는 일반 Dataset MAT를 검증해 Scenario로 변환 |
 | `GENERATE` | Top Model의 Design Verifier 설정을 복사해 CUT용 테스트 생성 |
 
 `FILE`과 `GENERATE` 대상은 Atomic Subsystem이어야 합니다. 기본
@@ -276,6 +278,14 @@ st_run_from_harness( ...
 각 CUT의 최장 SLDV 종료 시각을 `Tmax`로 사용합니다. 기본적으로 0.01초 격자에
 올림하여 Harness StopTime, Assessment transition, expected-value sampling에
 동일하게 적용합니다.
+
+`DataFileFormat=MAT`에서는 MAT 파일의 비어 있지 않은 scalar
+`Simulink.SimulationData.Dataset` 변수를 입력 Scenario로 사용합니다. 변수명이
+정렬 순서를 결정하고, `MatVariableName`을 지정하면 그 변수만 선택합니다. 여러
+Scenario의 입력 개수·순서·이름·자료형·차원과 Harness ActiveScenario 인터페이스가
+정확히 일치해야 합니다. 종료 시각은 각 Dataset 안 모든 입력 신호의 마지막 시간 중
+최댓값이며, 시간 정보가 전혀 없으면 임의 시간을 만들지 않고 실패합니다. 최종 이름은
+항상 `UT_REQ_{CUTName}_{index}`이고 MAT 변수명은 manifest의 `OriginalNames`로 남습니다.
 
 공유 Signal Editor MAT 전체 검사는 비용 때문에 기본
 `cfg.CheckSharedSignalEditorDataFile=false`입니다. 여러 Harness가 같은 MAT를
@@ -591,7 +601,7 @@ result/verification/
 
 시나리오 연결과 예외 처리 기준은 [테스트 명세서 추출](docs/test-specification.md)을 참조하십시오.
 직계 Inport가 없는 OFF 대상도 Signal Editor와 TC 연결이 있으면 입력 시나리오를
-출력합니다. `MaxTime` 열은 SLDV `FILE/GENERATE` 테스트에는 TC별 입력 Tmax를,
+출력합니다. `MaxTime` 열은 `FILE/GENERATE` 테스트에는 TC별 입력 Tmax를,
 OFF 대상에는 Harness Solver `StopTime`을 초 단위로 기록합니다.
 `DecisionBlocks` 열에는 CUT의 직계 자식인 If/MinMax/Switch 계열 블록을 블록 이름과
 `D번호 [분기종류]블록유형 (저장된 조건/선택 설정)` 두 줄씩 표시합니다. Outcome,
@@ -726,7 +736,7 @@ CUT별 CVF 격리 실행 구현 및 단위 테스트 코드가 포함되어 있�
 - 기대값 최초 실패, 갱신, 같은 CVF 재실행과 최종 PASS
 - Test File·Suite·Test Case 수동 필터의 저장·재개방 후 동일성
 - Decision·Execution CUT 매핑과 Excel·HTML·PDF·MLDATX 생성
-- SLDV `FILE`/`GENERATE`, Scenario·Iteration과 정확한 `Tmax` timing
+- SLDV·일반 MAT `FILE`/`GENERATE`, Scenario·Iteration과 정확한 `Tmax` timing
 - `QUICK → RUNTIME → CERTIFY` 전체 인증과 재실행 번들 반복 실행
 
 MATLAB R2025b 장비에서는 먼저 단위 테스트를 실행합니다.

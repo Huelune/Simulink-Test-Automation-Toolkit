@@ -1,5 +1,5 @@
 function [R, ScenarioR] = st_prepare_sldv_targets(stageSelection)
-%ST_PREPARE_SLDV_TARGETS Generate or validate per-target SLDV test data.
+%ST_PREPARE_SLDV_TARGETS Prepare per-target FILE or generated SLDV data.
 % The resulting manifest is consumed by all later workflow stages.
 %
 % SLDV input-interface validation uses the target Harness Signal Editor
@@ -28,6 +28,8 @@ profiles = repmat(st_empty_sldv_profile(), n, 1);
 
 SourceDataFile = strings(n,1);
 EffectiveDataFile = strings(n,1);
+DataFileFormat = strings(n,1);
+MatVariableName = strings(n,1);
 SldvRunStatus = nan(n,1);
 SldvRunMessage = strings(n,1);
 SldvRunElapsedSec = nan(n,1);
@@ -63,7 +65,7 @@ scenarioStatus = strings(0,1);
 scenarioMessage = strings(0,1);
 
 fprintf('\n============================================\n');
-fprintf('Prepare Simulink Design Verifier Data\n');
+fprintf('Prepare FILE / Simulink Design Verifier Data\n');
 fprintf('============================================\n');
 
 for i = 1:n
@@ -73,6 +75,14 @@ for i = 1:n
     if isempty(mode)
         mode = 'OFF';
     end
+    dataFileFormat = 'SLDV';
+    matVariableName = '';
+    if strcmp(mode, 'FILE')
+        dataFileFormat = char(T.DataFileFormat(i));
+        matVariableName = char(T.MatVariableName(i));
+    end
+    DataFileFormat(i) = string(dataFileFormat);
+    MatVariableName(i) = string(matVariableName);
 
     profile = st_empty_sldv_profile();
     profile.No = double(T.No(i));
@@ -81,6 +91,8 @@ for i = 1:n
     profile.HarnessName = char(T.HarnessName(i));
     profile.TestCaseName = char(T.TestCaseName(i));
     profile.Mode = mode;
+    profile.DataFileFormat = dataFileFormat;
+    profile.MatVariableName = matVariableName;
     profile.RequestedDataFile = char(T.SldvDataFile(i));
     profile.SourceDataFile = char(T.SldvDataFile(i));
 
@@ -197,20 +209,26 @@ for i = 1:n
                 strjoin(harnessInput.Names, ', '));
 
             if strcmp(mode, 'FILE')
-                dataFile = resolve_sldv_data_file(T.SldvDataFile(i), cfg);
+                dataFile = resolve_file_data_file(T.SldvDataFile(i), cfg);
                 SourceDataFile(i) = string(dataFile);
                 profile.SourceDataFile = dataFile;
-                meta = inspect_sldv_data( ...
-                    dataFile, ownerPath, T.CUTName(i), ...
-                    cfg.SldvTmaxResolution, harnessInput, ...
-                    cfg.IgnoreUnexpectedSldvInputs);
-
-                validate_harness_input_interface( ...
-                    harnessInput, ...
-                    meta.InputNames, ...
-                    meta.InputTypes, ...
-                    meta.InputDimensions, ...
-                    cfg.IgnoreUnexpectedSldvInputs);
+                st_log(cfg, 'INFO', '[FILE] Format=%s | File=%s', ...
+                    dataFileFormat, dataFile);
+                switch dataFileFormat
+                    case 'SLDV'
+                        meta = inspect_sldv_data( ...
+                            dataFile, ownerPath, T.CUTName(i), ...
+                            cfg.SldvTmaxResolution, harnessInput, ...
+                            cfg.IgnoreUnexpectedSldvInputs);
+                    case 'MAT'
+                        meta = st_inspect_mat_data( ...
+                            dataFile, T.CUTName(i), ...
+                            cfg.SldvTmaxResolution, matVariableName, cfg);
+                    otherwise
+                        error('simtest:UnsupportedDataFileFormat', ...
+                            ['Unsupported DataFileFormat: %s. ' ...
+                             'Supported values: SLDV, MAT'], dataFileFormat);
+                end
 
                 effectiveFile = dataFile;
             else
@@ -268,13 +286,21 @@ for i = 1:n
             % An SLDV Dataset may omit inputs that are driven elsewhere in
             % the Harness.  The missing Harness scenario elements are kept
             % when the UT_REQ Dataset is assembled later.
-            [sldvDrivenNames, preservedHarnessNames] = ...
-                validate_harness_input_interface( ...
-                    harnessInput, ...
-                    meta.InputNames, ...
-                    meta.InputTypes, ...
-                    meta.InputDimensions, ...
-                    cfg.IgnoreUnexpectedSldvInputs);
+            if strcmp(dataFileFormat, 'MAT')
+                st_validate_mat_harness_interface( ...
+                    harnessInput, meta.InputNames, meta.InputTypes, ...
+                    meta.InputDimensions);
+                sldvDrivenNames = meta.InputNames;
+                preservedHarnessNames = cell(0,1);
+            else
+                [sldvDrivenNames, preservedHarnessNames] = ...
+                    validate_harness_input_interface( ...
+                        harnessInput, ...
+                        meta.InputNames, ...
+                        meta.InputTypes, ...
+                        meta.InputDimensions, ...
+                        cfg.IgnoreUnexpectedSldvInputs);
+            end
 
             profile.SldvDrivenInputNames = sldvDrivenNames;
             profile.PreservedHarnessInputNames = preservedHarnessNames;
@@ -297,9 +323,10 @@ for i = 1:n
             ParameterCount(i) = sum(meta.ParameterCounts);
             Status(i) = 'OK';
             Message(i) = sprintf( ...
-                ['scenarios=%d, RawTmax=%.17g, Tmax=%.17g, ' ...
+                ['format=%s, scenarios=%d, RawTmax=%.17g, Tmax=%.17g, ' ...
                  'sldvInputs=%d, ' ...
                  'preservedHarnessInputs=%d, ignoredSldvInputs=%d'], ...
+                dataFileFormat, ...
                 ScenarioCount(i), ...
                 meta.RawTmax, ...
                 meta.Tmax, ...
@@ -428,7 +455,7 @@ elseif ~any(Status == 'FAIL') && any(executedSldvRows)
 end
 
 manifest = struct();
-manifest.Version = 4;
+manifest.Version = 5;
 manifest.TopModel = cfg.TopModel;
 manifest.ManagementExcel = cfg.ManagementExcel;
 manifest.CreatedAt = char(current_timestamp());
@@ -442,6 +469,8 @@ R = table( ...
     T.HarnessName, ...
     T.TestCaseName, ...
     T.SldvMode, ...
+    DataFileFormat, ...
+    MatVariableName, ...
     SourceDataFile, ...
     EffectiveDataFile, ...
     SldvRunStatus, ...
@@ -471,6 +500,8 @@ R = table( ...
         'HarnessName', ...
         'TestCaseName', ...
         'SldvMode', ...
+        'DataFileFormat', ...
+        'MatVariableName', ...
         'SourceDataFile', ...
         'EffectiveDataFile', ...
         'SldvRunStatus', ...
@@ -597,7 +628,7 @@ st_log( ...
 end
 
 
-function fullPath = resolve_sldv_data_file(value, cfg)
+function fullPath = resolve_file_data_file(value, cfg)
 
 textValue = strtrim(char(string(value)));
 
@@ -619,7 +650,7 @@ end
 
 if ~isfile(fullPath)
     error( ...
-        'SLDV data file not found: %s', ...
+        'FILE data file not found: %s', ...
         fullPath);
 end
 
@@ -842,7 +873,7 @@ ignoredInputNames = cell(0,1);
 for sourceIndex = 1:numel(data.TestCases)
     tc = data.TestCases(sourceIndex);
 
-    if testcase_has_no_effect(tc)
+    if st_testcase_has_no_effect(tc)
         continue;
     end
 
@@ -878,7 +909,7 @@ for sourceIndex = 1:numel(data.TestCases)
     end
 
     [signature, names, types, dimensions] = ...
-        dataset_signature(dataset);
+        st_dataset_signature(dataset);
 
     [selectedIndices, names, ignoredNames] = ...
         st_select_sldv_input_indices( ...
@@ -990,177 +1021,6 @@ end
 end
 
 
-function tf = testcase_has_no_effect(tc)
-
-tf = false;
-
-if ~isfield(tc, 'dataNoEffect') || ...
-        isempty(tc.dataNoEffect)
-
-    return;
-end
-
-values = tc.dataNoEffect;
-
-if ~iscell(values)
-    values = {values};
-end
-
-hasValue = false;
-allNoEffect = true;
-
-for i = 1:numel(values)
-    if isempty(values{i})
-        continue;
-    end
-
-    hasValue = true;
-    allNoEffect = ...
-        allNoEffect && ...
-        all(logical(values{i}(:)));
-end
-
-tf = ...
-    hasValue && ...
-    allNoEffect;
-
-end
-
-
-function [signature, names, types, dimensions] = ...
-        dataset_signature(dataset)
-
-n = dataset.numElements;
-
-signature = strings(n,1);
-names = cell(n,1);
-types = cell(n,1);
-dimensions = cell(n,1);
-
-for i = 1:n
-    element = dataset.getElement(i);
-
-    name = strtrim( ...
-        char(string(element.Name)));
-
-    if isempty(name)
-        error( ...
-            'Dataset element %d has an empty Name.', ...
-            i);
-    end
-
-    names{i} = name;
-    value = element;
-
-    if isa(element, 'Simulink.SimulationData.Signal')
-        value = element.Values;
-    end
-
-    [valueText, valueType, valueDimensions] = ...
-        value_signature(value);
-
-    signature(i) = string( ...
-        sprintf( ...
-            '%s|%s', ...
-            name, ...
-            valueText));
-
-    types{i} = valueType;
-    dimensions{i} = valueDimensions;
-end
-
-end
-
-
-function [text, dataType, dimensions] = value_signature(value)
-
-if isa(value, 'timeseries')
-    data = value.Data;
-    dims = size(data);
-
-    if ~isempty(value.Time) && ...
-            isprop(value, 'IsTimeFirst') && ...
-            value.IsTimeFirst && ...
-            ~isempty(dims)
-
-        dims = dims(2:end);
-
-    elseif ~isempty(value.Time) && ...
-            ~isempty(dims) && ...
-            dims(end) == numel(value.Time)
-
-        dims = dims(1:end-1);
-
-    elseif ~isempty(value.Time) && ...
-            ~isempty(dims) && ...
-            dims(1) == numel(value.Time)
-
-        dims = dims(2:end);
-    end
-
-    dataType = value_data_type(data);
-    dimensions = normalize_signal_dimensions(dims);
-
-    text = sprintf( ...
-        'timeseries|%s|%s', ...
-        dataType, ...
-        mat2str(dimensions));
-
-elseif istimetable(value)
-    data = value.Variables;
-    dims = size(data);
-    dims = dims(2:end);
-
-    dataType = value_data_type(data);
-    dimensions = normalize_signal_dimensions(dims);
-
-    text = sprintf( ...
-        'timetable|%s|%s', ...
-        dataType, ...
-        mat2str(dimensions));
-
-else
-    dataType = value_data_type(value);
-    dimensions = normalize_signal_dimensions(size(value));
-
-    text = sprintf( ...
-        '%s|%s', ...
-        dataType, ...
-        mat2str(dimensions));
-end
-
-end
-
-
-function type = value_data_type(value)
-
-if isa(value, 'embedded.fi')
-    type = 'fixed';
-
-elseif isstruct(value)
-    type = 'bus';
-
-else
-    type = class(value);
-end
-
-end
-
-
-function dims = normalize_signal_dimensions(dims)
-
-dims = double(dims(:).');
-
-if isempty(dims)
-    dims = 1;
-
-elseif all(dims == 1)
-    dims = 1;
-end
-
-end
-
-
 function interface = inspect_harness_input_interface( ...
         cfg, ...
         ownerPath, ...
@@ -1239,7 +1099,7 @@ if ~isa( ...
 end
 
 [~, names, types, dimensions] = ...
-    dataset_signature(scenario);
+    st_dataset_signature(scenario);
 
 interface = struct();
 interface.ScenarioName = scenarioName;

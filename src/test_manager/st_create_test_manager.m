@@ -28,7 +28,7 @@ function R = st_create_test_manager(stageSelection, varargin)
 %
 % Table Iterations:
 %   OFF mode keeps the legacy single 'Iteration 1'.
-%   FILE/GENERATE creates one named iteration per SLDV TestCase and assigns
+%   FILE/GENERATE creates one named iteration per prepared scenario and assigns
 %   the same UT_REQ_{CUTName}_{NNN} value to both scenario parameters.
 %   OFF mode assigns SignalEditorScenario whenever the Harness contains a
 %   Signal Editor block, regardless of direct CUT Inports.
@@ -493,6 +493,10 @@ for i = 1:n
 
             if strcmp(profile.Mode, 'OFF')
                 iterationName = 'Iteration 1';
+            elseif strcmp(profile.DataFileFormat, 'MAT')
+                % Ordinary MAT Dataset scenarios have no SLDV parameter
+                % override payload. ParameterCounts is normalized to zero.
+                iterationName = currentScenario;
             else
                 [~, params] = sldvsimdata(profile.EffectiveDataFile, ...
                     profile.SourceIndices(scenarioIndex));

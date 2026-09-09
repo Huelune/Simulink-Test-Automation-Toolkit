@@ -9,6 +9,16 @@ mode = upper(strtrim(char(targetRow.SldvMode)));
 if isempty(mode)
     mode = 'OFF';
 end
+dataFileFormat = target_text(targetRow, 'DataFileFormat', 'SLDV');
+matVariableName = target_text(targetRow, 'MatVariableName', '');
+if ~strcmp(mode, 'FILE')
+    dataFileFormat = 'SLDV';
+    matVariableName = '';
+else
+    dataFileFormat = char(st_resolve_data_file_formats( ...
+        string(mode), string(dataFileFormat)));
+    if ~strcmp(dataFileFormat, 'MAT'), matVariableName = ''; end
+end
 
 if strcmp(mode, 'OFF')
     profile = st_empty_sldv_profile();
@@ -19,6 +29,8 @@ if strcmp(mode, 'OFF')
     profile.HarnessName = char(targetRow.HarnessName);
     profile.TestCaseName = char(targetRow.TestCaseName);
     profile.Mode = 'OFF';
+    profile.DataFileFormat = 'SLDV';
+    profile.MatVariableName = '';
     profile.RequestedDataFile = char(targetRow.SldvDataFile);
     profile.SourceDataFile = char(targetRow.SldvDataFile);
     profile.ScenarioNames = {st_scenario_name(targetRow.CUTName, 1)};
@@ -52,13 +64,18 @@ for i = 1:numel(profiles)
     requestedFileMatches = ~strcmp(mode, 'FILE') || ...
         (isfield(profiles, 'RequestedDataFile') && ...
         strcmp(profiles(i).RequestedDataFile, char(targetRow.SldvDataFile)));
+    profileFormat = profile_text(profiles(i), 'DataFileFormat', 'SLDV');
+    profileVariable = profile_text(profiles(i), 'MatVariableName', '');
+    sourceFormatMatches = ~strcmp(mode, 'FILE') || ...
+        (strcmpi(profileFormat, dataFileFormat) && ...
+        strcmp(profileVariable, matVariableName));
     if double(profiles(i).No) == double(targetRow.No) && ...
             strcmp(profiles(i).CUTName, char(targetRow.CUTName)) && ...
             strcmp(profiles(i).CUTPath, ownerPath) && ...
             strcmp(profiles(i).HarnessName, char(targetRow.HarnessName)) && ...
             strcmp(profiles(i).TestCaseName, char(targetRow.TestCaseName)) && ...
             strcmp(profiles(i).Mode, mode) && ...
-            requestedFileMatches
+            requestedFileMatches && sourceFormatMatches
         profile = profiles(i);
         matched = true;
         break;
@@ -68,7 +85,7 @@ end
 if ~matched
     error('No matching target row exists in the SLDV manifest.');
 end
-profile = normalize_profile_schema(profile);
+profile = st_normalize_sldv_profile_schema(profile);
 % Older incremental runs could persist the reporting-only CACHED state in
 % the runtime manifest. Treat it as a successful reusable profile and
 % normalize it so the next manifest write repairs the stored state.
@@ -78,18 +95,29 @@ elseif ~strcmp(profile.Status, 'OK')
     error('SLDV target preparation was not successful: %s', profile.Message);
 end
 if isempty(profile.EffectiveDataFile) || ~isfile(profile.EffectiveDataFile)
-    error('Prepared SLDV data file is missing: %s', profile.EffectiveDataFile);
+    error('Prepared FILE/SLDV data file is missing: %s', ...
+        profile.EffectiveDataFile);
 end
 end
 
 
-function normalized = normalize_profile_schema(profile)
-normalized = st_empty_sldv_profile();
-fields = fieldnames(normalized);
-for i = 1:numel(fields)
-    field = fields{i};
-    if isfield(profile, field)
-        normalized.(field) = profile.(field);
+function value = target_text(row, field, fallback)
+value = fallback;
+if ismember(field, row.Properties.VariableNames)
+    candidate = string(row.(field));
+    if isscalar(candidate) && ~ismissing(candidate)
+        value = char(strtrim(candidate));
+    end
+end
+end
+
+
+function value = profile_text(profile, field, fallback)
+value = fallback;
+if isfield(profile, field)
+    candidate = string(profile.(field));
+    if isscalar(candidate) && ~ismissing(candidate)
+        value = char(strtrim(candidate));
     end
 end
 end

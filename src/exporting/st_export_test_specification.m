@@ -8,7 +8,7 @@ function [specification, outputFile] = st_export_test_specification(varargin)
 %   verify-bearing step in a separate column with its relative step path.
 %   Input scenarios are read from the actual Test Manager binding whenever
 %   the Harness contains a Signal Editor, regardless of direct CUT Inports.
-%   MaxTime is the input scenario Tmax for SLDV FILE/GENERATE cases, and
+%   MaxTime is the input scenario Tmax for FILE/GENERATE cases, and
 %   the Harness solver StopTime for OFF cases.
 %   DecisionBlocks shows each direct child decision block Name followed by
 %   a D-numbered saved-parameter condition. DecisionBlockDetails retains

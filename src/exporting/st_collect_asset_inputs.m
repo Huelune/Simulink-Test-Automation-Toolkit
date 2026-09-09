@@ -1,6 +1,6 @@
 function inventory = st_collect_asset_inputs( ...
         targets, cfg, inputRoot, bundleRoot)
-%ST_COLLECT_ASSET_INPUTS Copy Harness Signal Editor and SLDV inputs.
+%ST_COLLECT_ASSET_INPUTS Copy Harness Signal Editor and FILE/SLDV inputs.
 
 inventory = repmat(empty_item(), 0, 1);
 for i = 1:height(targets)
@@ -12,6 +12,8 @@ for i = 1:height(targets)
     item.HarnessName = char(row.HarnessName);
     item.TestCaseName = char(row.TestCaseName);
     item.SldvMode = char(row.SldvMode);
+    item.DataFileFormat = char(row.DataFileFormat);
+    item.MatVariableName = char(row.MatVariableName);
 
     needsSignalInput = true;
     if strcmpi(item.SldvMode, 'OFF')
@@ -63,12 +65,12 @@ end
 function output = copy_required(profile, fieldName, outputFolder, root)
 if ~isfield(profile, fieldName)
     error('simtest:AssetSldvInputMissing', ...
-        'SLDV profile has no %s field.', fieldName);
+        'FILE/SLDV profile has no %s field.', fieldName);
 end
 source = char(string(profile.(fieldName)));
 if isempty(source) || ~isfile(source)
     error('simtest:AssetSldvInputMissing', ...
-        'Required SLDV input is missing: %s', source);
+        'Required FILE/SLDV input is missing: %s', source);
 end
 prefix = lower(regexprep(fieldName, 'DataFile$', ''));
 path = fullfile(outputFolder, [prefix '_' file_name(source)]);
@@ -115,6 +117,8 @@ item = struct( ...
     'HarnessName', '', ...
     'TestCaseName', '', ...
     'SldvMode', '', ...
+    'DataFileFormat', 'SLDV', ...
+    'MatVariableName', '', ...
     'StandaloneHarness', '', ...
     'ResultPath', '', ...
     'SignalEditorInput', '', ...

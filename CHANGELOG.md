@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Extended `SldvMode=FILE` with explicit `DataFileFormat=SLDV|MAT` and optional
+  `MatVariableName`. Ordinary MAT Dataset scenarios are selected deterministically,
+  checked for exact interface and time consistency, copied to Signal Editor input,
+  and skip SLDV-only parameter processing. Existing workbooks default to `SLDV`.
+- Fixed nested-cell `dataNoEffect` handling and centralized Dataset interface
+  inspection on the documented `getElementNames` API.
 - Fixed specification workbook writing when MaxTime is NaN or text is missing.
   Overflow checks now preserve numeric cells and normalize missing strings to
   empty cells before character conversion.

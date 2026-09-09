@@ -35,6 +35,8 @@ cfg = struct('SldvManifestFile', 'does_not_exist.mat', ...
 profile = st_get_sldv_profile(target, cfg);
 
 verifyEqual(testCase, profile.Mode, 'OFF');
+verifyEqual(testCase, profile.DataFileFormat, 'SLDV');
+verifyEqual(testCase, profile.MatVariableName, '');
 verifyEqual(testCase, profile.ScenarioNames, {'UT_REQ_Controller_001'});
 verifyTrue(testCase, isnan(profile.Tmax));
 verifyEqual(testCase, sort(fieldnames(profile)), ...
@@ -88,6 +90,8 @@ profile = st_get_sldv_profile(target, cfg);
 
 verifyEqual(testCase, profile.Status, 'OK');
 verifyEqual(testCase, profile.EffectiveDataFile, dataFile);
+verifyEqual(testCase, profile.DataFileFormat, 'SLDV');
+verifyEqual(testCase, profile.MatVariableName, '');
 verifyEqual(testCase, sort(fieldnames(profile)), ...
     sort(fieldnames(st_empty_sldv_profile())));
 

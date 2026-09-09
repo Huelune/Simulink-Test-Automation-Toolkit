@@ -137,6 +137,9 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 16. If/Switch/MinMax/MultiPortSwitch/SwitchCase가 있는 CUT의 명세서를 export하고,
     블록 이름 다음 줄의 D번호·분기종류·저장 파라미터 표현과 DecisionBlockDetails의
     Outcome/Expression/ReadStatus가 실제 블록 설정과 일치하는지 확인한다.
+17. FILE+MAT 단일/복수 Dataset, 명시적 MatVariableName, Scenario 간 및 Harness
+    interface mismatch, Dataset 없음·시간 없음, nested dataNoEffect를 확인하고 MAT
+    실행에서 sldvsimdata와 parameter override가 호출되지 않는 증거를 보관한다.
 
 실패 시 최소 전달 자료:
 
@@ -180,9 +183,26 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   Signal Editor 자체가 없을 때만 `SKIP_NO_SIGNAL_EDITOR` WARN으로 처리한다.
 - 현재 PC에는 MATLAB과 MISS_HIT 실행 환경이 없다. `git diff --check`와 정적 계약
   테스트 소스 검토만 수행했으며 MATLAB 단위/통합/fixture는 실행하지 못했다.
-- R2025b에서는 위 "반드시 확인할 항목"의 15개 증거와 `CVF-CHECK-v2`,
+- R2025b에서는 위 "반드시 확인할 항목"의 17개 증거와 `CVF-CHECK-v2`,
   `SYSTEM-CHECK-v1`, 대상 manifest/CVF/보고서를 보관해야 한다. 그 전에는 main에
   통합하거나 런타임 인증 완료로 표현하지 않는다.
+
+### 2026-09-09 FILE 일반 MAT Dataset 입력
+
+- `SldvMode=FILE`에서 optional `DataFileFormat=SLDV|MAT`와 `MatVariableName`을
+  읽는다. 새 열이 없으면 `SLDV`가 기본이어서 기존 `sldvData` 흐름이 유지된다.
+- MAT parser는 비어 있지 않은 scalar `Simulink.SimulationData.Dataset` 변수를
+  이름순으로 선택하고, 모든 Scenario와 Harness ActiveScenario의 입력 개수·순서·
+  이름·자료형·차원을 정확히 검증한다. 마지막 신호 시간의 최댓값을 EndTime으로
+  사용하며 시간 없는 Dataset은 실패시킨다.
+- MAT Scenario는 기존 이름 규칙을 사용하고 원래 변수명을 `OriginalNames`로 보존한다.
+  `ParameterCounts=0`으로 정상화하여 Test Manager에서 `sldvsimdata`와
+  `st_apply_sldv_parameters`를 건너뛴다.
+- SLDV와 MAT parser는 공통 profile/meta schema로 합쳐지고 Signal Editor부터 같은
+  workflow를 사용한다. Dataset 이름은 공통 `st_dataset_signature`의
+  `getElementNames`로 읽고 nested cell `dataNoEffect`는 재귀적으로 처리한다.
+- 현재 PC에는 MATLAB과 MISS_HIT 실행 환경이 없다. 정적 검사와 소스 계약 테스트만
+  수행하며 R2025b에서는 위 17번의 성공/실패 경계와 원본 파일 불변 증거가 필요하다.
 
 ### 2026-09-09 Template Harness clone 전환
 

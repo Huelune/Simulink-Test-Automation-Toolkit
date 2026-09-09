@@ -220,6 +220,8 @@ signatures.HARNESS = st_hash_value(harness);
 sldv = common;
 sldv.SldvMode = char(row.SldvMode);
 sldv.SldvDataFile = char(row.SldvDataFile);
+sldv.DataFileFormat = effective_data_file_format(row);
+sldv.MatVariableName = effective_mat_variable_name(row);
 sldv.SldvDataSignature = sldv_source_signature(row, cfg);
 sldv.TmaxResolution = cfg.SldvTmaxResolution;
 sldv.AutoConvertAtomic = cfg.AutoConvertSldvTargetsToAtomic;
@@ -278,6 +280,29 @@ catch
     path = char(row.SldvDataFile);
 end
 signature = st_file_signature(path);
+end
+
+function value = effective_data_file_format(row)
+value = 'SLDV';
+if row.SldvMode == "FILE" && ...
+        ismember('DataFileFormat', row.Properties.VariableNames)
+    candidate = upper(strtrim(string(row.DataFileFormat)));
+    if isscalar(candidate) && ~ismissing(candidate) && strlength(candidate) > 0
+        value = char(candidate);
+    end
+end
+end
+
+function value = effective_mat_variable_name(row)
+value = '';
+if row.SldvMode == "FILE" && ...
+        strcmp(effective_data_file_format(row), 'MAT') && ...
+        ismember('MatVariableName', row.Properties.VariableNames)
+    candidate = strtrim(string(row.MatVariableName));
+    if isscalar(candidate) && ~ismissing(candidate)
+        value = char(candidate);
+    end
+end
 end
 
 function digest = toolkit_signature()

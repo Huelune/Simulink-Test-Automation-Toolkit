@@ -62,7 +62,7 @@ st_run_after_harness
 | Top Model 및 dependency | 보통 외부 | 테스트 대상 모델 |
 | `TestManagement.xlsx` | 실제 업무 파일은 제외 | `Targets` 시트 관리 입력 |
 | `runtime_target.mat` | 제외 | `st_select_target_model`이 생성 |
-| `*_sldvdata.mat` | 제외 | `SldvMode=FILE` 입력 |
+| SLDV 결과 MAT 또는 일반 Dataset MAT | 제외 | `SldvMode=FILE` 입력 |
 | `{TopModel}.mldatx` | 제외 | 생성 또는 증분 갱신되는 Test File |
 
 모델, dependency, Test File과 Excel은 runtime 검증이나 번들 내보내기 전에
@@ -92,6 +92,8 @@ st_run_after_harness
 | `Enabled` | 아니요 | `TRUE` |
 | `SldvMode` | 아니요 | `OFF`, `FILE`, `GENERATE` |
 | `SldvDataFile` | `FILE`에서 필수 | `sldv_data/Controller_sldvdata.mat` |
+| `DataFileFormat` | 아니요 | `SLDV`(기본), `MAT` |
+| `MatVariableName` | 아니요 | `FILE+MAT`에서 Dataset 변수 하나를 선택; 빈 값이면 이름순 전체 선택 |
 | `ExpectedUpdateMode` | 아니요 | `DEFAULT`, `OFF`, `APPLY` |
 | `CoverageFilterMode` | 아니요 | `OFF`, `SUBSYSTEM`, `ALL_CONTENT` |
 | `CoverageBoundaryMode` | 아니요 | `OFF`, `CUT_ONLY` |
@@ -445,15 +447,40 @@ Harness에 Signal Editor 블록 자체가 없을 때만 입력 Scenario 없이 �
 
 ### 9.2 `FILE`
 
-기존 `*_sldvdata.mat`을 검증하고 사용합니다.
+기존 SLDV 결과 MAT 또는 일반 Dataset MAT를 검증하고 사용합니다. 두 파일 모두
+확장자가 `.mat`일 수 있으므로 `DataFileFormat`으로 명시적으로 구분합니다.
 
 ```text
 SldvMode=FILE
 SldvDataFile=sldv_data/Controller_sldvdata.mat
+DataFileFormat=SLDV
 ```
 
-MAT는 일반 Signal Editor MAT가 아니라 Design Verifier가 생성한 `sldvData`
-구조체 파일이어야 합니다. 자동화가 Dataset Scenario로 변환합니다.
+`DataFileFormat` 열이 없는 기존 Excel은 `SLDV`로 처리하므로 동작이 바뀌지 않습니다.
+`SLDV`는 Design Verifier가 생성한 `sldvData` 구조체를 기존 흐름으로 읽고,
+TestCase parameter override도 그대로 적용합니다.
+
+일반 Dataset 입력은 다음처럼 설정합니다.
+
+```text
+SldvMode=FILE
+SldvDataFile=input_data/Controller_scenarios.mat
+DataFileFormat=MAT
+MatVariableName=
+```
+
+MAT 파일의 비어 있지 않은 scalar `Simulink.SimulationData.Dataset`만 후보입니다.
+`MatVariableName`이 비어 있으면 후보를 변수명으로 정렬해 각각 Scenario로 만들고,
+값이 있으면 정확히 일치하는 변수 하나만 사용합니다. Dataset 외 변수가 함께 있어도
+무시하지만 Dataset 후보가 없거나 지정 변수가 없거나 Dataset이 아니면 실패합니다.
+최종 Scenario 이름은 `UT_REQ_{CUTName}_{index}` 규칙을 사용하고 원래 MAT 변수명은
+manifest `OriginalNames`에 보존합니다.
+
+여러 Dataset은 입력 개수·순서·이름·자료형·차원이 모두 같아야 하며 Harness Signal
+Editor ActiveScenario와도 정확히 일치해야 합니다. 각 Scenario의 EndTime은 모든
+입력 신호의 마지막 시간 중 최댓값입니다. 시간 정보가 전혀 없으면 임의 시간을
+생성하지 않고 실패합니다. MAT Scenario는 parameter payload가 없으므로
+`ParameterCount=0`이며 `sldvsimdata`와 `st_apply_sldv_parameters`를 호출하지 않습니다.
 
 Harness의 기존 Signal Editor MAT에 `TestCase_1`, `TestCase_2`, ...처럼 여러
 Scenario가 이미 있으면 SLDV 원본 TestCase 번호와 일대일 대응해 각각의
@@ -744,6 +771,7 @@ plan = st_cleanup_results( ...
 ```text
 Targets.SldvMode=FILE
 Targets.SldvDataFile=<Excel 기준 MAT 상대경로>
+Targets.DataFileFormat=SLDV
 cfg.RunGeneratedTests=false
 cfg.OverwriteTestFile=false
 ```
@@ -785,7 +813,7 @@ summary = st_verify_all( ...
 2. `result/reports/WorkflowPlanResult.ini`
 3. 해당 단계 INI 결과의 `Status`, `Message`
 4. `PreparationMode=FORCE`가 필요한지 판단
-5. SLDV FILE이면 subsystem path, TestCase, Dataset 이름·자료형·차원 확인
+5. FILE이면 형식, Dataset 변수 선택, 이름·자료형·차원과 Harness 일치 여부 확인
 6. Test Manager 단계면 Scenario/Iteration 이름과 기존 TC 중복 확인
 7. runtime 인증은 `VerificationSummary.xlsx`의 required FAIL/BLOCKED 확인
 
