@@ -17,9 +17,14 @@ for i = 1:numel(blocks)
     end
 end
 
+if isempty(found)
+    error('simtest:SignalEditorBlockMissing', ...
+        'Signal Editor block was not found in Harness: %s', harnessName);
+end
 if numel(found) ~= 1
-    error('Could not identify exactly one Signal Editor block. Found=%d, Harness=%s', ...
-        numel(found), harnessName);
+    error('simtest:SignalEditorBlockAmbiguous', ...
+        ['Could not identify exactly one Signal Editor block. ' ...
+         'Found=%d, Harness=%s'], numel(found), harnessName);
 end
 
 blockPath = found{1};

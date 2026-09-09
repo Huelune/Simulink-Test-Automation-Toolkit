@@ -427,6 +427,11 @@ st_cleanup_results('Scope', 'STATE', 'Apply', true);
 ### 9.1 `OFF`
 
 SLDV 없이 기존 단일 Scenario를 사용합니다.
+CUT에 직계 Inport가 없어도 Harness에 Signal Editor가 있으면 기존 ActiveScenario를
+`UT_REQ_{CUTName}_001`로 변경하고 Test Case의 `SignalEditorScenario`에 연결합니다.
+Harness에 Signal Editor 블록 자체가 없을 때만 입력 Scenario 없이 계속하며 WARN을
+기록합니다. 블록은 있지만 MAT 파일이나 ActiveScenario가 손상된 경우에는 해당 대상
+준비를 실패로 기록합니다.
 
 ### 9.2 `FILE`
 

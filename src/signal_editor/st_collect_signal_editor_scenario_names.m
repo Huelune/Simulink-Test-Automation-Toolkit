@@ -10,9 +10,15 @@ function names = st_collect_signal_editor_scenario_names(harnessName, topModel)
 harnessName = char(harnessName);
 topModel = char(topModel);
 
-sigBlock = ...
-    st_find_signal_editor_block( ...
-        harnessName);
+try
+    sigBlock = st_find_signal_editor_block(harnessName);
+catch ME
+    if strcmp(ME.identifier, 'simtest:SignalEditorBlockMissing')
+        names = strings(0,1);
+        return;
+    end
+    rethrow(ME);
+end
 
 scenarioName = ...
     char( ...

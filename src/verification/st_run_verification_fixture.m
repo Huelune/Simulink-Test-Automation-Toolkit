@@ -126,9 +126,20 @@ offIndex = find(targets.CUTName == "NoInportOff", 1);
 offOwner = st_normalize_cut_path(targets.CUTPath(offIndex), cfg.TopModel);
 offInputs = find_system(offOwner, 'SearchDepth', 1, ...
     'Type', 'Block', 'BlockType', 'Inport');
-checks = append(checks, row('FIXTURE.NO_INPORT_SKIP', 'SIGNAL_EDITOR', ...
-    options, pass_if(isempty(offInputs)), ...
-    'OFF target has no direct Inport and uses the skip path', cfg.ModelFile));
+offScenarioOk = false;
+offHarness = char(targets.HarnessName(offIndex));
+try
+    sltest.harness.load(offOwner, offHarness);
+    offSignal = st_find_signal_editor_block(offHarness);
+    offScenarioOk = strcmp(get_param(offSignal, 'ActiveScenario'), ...
+        st_scenario_name(char(targets.CUTName(offIndex)), 1));
+catch
+end
+try, sltest.harness.close(offOwner, offHarness); catch, end
+checks = append(checks, row('FIXTURE.NO_INPORT_SCENARIO', 'SIGNAL_EDITOR', ...
+    options, pass_if(isempty(offInputs) && offScenarioOk), ...
+    ['OFF target has no direct Inport but its Signal Editor uses the ' ...
+     'standard UT_REQ scenario'], cfg.ModelFile));
 
 manifestOk = isfile(cfg.SldvManifestFile);
 if manifestOk
