@@ -134,6 +134,9 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 14. ExpectedUpdateMode=APPLY 갱신과 선택적 재실행 결과가 종합 보고서에 남는지 확인한다.
 15. export 전후 원본 모델·Test File checksum, Dirty 상태와 Harness inventory가
     불변인지 확인한다.
+16. If/Switch/MinMax/MultiPortSwitch/SwitchCase가 있는 CUT의 명세서를 export하고,
+    블록 이름 다음 줄의 D번호·분기종류·저장 파라미터 표현과 DecisionBlockDetails의
+    Outcome/Expression/ReadStatus가 실제 블록 설정과 일치하는지 확인한다.
 
 실패 시 최소 전달 자료:
 
@@ -214,8 +217,10 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   입력 Tmax를 쓰지 않는 회귀 검사와 SLDV의 StopTime fallback 금지 검사를 추가했다.
   현재 PC에는 MATLAB이 없어 이 변경도 정적 검사만 수행했다.
 - 명세서의 `DecisionBlocks` 열은 CUT 아래 If/MinMax/Switch/MultiPortSwitch/SwitchCase
-  후보를 `D번호 실제 블록 Name` 형식의 줄 목록으로 기록한다. 원본 BlockType, Name,
-  전체 경로와 개별 JSON 객체는 `DecisionBlockDetails` 시트에 블록별 행으로 기록한다.
+  후보를 블록 이름과 `D번호 [분기종류]블록유형 (저장된 조건/선택 설정)` 두 줄씩
+  기록한다. If/Switch는 `[T/F]`, MinMax/MultiPortSwitch는 `[SELECT]`, SwitchCase는
+  `[CASE]`를 사용한다. 원본 Outcome, BlockType, Name, Expression, 전체 경로와 개별
+  JSON 객체, 읽기 상태는 `DecisionBlockDetails` 시트에 블록별 행으로 기록한다.
   Name은 경로 문자열을 분리하지 않고 `get_param(path,'Name')`으로 읽는다. `SearchDepth=1`로
   CUT의 직계 자식만 정렬·중복 제거하며 하위 Subsystem, 마스크, 라이브러리 링크,
   Variant, 참조 모델 내부 및 Stateflow/MATLAB Function 내부 분기는 포함하지 않는다.

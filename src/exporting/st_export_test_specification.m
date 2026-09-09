@@ -10,8 +10,9 @@ function [specification, outputFile] = st_export_test_specification(varargin)
 %   the Harness contains a Signal Editor, regardless of direct CUT Inports.
 %   MaxTime is the input scenario Tmax for SLDV FILE/GENERATE cases, and
 %   the Harness solver StopTime for OFF cases.
-%   DecisionBlocks is a readable D-numbered list of direct child decision
-%   block Names. DecisionBlockDetails retains types, paths, and JSON.
+%   DecisionBlocks shows each direct child decision block Name followed by
+%   a D-numbered saved-parameter condition. DecisionBlockDetails retains
+%   outcomes, expressions, types, paths, and JSON.
 p = inputParser;
 addParameter(p, 'OutputFile', '', @(v) (ischar(v) && isrow(v)) || ...
     (isstring(v) && isscalar(v)) || isempty(v));

@@ -60,24 +60,30 @@ Harness `StopTime`이 숫자로 직접 해석되지 않거나 유한한 0 이상
 비고를 기록한다.
 
 `DecisionBlocks`는 CUT 바로 아래(`SearchDepth=1`)에서 정적으로 찾은 `If`, `MinMax`, `Switch`,
-`MultiPortSwitch`, `SwitchCase` 블록을 사람이 바로 읽을 수 있도록 `D번호 실제 블록 Name`
-형식으로 한 줄씩 기록한다. Path, BlockType 순으로 정렬하고 중복을 제거하며 빈 목록은
-빈 셀이다. 예를 들어 블록 이름이 `Switch`, `Switch2`, `If (a==1)`이면 메인 시트에는
-다음처럼 표시된다.
+`MultiPortSwitch`, `SwitchCase` 블록을 블록마다 이름 한 줄과
+`D번호 [분기종류]블록유형 (저장된 조건/선택 설정)` 한 줄로 표시한다. Path, BlockType
+순으로 정렬하고 중복을 제거하며 빈 목록은 빈 셀이다. 예를 들면 다음과 같다.
 
 ```text
-D1 Switch
-D2 Switch2
-D3 If (a==1)
+Dics Block 이름
+D1 [T/F]IF (u1 == 0)
+Dics Block 이름2
+D2 [T/F]Switch (u2 >= 5)
 ```
 
+`If`는 `IfExpression`과 선택적인 `ElseIfExpressions`를, `Switch`는 `Criteria`와
+`Threshold`를 읽는다. `MinMax`, `MultiPortSwitch`, `SwitchCase`는 각각 `[SELECT]`,
+`[SELECT]`, `[CASE]`와 저장된 입력 선택 또는 case 설정을 표시한다. `[T/F]`는 실행
+Coverage 결과가 아니라 저장된 블록에 참/거짓 분기가 있다는 정적 표기다.
+
 `DecisionBlockDetails` 시트에는 메인 시트 행, 테스트 케이스명, CUTPath, D번호,
-`BlockType`, 원본 `Name`, 전체 Simulink `Path`, 개별 JSON 객체를 행 단위로 기록한다.
+`Outcome`, `BlockType`, 원본 `Name`, `Expression`, 전체 Simulink `Path`, 개별 JSON
+객체와 조건식 읽기 상태를 행 단위로 기록한다.
 따라서 표시용 셀을 다시 파싱하지 않고 구조화된 열이나 `JSON` 열을 사용할 수 있다.
 블록이 없는 테스트 케이스도 `JSON=[]`인 행으로 남긴다. JSON 객체의 예시는 다음과 같다.
 
 ```json
-{"BlockType":"If","Name":"If","Path":"Top/CUT/Logic/If"}
+{"BlockType":"If","Name":"If","Path":"Top/CUT/Logic/If","Outcome":"T/F","Expression":"u1 > 0","ExpressionStatus":"OK","Message":""}
 ```
 
 CUT의 직계 자식만 포함하므로 `CUT/Subsystem/Switch`처럼 하위 Subsystem 안에 있는
