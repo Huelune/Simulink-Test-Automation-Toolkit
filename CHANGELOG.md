@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Targets with no usable Harness output now configure an empty verify action and
+  report `SKIP_NO_VERIFY_OUTPUT` during verify-timing validation and expected-value
+  update. Missing or untested verify results still fail when an output exists.
 - Extended `SldvMode=FILE` with explicit `DataFileFormat=SLDV|MAT` and optional
   `MatVariableName`. Ordinary MAT Dataset scenarios are selected deterministically,
   checked for exact interface and time consistency, copied to Signal Editor input,

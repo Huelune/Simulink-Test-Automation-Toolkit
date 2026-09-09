@@ -327,6 +327,11 @@ cfg.RerunAfterExpectedUpdate = true;
 logical scalar입니다. array와 Bus Assessment 생성 지원이 array·Bus 기대값의
 자동 갱신까지 의미하지는 않습니다.
 
+`cfg.VerifyHarnessOutportsOnly=true`일 때 사용 가능한 Harness 출력 신호가 하나도
+없으면 Assessment는 빈 verify Action으로 구성됩니다. 실행 후 verify timing 검사와
+기대값 갱신은 `SKIP_NO_VERIFY_OUTPUT`으로 건너뜁니다. 출력이 존재하는데 verify
+결과가 없거나 `Untested`이면 구성 또는 실행 오류로 계속 처리합니다.
+
 하나 이상의 값이 바뀌고 `cfg.RerunAfterExpectedUpdate=true`이면 동일 범위를
 다시 실행합니다. `PER_CUT`에서는 같은 CVF를 유지한 채 해당 Test Case만
 재실행한 뒤 필터를 복원합니다. 후보 검토 후 승인하는 `REVIEW` 모드는 아직

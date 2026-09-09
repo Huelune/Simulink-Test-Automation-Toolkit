@@ -208,7 +208,7 @@ for i = 1:n
         results(i).FinalResult = initialResult;
         InitialOutcome(i) = result_outcome(initialResult, row, 'INITIAL');
         FinalOutcome(i) = InitialOutcome(i);
-        validate_verify_timing(initialResult, 'initial');
+        validate_verify_timing(initialResult, 'initial', row);
 
         if row.ExpectedUpdateMode == "APPLY"
             updateResult = st_update_expected_from_results(initialResult, row);
@@ -240,7 +240,7 @@ for i = 1:n
             results(i).RerunPerformed = true;
             RerunPerformed(i) = true;
             FinalOutcome(i) = result_outcome(finalResult, row, 'FINAL');
-            validate_verify_timing(finalResult, 'final');
+            validate_verify_timing(finalResult, 'final', row);
         end
 
         append_event(logPath, i, 'RESTORE_START', char(TestCaseName(i)));
@@ -487,8 +487,8 @@ end
 end
 
 
-function validate_verify_timing(resultObj, phase)
-verifyResult = st_validate_sldv_verify_results(resultObj);
+function validate_verify_timing(resultObj, phase, targetRow)
+verifyResult = st_validate_sldv_verify_results(resultObj, targetRow);
 if ~isempty(verifyResult) && any(string(verifyResult.Status) == "FAIL")
     failed = verifyResult(string(verifyResult.Status) == "FAIL", :);
     error('simtest:PerCutVerifyTimingFailed', ...

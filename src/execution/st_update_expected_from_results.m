@@ -211,6 +211,42 @@ for i = 1:n
 
 
         %% ----------------------------------------------------
+        % Verify할 Harness 출력이 없으면 기대값 갱신도 불필요
+        %% ----------------------------------------------------
+
+        [verifyRequired, usableOutputCount] = ...
+            st_inspect_verify_output_requirement( ...
+                T(targetIndex,:), cfg);
+
+        if ~verifyRequired
+
+            Status(i) = ...
+                'SKIP';
+
+            Message(i) = ...
+                sprintf( ...
+                    ['SKIP_NO_VERIFY_OUTPUT | usable Harness outputs=%d; ' ...
+                     'expected update not applicable'], ...
+                    usableOutputCount);
+
+            fprintf('  -> SKIP : SKIP_NO_VERIFY_OUTPUT\n');
+
+            ElapsedSec(i) = ...
+                toc(timerValue);
+
+            Timestamp(i) = ...
+                current_timestamp();
+
+            st_log(cfg, 'INFO', ...
+                ['[ExpectedUpdate %d/%d] skipped | TestCase=%s | ' ...
+                 'Reason=SKIP_NO_VERIFY_OUTPUT | elapsed=%.3f sec'], ...
+                i, n, testCaseName, ElapsedSec(i));
+
+            continue;
+        end
+
+
+        %% ----------------------------------------------------
         % Output Run
         %% ----------------------------------------------------
 

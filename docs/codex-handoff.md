@@ -140,6 +140,10 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 17. FILE+MAT 단일/복수 Dataset, 명시적 MatVariableName, Scenario 간 및 Harness
     interface mismatch, Dataset 없음·시간 없음, nested dataNoEffect를 확인하고 MAT
     실행에서 sldvsimdata와 parameter override가 호출되지 않는 증거를 보관한다.
+18. 사용 가능한 Harness 출력이 0개인 ORIGINAL/STANDALONE 대상을 실행하여
+    Assessment 구성, verify timing, ExpectedUpdateMode=APPLY가 각각
+    SKIP_NO_VERIFY_OUTPUT으로 계속되는지 확인한다. 출력이 있는 대상의 verify 결과
+    누락과 Untested는 계속 실패하는 반대 사례도 함께 보관한다.
 
 실패 시 최소 전달 자료:
 
@@ -218,6 +222,18 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - 세부 사용법과 런타임 체크: `docs/harness-template-clone.md`.
 - MATLAB은 이 PC에서 발견되지 않았다. 새 단위/통합 테스트는 런타임 미수행이다.
   정적 검사 결과만으로 clone/CUT 연결이나 복구가 런타임 검증됐다고 표현하지 않는다.
+
+### 2026-09-09 출력 없는 대상의 verify 처리
+
+- `VerifyHarnessOutportsOnly=true`에서 실제 실행 Harness 또는 standalone 모델에
+  사용 가능한 최상위 출력 신호가 0개이면 빈 verify Action을 정상으로 허용한다.
+  verify timing 검증과 기대값 갱신은 `SKIP_NO_VERIFY_OUTPUT`으로 기록한다.
+- 출력이 하나라도 있으면 verify 결과 없음과 Untested는 이전과 동일하게 실패한다.
+  `VerifyHarnessOutportsOnly=false`도 출력 개수와 무관하게 verify 결과가 필요하다.
+- PER_CUT verify 검증은 현재 대상 행만 전달하여 standalone 실행 context와 다중 CUT
+  매핑을 보존한다.
+- 현재 PC에는 MATLAB이 없어 순수 정책 테스트와 정적 계약 검사만 작성했다. R2025b
+  런타임 검증은 위 18번 증거를 추가한 뒤에만 완료로 판단한다.
 
 
 ### 2026-09-04 테스트 명세서 추출 추가

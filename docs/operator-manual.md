@@ -540,6 +540,13 @@ cfg.CheckSharedSignalEditorDataFile = false;
 
 기대값 변경 의도가 없다면 Excel 행과 전역 기본값을 `OFF`로 설정합니다.
 
+`cfg.VerifyHarnessOutportsOnly=true`이고 실제 실행 Harness/standalone 모델에
+사용 가능한 최상위 출력 신호가 0개이면 verify할 대상도 없습니다. 이 경우 빈
+verify Action은 정상 구성이며 verify timing 검사와 기대값 갱신은
+`SKIP_NO_VERIFY_OUTPUT`으로 기록하고 계속합니다. 출력이 하나라도 있는데 verify
+결과가 없거나 `Untested`인 경우는 계속 실패입니다. 모든 Assessment 입력을
+검증하는 `VerifyHarnessOutportsOnly=false`에는 이 예외를 적용하지 않습니다.
+
 ## 11. 종합 검증
 
 ### 11.1 `st_verify_all`

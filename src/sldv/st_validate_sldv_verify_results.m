@@ -1,8 +1,14 @@
-function R = st_validate_sldv_verify_results(resultObj)
-%ST_VALIDATE_SLDV_VERIFY_RESULTS Fail SLDV scenarios with untested verify.
+function R = st_validate_sldv_verify_results(resultObj, targetConfig)
+%ST_VALIDATE_SLDV_VERIFY_RESULTS Validate SLDV verify result timing.
+% A Harness with no usable output legitimately records no verify result when
+% VerifyHarnessOutportsOnly is enabled. That case is reported as SKIP.
 
 cfg = st_require_runtime_target();
-T = st_load_targets(cfg.OnlyEnabled);
+if nargin < 2 || isempty(targetConfig)
+    T = st_load_targets(cfg.OnlyEnabled);
+else
+    T = targetConfig;
+end
 testCaseResults = st_collect_test_case_results(resultObj);
 
 TargetRow = zeros(0,1);
@@ -12,13 +18,33 @@ TestCaseName = strings(0,1);
 ScenarioName = strings(0,1);
 VerifyCount = zeros(0,1);
 UntestedCount = zeros(0,1);
+UsableHarnessOutputCount = zeros(0,1);
 Status = strings(0,1);
 Message = strings(0,1);
+
+timerValue = tic;
+st_log(cfg, 'INFO', ...
+    'SLDV verify result validation start | target count=%d', height(T));
 
 for targetIndex = 1:height(T)
     profile = st_get_sldv_profile(T(targetIndex,:), cfg);
     if strcmp(profile.Mode, 'OFF')
         continue;
+    end
+
+    requirementError = [];
+    verifyRequired = true;
+    usableOutputCount = NaN;
+    try
+        [verifyRequired, usableOutputCount] = ...
+            st_inspect_verify_output_requirement(T(targetIndex,:), cfg);
+    catch ME
+        requirementError = ME;
+        st_log(cfg, 'ERROR', ...
+            ['SLDV verify output inspection failed | No=%g | CUT=%s | ' ...
+             'TestCase=%s | %s'], ...
+            double(T.No(targetIndex)), char(string(T.CUTName(targetIndex))), ...
+            char(string(T.TestCaseName(targetIndex))), ME.message);
     end
 
     tcResult = find_test_case_result(testCaseResults, char(T.TestCaseName(targetIndex)));
@@ -35,8 +61,26 @@ for targetIndex = 1:height(T)
         % before verify counts can be collected.
         VerifyCount(row,1) = NaN;
         UntestedCount(row,1) = NaN;
+        UsableHarnessOutputCount(row,1) = usableOutputCount;
 
         try
+            if ~isempty(requirementError)
+                rethrow(requirementError);
+            end
+            if ~verifyRequired
+                VerifyCount(row,1) = 0;
+                UntestedCount(row,1) = 0;
+                Status(row,1) = 'SKIP';
+                Message(row,1) = sprintf([ ...
+                    'SKIP_NO_VERIFY_OUTPUT | usable Harness outputs=%d; ' ...
+                    'verify timing not applicable'], usableOutputCount);
+                st_log(cfg, 'INFO', ...
+                    ['SLDV verify validation skipped | No=%g | CUT=%s | ' ...
+                     'Scenario=%s | Reason=SKIP_NO_VERIFY_OUTPUT'], ...
+                    double(T.No(targetIndex)), ...
+                    char(string(T.CUTName(targetIndex))), scenario);
+                continue;
+            end
             if isempty(tcResult)
                 error('Test Case Result not found.');
             end
@@ -66,13 +110,22 @@ for targetIndex = 1:height(T)
         catch ME
             Status(row,1) = 'FAIL';
             Message(row,1) = string(ME.message);
+            st_log(cfg, 'ERROR', ...
+                ['SLDV verify validation failed | No=%g | CUT=%s | ' ...
+                 'Scenario=%s | %s'], ...
+                double(T.No(targetIndex)), ...
+                char(string(T.CUTName(targetIndex))), scenario, ME.message);
         end
     end
 end
 
 R = table(TargetRow, No, CUTName, TestCaseName, ScenarioName, ...
-    VerifyCount, UntestedCount, Status, Message);
+    VerifyCount, UntestedCount, UsableHarnessOutputCount, Status, Message);
 st_write_result('SldvVerifyTimingResult', R);
+st_log(cfg, 'INFO', ...
+    ['SLDV verify result validation end | rows=%d | fail=%d | skip=%d | ' ...
+     'elapsed=%.3f sec'], ...
+    height(R), sum(Status == "FAIL"), sum(Status == "SKIP"), toc(timerValue));
 end
 
 
