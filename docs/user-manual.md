@@ -124,19 +124,23 @@ disp(cfg.ManagementExcel)
 | `TestCaseName` | Test Manager Test Case 이름 |
 
 실행 범위와 갱신 정책을 제어하려면 `Enabled`, `SldvMode`, `SldvDataFile`,
-`ExpectedUpdateMode`, `CoverageFilterMode`, `CoverageFilterAction`,
+`ExpectedUpdateMode`, `CoverageFilterMode`, `CoverageBoundaryMode`, `CoverageFilterAction`,
 `CoverageFilterRationale`, `PreparationMode`, `PreparationFromStage`를 사용합니다.
 
 Coverage 자동 필터를 사용하려면 `CoverageFilterMode`를 `SUBSYSTEM` 또는
 `ALL_CONTENT`로 정하고, `CoverageFilterAction`과
 `CoverageFilterRationale`을 함께 입력합니다. `SUBSYSTEM`은 CUT의 직속 하위
 Subsystem 블록만, `ALL_CONTENT`는 그 직속 하위 Subsystem과 각 내부 전체를
-필터 대상으로 합니다. CUT 자기 자신과 일반 블록은 직접 필터링하지 않으며,
-기본 설정은 실행 중 Test Case별 임시 적용입니다.
+필터 대상으로 합니다. 이 content rule은 CUT 자기 자신과 일반 블록을 직접
+선택하지 않으며, 기본 설정은 실행 중 Test Case별 임시 적용입니다.
+
+Harness의 CUT 외부를 Coverage에서 제외하려면 독립 옵션
+`CoverageBoundaryMode=CUT_ONLY`를 사용합니다. 기존 모드가 `OFF`여도 동작하며,
+기존 `SUBSYSTEM`/`ALL_CONTENT` 규칙과 동시에 적용할 수 있습니다.
 
 실제 실행이 끝난 뒤 `[code, details] = st_check_per_cut_cvf()`를 실행하면 CUT별
 6비트 점검 코드가 출력됩니다. `111111`만 전체 통과입니다. 문제가 있으면
-`CVF-CHECK-v1`로 시작하는 줄 전체와 `details` 표를 전달하십시오.
+`CVF-CHECK-v2`로 시작하는 줄 전체와 `details` 표를 전달하십시오.
 
 환경과 실행 결과까지 함께 확인하려면 `summary = st_check_actual_system()`을
 실행하십시오. `SYSTEM-CHECK-v1`의 `ENV`, `RUN`, `CVF`가 모두 `111111`이면

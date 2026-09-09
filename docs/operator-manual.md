@@ -94,6 +94,7 @@ st_run_after_harness
 | `SldvDataFile` | `FILE`에서 필수 | `sldv_data/Controller_sldvdata.mat` |
 | `ExpectedUpdateMode` | 아니요 | `DEFAULT`, `OFF`, `APPLY` |
 | `CoverageFilterMode` | 아니요 | `OFF`, `SUBSYSTEM`, `ALL_CONTENT` |
+| `CoverageBoundaryMode` | 아니요 | `OFF`, `CUT_ONLY` |
 | `CoverageFilterAction` | 필터 사용 시 | `EXCLUDE`, `JUSTIFY` |
 | `CoverageFilterRationale` | 필터 사용 시 | 검토 가능한 근거 문구 |
 | `PreparationMode` | 아니요 | `DEFAULT`, `AUTO`, `FORCE` |
@@ -157,10 +158,18 @@ API로 적용하고 실행 종료 또는 오류 시 기존 수동 필터로 복�
 Test Case별 필터 설정을 Test File에 저장합니다. 두 모드 모두 자동 필터를
 Test File 수준에는 기록하지 않습니다. 필터 규칙은 CUT 자체가 아니라 직속 하위
 Subsystem마다 생성합니다. `SUBSYSTEM`은 해당 블록 인스턴스만, `ALL_CONTENT`는
-해당 Subsystem과 내부 전체를 대상으로 하며 일반 블록은 직접 rule로 만들지
-않습니다. 직속 하위 Subsystem이 없으면 규칙 0개짜리 CVF를 생성합니다. 생성한
+해당 Subsystem과 내부 전체를 대상으로 하며 이 content rule에서는 일반 블록을
+직접 선택하지 않습니다. 경계 모드도 OFF이고 직속 하위 Subsystem이 없으면 규칙
+0개짜리 CVF를 생성합니다. 생성한
 CVF는 다시 열어 규칙 수와 모드를 검증하며, 검증에 실패하면 해당 CUT 실행을
 실패로 기록합니다.
+
+`CoverageBoundaryMode=CUT_ONLY`는 위 설정과 독립적으로 조합합니다. 실제 실행
+Harness 또는 standalone 모델에서 CUT와 이름·인터페이스가 일치하는 블록을 찾고,
+CUT 외부 최상위 Subsystem에는 `SubsystemAllContent`, 나머지 최상위 블록에는
+`BlockInstance` EXCLUDE 규칙을 표준 사유로 추가합니다. 따라서
+`CoverageFilterMode=OFF + CoverageBoundaryMode=CUT_ONLY`도 CVF를 생성하며
+`ExecutionMode=AUTO`는 `PER_CUT`을 선택합니다.
 
 실제 기본값은 파일을 수정해야 변경됩니다. Command Window에서 반환된 `cfg`만
 수정해도 다음 공개 명령의 새 `st_config()` 호출에는 반영되지 않습니다.
@@ -181,9 +190,9 @@ Suite, Test Case에 연결된 기존 CVF를 임시로 해제하고 새로 생성
 disp(details(:, {'No','TestCaseName','Code','Status','Message'}))
 ```
 
-비트 순서는 산출물 무결성, 적용 수명주기, rule 수, CUT 자신 제외, 직속 하위
-Subsystem 정확 일치, 모드·action 일치입니다. `111111`만 전체 통과이며 문의 시
-`CVF-CHECK-v1` 출력 줄 전체를 전달합니다.
+비트 순서는 산출물 무결성, 적용 수명주기, rule 수, 고유 block selector,
+활성 rule 범주, selector/action/rationale 정책입니다. `111111`만 전체 통과이며 문의 시
+`CVF-CHECK-v2` 출력 줄 전체를 전달합니다.
 
 현장 실행 전체를 한 번에 판정할 때는 다음 명령을 우선 사용합니다.
 
@@ -366,7 +375,8 @@ Test Case 판정이 `FAILED`, `UNTESTED`, `INCOMPLETE`여도 실행 자체가 �
 `FinalOutcome`과 `WARN`으로 기록하고 다음 CUT을 실행합니다. `run(tc)` 또는 결과
 저장 중 예외가 발생한 경우에만 실행 실패(`FAIL`)로 기록됩니다.
 
-`BATCH`는 모든 활성 행의 `CoverageFilterMode=OFF`일 때만 허용됩니다.
+`BATCH`는 모든 활성 행의 `CoverageFilterMode`와 `CoverageBoundaryMode`가 모두
+`OFF`일 때만 허용됩니다.
 `SUMMARY`는 CUT별 MLDATX·Excel·경량 HTML, `FULL`은 여기에 PDF와 전체 Coverage
 HTML을 추가합니다. 필터 복원 실패는 다음 CUT로 진행하지 않는 안전 오류입니다.
 

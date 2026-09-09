@@ -74,6 +74,7 @@ if strcmp(options.Profile, 'CERTIFY')
     checks = [checks; certify_partial_failure(cfg, options)];
     checks = [checks; certify_fixture_export(cfg, options, ...
         fullfile(workspaceDirectory, 'fixture_exports'))];
+    checks = [checks; certify_signal_editor_edge_cases(cfg, options)];
 else
     checks = append(checks, row('CERTIFY.FIXTURE.EXHAUSTIVE', ...
         'CORE', options, 'SKIP', ...
@@ -230,8 +231,8 @@ try
 
     filters = readtable(reportInfo.Summary, 'Sheet', 'Targets', ...
         'TextType', 'string', 'VariableNamingRule', 'preserve');
-    active = filters.FilterMode ~= "OFF";
-    filterOk = sum(active) == 2 && ...
+    active = filters.FilterMode ~= "OFF" | filters.BoundaryMode ~= "OFF";
+    filterOk = sum(active) == 3 && ...
         all(filters.CVFRuleCount(active) > 0) && ...
         all(filters.FilterGenerationStatus(active) == "OK") && ...
         all(filters.FilterApplyStatus(active) ~= "NOT_RUN") && ...
@@ -394,7 +395,8 @@ function checks = certify_fixture_export(cfg, options, destination)
 checks = st_empty_verification_checks();
 started = timestamp_text(); timerValue = tic;
 try
-    snapshot = st_create_verification_snapshot(cfg, destination, false);
+    snapshot = st_create_verification_snapshot( ...
+        cfg, destination, false, 'STANDALONE_HARNESS');
     templateBefore = inventory_tree(fullfile(snapshot.Root, 'template'));
     oldPath = path;
     oldDirectory = pwd;
@@ -406,16 +408,88 @@ try
     second = run_exported_tests();
     templateAfter = inventory_tree(fullfile(snapshot.Root, 'template'));
     immutable = isequal(templateBefore, templateAfter);
-    reportsOk = strcmp(first.Report.Status, 'OK') && ...
-        strcmp(second.Report.Status, 'OK');
+    reportsOk = ismember(string(first.Report.Status), ["OK","PASS"]) && ...
+        ismember(string(second.Report.Status), ["OK","PASS"]);
     checks = append(checks, row('CERTIFY.FIXTURE.EXPORT_RERUN', ...
         'EXPORT', options, pass_if(immutable && reportsOk), ...
-        'Bundle checksums passed, two reruns completed, template unchanged', ...
+        ['Standalone bundle checksums passed, two sequential reruns ' ...
+         'completed, template unchanged'], ...
         snapshot.Root, toc(timerValue), started));
 catch ME
     checks = append(checks, exception_row( ...
         'CERTIFY.FIXTURE.EXPORT_RERUN', 'EXPORT', options, ME, ...
         destination, toc(timerValue), started));
+end
+end
+
+function checks = certify_signal_editor_edge_cases(cfg, options)
+checks = st_empty_verification_checks();
+targets = st_load_targets(cfg.OnlyEnabled);
+rowIndex = find(targets.CUTName == "NoInportOff", 1);
+if isempty(rowIndex)
+    checks = append(checks, row('CERTIFY.FIXTURE.SIGNAL_EDITOR_EDGES', ...
+        'SIGNAL_EDITOR', options, 'BLOCKED', ...
+        'NoInportOff target is unavailable'));
+    return;
+end
+target = targets(rowIndex,:);
+
+[status, message] = run_signal_editor_variant(cfg, target, 'MISSING');
+checks = append(checks, row('CERTIFY.FIXTURE.NO_SIGNAL_EDITOR', ...
+    'SIGNAL_EDITOR', options, status, message, cfg.ModelFile));
+
+[status, message] = run_signal_editor_variant(cfg, target, 'BROKEN_FILE');
+checks = append(checks, row('CERTIFY.FIXTURE.BROKEN_SIGNAL_EDITOR', ...
+    'SIGNAL_EDITOR', options, status, message, cfg.ModelFile));
+end
+
+function [status, message] = run_signal_editor_variant(cfg, target, variant)
+backup = [tempname(fileparts(cfg.ModelFile)) '.slx'];
+copyfile(cfg.ModelFile, backup, 'f');
+cleanup = onCleanup(@() restore_model_file(backup, cfg)); %#ok<NASGU>
+try
+    owner = st_normalize_cut_path(target.CUTPath, cfg.TopModel);
+    harness = char(target.HarnessName);
+    load_system(cfg.ModelFile);
+    sltest.harness.load(owner, harness);
+    signal = st_find_signal_editor_block(harness);
+    if strcmp(variant, 'MISSING')
+        delete_block(signal);
+    else
+        set_param(signal, 'Filename', ...
+            fullfile(fileparts(cfg.ModelFile), ...
+            'missing_signal_editor_data.mat'));
+    end
+    save_system(harness);
+    sltest.harness.close(owner, harness);
+    save_system(cfg.TopModel);
+    scope = st_target_scope('enter', target); %#ok<NASGU>
+    result = st_configure_signal_editors([]);
+    if strcmp(variant, 'MISSING')
+        passed = height(result) == 1 && ...
+            string(result.Status(1)) == "SKIP_NO_SIGNAL_EDITOR";
+        message = ...
+            'Missing Signal Editor returns WARN/SKIP_NO_SIGNAL_EDITOR';
+    else
+        passed = height(result) == 1 && string(result.Status(1)) == "FAIL";
+        message = 'Broken Signal Editor MAT configuration fails the target';
+    end
+    status = pass_if(passed);
+catch ME
+    status = 'FAIL';
+    message = sprintf('%s fixture failed: %s: %s', ...
+        variant, ME.identifier, ME.message);
+end
+end
+
+function restore_model_file(backup, cfg)
+try
+    if bdIsLoaded(cfg.TopModel), close_system(cfg.TopModel, 0); end
+catch
+end
+if isfile(backup)
+    copyfile(backup, cfg.ModelFile, 'f');
+    delete(backup);
 end
 end
 

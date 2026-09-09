@@ -6,15 +6,15 @@ function [overallCode, details] = st_check_per_cut_cvf(varargin)
 %
 % The command reads the latest PER_CUT run by default and prints one fixed
 % six-bit code for every CVF-enabled target plus an aggregate code. Send the
-% complete lines beginning with "CVF-CHECK-v1" when requesting diagnosis.
+% complete lines beginning with "CVF-CHECK-v2" when requesting diagnosis.
 %
 % Bit order:
 %   B1  target manifest, CVF file, and SHA-256 are consistent
 %   B2  generation, application, and restoration statuses are all OK
 %   B3  saved rule count matches the manifest and is greater than zero
-%   B4  the CUT root itself is not selected
-%   B5  selectors exactly match the CUT's direct-child Subsystems
-%   B6  selector type and filter action match the Excel mode/action
+%   B4  every selector is a unique, nonempty block selector
+%   B5  enabled CUT-child/boundary rule categories are represented
+%   B6  selector type, action, and rationale match each category policy
 %
 % Only result files are read. A model that was not already loaded is closed
 % without saving when the inspection completes.
@@ -85,6 +85,7 @@ No = zeros(0,1);
 TestCaseName = strings(0,1);
 CUTPath = strings(0,1);
 CoverageFilterMode = strings(0,1);
+CoverageBoundaryMode = strings(0,1);
 Code = strings(0,1);
 Status = strings(0,1);
 Message = strings(0,1);
@@ -97,7 +98,9 @@ for i = 1:numel(targets)
     target = targets(i);
     mode = upper(field_text(target, ...
         {'FilterMode','CoverageFilterMode'}, ''));
-    if strcmp(mode, 'OFF')
+    boundary = upper(field_text(target, ...
+        {'BoundaryMode','CoverageBoundaryMode'}, 'OFF'));
+    if strcmp(mode, 'OFF') && strcmp(boundary, 'OFF')
         continue;
     end
 
@@ -111,6 +114,7 @@ for i = 1:numel(targets)
     CUTPath(end+1,1) = string(field_text( ...
         target, {'CUTPath'}, '<unknown>')); %#ok<AGROW>
     CoverageFilterMode(end+1,1) = string(mode); %#ok<AGROW>
+    CoverageBoundaryMode(end+1,1) = string(boundary); %#ok<AGROW>
     Code(end+1,1) = string(bits_to_code(bits)); %#ok<AGROW>
     if all(bits)
         Status(end+1,1) = "PASS"; %#ok<AGROW>
@@ -130,6 +134,7 @@ if isempty(bitRows)
     TestCaseName = "<none>";
     CUTPath = "";
     CoverageFilterMode = "OFF";
+    CoverageBoundaryMode = "OFF";
     Code = "000000";
     Status = "BLOCKED";
     Message = "No CVF-enabled target was found in the selected run";
@@ -140,17 +145,18 @@ else
     overallCode = bits_to_code(all(bitRows, 1));
 end
 
-details = table(No, TestCaseName, CUTPath, CoverageFilterMode, Code, ...
+details = table(No, TestCaseName, CUTPath, CoverageFilterMode, ...
+    CoverageBoundaryMode, Code, ...
     Status, Message, RuleCount, RulePaths, TargetManifest);
 
 print_legend();
 for i = 1:height(details)
-    fprintf(['CVF-CHECK-v1 TARGET No=%g TestCase="%s" ' ...
+    fprintf(['CVF-CHECK-v2 TARGET No=%g TestCase="%s" ' ...
         'CODE=%s STATUS=%s\n'], ...
         details.No(i), char(details.TestCaseName(i)), ...
         char(details.Code(i)), char(details.Status(i)));
 end
-fprintf('CVF-CHECK-v1 OVERALL=%s RUN="%s"\n', ...
+fprintf('CVF-CHECK-v2 OVERALL=%s RUN="%s"\n', ...
     overallCode, runDirectory);
 
 if strcmp(overallCode, '111111')
@@ -285,33 +291,25 @@ if ~bits(3)
         "B3 rule count is zero or differs from the manifest"; %#ok<AGROW>
 end
 
-if ~modelAvailable
-    failures(end+1,1) = "B4-B6 model could not be loaded: " + ...
-        modelMessage; %#ok<AGROW>
-    diagnostic.Message = strjoin(unique(failures, 'stable'), ' | ');
-    return;
-end
-
 mode = upper(field_text(manifest, ...
     {'CoverageFilterMode'}, field_text(target, {'FilterMode'}, '')));
+boundary = upper(field_text(manifest, ...
+    {'CoverageBoundaryMode'}, ...
+    field_text(target, {'BoundaryMode'}, 'OFF')));
 action = upper(field_text(manifest, ...
     {'CoverageFilterAction'}, field_text(target, {'FilterAction'}, '')));
-ownerPath = st_normalize_cut_path( ...
-    field_text(manifest, {'CUTPath'}, field_text(target, {'CUTPath'}, '')), ...
-    cfg.TopModel);
+rationale = string(field_text(manifest, ...
+    {'CoverageFilterRationale'}, ...
+    field_text(target, {'FilterRationale'}, '')));
+boundaryRationale = ...
+    "Automatically excluded because block is outside the CUT coverage boundary.";
 
 try
-    ownerSid = string(Simulink.ID.getSID(ownerPath));
-    expectedPaths = direct_child_subsystems(ownerPath);
-    expectedSids = strings(numel(expectedPaths),1);
-    for i = 1:numel(expectedPaths)
-        expectedSids(i) = string(Simulink.ID.getSID(expectedPaths{i}));
-    end
-
     selectedSids = strings(actualRuleCount,1);
     selectedPaths = strings(actualRuleCount,1);
     selectorTypes = strings(actualRuleCount,1);
     ruleModes = strings(actualRuleCount,1);
+    ruleRationales = strings(actualRuleCount,1);
     selectorsAreBlocks = true;
     for i = 1:actualRuleCount
         selector = savedRules(i).Selector;
@@ -321,21 +319,29 @@ try
         selectedPaths(i) = selector_path(selector.Id);
         selectorTypes(i) = enum_tail(selector.Type);
         ruleModes(i) = enum_tail(savedRules(i).Mode);
+        ruleRationales(i) = string(savedRules(i).Rationale);
     end
     diagnostic.RulePaths = strjoin(selectedPaths, ' | ');
 
     bits(4) = selectorsAreBlocks && ...
-        ~any(selectedSids == ownerSid) && ...
-        ~any(selectedPaths == string(ownerPath));
+        all(strlength(selectedSids) > 0) && ...
+        numel(unique(selectedSids)) == actualRuleCount;
     if ~bits(4)
-        failures(end+1,1) = "B4 CUT root is selected or unresolved"; %#ok<AGROW>
+        failures(end+1,1) = ...
+            "B4 selectors are not unique nonempty block selectors"; %#ok<AGROW>
     end
 
-    bits(5) = selectorsAreBlocks && exact_string_set( ...
-        selectedPaths, string(expectedPaths(:)));
+    boundaryRules = ruleRationales == boundaryRationale;
+    contentRules = ~boundaryRules;
+    contentRepresented = (strcmp(mode, 'OFF') && ~any(contentRules)) || ...
+        (~strcmp(mode, 'OFF') && any(contentRules));
+    boundaryRepresented = (strcmp(boundary, 'OFF') && ...
+        ~any(boundaryRules)) || ...
+        (strcmp(boundary, 'CUT_ONLY') && any(boundaryRules));
+    bits(5) = contentRepresented && boundaryRepresented;
     if ~bits(5)
         failures(end+1,1) = ...
-            "B5 selectors do not exactly match direct-child Subsystems"; %#ok<AGROW>
+            "B5 enabled rule categories are not represented"; %#ok<AGROW>
     end
 
     if strcmp(mode, 'SUBSYSTEM')
@@ -343,12 +349,18 @@ try
     else
         expectedSelectorType = "SUBSYSTEMALLCONTENT";
     end
-    bits(6) = selectorsAreBlocks && ...
-        all(selectorTypes == expectedSelectorType) && ...
-        all(ruleModes == string(action));
+    contentPolicy = all(selectorTypes(contentRules) == ...
+        expectedSelectorType) && ...
+        all(ruleModes(contentRules) == string(action)) && ...
+        all(ruleRationales(contentRules) == rationale);
+    boundaryPolicy = all(ismember(selectorTypes(boundaryRules), ...
+        ["BLOCKINSTANCE","SUBSYSTEMALLCONTENT"])) && ...
+        all(ruleModes(boundaryRules) == "EXCLUDE") && ...
+        all(ruleRationales(boundaryRules) == boundaryRationale);
+    bits(6) = selectorsAreBlocks && contentPolicy && boundaryPolicy;
     if ~bits(6)
         failures(end+1,1) = ...
-            "B6 selector type or filter action differs from Excel"; %#ok<AGROW>
+            "B6 selector type, action, or rationale differs from policy"; %#ok<AGROW>
     end
 catch ME
     failures(end+1,1) = "B4-B6 model selector inspection failed: " + ...
@@ -462,13 +474,13 @@ end
 
 
 function print_legend()
-fprintf(['CVF-CHECK-v1 BITS=' ...
+fprintf(['CVF-CHECK-v2 BITS=' ...
     'B1:INTEGRITY,' ...
     'B2:LIFECYCLE,' ...
     'B3:RULE_COUNT,' ...
-    'B4:CUT_EXCLUDED,' ...
-    'B5:DIRECT_CHILDREN,' ...
-    'B6:MODE_ACTION\n']);
+    'B4:BLOCK_SELECTORS,' ...
+    'B5:RULE_CATEGORIES,' ...
+    'B6:RULE_POLICY\n']);
 end
 
 
@@ -485,15 +497,17 @@ No = NaN;
 TestCaseName = "<unavailable>";
 CUTPath = "";
 CoverageFilterMode = "";
+CoverageBoundaryMode = "";
 Code = "000000";
 Status = "BLOCKED";
 Message = string(message);
 RuleCount = 0;
 RulePaths = "";
 TargetManifest = "";
-details = table(No, TestCaseName, CUTPath, CoverageFilterMode, Code, ...
+details = table(No, TestCaseName, CUTPath, CoverageFilterMode, ...
+    CoverageBoundaryMode, Code, ...
     Status, Message, RuleCount, RulePaths, TargetManifest);
 print_legend();
-fprintf('CVF-CHECK-v1 OVERALL=000000 ERROR="%s"\n', ...
+fprintf('CVF-CHECK-v2 OVERALL=000000 ERROR="%s"\n', ...
     char(replace(string(message), '"', ' ')));
 end

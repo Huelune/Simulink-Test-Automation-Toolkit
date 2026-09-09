@@ -6,7 +6,7 @@ function summary = st_check_actual_system(varargin)
 %
 % The command inspects the local MATLAB environment, one PER_CUT run, and
 % the saved CVFs. It never saves a model, Test File, or result artifact.
-% Send the complete lines beginning with SYSTEM-CHECK-v1 and CVF-CHECK-v1
+% Send the complete lines beginning with SYSTEM-CHECK-v1 and CVF-CHECK-v2
 % when requesting diagnosis.
 %
 % ENV bit order:

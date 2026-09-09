@@ -89,7 +89,7 @@ result/exports/{timestamp}_{id}/
 ## Manifest와 재실행
 
 manifest v2는 번들 ID, MATLAB 릴리스, `ExecutionModelMode`, 대상별 standalone
-모델 경로와 CUT 경로, 상대 경로, 필요한 제품,
+모델 경로와 CUT 경로, `CoverageBoundaryMode`, 상대 경로, 필요한 제품,
 모든 기준 파일의 SHA-256과 크기를 기록합니다. 로컬 절대 source path는
 기록하지 않습니다.
 

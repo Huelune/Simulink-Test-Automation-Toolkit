@@ -113,6 +113,7 @@ if strcmp(applicationMode, 'RUNTIME')
 end
 
 FilterMode = strings(n, 1);
+BoundaryMode = repmat("OFF", n, 1);
 FilterAction = strings(n, 1);
 FilterFile = strings(n, 1);
 ManualFilterCount = zeros(n, 1);
@@ -142,6 +143,9 @@ try
             caseNames(i), 1);
         row = targetConfig(targetIndex,:);
         FilterMode(i) = row.CoverageFilterMode;
+        if ismember('CoverageBoundaryMode', row.Properties.VariableNames)
+            BoundaryMode(i) = row.CoverageBoundaryMode;
+        end
         FilterAction(i) = row.CoverageFilterAction;
         if strcmp(existingFilterPolicy, 'REPLACE')
             existing = unique([fileOriginalFilters; ...
@@ -152,7 +156,7 @@ try
             ManualFilterCount(i) = numel(manualFilters{i});
             filters = manualFilters{i};
         end
-        if row.CoverageFilterMode ~= "OFF"
+        if st_coverage_filter_active(row)
             expectedFile = char(filterFiles(i));
             if isempty(expectedFile)
                 expectedFile = st_coverage_filter_file(row, cfg);
@@ -182,7 +186,7 @@ try
                 Message(i) = ...
                     "Automatic filter deferred to result coverage data";
             end
-        elseif row.CoverageFilterMode == "OFF"
+        elseif ~st_coverage_filter_active(row)
             Message(i) = "Automatic coverage filter disabled";
         else
             Status(i) = "WARN";
@@ -228,11 +232,11 @@ ApplicationMode = repmat(string(applicationMode), n, 1);
 ExistingFilterPolicy = repmat(string(existingFilterPolicy), n, 1);
 ManagedFilterApplication = repmat(string(managed_application_text( ...
     applyManagedFiltersDuringRun)), n, 1);
-R = table(caseNames, FilterMode, FilterAction, ApplicationMode, ...
+R = table(caseNames, FilterMode, BoundaryMode, FilterAction, ApplicationMode, ...
     ExistingFilterPolicy, ManagedFilterApplication, FilterFile, ...
     ManualFilterCount, ...
     IgnoredFilterCount, AppliedFilterCount, Status, Message, ...
-    'VariableNames', {'TestCaseName','FilterMode','FilterAction', ...
+    'VariableNames', {'TestCaseName','FilterMode','BoundaryMode','FilterAction', ...
     'ApplicationMode','ExistingFilterPolicy','ManagedFilterApplication', ...
     'FilterFile', ...
     'ManualFilterCount','IgnoredFilterCount','AppliedFilterCount', ...

@@ -11,7 +11,7 @@ if ~isscalar(requestedMode) || ...
         'ExecutionMode must be AUTO, BATCH, or PER_CUT.');
 end
 
-hasActiveFilter = any(string(targetConfig.CoverageFilterMode) ~= "OFF");
+hasActiveFilter = any(st_coverage_filter_active(targetConfig));
 if requestedMode == "AUTO"
     if hasActiveFilter
         mode = 'PER_CUT';
@@ -21,7 +21,7 @@ if requestedMode == "AUTO"
 elseif requestedMode == "BATCH" && hasActiveFilter
     error('simtest:BatchExecutionWithCoverageFilter', ...
         ['BATCH execution is allowed only when every enabled target has ' ...
-         'CoverageFilterMode=OFF. Use AUTO or PER_CUT.']);
+         'both coverage filter modes OFF. Use AUTO or PER_CUT.']);
 else
     mode = char(requestedMode);
 end

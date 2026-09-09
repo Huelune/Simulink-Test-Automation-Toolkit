@@ -127,6 +127,7 @@ st_find_target_paths              % 같은 이름의 후보를 문맥으로 순�
 | `SldvDataFile` | 조건부 | 빈 값 | `FILE`에서 필수인 절대 또는 workbook 상대 경로 |
 | `ExpectedUpdateMode` | 아니요 | `DEFAULT` | `DEFAULT`, `OFF`, `APPLY` |
 | `CoverageFilterMode` | 아니요 | `OFF` | `OFF`, `SUBSYSTEM`, `ALL_CONTENT` |
+| `CoverageBoundaryMode` | 아니요 | `OFF` | `OFF`, `CUT_ONLY` |
 | `CoverageFilterAction` | 조건부 | 빈 값 | CVF 사용 시 `EXCLUDE` 또는 `JUSTIFY` |
 | `CoverageFilterRationale` | 조건부 | 빈 값 | CVF 사용 시 필수 근거 |
 | `PreparationMode` | 아니요 | `DEFAULT` | `DEFAULT`, `AUTO`, `FORCE` |
@@ -335,16 +336,18 @@ cfg.CoverageFilterExistingPolicy = 'REPLACE';
 
 | Excel 설정 | 의미 |
 | --- | --- |
-| `CoverageFilterMode=OFF` | 자동 CVF를 만들지 않음 |
+| `CoverageFilterMode=OFF` | CUT 직계 하위 규칙을 만들지 않음(경계 옵션은 독립) |
+| `CoverageBoundaryMode=CUT_ONLY` | Harness/standalone 실행 루트에서 CUT 외부 블록 제외 |
 | `SUBSYSTEM` | `CUTPath` 직속 하위 Subsystem 블록만 필터 대상으로 선택 |
 | `ALL_CONTENT` | `CUTPath` 직속 하위 Subsystem과 각 내부 전체를 필터 대상으로 선택 |
 | `CoverageFilterAction=EXCLUDE` | 대상 outcome을 Coverage에서 제외 |
 | `CoverageFilterAction=JUSTIFY` | 대상 outcome을 justified로 기록 |
 
-CVF를 사용할 때는 `CoverageFilterRationale`이 필수입니다. CVF는 저장 직후 다시
+`CoverageFilterMode`를 사용할 때는 `CoverageFilterRationale`이 필수입니다. CVF는 저장 직후 다시
 열어 규칙 수와 action을 검증하며, 올바르게 열리지 않으면 해당 CUT을 `FAIL`로
-기록합니다. CUT 자기 자신과 일반 블록은 규칙에 포함하지 않습니다. 직속 하위
-Subsystem이 없으면 규칙 0개짜리 CVF를 생성합니다. 필터 설정이 안전한 상태이면
+기록합니다. 이 설명은 `CoverageFilterMode` 규칙에 해당하며, 독립적인
+`CoverageBoundaryMode=CUT_ONLY`는 CUT 외부 최상위 블록을 추가로 제외합니다. 경계 모드도
+OFF이고 직속 하위 Subsystem이 없으면 규칙 0개짜리 CVF를 생성합니다. 필터 설정이 안전한 상태이면
 다음 CUT은 계속 처리합니다.
 
 `PER_CUT`의 안전 순서는 다음과 같습니다.
@@ -377,8 +380,8 @@ Coverage 분모가 0이면 `N/A`, justified outcome은 별도 수치로 기록�
 
 ### 9.1 실제 시스템 CVF 자체 점검
 
-최신 `PER_CUT` 실행이 끝난 뒤 생성된 CVF가 CUT 자신이 아니라 직속 하위
-Subsystem을 가리키는지 읽기 전용으로 확인할 수 있습니다.
+최신 `PER_CUT` 실행이 끝난 뒤 생성된 CVF의 rule 범주와 정책을 읽기 전용으로
+확인할 수 있습니다.
 
 ```matlab
 st_setup
@@ -398,12 +401,12 @@ disp(details(:, {'No','TestCaseName','Code','Status','Message'}))
 | B1 | target manifest, CVF와 SHA-256 일치 |
 | B2 | 생성·적용·복원 상태가 모두 `OK` |
 | B3 | 실제 rule 수가 manifest와 같고 0보다 큼 |
-| B4 | CUT 자신이 selector에 없음 |
-| B5 | selector가 직속 하위 Subsystem 집합과 정확히 일치 |
-| B6 | selector 모드와 `EXCLUDE`/`JUSTIFY` action 일치 |
+| B4 | selector가 고유하고 SID가 비어 있지 않은 block selector임 |
+| B5 | 활성화한 CUT-child/boundary rule 범주가 존재함 |
+| B6 | 각 범주의 selector, action, rationale 정책이 일치함 |
 
 `111111`만 전체 통과입니다. 여러 CUT이 있으면 CUT별 코드와 전체 AND 코드가 함께
-출력됩니다. 문의할 때 `CVF-CHECK-v1`로 시작하는 출력 줄 전체와 `details` 표를
+출력됩니다. 문의할 때 `CVF-CHECK-v2`로 시작하는 출력 줄 전체와 `details` 표를
 전달하십시오. 이 명령은 모델, Test File과 CVF를 저장하거나 변경하지 않습니다.
 
 ### 9.2 실제 시스템 전체 18비트 점검
@@ -443,7 +446,7 @@ SYSTEM-CHECK-v1 ENV=111111 RUN=111111 CVF=111111 OVERALL=111111111111111111
 
 `OVERALL=111111111111111111`만 전체 자동 점검 통과입니다. Test Manager 화면과
 PDF/HTML의 시각적 내용은 자동 코드로 판정하지 않으므로 별도로 확인해야 합니다.
-문의할 때 `SYSTEM-CHECK-v1`, `CVF-CHECK-v1`로 시작하는 줄과 `summary`의 세 상세
+문의할 때 `SYSTEM-CHECK-v1`, `CVF-CHECK-v2`로 시작하는 줄과 `summary`의 세 상세
 표를 함께 전달하십시오. 이 명령도 프로젝트 자산을 저장하거나 변경하지 않습니다.
 
 ## 10. 실행 결과와 보고서

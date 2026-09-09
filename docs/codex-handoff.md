@@ -7,7 +7,7 @@
 ## 현재 기준
 
 - 기준일: 2026-09-09
-- 활성 개발 브랜치: feat/harness-template-clone
+- 활성 개발 브랜치: feat/harness-workflow-v2
 - 필수 기능 기준: feat/per-cut-filtered-execution의 7f0825e
 - 필수 handoff 기준: 2b3ba09 이후
 - 필수 진단 기준: 현재 브랜치 최신 커밋의 st_check_actual_system 포함
@@ -17,18 +17,24 @@
 
 ## 변경 불가 핵심 결정
 
-CoverageFilterMode이 활성화된 CUT의 자동 CVF는 CUT 자기 자신을 rule로 선택하면
+CoverageFilterMode이 활성화된 CUT의 content rule은 CUT 자기 자신을 선택하면
 안 된다. CUT의 직계 하위 Subsystem만 선택해야 한다.
 
 - SUBSYSTEM: 각 직계 하위 Subsystem을 BlockInstance로 선택한다. 내부 일반 블록은
   직접 포함하지 않는다.
 - ALL_CONTENT: 각 직계 하위 Subsystem을 SubsystemAllContent로 선택한다.
 - CUT 자신은 두 모드 모두 제외한다.
-- 일반 블록은 직접 rule로 만들지 않는다.
+- content rule은 일반 블록을 직접 선택하지 않는다. CUT_ONLY 경계 rule은 아래의
+  별도 정책에 따라 CUT 외부 일반 블록을 직접 선택한다.
 - 직계 하위 Subsystem이 없으면 CVF는 생성될 수 있지만 실제 rule은 0개다. 실제
   필터 효과를 확인하는 6비트 진단에서는 B3을 0으로 표시한다.
 - CVF는 CUT별 실행 폴더에 보존하고 실행 후 원래 Test File, Suite, Test Case 필터
   목록을 복원해야 한다.
+- `CoverageBoundaryMode=CUT_ONLY`는 위 모드와 독립이다. 실제 Harness 또는
+  standalone 실행 루트에서 CUT 외부 최상위 Subsystem은 SubsystemAllContent,
+  나머지 최상위 블록은 BlockInstance로 항상 EXCLUDE한다.
+- standalone 모델은 원본 SID를 재사용하지 않으므로 실행 작업 사본에서 CVF를
+  다시 생성하고 저장본의 SID, selector type, action, rationale, rule 수를 검증한다.
 
 이 기준은 d109472에서 최신 기능 브랜치 위에 다시 반영됐다. 이전 원격 커밋
 f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사용하지 않는다.
@@ -40,8 +46,9 @@ f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사
 | backup/harness-full-copy | b6d30a8 | 완전 복사/Import 구현 보존. 수정하지 않는다. |
 | feat/harness-content-import | b6d30a8 | 기존 Import 브랜치. clone 개발을 이어가지 않는다. |
 | feat/harness-template-clone | b6d30a8 기반 | Import만 선별 제거한 Template clone 개발. MATLAB 검증 전 통합하지 않는다. |
+| feat/harness-workflow-v2 | 53c7e410 기반 | 입력 시나리오, standalone 재실행, CUT 경계 필터 통합 개발. MATLAB 검증 전 main에 통합하지 않는다. |
 | main | 0a0ace5 | 파일 구조 정리까지만 반영된 안정 기준. R2025b 검증 전 기능을 임의 backport하지 않는다. |
-| feat/per-cut-filtered-execution | d109472 이후 | 현재 활성 통합 브랜치. 다른 작업은 이 브랜치 최신 원격을 fetch한 뒤 이어간다. |
+| feat/per-cut-filtered-execution | d109472 이후 | v2의 선행 Coverage 기준. 신규 v2 작업의 활성 브랜치는 아니다. |
 
 ## 정리된 과거 브랜치
 
@@ -59,8 +66,8 @@ f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사
 | feat/reproducible-test-bundle-export | 0812582 | 현재 활성 브랜치에 포함됨 |
 | handoff/r2025b-cross-machine | 96926cf | 현재 handoff 문서와 활성 브랜치가 대체함 |
 
-과거 커밋 해시는 추적 근거로만 유지한다. 새 수정은 main이 아니라
-feat/per-cut-filtered-execution의 최신 원격에서 시작한다.
+과거 커밋 해시는 추적 근거로만 유지한다. Harness Workflow v2 후속 수정은
+main이나 과거 Coverage 브랜치가 아니라 `feat/harness-workflow-v2`에서 이어간다.
 
 ## 실제 시스템 CVF 점검
 
@@ -91,7 +98,7 @@ CVF selector만 다시 확인하려면 아래 개별 검사를 사용한다.
     [code, details] = st_check_per_cut_cvf( ...
         'RunDirectory', 'result/per_cut_runs/<run-id>');
 
-출력되는 CVF-CHECK-v1 줄 전체를 사용자 또는 다른 Codex에 전달한다. 종합 코드가
+출력되는 CVF-CHECK-v2 줄 전체를 사용자 또는 다른 Codex에 전달한다. 종합 코드가
 111111일 때만 모든 활성 CVF CUT이 여섯 검사를 통과한 것이다.
 
 | 비트 | 검사 |
@@ -99,9 +106,9 @@ CVF selector만 다시 확인하려면 아래 개별 검사를 사용한다.
 | B1 | target manifest, CVF 파일, SHA-256 일치 |
 | B2 | 생성, 적용, 복원 상태가 모두 OK |
 | B3 | 실제 rule 수가 manifest와 같고 0보다 큼 |
-| B4 | CUT 자신이 selector에 없음 |
-| B5 | selector 집합이 직계 하위 Subsystem 집합과 정확히 같음 |
-| B6 | SUBSYSTEM/ALL_CONTENT selector와 EXCLUDE/JUSTIFY action 일치 |
+| B4 | selector가 고유하고 SID가 비어 있지 않은 block selector임 |
+| B5 | 활성화한 CUT-child/boundary rule 범주가 존재함 |
+| B6 | 범주별 selector, action, rationale 정책 일치 |
 
 한 CUT이라도 특정 비트가 0이면 종합 코드의 같은 위치도 0이다. 진단 명령은
 result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 않고 닫는다.
@@ -109,19 +116,28 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 ## R2025b에서 반드시 확인할 항목
 
 1. MATLAB 경로 중복 여부를 which 함수명 -all 형태로 확인한다.
-2. SUBSYSTEM, ALL_CONTENT, OFF 대상이 포함된 PER_CUT 실행을 수행한다.
+2. SUBSYSTEM, ALL_CONTENT, OFF와 CUT_ONLY 조합이 포함된 PER_CUT 실행을 수행한다.
 3. st_check_actual_system과 st_check_per_cut_cvf 출력 및 상세 표를 보관한다.
-4. 생성 CVF에서 CUT 자신이 없고 직계 하위 Subsystem만 있는지 확인한다.
+4. 생성 CVF에서 CUT 자신이 없고 content rule은 직계 하위 Subsystem에만,
+   boundary rule은 CUT 외부 최상위 블록에만 있는지 확인한다.
 5. SUBSYSTEM이 내부 일반 블록 전체를 필터링하지 않는지 Coverage HTML로 확인한다.
 6. ALL_CONTENT만 선택된 하위 Subsystem 내부 전체를 처리하는지 확인한다.
 7. 실행 전후 Test File, Suite, Test Case의 기존 필터 목록이 동일한지 확인한다.
 8. Test Manager Coverage 화면에서 점 인덱싱 오류가 재발하지 않는지 확인한다.
 9. 각 CUT의 MLDATX, CVT, CVF, Excel, HTML과 선택적 PDF를 확인한다.
 10. 모델, Test File, Excel과 입력 파일의 원본 checksum 불변을 확인한다.
+11. 직계 Inport 없음+Signal Editor 있음, Signal Editor 없음, 손상/중복 Signal
+    Editor의 성공·WARN·실패 경계를 각각 확인한다.
+12. ORIGINAL/STANDALONE_HARNESS × OFF/CUT_ONLY와 기존 필터 동시 적용을 확인한다.
+13. 여러 CUT가 manifest 순서대로 실행되고 각 standalone 모델이 다음 CUT 전에
+    닫히는지 확인한다.
+14. ExpectedUpdateMode=APPLY 갱신과 선택적 재실행 결과가 종합 보고서에 남는지 확인한다.
+15. export 전후 원본 모델·Test File checksum, Dirty 상태와 Harness inventory가
+    불변인지 확인한다.
 
 실패 시 최소 전달 자료:
 
-- CVF-CHECK-v1로 시작하는 모든 출력 줄
+- CVF-CHECK-v2로 시작하는 모든 출력 줄
 - SYSTEM-CHECK-v1로 시작하는 모든 출력 줄과 summary 상세 표
 - details 표
 - result/per_cut_latest.json
@@ -132,7 +148,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 ## 다른 Codex의 시작 절차
 
 1. git fetch --prune origin을 실행한다.
-2. 원격 feat/per-cut-filtered-execution의 최신 커밋을 확인한다.
+2. 원격 feat/harness-workflow-v2의 최신 커밋을 확인한다.
 3. 작업 트리가 깨끗할 때만 fast-forward한다.
 4. 이 문서의 브랜치 지도와 변경 불가 핵심 결정을 읽는다.
 5. st_setup 후 st_check_actual_system을 실행한다. E6이 주요 st 함수 중복을
@@ -142,6 +158,25 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 8. 새 런타임 결과와 결정이 생기면 이 문서의 기준일, 커밋, 검증 상태를 갱신한다.
 
 ## 다음 작업 순서
+
+### 2026-09-09 Harness Workflow v2
+
+- 브랜치 `feat/harness-workflow-v2`는 `53c7e41076996be36cedf901a75d82e72662be55`에서
+  시작했다. 제품 `VERSION.txt`는 0.9.6을 유지한다.
+- `6bea60e`는 OFF 대상의 직계 Inport 조건을 제거했다. Signal Editor가 있으면
+  `UT_REQ_{CUTName}_001`로 연결하고, 블록 자체가 없을 때만 WARN과
+  `SKIP_NO_SIGNAL_EDITOR`로 입력 없는 TC를 계속한다. 손상/중복은 실패한다.
+- `e0add98`은 `ExecutionModelMode=ORIGINAL|STANDALONE_HARNESS`, manifest v2,
+  일회용 모델 복사본 export, CUT 이름/인터페이스 검증, 실행 Test Case API 재배선,
+  manifest 순서 PER_CUT 실행과 기대값 갱신 경로를 추가했다.
+- `CoverageBoundaryMode=OFF|CUT_ONLY`는 기존 CoverageFilterMode와 독립적으로
+  해석한다. OFF+CUT_ONLY도 AUTO에서 PER_CUT을 선택하며 internal Harness와
+  standalone 모델의 실제 실행 CUT를 기준으로 외부 규칙을 생성한다.
+- 현재 PC에는 MATLAB과 MISS_HIT 실행 환경이 없다. `git diff --check`와 정적 계약
+  테스트 소스 검토만 수행했으며 MATLAB 단위/통합/fixture는 실행하지 못했다.
+- R2025b에서는 위 "반드시 확인할 항목"의 15개 증거와 `CVF-CHECK-v2`,
+  `SYSTEM-CHECK-v1`, 대상 manifest/CVF/보고서를 보관해야 한다. 그 전에는 main에
+  통합하거나 런타임 인증 완료로 표현하지 않는다.
 
 ### 2026-09-09 Template Harness clone 전환
 

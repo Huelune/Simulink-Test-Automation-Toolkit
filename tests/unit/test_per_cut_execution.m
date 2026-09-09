@@ -260,11 +260,22 @@ source = fileread(fullfile(root, 'tests', 'fixtures', ...
 verifyNotEmpty(testCase, regexp(source, ...
     '"SUBSYSTEM"; "ALL_CONTENT"; repmat\("OFF"', 'once'));
 verifyNotEmpty(testCase, regexp(source, ...
+    'CoverageBoundaryMode\s*=\s*\["CUT_ONLY"', 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
     '"JUSTIFY"; "EXCLUDE"', 'once'));
 end
 
 
 function T = filter_table(modes)
 CoverageFilterMode = string(modes(:));
-T = table(CoverageFilterMode);
+CoverageBoundaryMode = repmat("OFF", numel(CoverageFilterMode), 1);
+T = table(CoverageFilterMode, CoverageBoundaryMode);
+end
+
+function testAutoSelectsPerCutForBoundaryOnly(testCase)
+T = filter_table(["OFF"; "OFF"]);
+T.CoverageBoundaryMode(2) = "CUT_ONLY";
+verifyEqual(testCase, st_resolve_execution_mode('AUTO', T), 'PER_CUT');
+verifyError(testCase, @() st_resolve_execution_mode('BATCH', T), ...
+    'simtest:BatchExecutionWithCoverageFilter');
 end

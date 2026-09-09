@@ -6,6 +6,7 @@ function T = st_load_targets(onlyEnabled)
 % Optional:
 %   No, Enabled, SldvMode, SldvDataFile, ExpectedUpdateMode,
 %   CoverageFilterMode, CoverageFilterAction, CoverageFilterRationale,
+%   CoverageBoundaryMode,
 %   PreparationMode, PreparationFromStage
 %
 % Important:
@@ -74,6 +75,9 @@ idxCoverageFilterAction = find_column_optional(names, ...
 idxCoverageFilterRationale = find_column_optional(names, ...
     {'CoverageFilterRationale','Coverage Filter Rationale','커버리지필터사유'});
 
+idxCoverageBoundaryMode = find_column_optional(names, ...
+    {'CoverageBoundaryMode','Coverage Boundary Mode','커버리지경계모드'});
+
 idxPreparationMode = find_column_optional(names, ...
     {'PreparationMode','Preparation Mode','준비실행모드'});
 
@@ -121,6 +125,7 @@ end
 CoverageFilterMode = repmat("OFF", n, 1);
 CoverageFilterAction = strings(n, 1);
 CoverageFilterRationale = strings(n, 1);
+CoverageBoundaryMode = repmat("OFF", n, 1);
 
 if ~isempty(idxCoverageFilterMode)
     CoverageFilterMode = string(raw{:, idxCoverageFilterMode});
@@ -130,6 +135,9 @@ if ~isempty(idxCoverageFilterAction)
 end
 if ~isempty(idxCoverageFilterRationale)
     CoverageFilterRationale = string(raw{:, idxCoverageFilterRationale});
+end
+if ~isempty(idxCoverageBoundaryMode)
+    CoverageBoundaryMode = string(raw{:, idxCoverageBoundaryMode});
 end
 
 PreparationMode = repmat("DEFAULT", n, 1);
@@ -210,6 +218,7 @@ ExpectedUpdateMode = ExpectedUpdateMode(keep);
 CoverageFilterMode = CoverageFilterMode(keep);
 CoverageFilterAction = CoverageFilterAction(keep);
 CoverageFilterRationale = CoverageFilterRationale(keep);
+CoverageBoundaryMode = CoverageBoundaryMode(keep);
 PreparationMode = PreparationMode(keep);
 PreparationFromStage = PreparationFromStage(keep);
 
@@ -217,6 +226,8 @@ PreparationFromStage = PreparationFromStage(keep);
     st_resolve_coverage_filter_settings( ...
         CoverageFilterMode, CoverageFilterAction, ...
         CoverageFilterRationale);
+CoverageBoundaryMode = st_resolve_coverage_boundary_modes( ...
+    CoverageBoundaryMode);
 
 ExpectedUpdateMode = ...
     st_resolve_expected_update_modes( ...
@@ -258,6 +269,7 @@ T = table( ...
     CoverageFilterMode, ...
     CoverageFilterAction, ...
     CoverageFilterRationale, ...
+    CoverageBoundaryMode, ...
     PreparationMode, ...
     PreparationFromStage);
 
