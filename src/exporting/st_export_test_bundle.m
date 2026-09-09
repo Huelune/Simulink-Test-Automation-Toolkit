@@ -17,6 +17,9 @@ function info = st_export_test_bundle(varargin)
 %                   report is not required before an isolated runtime run.
 %     Profile       'REPRODUCIBLE' (default) or internal 'ASSET'. Use
 %                   st_export_test_asset_bundle for asset management.
+%     ExecutionModelMode
+%                   'ORIGINAL' (default) or 'STANDALONE_HARNESS'. The
+%                   standalone mode is available only for REPRODUCIBLE.
 
 %   The source model and Test File must be saved before export. Missing
 %   model dependencies stop the export instead of creating a partial
@@ -36,6 +39,8 @@ addParameter(p, 'IncludeReferenceReport', true, ...
     @(x) islogical(x) && isscalar(x));
 addParameter(p, 'Profile', 'REPRODUCIBLE', ...
     @(x) ischar(x) || isstring(x));
+addParameter(p, 'ExecutionModelMode', 'ORIGINAL', ...
+    @(x) ischar(x) || isstring(x));
 parse(p, varargin{:});
 
 cfg = st_require_runtime_target();
@@ -48,6 +53,13 @@ createArchive = p.Results.CreateArchive;
 includeReferenceReport = p.Results.IncludeReferenceReport;
 profile = normalize_export_profile(p.Results.Profile);
 reproducible = strcmp(profile, 'REPRODUCIBLE');
+executionModelMode = normalize_execution_model_mode( ...
+    p.Results.ExecutionModelMode);
+if ~reproducible && ~strcmp(executionModelMode, 'ORIGINAL')
+    error('simtest:StandaloneHarnessRequiresReproducibleProfile', ...
+        ['ExecutionModelMode=STANDALONE_HARNESS is supported only for ' ...
+         'Profile=REPRODUCIBLE.']);
+end
 if reproducible
     exportTitle = 'Reproducible Test Bundle Export';
 else
@@ -61,14 +73,16 @@ fprintf('Model       : %s\n', cfg.TopModel);
 fprintf('Destination : %s\n', destination);
 fprintf('Run         : %s\n', runId);
 fprintf('Profile     : %s\n', profile);
+fprintf('Model Mode  : %s\n', executionModelMode);
 fprintf('Archive     : %s\n', on_off_text(createArchive));
 fprintf('Start       : %s\n', console_timestamp_text());
 fprintf('============================================\n');
 
 st_log(cfg, 'INFO', ...
     ['Export Test Bundle start | Model=%s | Destination=%s | ' ...
-     'RunId=%s | Profile=%s | Archive=%d | ReferenceReport=%d'], ...
-    cfg.TopModel, destination, runId, profile, ...
+     'RunId=%s | Profile=%s | ExecutionModelMode=%s | ' ...
+     'Archive=%d | ReferenceReport=%d'], ...
+    cfg.TopModel, destination, runId, profile, executionModelMode, ...
     logical(createArchive), logical(includeReferenceReport));
 
 currentStage = 'Validate Export Sources';
@@ -89,9 +103,11 @@ assert_saved_model(cfg);
 assert_saved_test_file(cfg);
 sourceModelSignature = struct();
 sourceTestSignature = struct();
+sourceHarnessInventory = strings(0,1);
 if reproducible
     sourceModelSignature = st_file_signature(cfg.ModelFile);
     sourceTestSignature = st_file_signature(cfg.TestFile);
+    sourceHarnessInventory = harness_inventory(cfg);
 else
     fprintf('Source SHA-256 validation: SKIP (asset profile)\n');
 end
@@ -193,11 +209,31 @@ if isempty(modelBundlePath)
 end
 finish_step(currentStage, stageTimer);
 
+standaloneDetails = repmat(empty_standalone_detail(), height(targets), 1);
+if strcmp(executionModelMode, 'STANDALONE_HARNESS')
+    currentStage = 'Export Standalone Harness Models';
+    stageTimer = start_step(currentStage);
+    standaloneDirectory = fullfile(workspaceDirectory, 'standalone');
+    [~, standaloneDetails] = st_export_standalone_harnesses( ...
+        cfg.ModelFile, cfg.TopModel, targets, standaloneDirectory, ...
+        stagingDirectory, 'ModelNameMode', 'TARGET_HARNESS', ...
+        'LogConfig', cfg);
+    finish_step(currentStage, stageTimer);
+end
+
 currentStage = 'Collect Target Inputs';
 stageTimer = start_step(currentStage);
 sldvManifestBundlePath = '';
 targetInventory = collect_target_inputs( ...
     targets, cfg, stagingDirectory, templateDirectory);
+for i = 1:numel(targetInventory)
+    targetInventory(i).StandaloneModel = ...
+        standaloneDetails(i).StandaloneModel;
+    targetInventory(i).StandaloneModelFile = ...
+        standaloneDetails(i).StandaloneModelFile;
+    targetInventory(i).StandaloneCUTPath = ...
+        standaloneDetails(i).StandaloneCUTPath;
+end
 if isfile(cfg.SldvManifestFile)
     sldvManifestOutput = fullfile( ...
         templateDirectory, 'result', 'sldv', 'sldv_manifest.mat');
@@ -234,9 +270,14 @@ else
     fprintf('Toolbox dependency analysis: SKIP (asset profile)\n');
 end
 manifest = struct();
-manifest.Version = 1;
+if reproducible
+    manifest.Version = 2;
+else
+    manifest.Version = 1;
+end
 manifest.BundleId = bundleId;
 manifest.Profile = profile;
+manifest.ExecutionModelMode = executionModelMode;
 manifest.CreatedAt = timestamp_text();
 manifest.MATLABRelease = version('-release');
 manifest.TopModel = cfg.TopModel;
@@ -260,6 +301,8 @@ manifest.Policy = struct( ...
     'SourceUnchanged', true, ...
     'TemplateImmutable', logical(reproducible), ...
     'FreshWorkspacePerRun', logical(reproducible), ...
+    'SequentialStandaloneExecution', ...
+        strcmp(executionModelMode, 'STANDALONE_HARNESS'), ...
     'ExactMATLABReleaseRequiredByDefault', logical(reproducible), ...
     'PreparationWorkflowIncluded', false, ...
     'ReferenceReportIncluded', logical(includeReferenceReport));
@@ -286,6 +329,10 @@ write_json(fullfile(stagingDirectory, 'manifest.json'), manifest);
 if reproducible
     assert_source_unchanged(cfg.ModelFile, sourceModelSignature);
     assert_source_unchanged(cfg.TestFile, sourceTestSignature);
+    if ~isequal(harness_inventory(cfg), sourceHarnessInventory)
+        error('simtest:ExportChangedHarnessInventory', ...
+            'Export unexpectedly changed the source Harness inventory.');
+    end
 end
 assert_saved_dependency_models(dependencyFiles);
 fprintf('Inventory files : %d\n', numel(manifest.Files));
@@ -319,6 +366,7 @@ end
 info = struct( ...
     'BundleId', bundleId, ...
     'Profile', profile, ...
+    'ExecutionModelMode', executionModelMode, ...
     'Reproducible', logical(reproducible), ...
     'BundleDirectory', finalDirectory, ...
     'Archive', archivePath, ...
@@ -446,6 +494,10 @@ for i = 1:height(targets)
     item.HarnessName = char(row.HarnessName);
     item.TestCaseName = char(row.TestCaseName);
     item.SldvMode = char(row.SldvMode);
+    item.ExpectedUpdateMode = char(row.ExpectedUpdateMode);
+    item.CoverageFilterMode = char(row.CoverageFilterMode);
+    item.CoverageFilterAction = char(row.CoverageFilterAction);
+    item.CoverageFilterRationale = char(row.CoverageFilterRationale);
 
     targetTimer = tic;
     fprintf('[%d/%d] START %s | Harness=%s | SLDV=%s\n', ...
@@ -455,23 +507,6 @@ for i = 1:height(targets)
         i, height(targets), item.CUTName, item.HarnessName, item.SldvMode);
 
     try
-    if strcmpi(item.SldvMode, 'OFF')
-        directInports = find_system( ...
-            item.CUTPath, 'SearchDepth', 1, ...
-            'Type', 'Block', 'BlockType', 'Inport');
-        if isempty(directInports)
-            inventory(end + 1, 1) = item; %#ok<AGROW>
-            fprintf('[%d/%d] OK    %s | no external input | %s\n', ...
-                i, height(targets), item.CUTName, ...
-                elapsed_text(toc(targetTimer)));
-            st_log(cfg, 'DEBUG', ...
-                ['[ExportTarget %d/%d] done | CUT=%s | ' ...
-                 'input=NONE | elapsed=%.3f sec'], ...
-                i, height(targets), item.CUTName, toc(targetTimer));
-            continue;
-        end
-    end
-
     harnessLoaded = false;
     try
         sltest.harness.load(item.CUTPath, item.HarnessName);
@@ -488,9 +523,17 @@ for i = 1:height(targets)
         if harnessLoaded
             close_harness(item.CUTPath, item.HarnessName);
         end
-        error('simtest:ExportHarnessInputFailed', ...
-            'Cannot export Signal Editor input for target %g (%s): %s', ...
-            item.No, item.CUTName, ME.message);
+        if strcmpi(item.SldvMode, 'OFF') && ...
+                strcmp(ME.identifier, 'simtest:SignalEditorBlockMissing')
+            st_log(cfg, 'WARN', ...
+                ['[ExportTarget %d/%d] Signal Editor input omitted | ' ...
+                 'CUT=%s | Harness=%s | reason=no Signal Editor block'], ...
+                i, height(targets), item.CUTName, item.HarnessName);
+        else
+            error('simtest:ExportHarnessInputFailed', ...
+                'Cannot export Signal Editor input for target %g (%s): %s', ...
+                item.No, item.CUTName, ME.message);
+        end
     end
     close_harness(item.CUTPath, item.HarnessName);
 
@@ -725,6 +768,38 @@ if isempty(value) || ~ismember(value, allowed)
 end
 end
 
+function inventory = harness_inventory(cfg)
+loadedHere = ~bdIsLoaded(cfg.TopModel);
+if loadedHere, load_system(cfg.ModelFile); end
+cleanup = onCleanup(@() close_loaded_here(cfg.TopModel, loadedHere)); %#ok<NASGU>
+items = sltest.harness.find(cfg.TopModel);
+inventory = strings(numel(items),1);
+for i = 1:numel(items)
+    inventory(i) = string(items(i).ownerFullPath) + "|" + ...
+        string(items(i).name);
+end
+inventory = sort(inventory);
+end
+
+function close_loaded_here(model, loadedHere)
+if loadedHere && bdIsLoaded(model), close_system(model, 0); end
+end
+
+function value = normalize_execution_model_mode(value)
+text = string(value);
+allowed = {'ORIGINAL', 'STANDALONE_HARNESS'};
+if ~isscalar(text)
+    error('simtest:InvalidExecutionModelMode', ...
+        'ExecutionModelMode must be a scalar text value.');
+end
+value = upper(strtrim(char(text)));
+if isempty(value) || ~ismember(value, allowed)
+    error('simtest:InvalidExecutionModelMode', ...
+        'Invalid ExecutionModelMode: %s. Allowed: %s.', ...
+        value, strjoin(allowed, ', '));
+end
+end
+
 function value = target_folder(item)
 value = sprintf('%04d_%s', round(item.No), ...
     st_export_safe_name(item.CUTName));
@@ -783,7 +858,19 @@ value = struct( ...
     'HarnessName', '', ...
     'TestCaseName', '', ...
     'SldvMode', '', ...
+    'ExpectedUpdateMode', '', ...
+    'CoverageFilterMode', '', ...
+    'CoverageFilterAction', '', ...
+    'CoverageFilterRationale', '', ...
     'SignalEditorInput', '', ...
     'EffectiveSldvInput', '', ...
-    'SourceSldvInput', '');
+    'SourceSldvInput', '', ...
+    'StandaloneModel', '', ...
+    'StandaloneModelFile', '', ...
+    'StandaloneCUTPath', '');
+end
+
+function value = empty_standalone_detail()
+value = struct('StandaloneModel', '', ...
+    'StandaloneModelFile', '', 'StandaloneCUTPath', '');
 end

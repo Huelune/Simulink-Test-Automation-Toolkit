@@ -619,6 +619,18 @@ ZIP 없이 폴더만 생성:
 info = st_export_test_bundle('CreateArchive', false);
 ```
 
+Harness를 독립 모델로 내보내 재실행하는 v2 번들:
+
+```matlab
+info = st_export_test_bundle( ...
+    'ExecutionModelMode', 'STANDALONE_HARNESS');
+```
+
+`STANDALONE_HARNESS`는 `Profile='REPRODUCIBLE'`에서만 사용할 수 있습니다.
+원본 모델의 일회용 복사본에서 대상별 standalone 모델을 만들고, 실행 작업
+사본의 Test Case만 해당 모델로 재배선합니다. 원본 모델·Harness·Test File은
+checksum과 Harness inventory를 다시 검사합니다.
+
 특정 run report를 참조 결과로 포함:
 
 ```matlab

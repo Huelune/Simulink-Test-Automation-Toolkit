@@ -6,30 +6,43 @@ if isempty(T)
     return;
 end
 
-if ~bdIsLoaded(cfg.TopModel)
-    load_system(cfg.TopModel);
-end
-st_force_model_stopped(cfg.TopModel);
-
 for i = 1:height(T)
-    ownerPath = st_normalize_cut_path(T.CUTPath(i), cfg.TopModel);
-    harnessName = char(T.HarnessName(i));
+    [executionModel, standalone] = execution_model(T(i,:), cfg);
+    ownerPath = '';
+    harnessName = '';
+    if standalone
+        if ~bdIsLoaded(executionModel), load_system(executionModel); end
+        st_force_model_stopped(executionModel);
+        loggingRoot = executionModel;
+    else
+        if ~bdIsLoaded(cfg.TopModel), load_system(cfg.TopModel); end
+        st_force_model_stopped(cfg.TopModel);
+        ownerPath = st_normalize_cut_path(T.CUTPath(i), cfg.TopModel);
+        harnessName = char(T.HarnessName(i));
+        loggingRoot = harnessName;
+    end
     try
-        sltest.harness.load(ownerPath, harnessName);
-        logResult = st_enable_harness_output_logging(harnessName);
+        if ~standalone
+            sltest.harness.load(ownerPath, harnessName);
+        end
+        logResult = st_enable_harness_output_logging(loggingRoot);
         if any(string(logResult.Status) == "FAIL")
             failed = logResult(string(logResult.Status) == "FAIL", :);
             error('simtest:ExpectedLoggingPreparationFailed', ...
                 'Harness Outport logging failed: %s', ...
                 char(strjoin(string(failed.Message), ' | ')));
         end
-        save_system(cfg.TopModel);
-        close_harness_quiet(ownerPath, harnessName);
+        save_system(executionModel);
+        if ~standalone
+            close_harness_quiet(ownerPath, harnessName);
+        end
     catch ME
-        close_harness_quiet(ownerPath, harnessName);
+        if ~standalone
+            close_harness_quiet(ownerPath, harnessName);
+        end
         error('simtest:ExpectedLoggingPreparationFailed', ...
             'Expected value logging preparation failed [%s]: %s', ...
-            harnessName, ME.message);
+            executionModel, ME.message);
     end
 end
 
@@ -49,6 +62,16 @@ for s = 1:numel(suites)
     end
 end
 saveToFile(tf);
+end
+
+function [model, standalone] = execution_model(row, cfg)
+standalone = ismember('ExecutionModel', row.Properties.VariableNames) && ...
+    strlength(strtrim(string(row.ExecutionModel))) > 0;
+if standalone
+    model = char(row.ExecutionModel);
+else
+    model = cfg.TopModel;
+end
 end
 
 

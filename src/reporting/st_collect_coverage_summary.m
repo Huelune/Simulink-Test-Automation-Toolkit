@@ -23,7 +23,7 @@ resultDescriptors = describe_coverage_objects(resultCoverage);
 for t = 1:height(targetConfig)
     notify_progress(progressFcn, 'CUT coverage', t, height(targetConfig));
     target = targetConfig(t,:);
-    targetPath = char(target.CUTPath);
+    targetPath = coverage_target_path(target);
     matches = select_coverage_objects(resultDescriptors, targetPath, ...
         matchCoverageObjects);
     if isempty(matches)
@@ -71,7 +71,7 @@ for c = 1:numel(caseResults)
     end
     target = targetConfig(targetIndex,:);
     caseCoverage = getCoverageResults(tcResult);
-    targetPath = char(target.CUTPath);
+    targetPath = coverage_target_path(target);
     caseMatches = select_coverage_objects( ...
         describe_coverage_objects(caseCoverage), targetPath, ...
         matchCoverageObjects);
@@ -94,6 +94,15 @@ for c = 1:numel(caseResults)
                 target, caseName, iterName, targetPath);
         end
     end
+end
+end
+
+function path = coverage_target_path(target)
+if ismember('StandaloneCUTPath', target.Properties.VariableNames) && ...
+        strlength(strtrim(string(target.StandaloneCUTPath))) > 0
+    path = char(target.StandaloneCUTPath);
+else
+    path = char(target.CUTPath);
 end
 end
 

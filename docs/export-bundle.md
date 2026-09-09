@@ -45,7 +45,9 @@ Signal Editor·SLDV 입력과 결과 보고서·Coverage를 복사합니다. 독
 ## 안전 경계
 
 - 원본 모델과 Test File이 저장된 상태일 때만 내보냅니다.
-- 원본의 내부 Harness를 파일로 분리하거나 모델과의 연결을 제거하지 않습니다.
+- 기본 `ExecutionModelMode=ORIGINAL`은 내부 Harness를 그대로 사용합니다.
+- `ExecutionModelMode=STANDALONE_HARNESS`는 원본 모델의 일회용 복사본에서만
+  Harness를 export하므로 원본 모델과 Harness 관계를 바꾸지 않습니다.
 - 파일 복사 전후 모델과 Test File의 SHA-256을 비교합니다.
 - 모델 dependency 분석에서 누락 파일이 발견되면 부분 번들을 만들지 않습니다.
 - 번들 `template/`은 기준 상태이며 실행 중 직접 수정하지 않습니다.
@@ -53,9 +55,9 @@ Signal Editor·SLDV 입력과 결과 보고서·Coverage를 복사합니다. 독
 - 받는 쪽에서 변경되는 Harness Filename, SLDV manifest, 기대값과 Test File은
   해당 작업 사본에만 저장됩니다.
 
-`sltest.harness.export`는 기존 모델과 Harness 관계를 제거하는 용도의 API이므로
-이 기능에서 사용하지 않습니다. 현재 내부 Harness는 저장된 모델 파일 복사로
-보존합니다.
+standalone 모드의 `sltest.harness.export`는 격리된 일회용 모델 복사본에만
+적용합니다. export 후 CUT 이름과 Inport/Outport 인터페이스를 원본과 비교하고
+검증된 경로만 manifest의 `StandaloneCUTPath`에 기록합니다.
 
 ## 출력 구조
 
@@ -71,6 +73,7 @@ result/exports/{timestamp}_{id}/
 │   ├── TestManagement.xlsx
 │   ├── {TopModel}.mldatx
 │   ├── workspace/          # 모델과 분석된 모델 dependency
+│   │   └── standalone/     # 선택 시 대상별 독립 Harness 모델
 │   ├── inputs/
 │   │   ├── signal_editor/{target}/
 │   │   └── sldv/{target}/
@@ -85,7 +88,8 @@ result/exports/{timestamp}_{id}/
 
 ## Manifest와 재실행
 
-`manifest.json`은 번들 ID, MATLAB 릴리스, 대상, 상대 경로, 필요한 제품,
+manifest v2는 번들 ID, MATLAB 릴리스, `ExecutionModelMode`, 대상별 standalone
+모델 경로와 CUT 경로, 상대 경로, 필요한 제품,
 모든 기준 파일의 SHA-256과 크기를 기록합니다. 로컬 절대 source path는
 기록하지 않습니다.
 
@@ -94,9 +98,12 @@ result/exports/{timestamp}_{id}/
 1. MATLAB 릴리스와 기준 파일 checksum을 검사합니다.
 2. `template/`을 새 실행 작업 공간에 복사합니다.
 3. 작업 사본에만 `runtime_target.mat`을 만들고 SLDV manifest 경로를 바꿉니다.
-4. 작업 사본 모델의 Harness Signal Editor Filename을 복사된 입력으로 바꿉니다.
-5. `st_run_generated_tests`로 Test File을 실행합니다.
-6. `st_generate_test_report`로 새 Excel/PDF/HTML/MLDATX 결과를 만듭니다.
+4. ORIGINAL은 내부 Harness의 Signal Editor Filename을 바꿉니다.
+5. STANDALONE_HARNESS는 Test Case의 Model을 독립 모델로 바꾸고 HarnessOwner와
+   HarnessName을 지운 뒤 Assessment 경로를 독립 모델 루트로 재설정·재검증합니다.
+6. ORIGINAL은 기존 batch 경로, standalone은 manifest 순서의 PER_CUT 경로로
+   실행하고 대상 모델을 닫은 뒤 다음 CUT로 진행합니다.
+7. 기대값 APPLY와 선택적 재실행을 작업 사본에서 수행하고 종합 보고서를 만듭니다.
 
 일반 사용자의 `st_export_test_bundle`은 기본적으로 reference report를
 포함합니다. `st_verify_all`의 격리 snapshot은 아직 실행 결과가 없는 상태도

@@ -20,6 +20,11 @@ run_exported_tests
 
 실행할 때마다 `executions/날짜_식별자/workspace/`가 새로 생깁니다. 테스트 중 변경되는 기대값, Harness 설정, Test File과 결과는 이 작업 사본에만 저장됩니다. `template/`과 원래 프로젝트는 바뀌지 않으므로 같은 시작 상태에서 다시 실행할 수 있습니다.
 
+`manifest.json`의 `ExecutionModelMode`가 `STANDALONE_HARNESS`이면 작업 사본의
+Test Case가 대상별 독립 Harness 모델로 재배선되고 manifest 순서대로 하나씩
+실행됩니다. 각 모델은 실행 후 닫히며 기대값 APPLY와 선택적 재실행도 같은
+작업 사본 안에서 처리됩니다.
+
 ## 포함된 파일
 
 | 위치 | 내용 |

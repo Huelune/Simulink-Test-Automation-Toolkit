@@ -50,10 +50,6 @@ if isempty(T)
 end
 
 
-st_force_model_stopped( ...
-    cfg.TopModel);
-
-
 [taskTargetRow, taskScenarioName, taskSampleTime] = ...
     build_expected_update_tasks(T, cfg);
 
@@ -109,13 +105,14 @@ for i = 1:n
     scenarioName = ...
         char(taskScenarioName(i));
 
-    ownerPath = ...
-        st_normalize_cut_path( ...
-            T.CUTPath(targetIndex), ...
-            cfg.TopModel);
-
-    harnessName = ...
-        char(T.HarnessName(targetIndex));
+    [executionModel, standalone] = execution_model( ...
+        T(targetIndex,:), cfg);
+    ownerPath = '';
+    harnessName = char(T.HarnessName(targetIndex));
+    if ~standalone
+        ownerPath = st_normalize_cut_path( ...
+            T.CUTPath(targetIndex), cfg.TopModel);
+    end
 
 
     TestCaseName(i) = ...
@@ -242,17 +239,22 @@ for i = 1:n
         % Harness / Assessment Load
         %% ----------------------------------------------------
 
-        st_force_model_stopped( ...
-            cfg.TopModel);
+        if ~bdIsLoaded(executionModel)
+            load_system(executionModel);
+        end
+        st_force_model_stopped(executionModel);
 
 
         st_log(cfg, 'DEBUG', ...
             '[ExpectedUpdate %d/%d] harness.load start', ...
             i, n);
 
-        sltest.harness.load( ...
-            ownerPath, ...
-            harnessName);
+        if standalone
+            harnessRoot = executionModel;
+        else
+            sltest.harness.load(ownerPath, harnessName);
+            harnessRoot = harnessName;
+        end
 
         st_log(cfg, 'DEBUG', ...
             '[ExpectedUpdate %d/%d] harness.load done', ...
@@ -261,7 +263,7 @@ for i = 1:n
 
         assess = ...
             st_find_assessment_block( ...
-                harnessName);
+                harnessRoot);
 
 
         step2Path = ...
@@ -293,7 +295,7 @@ for i = 1:n
 
         harnessOutputs = ...
             st_collect_harness_output_signals( ...
-                harnessName);
+                harnessRoot);
 
         st_log(cfg, 'DEBUG', ...
             '[ExpectedUpdate %d/%d] Harness output rows=%d | names=[%s]', ...
@@ -321,7 +323,7 @@ for i = 1:n
 
             scenarioNames = ...
                 st_collect_signal_editor_scenario_names( ...
-                    harnessName, ...
+                    harnessRoot, ...
                     cfg.TopModel);
 
             scenarioInputCount = ...
@@ -416,8 +418,7 @@ for i = 1:n
                 i, n);
 
 
-            save_system( ...
-                cfg.TopModel);
+            save_system(executionModel);
 
             st_log(cfg, 'DEBUG', ...
                 '[ExpectedUpdate %d/%d] save_system done', ...
@@ -425,9 +426,9 @@ for i = 1:n
         end
 
 
-        st_close_harness_quiet( ...
-            ownerPath, ...
-            harnessName);
+        if ~standalone
+            st_close_harness_quiet(ownerPath, harnessName);
+        end
 
 
         %% ----------------------------------------------------
@@ -469,9 +470,9 @@ for i = 1:n
 
     catch ME
 
-        st_close_harness_quiet( ...
-            ownerPath, ...
-            harnessName);
+        if ~standalone
+            st_close_harness_quiet(ownerPath, harnessName);
+        end
 
 
         Status(i) = ...
@@ -591,6 +592,16 @@ for targetIndex = 1:height(T)
     targetRows = [targetRows; repmat(targetIndex, numel(names), 1)]; %#ok<AGROW>
     scenarioNames = [scenarioNames; string(names(:))]; %#ok<AGROW>
     sampleTimes = [sampleTimes; times(:)]; %#ok<AGROW>
+end
+end
+
+function [model, standalone] = execution_model(row, cfg)
+standalone = ismember('ExecutionModel', row.Properties.VariableNames) && ...
+    strlength(strtrim(string(row.ExecutionModel))) > 0;
+if standalone
+    model = char(row.ExecutionModel);
+else
+    model = cfg.TopModel;
 end
 end
 

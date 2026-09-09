@@ -20,6 +20,14 @@ if ~isfile(manifestPath)
         'manifest.json is missing: %s', manifestPath);
 end
 manifest = jsondecode(fileread(manifestPath));
+executionModelMode = 'ORIGINAL';
+if isfield(manifest, 'ExecutionModelMode')
+    executionModelMode = upper(char(manifest.ExecutionModelMode));
+end
+if ~ismember(executionModelMode, {'ORIGINAL','STANDALONE_HARNESS'})
+    error('simtest:BundleExecutionModelModeInvalid', ...
+        'Unsupported ExecutionModelMode: %s', executionModelMode);
+end
 
 validate_release(manifest, p.Results.AllowReleaseMismatch);
 validate_files(bundleRoot, manifest.Files);
@@ -52,21 +60,47 @@ st_setup();
 addpath(genpath(fullfile(workRoot, 'workspace')), '-begin');
 
 rewrite_sldv_manifest(bundleRoot, workRoot, manifest);
-rewrite_signal_editor_paths(bundleRoot, workRoot, manifest, modelFile);
-
-[~, ~, runContext] = st_run_generated_tests();
-workflowResult = table( ...
-    string('EXPORTED_BUNDLE'), string('OK'), ...
-    string(['Bundle ' char(manifest.BundleId)]), ...
-    'VariableNames', {'Stage', 'Status', 'Message'});
-workflowPlan = table();
-reportInfo = st_generate_test_report( ...
-    runContext, workflowResult, workflowPlan);
+cfg = st_require_runtime_target();
+st_log(cfg, 'INFO', ...
+    'Exported bundle execution start | Bundle=%s | ModelMode=%s', ...
+    char(manifest.BundleId), executionModelMode);
+try
+if strcmp(executionModelMode, 'STANDALONE_HARNESS')
+    [executionTargets, testCases, preparation, tf] = ...
+        st_prepare_standalone_bundle_execution( ...
+        manifest, bundleRoot, workRoot);
+    [~, updates, reportInfo] = st_run_tests_per_cut( ...
+        'TargetConfig', executionTargets, ...
+        'TestFile', tf, 'TestCases', testCases);
+else
+    rewrite_signal_editor_paths(bundleRoot, workRoot, manifest, modelFile);
+    [~, updates, runContext] = st_run_generated_tests();
+    preparation = table();
+    workflowResult = table( ...
+        string('EXPORTED_BUNDLE'), string('OK'), ...
+        string(['Bundle ' char(manifest.BundleId)]), ...
+        'VariableNames', {'Stage', 'Status', 'Message'});
+    workflowPlan = table();
+    reportInfo = st_generate_test_report( ...
+        runContext, workflowResult, workflowPlan);
+end
+catch ME
+    st_log(cfg, 'ERROR', ...
+        'Exported bundle execution failed | ModelMode=%s | %s: %s', ...
+        executionModelMode, ME.identifier, ME.message);
+    rethrow(ME);
+end
+st_log(cfg, 'INFO', ...
+    'Exported bundle execution complete | Bundle=%s | ModelMode=%s', ...
+    char(manifest.BundleId), executionModelMode);
 
 info = struct( ...
     'ExecutionId', executionId, ...
     'ExecutionDirectory', executionRoot, ...
     'Workspace', workRoot, ...
+    'ExecutionModelMode', executionModelMode, ...
+    'Preparation', table2struct(preparation), ...
+    'ExpectedUpdates', table2struct(updates), ...
     'Report', reportInfo, ...
     'ReferenceRunId', char(manifest.ReferenceRunId), ...
     'CompletedAt', timestamp_text());
@@ -114,18 +148,31 @@ end
 
 function prepare_existing_session(bundleRoot, manifest)
 executionRoot = fullfile(bundleRoot, 'executions');
-topModel = char(manifest.TopModel);
-if bdIsLoaded(topModel)
-    loadedFile = get_param(topModel, 'FileName');
-    if ~is_under_root(loadedFile, executionRoot)
-        error('simtest:BundleModelAlreadyLoaded', ...
-            ['A model with the same name is loaded outside this bundle. ' ...
-             'Save and close it before running the bundle: %s'], loadedFile);
+models = string(manifest.TopModel);
+if isfield(manifest, 'Targets')
+    for j = 1:numel(manifest.Targets)
+        if isfield(manifest.Targets(j), 'StandaloneModel') && ...
+                ~isempty(char(manifest.Targets(j).StandaloneModel))
+            models(end+1,1) = string( ...
+                manifest.Targets(j).StandaloneModel); %#ok<AGROW>
+        end
     end
-    if strcmp(get_param(topModel, 'Dirty'), 'on')
-        save_system(topModel);
+end
+models = unique(models, 'stable');
+for m = 1:numel(models)
+    model = char(models(m));
+    if bdIsLoaded(model)
+        loadedFile = get_param(model, 'FileName');
+        if ~is_under_root(loadedFile, executionRoot)
+            error('simtest:BundleModelAlreadyLoaded', ...
+                ['A model with the same name is loaded outside this bundle. ' ...
+                 'Save and close it before running the bundle: %s'], loadedFile);
+        end
+        if strcmp(get_param(model, 'Dirty'), 'on')
+            save_system(model);
+        end
+        close_system(model, 0);
     end
-    close_system(topModel, 0);
 end
 
 openFiles = sltest.testmanager.getTestFiles;

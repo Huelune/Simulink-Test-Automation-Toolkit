@@ -1,6 +1,19 @@
-function bundlePaths = st_export_standalone_harnesses( ...
-        sourceModelFile, topModel, targets, destination, bundleRoot)
+function [bundlePaths, details] = st_export_standalone_harnesses( ...
+        sourceModelFile, topModel, targets, destination, bundleRoot, varargin)
 %ST_EXPORT_STANDALONE_HARNESSES Export Harnesses from a disposable copy.
+
+p = inputParser;
+addParameter(p, 'ModelNameMode', 'HARNESS', ...
+    @(x) ismember(upper(string(x)), ["HARNESS","TARGET_HARNESS"]));
+addParameter(p, 'LogConfig', [], @(x) isempty(x) || isstruct(x));
+parse(p, varargin{:});
+modelNameMode = upper(char(string(p.Results.ModelNameMode)));
+logConfig = p.Results.LogConfig;
+
+totalTimer = tic;
+log_message(logConfig, 'INFO', ...
+    'Standalone Harness export start | Targets=%d | NameMode=%s', ...
+    height(targets), modelNameMode);
 
 if ~isfile(sourceModelFile)
     error('simtest:AssetModelMissing', ...
@@ -9,6 +22,7 @@ end
 if ~isfolder(destination), mkdir(destination); end
 
 bundlePaths = strings(height(targets), 1);
+details = repmat(empty_detail(), height(targets), 1);
 workRoot = tempname(destination);
 mkdir(workRoot);
 sourceWasLoaded = bdIsLoaded(topModel);
@@ -60,14 +74,19 @@ end
 
 keys = strings(0,1);
 keyPaths = strings(0,1);
+keyDetails = repmat(empty_detail(), 0, 1);
 for i = 1:height(targets)
     sourceOwner = char(st_normalize_cut_path( ...
         targets.CUTPath(i), topModel));
     harnessName = char(string(targets.HarnessName(i)));
     key = string(lower(sourceOwner)) + "|" + string(lower(harnessName));
+    if strcmp(modelNameMode, 'TARGET_HARNESS')
+        key = string(round(double(targets.No(i)))) + "|" + key;
+    end
     existing = find(keys == key, 1);
     if ~isempty(existing)
         bundlePaths(i) = keyPaths(existing);
+        details(i) = keyDetails(existing);
         continue;
     end
 
@@ -82,7 +101,8 @@ for i = 1:height(targets)
 
     outputFolder = fullfile(destination, target_folder(targets(i,:)));
     if ~isfolder(outputFolder), mkdir(outputFolder); end
-    outputModel = standalone_model_name(harnessName);
+    outputModel = standalone_model_name(harnessName, targets(i,:), ...
+        modelNameMode);
     outputPath = fullfile(outputFolder, [outputModel '.slx']);
 
     previousFolder = pwd;
@@ -100,6 +120,10 @@ for i = 1:height(targets)
             error('simtest:AssetHarnessExportMissing', ...
                 'Standalone Harness file was not created: %s', outputPath);
         end
+        load_system(outputPath);
+        standaloneCutPath = identify_standalone_cut( ...
+            sourceOwner, outputModel);
+        close_system(outputModel, 0);
     catch ME
         if bdIsLoaded(outputModel), close_system(outputModel, 0); end
         rethrow(ME);
@@ -110,8 +134,21 @@ for i = 1:height(targets)
     keys(end+1,1) = key; %#ok<AGROW>
     keyPaths(end+1,1) = string(relative); %#ok<AGROW>
     bundlePaths(i) = string(relative);
+    details(i) = struct( ...
+        'StandaloneModel', outputModel, ...
+        'StandaloneModelFile', relative, ...
+        'StandaloneCUTPath', standaloneCutPath);
+    keyDetails(end+1,1) = details(i); %#ok<AGROW>
+    log_message(logConfig, 'DEBUG', ...
+        ['[StandaloneHarness %d/%d] exported | Source=%s | ' ...
+         'Harness=%s | Model=%s | CUT=%s'], ...
+        i, height(targets), sourceOwner, harnessName, ...
+        outputModel, standaloneCutPath);
 end
 clear sessionCleanup;
+log_message(logConfig, 'INFO', ...
+    'Standalone Harness export complete | Targets=%d | elapsed=%.3f sec', ...
+    height(targets), toc(totalTimer));
 
     function cleanup_export_session()
         restoreError = [];
@@ -143,13 +180,76 @@ folder = sprintf('%04d_%s', round(double(row.No)), ...
     st_export_safe_name(char(string(row.CUTName))));
 end
 
-function name = standalone_model_name(harnessName)
-name = char(harnessName);
+function name = standalone_model_name(harnessName, row, mode)
+if strcmp(mode, 'TARGET_HARNESS')
+    name = sprintf('st_h_%04d_%s', round(double(row.No)), ...
+        st_export_safe_name(harnessName));
+    name = matlab.lang.makeValidName(name);
+    if numel(name) > namelengthmax
+        name = name(1:namelengthmax);
+    end
+else
+    name = char(harnessName);
+end
 if ~isvarname(name) || numel(name) > namelengthmax
     error('simtest:AssetHarnessNameInvalidForModel', ...
         ['HarnessName must also be a valid standalone Simulink model ' ...
          'name: %s'], name);
 end
+end
+
+function path = identify_standalone_cut(sourceOwner, standaloneModel)
+sourceName = get_param(sourceOwner, 'Name');
+sourceSignature = interface_signature(sourceOwner);
+candidates = find_system(standaloneModel, ...
+    'SearchDepth', 1, 'Type', 'Block');
+candidates = cellstr(string(candidates(:)));
+candidates = candidates(~strcmp(candidates, standaloneModel));
+matches = strings(0,1);
+for i = 1:numel(candidates)
+    if ~strcmp(get_param(candidates{i}, 'Name'), sourceName)
+        continue;
+    end
+    if isequal(interface_signature(candidates{i}), sourceSignature)
+        matches(end+1,1) = string(candidates{i}); %#ok<AGROW>
+    end
+end
+if numel(matches) ~= 1
+    error('simtest:StandaloneCUTIdentificationFailed', ...
+        ['Expected exactly one exported CUT matching name and interface. ' ...
+         'Source=%s | Model=%s | Matches=%d'], ...
+        sourceOwner, standaloneModel, numel(matches));
+end
+path = char(matches(1));
+end
+
+function signature = interface_signature(block)
+ports = find_system(block, 'SearchDepth', 1, 'Type', 'Block');
+ports = cellstr(string(ports(:)));
+ports = ports(~strcmp(ports, block));
+rows = strings(0,1);
+for i = 1:numel(ports)
+    blockType = get_param(ports{i}, 'BlockType');
+    if ~ismember(blockType, {'Inport','Outport','EnablePort', ...
+            'TriggerPort','ResetPort'})
+        continue;
+    end
+    portNumber = '';
+    try, portNumber = get_param(ports{i}, 'Port'); catch, end
+    rows(end+1,1) = string(blockType) + "|" + ...
+        string(portNumber) + "|" + string(get_param(ports{i}, 'Name')); %#ok<AGROW>
+end
+signature = sort(rows);
+end
+
+function value = empty_detail()
+value = struct('StandaloneModel', '', ...
+    'StandaloneModelFile', '', 'StandaloneCUTPath', '');
+end
+
+function log_message(cfg, level, formatText, varargin)
+if isempty(cfg), return; end
+st_log(cfg, level, formatText, varargin{:});
 end
 
 function openHarnesses = close_open_source_harnesses(topModel)

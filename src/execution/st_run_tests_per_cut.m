@@ -14,6 +14,9 @@ addParameter(p, 'ReportMode', 'SUMMARY', ...
     @(x) ismember(upper(string(x)), ["SUMMARY","FULL"]));
 addParameter(p, 'FailOnNonPass', false, ...
     @(x) islogical(x) && isscalar(x));
+addParameter(p, 'TargetConfig', [], @(x) isempty(x) || istable(x));
+addParameter(p, 'TestFile', [], @(x) true);
+addParameter(p, 'TestCases', [], @(x) true);
 parse(p, varargin{:});
 
 continueOnFailure = logical(p.Results.ContinueOnFailure);
@@ -34,9 +37,24 @@ if ~isfile(cfg.TestFile)
         'Test File not found: %s', cfg.TestFile);
 end
 
-targetConfig = st_load_targets(cfg.OnlyEnabled);
-tf = sltest.testmanager.TestFile(cfg.TestFile);
-[testCases, runScope] = st_get_run_test_cases(tf);
+if isempty(p.Results.TargetConfig)
+    targetConfig = st_load_targets(cfg.OnlyEnabled);
+else
+    targetConfig = p.Results.TargetConfig;
+end
+if isempty(p.Results.TestFile)
+    tf = sltest.testmanager.TestFile(cfg.TestFile);
+else
+    tf = p.Results.TestFile;
+end
+if isempty(p.Results.TestCases)
+    [testCases, runScope] = st_get_run_test_cases(tf);
+else
+    testCases = p.Results.TestCases;
+    runScope = table(double(targetConfig.No), ...
+        string(targetConfig.TestCaseName), true(height(targetConfig),1), ...
+        'VariableNames', {'No','TestCaseName','WillRun'});
+end
 n = height(targetConfig);
 if numel(testCases) ~= n
     error('simtest:PerCutTargetMappingFailed', ...
@@ -59,6 +77,10 @@ artifacts = empty_artifact_table();
 No = double(targetConfig.No);
 CUTName = string(targetConfig.CUTName);
 CUTPath = string(targetConfig.CUTPath);
+ExecutionModel = strings(n,1);
+if ismember('ExecutionModel', targetConfig.Properties.VariableNames)
+    ExecutionModel = string(targetConfig.ExecutionModel);
+end
 TestCaseName = string(targetConfig.TestCaseName);
 FilterMode = string(targetConfig.CoverageFilterMode);
 FilterAction = string(targetConfig.CoverageFilterAction);
@@ -351,6 +373,7 @@ for i = 1:n
         end
     end
 
+    close_execution_model(row, cfg);
     DurationSec(i) = toc(rowTimer);
     CompletedAt(i) = timestamp_text();
     targetManifest = build_target_manifest( ...
@@ -391,7 +414,7 @@ Status(~processed) = "SKIP";
 Message(~processed) = "Not executed because a previous CUT could not be restored";
 FilterRestoreStatus(~processed) = "NOT_RUN";
 
-targets = table(No, CUTName, CUTPath, TestCaseName, ...
+targets = table(No, CUTName, CUTPath, ExecutionModel, TestCaseName, ...
     FilterMode, FilterAction, FilterRationale, ExistingFilterPolicy, ...
     ManagedFilterApplication, CVFPath, CVFSHA256, ...
     CVFRuleCount, FilterGenerationStatus, InitialOutcome, FinalOutcome, ...
@@ -432,6 +455,26 @@ if failOnNonPass && (any(nonPassMask) || strcmp(summary.Status, 'FAIL'))
     end
     st_log(cfg, 'ERROR', 'PER_CUT execution failed | %s', failureMessage);
     error('simtest:PerCutRunFailed', '%s', failureMessage);
+end
+end
+
+function close_execution_model(row, cfg)
+if ~ismember('ExecutionModel', row.Properties.VariableNames)
+    return;
+end
+model = char(string(row.ExecutionModel));
+if isempty(model) || strcmp(model, cfg.TopModel) || ~bdIsLoaded(model)
+    return;
+end
+try
+    if strcmp(get_param(model, 'Dirty'), 'on')
+        save_system(model);
+    end
+    close_system(model, 0);
+catch ME
+    st_log(cfg, 'WARN', ...
+        'Standalone execution model close failed | Model=%s | %s', ...
+        model, ME.message);
 end
 end
 
