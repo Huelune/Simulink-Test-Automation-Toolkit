@@ -127,15 +127,6 @@ disp(cfg.ManagementExcel)
 `ExpectedUpdateMode`, `CoverageFilterMode`, `CoverageFilterAction`,
 `CoverageFilterRationale`, `PreparationMode`, `PreparationFromStage`를 사용합니다.
 
-같은 모델 안에서 기준 CUT의 완성된 Harness 테스트를 동명 CUT의 기존 Harness에
-가져오려면 대상 행에 `TestPreparationSource=HARNESS_IMPORT`, `SourceCUTPath`,
-`SourceHarnessName`을 입력합니다. 기준 CUT 행은 비활성화합니다. 이 대상은 SLDV와
-기대값 자동 갱신 대신 복사된 Signal Editor 시나리오, Assessment 검증 로직·기대값,
-Harness 실행 설정을 사용합니다. 실행 전에 `st_import_harness_contents('DryRun',true)`로
-호환성을 확인할 수 있습니다. 자세한 지원 범위와 복원 절차는 운영자 매뉴얼 3.1을
-참조하십시오. 컴파일 시간이 긴 모델은 CUT 인터페이스가 같음을 별도로 확인한 뒤
-`st_run_after_harness('SkipImportCompile',true)`로 정적 검사만 사용할 수 있습니다.
-
 Coverage 자동 필터를 사용하려면 `CoverageFilterMode`를 `SUBSYSTEM` 또는
 `ALL_CONTENT`로 정하고, `CoverageFilterAction`과
 `CoverageFilterRationale`을 함께 입력합니다. `SUBSYSTEM`은 CUT의 직속 하위
@@ -559,3 +550,11 @@ certification = st_verify_all( ...
     'KeepWorkspace', 'ON_FAILURE', ...
     'FailOnNonPass', true);
 ```
+
+## Template Harness clone
+
+Targets의 `TestPreparationSource=HARNESS_CLONE`, `SourceCUTPath`(원본 모델을 포함한 전체 경로),
+`SourceHarnessName`으로 정상 구성된 Harness를 지정한다. 대상 Harness 이름은 기존 열을
+그대로 사용한다. `cfg.OverwriteHarness=false`는 기존 Harness를 건너뛰고, true는 복구용
+clone을 저장한 뒤 교체한다. 입력·Assessment 자동화는 기존 함수를 재사용한다.
+자세한 설정, 복구 및 검증 절차는 [Template Harness clone](harness-template-clone.md)을 참고한다.

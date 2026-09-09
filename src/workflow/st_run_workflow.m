@@ -5,7 +5,10 @@ function [resultObj, updateResult, workflowResult, reportInfo] = ...
 cfg = st_require_runtime_target();
 options = st_parse_workflow_options(varargin{:});
 T = st_load_targets(cfg.OnlyEnabled);
-if any(st_is_harness_import(T)), st_validate_import_mapping(T,cfg); end
+cloneRows = st_is_harness_clone(T);
+failedCloneRows = false(height(T),1);
+preparedCloneRows = false(height(T),1);
+st_validate_clone_mapping(T,cfg);
 requestedExecutionMode = options.ExecutionMode;
 if isempty(requestedExecutionMode)
     requestedExecutionMode = cfg.ExecutionMode;
@@ -44,7 +47,7 @@ print_plan(plan);
 if strcmpi(workflowKind, 'FULL')
     validationResult = execute_timed_step( ...
         'Pre-Validate CUT Paths', @() st_pre_validate_targets());
-    require_success(validationResult, ...
+    require_success(validationResult(~cloneRows,:), ...
         'Pre-Validation failed. Check PreValidationResult.');
 
     harnessResult = execute_timed_step( ...
@@ -52,7 +55,9 @@ if strcmpi(workflowKind, 'FULL')
         st_stage_selection(plan, 'HARNESS')));
     state = st_checkpoint_workflow_state( ...
         state, plan, 'HARNESS', harnessResult, cfg);
-    require_success(harnessResult, ...
+    failedCloneRows = cloneRows & strcmpi(string(harnessResult.Status),'FAIL');
+    preparedCloneRows = cloneRows & ~failedCloneRows;
+    require_success(harnessResult(~cloneRows,:), ...
         'Harness creation failed. Check HarnessCreateResult.');
 
     createdRows = strcmpi(string(harnessResult.Status), 'OK');
@@ -66,31 +71,9 @@ if strcmpi(workflowKind, 'FULL')
 else
     validationResult = execute_timed_step( ...
         'Validate CUT / Harness Mapping', @() st_validate_targets());
-    require_success(validationResult, ...
+    require_success(validationResult(~cloneRows,:), ...
         'Validation failed. Check ValidationResult.');
-end
-
-% Content inspection always runs; only changed copies invalidate consumers.
-importStages = ["HARNESS","SLDV","HARNESS_CONFIG","SIGNAL_EDITOR", ...
-    "ASSESSMENT","HARNESS_IMPORT"];
-importForce = st_is_harness_import(T) & plan.PreparationMode == "FORCE" & ...
-    ismember(plan.PreparationFromStage,importStages);
-skipImportCompile = option_or_default( ...
-    options.SkipImportCompile, cfg.SkipImportCompile);
-importResult = execute_timed_step('Import Harness Contents', ...
-    @() st_import_harness_contents( ...
-        'Force',importForce,'SkipCompile',skipImportCompile));
-require_success(importResult, 'Harness import failed.');
-state = st_checkpoint_workflow_state(state,plan,'HARNESS_IMPORT',importResult,cfg);
-importedRows = importResult.Status == "IMPORTED";
-if any(importedRows)
-    rows = importedRows;
-    if cfg.OverwriteTestFile, rows(:) = true; end
-    plan = st_force_plan_downstream(plan,rows,'COVERAGE_FILTER', ...
-        'Imported Harness content changed');
-    state = st_invalidate_workflow_state(state,plan);
-    st_save_workflow_state(state,cfg);
-    st_write_result('WorkflowPlanResult',plan);
+    failedCloneRows = cloneRows & strcmpi(string(validationResult.Status),'FAIL');
 end
 
 stageNames = {'SLDV','HARNESS_CONFIG','SIGNAL_EDITOR', ...
@@ -105,9 +88,25 @@ stageFunctions = { ...
     @st_prepare_coverage_filters, @st_create_test_manager, ...
     @st_validate_scenario_alignment};
 
+% Clone preparation already completed these stages inside its recovery boundary.
+if strcmpi(workflowKind,'FULL')
+    completed = cloneRows & strcmpi(string(harnessResult.Status),'OK');
+    for k = 1:4
+        checkpointPlan = plan;
+        checkpointPlan.(['Run' stageNames{k}]) = completed;
+        state = st_checkpoint_workflow_state(state,checkpointPlan, ...
+            stageNames{k},harnessResult,cfg);
+    end
+end
+
 stageResults = cell(numel(stageNames),1);
 for s = 1:numel(stageNames)
     stage = stageNames{s};
+    blocked = failedCloneRows;
+    if s <= 4, blocked = blocked | preparedCloneRows; end
+    plan.(['Run' stage])(blocked) = false;
+    plan.(['Action' stage])(blocked) = "SKIP";
+    plan.(['Reason' stage])(blocked) = "Clone preparation completed, skipped, or failed per target";
     selection = st_stage_selection(plan, stage);
     fn = stageFunctions{s};
     if strcmp(executionMode, 'PER_CUT') && ...
@@ -122,11 +121,17 @@ for s = 1:numel(stageNames)
         stageLabels{s}, @() fn(selection));
     state = st_checkpoint_workflow_state( ...
         state, plan, stage, stageResults{s}, cfg);
-    require_success(stageResults{s}, sprintf( ...
+    failedCloneRows = failedCloneRows | ...
+        (cloneRows & strcmpi(string(stageResults{s}.Status),'FAIL'));
+    require_success(stageResults{s}(~cloneRows,:), sprintf( ...
         '%s failed. Check the stage result report.', stageLabels{s}));
 end
 
-if cfg.RunGeneratedTests
+if any(failedCloneRows)
+    st_log(cfg,'WARN','Clone batch excludes %d failed target(s) from execution.',sum(failedCloneRows));
+end
+executionScope = st_target_scope('enter',T(~failedCloneRows,:)); %#ok<NASGU>
+if cfg.RunGeneratedTests && any(~failedCloneRows)
     if strcmp(executionMode, 'PER_CUT')
         continueOnFailure = option_or_default( ...
             options.ContinueOnFailure, cfg.PerCutContinueOnFailure);
@@ -154,6 +159,7 @@ state.Artifacts.Model = st_file_signature(cfg.ModelFile);
 state.Artifacts.TestFile = st_file_signature(cfg.TestFile);
 st_save_workflow_state(state, cfg);
 
+st_write_result('WorkflowPlanResult',plan);
 Stage = string(stageLabels(:));
 RunCount = zeros(numel(stageNames),1);
 CachedCount = zeros(numel(stageNames),1);
@@ -164,14 +170,11 @@ for s = 1:numel(stageNames)
     FailCount(s) = sum(strcmpi(string(stageResults{s}.Status), 'FAIL'));
 end
 workflowResult = table(Stage, RunCount, CachedCount, FailCount);
-workflowResult = [table("Import Harness Contents",sum(importedRows), ...
-    sum(importResult.Status == "CACHED"),sum(importResult.Status == "FAIL"), ...
-    'VariableNames',workflowResult.Properties.VariableNames); workflowResult];
 st_write_result('WorkflowResult', workflowResult);
 
-if cfg.RunGeneratedTests && strcmp(executionMode, 'PER_CUT')
+if cfg.RunGeneratedTests && any(~failedCloneRows) && strcmp(executionMode, 'PER_CUT')
     % st_run_tests_per_cut writes its report before each filter is restored.
-elseif cfg.RunGeneratedTests && cfg.GenerateTestReport
+elseif cfg.RunGeneratedTests && any(~failedCloneRows) && cfg.GenerateTestReport
     reportInfo = execute_timed_step( ...
         'Generate Integrated Test Report', ...
         @() st_generate_test_report( ...
@@ -182,7 +185,12 @@ elseif cfg.RunGeneratedTests
 end
 
 fprintf('\n============================================\n');
-fprintf('Automation Complete\n');
+if any(failedCloneRows)
+    fprintf('Automation finished with %d failed clone target(s).\n',sum(failedCloneRows));
+else
+    fprintf('Automation Complete\n');
+end
+reportInfo.CloneFailures = T(failedCloneRows,:);
 fprintf('End     : %s\n', timestamp_text());
 fprintf('Elapsed : %s\n', elapsed_text(toc(totalTimer)));
 fprintf('============================================\n');
@@ -219,7 +227,7 @@ end
 
 function print_plan(plan)
 stages = {'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR', ...
-    'ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT','HARNESS_IMPORT'};
+    'ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT'};
 for s = 1:numel(stages)
     runCount = sum(plan.(sprintf('Run%s', stages{s})));
     fprintf('%-16s RUN=%d CACHED=%d\n', stages{s}, ...

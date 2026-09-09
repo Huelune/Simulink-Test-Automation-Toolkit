@@ -18,7 +18,6 @@ verifyEqual(testCase, cfg.ExecutionMode, 'AUTO');
 verifyTrue(testCase, cfg.PerCutContinueOnFailure);
 verifyEqual(testCase, cfg.PerCutReportMode, 'SUMMARY');
 verifyFalse(testCase, cfg.PerCutFailOnNonPass);
-verifyFalse(testCase, cfg.SkipImportCompile);
 end
 
 function testWorkflowOptionOverrides(testCase)
@@ -31,13 +30,6 @@ end
 function testCoverageFilterStageOverride(testCase)
 options = st_parse_workflow_options('FromStage', 'coverage_filter');
 verifyEqual(testCase, options.FromStage, 'COVERAGE_FILTER');
-end
-
-function testSkipImportCompileWorkflowOverride(testCase)
-options = st_parse_workflow_options('SkipImportCompile',true);
-verifyTrue(testCase,options.SkipImportCompile);
-options = st_parse_workflow_options();
-verifyEmpty(testCase,options.SkipImportCompile);
 end
 
 function testPerCutWorkflowOptionOverrides(testCase)

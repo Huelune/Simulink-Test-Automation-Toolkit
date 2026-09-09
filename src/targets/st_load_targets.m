@@ -6,8 +6,7 @@ function T = st_load_targets(onlyEnabled)
 % Optional:
 %   No, Enabled, SldvMode, SldvDataFile, ExpectedUpdateMode,
 %   CoverageFilterMode, CoverageFilterAction, CoverageFilterRationale,
-%   PreparationMode, PreparationFromStage, TestPreparationSource,
-%   SourceCUTPath, SourceHarnessName
+%   PreparationMode, PreparationFromStage
 %
 % Important:
 % - CUTName and CUTPath preserve their original whitespace because trailing
@@ -81,10 +80,6 @@ idxPreparationMode = find_column_optional(names, ...
 idxPreparationFromStage = find_column_optional(names, ...
     {'PreparationFromStage','Preparation From Stage','준비시작단계'});
 
-idxTestPreparationSource = find_column_optional(names, {'TestPreparationSource'});
-idxSourceCUTPath = find_column_optional(names, {'SourceCUTPath'});
-idxSourceHarnessName = find_column_optional(names, {'SourceHarnessName'});
-
 CUTName = string(raw{:, idxCUTName});
 CUTPath = string(raw{:, idxCUTPath});
 HarnessName = string(raw{:, idxHarness});
@@ -122,28 +117,6 @@ ExpectedUpdateMode = repmat("DEFAULT", n, 1);
 if ~isempty(idxExpectedUpdateMode)
     ExpectedUpdateMode = string(raw{:, idxExpectedUpdateMode});
 end
-
-TestPreparationSource = repmat("EXISTING",n,1);
-SourceCUTPath = strings(n,1);
-SourceHarnessName = strings(n,1);
-if ~isempty(idxTestPreparationSource)
-    TestPreparationSource = upper(strtrim(string(raw{:,idxTestPreparationSource})));
-    TestPreparationSource(ismissing(TestPreparationSource) | ...
-        strlength(TestPreparationSource) == 0) = "EXISTING";
-end
-if ~isempty(idxSourceCUTPath), SourceCUTPath = string(raw{:,idxSourceCUTPath}); end
-if ~isempty(idxSourceHarnessName)
-    SourceHarnessName = strtrim(string(raw{:,idxSourceHarnessName}));
-end
-importMask = TestPreparationSource == "HARNESS_IMPORT";
-if any(importMask & (SldvMode ~= "OFF" | strlength(SldvDataFile) > 0 | ...
-        ~ismember(upper(strtrim(ExpectedUpdateMode)),["","DEFAULT","OFF"])))
-    st_log(cfg,'WARN', ...
-        'HARNESS_IMPORT rows ignore SLDV data and expected-value update settings.');
-end
-SldvMode(importMask) = "OFF";
-SldvDataFile(importMask) = "";
-ExpectedUpdateMode(importMask) = "OFF";
 
 CoverageFilterMode = repmat("OFF", n, 1);
 CoverageFilterAction = strings(n, 1);
@@ -239,9 +212,6 @@ CoverageFilterAction = CoverageFilterAction(keep);
 CoverageFilterRationale = CoverageFilterRationale(keep);
 PreparationMode = PreparationMode(keep);
 PreparationFromStage = PreparationFromStage(keep);
-TestPreparationSource = TestPreparationSource(keep);
-SourceCUTPath = SourceCUTPath(keep);
-SourceHarnessName = SourceHarnessName(keep);
 
 [CoverageFilterMode, CoverageFilterAction, CoverageFilterRationale] = ...
     st_resolve_coverage_filter_settings( ...
@@ -265,7 +235,7 @@ end
 validPreparationStages = [ ...
     "DEFAULT", "START", "HARNESS", "SLDV", "HARNESS_CONFIG", ...
     "SIGNAL_EDITOR", "ASSESSMENT", "COVERAGE_FILTER", ...
-    "TEST_MANAGER", "ALIGNMENT", "HARNESS_IMPORT"];
+    "TEST_MANAGER", "ALIGNMENT"];
 invalidPreparationStages = ...
     ~ismember(PreparationFromStage, validPreparationStages);
 if any(invalidPreparationStages)
@@ -289,16 +259,22 @@ T = table( ...
     CoverageFilterAction, ...
     CoverageFilterRationale, ...
     PreparationMode, ...
-    PreparationFromStage, ...
-    TestPreparationSource, ...
-    SourceCUTPath, ...
-    SourceHarnessName);
+    PreparationFromStage);
 
-T = st_resolve_harness_import_settings(T, cfg);
+fields = {'TestPreparationSource','SourceCUTPath','SourceHarnessName'};
+for k = 1:numel(fields)
+    idx = find_column_optional(names, fields(k));
+    values = strings(height(raw),1);
+    if ~isempty(idx), values = string(raw{:,idx}); end
+    values(ismissing(values)) = "";
+    T.(fields{k}) = values(keep);
+end
+T = st_resolve_harness_clone_settings(T);
 
 if onlyEnabled
     T = T(T.Enabled, :);
 end
+T = st_target_scope('filter', T);
 
 end
 

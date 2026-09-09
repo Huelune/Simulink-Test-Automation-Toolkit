@@ -22,13 +22,6 @@ st_setup
 st_run_after_harness('ExecutionMode', 'PER_CUT')
 ```
 
-HARNESS_IMPORT 대상의 CUT 인터페이스가 같음을 별도로 확인했고 긴 컴파일을 생략해야
-하면 다음처럼 실행한다. 선언 포트와 Harness 구조 검사는 계속 수행한다.
-
-```matlab
-st_run_after_harness('SkipImportCompile', true)
-```
-
 준비 없이 CUT별 테스트만 실행:
 
 ```matlab
@@ -78,7 +71,6 @@ st_setup
 | 실행 파일 | 역할 |
 | --- | --- |
 | `st_create_harnesses.m` | 누락 Harness 생성 |
-| `st_import_harness_contents.m` | HARNESS_IMPORT 대상 내용 가져오기 |
 | `st_prepare_sldv_targets.m` | SLDV 데이터와 manifest 준비 |
 | `st_configure_harnesses.m` | Harness StopTime 등 설정 |
 | `st_configure_signal_editors.m` | Signal Editor MAT와 Scenario 구성 |
@@ -89,3 +81,5 @@ st_setup
 
 `st_run_workflow.m`, 보고서 작성 함수와 세부 변환 함수는 공개 실행 명령을 지원하는
 내부 구현이므로 직접 실행 목록에서 제외한다.
+
+Template clone 설정과 복구 절차는 [harness-template-clone.md](harness-template-clone.md)를 참고한다.

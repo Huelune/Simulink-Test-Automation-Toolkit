@@ -16,7 +16,6 @@ Status = strings(0,1);
 Message = strings(0,1);
 
 for targetIndex = 1:height(T)
-    if st_is_harness_import(T(targetIndex,:)), continue; end
     profile = st_get_sldv_profile(T(targetIndex,:), cfg);
     if strcmp(profile.Mode, 'OFF')
         continue;

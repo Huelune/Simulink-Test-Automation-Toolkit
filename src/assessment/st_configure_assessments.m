@@ -50,7 +50,6 @@ if nargin < 1
     stageSelection = [];
 end
 selection = st_normalize_stage_selection(T, stageSelection);
-selection = st_skip_import_preparation(T, selection, cfg);
 
 
 st_force_model_stopped( ...
@@ -167,7 +166,9 @@ for i = 1:n
     scenarioNames = profile.ScenarioNames;
     scenarioName = scenarioNames{1};
 
-    if strcmp(profile.Mode, 'OFF')
+    if st_is_harness_clone(T(i,:))
+        transitionCondition = sprintf('after(%.17g, sec)', cfg.ExpectedValueSampleTime);
+    elseif strcmp(profile.Mode, 'OFF')
         transitionCondition = legacyTransitionCondition;
     else
         transitionCondition = sprintf('after(%.17g, sec)', profile.Tmax);

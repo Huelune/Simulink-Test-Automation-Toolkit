@@ -18,6 +18,7 @@ if nargin < 1
 end
 selection = st_normalize_stage_selection(T, stageSelection);
 
+st_validate_clone_mapping(T, cfg);
 n = height(T);
 
 Status = strings(n,1);
@@ -124,7 +125,11 @@ for i = 1:n
             '[HarnessCreate %d/%d] existing Harness count=%d', ...
             i, n, numel(existing));
 
-        if ~isempty(existing)
+        if st_is_harness_clone(T(i,:))
+            [cloneStatus, cloneMessage] = st_clone_template_harness(T(i,:), cfg);
+            Status(i) = cloneStatus;
+            Message(i) = cloneMessage;
+        elseif ~isempty(existing)
 
             Status(i) = 'SKIP';
             Message(i) = 'Harness already exists';
@@ -132,11 +137,6 @@ for i = 1:n
             fprintf('  -> SKIP : already exists\n');
 
         else
-
-            if st_is_harness_import(T(i,:))
-                error('simtest:ImportHarnessMissing', ...
-                    'HARNESS_IMPORT requires an existing Harness: %s', harnessName);
-            end
 
             st_log(cfg, 'DEBUG', ...
                 '[HarnessCreate %d/%d] forcing model stopped', ...
@@ -230,6 +230,8 @@ for i = 1:n
             rethrow(ME);
         end
 
+        st_log(cfg, 'ERROR', 'Harness creation failed | CUT=%s | Harness=%s | %s', ...
+            ownerPath, harnessName, ME.message);
         Status(i) = 'FAIL';
         Message(i) = string(ME.message);
 

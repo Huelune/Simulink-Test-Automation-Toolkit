@@ -48,13 +48,6 @@ verifyEqual(testCase, plan.Path, ...
     string({cfg.PerCutRunRootDir; cfg.PerCutLatestPointer}));
 end
 
-function testImportScopeTargetsOnlyPreparedHarnessCopies(testCase)
-cfg = st_config();
-plan = st_cleanup_results('Scope','IMPORTS');
-verifyEqual(testCase,height(plan),1);
-verifyEqual(testCase,plan.Path,string(fullfile(cfg.ResultDir,'harness_import')));
-end
-
 
 function tf = under_result(paths, root)
 root = char(java.io.File(root).getCanonicalPath());

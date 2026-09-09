@@ -20,11 +20,7 @@ st_log(cfg, 'INFO', 'Specification MaxTime source selected | Case=%s | Mode=%s |
     target.TestCaseName, target.SldvMode, maxTimeSource, string(harnessStopTime));
 [decisionBlockList, ~, decisionBlockNote] = st_specification_decision_blocks(base(9), cfg);
 assessment = st_find_assessment_block(harness);
-if st_is_harness_import(target) && ~sltest.testsequence.isUsingScenarios(assessment)
-    scenarios = ""; % One run without a TestSequenceScenario override.
-else
-    scenarios = string(sltest.testsequence.getAllScenarios(assessment));
-end
+scenarios = string(sltest.testsequence.getAllScenarios(assessment));
 scenarios = scenarios(:);
 if isempty(scenarios)
     error('simtest:SpecificationNoScenarios', 'Assessment has no scenarios: %s', assessment);
@@ -39,10 +35,6 @@ signalNote = "";
 ports = find_system(char(base(9)), 'SearchDepth', 1, ...
     'Type', 'Block', 'BlockType', 'Inport');
 noInput = isempty(ports) && strcmpi(target.SldvMode, 'OFF');
-if st_is_harness_import(target)
-    importedProfile = st_get_test_profile(target,cfg);
-    noInput = ~importedProfile.HasSignalEditor;
-end
 try
     if noInput
         base(4) = "해당 없음";

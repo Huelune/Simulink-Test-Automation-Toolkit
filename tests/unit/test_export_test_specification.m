@@ -236,7 +236,6 @@ files = usage{:,'실행파일'};
 verifyTrue(testCase, any(files == "st_run_from_harness.m"));
 verifyTrue(testCase, any(files == "st_run_after_harness.m"));
 verifyTrue(testCase, any(files == "st_run_tests_per_cut.m"));
-verifyTrue(testCase, any(contains(usage{:,'대표사용법'}, "SkipImportCompile")));
 verifyTrue(testCase, any(files == "st_export_test_specification.m"));
 verifyTrue(testCase, any(files == "st_check_actual_system.m"));
 verifyFalse(testCase, any(files == "st_run_workflow.m"));

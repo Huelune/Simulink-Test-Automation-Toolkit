@@ -260,6 +260,9 @@ cfg.TestSuiteName = ...
 %   - Recreate Test Cases from Excel.
 cfg.OverwriteTestFile = false;
 
+% Replace existing clone destinations only after a recovery clone is saved.
+cfg.OverwriteHarness = false;
+
 
 %% ============================================================
 % Test execution
@@ -297,12 +300,6 @@ cfg.PreparationMode = 'AUTO';
 % Earliest stage used by FORCE. START resolves to HARNESS for the full
 % workflow and SLDV for the existing-Harness workflow.
 cfg.PreparationFromStage = 'START';
-
-% false (default): compile source/destination CUT interfaces and update each
-% imported Harness after applying content.
-% true: use declared-port/static structure checks only. This is faster, but
-% cannot verify inherited data types, dimensions, sample times, or Bus types.
-cfg.SkipImportCompile = false;
 
 cfg.WorkflowStateFile = ...
     fullfile(rootDir, 'result', 'state', 'workflow_state.mat');

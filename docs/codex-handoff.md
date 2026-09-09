@@ -6,8 +6,8 @@
 
 ## 현재 기준
 
-- 기준일: 2026-09-08
-- 활성 개발 브랜치: feat/harness-content-import
+- 기준일: 2026-09-09
+- 활성 개발 브랜치: feat/harness-template-clone
 - 필수 기능 기준: feat/per-cut-filtered-execution의 7f0825e
 - 필수 handoff 기준: 2b3ba09 이후
 - 필수 진단 기준: 현재 브랜치 최신 커밋의 st_check_actual_system 포함
@@ -37,9 +37,11 @@ f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사
 
 | 브랜치 | 기준 커밋 | 역할과 처리 방침 |
 | --- | --- | --- |
+| backup/harness-full-copy | b6d30a8 | 완전 복사/Import 구현 보존. 수정하지 않는다. |
+| feat/harness-content-import | b6d30a8 | 기존 Import 브랜치. clone 개발을 이어가지 않는다. |
+| feat/harness-template-clone | b6d30a8 기반 | Import만 선별 제거한 Template clone 개발. MATLAB 검증 전 통합하지 않는다. |
 | main | 0a0ace5 | 파일 구조 정리까지만 반영된 안정 기준. R2025b 검증 전 기능을 임의 backport하지 않는다. |
 | feat/per-cut-filtered-execution | d109472 이후 | 현재 활성 통합 브랜치. 다른 작업은 이 브랜치 최신 원격을 fetch한 뒤 이어간다. |
-| feat/harness-content-import | 7f0825e 기반 | 동명 CUT의 Harness 테스트 내용 가져오기 개발 브랜치. R2025b 검증 전 통합 브랜치에 병합하지 않는다. |
 
 ## 정리된 과거 브랜치
 
@@ -141,27 +143,21 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 
 ## 다음 작업 순서
 
-### 2026-09-07 동명 CUT Harness 내용 가져오기
+### 2026-09-09 Template Harness clone 전환
 
-- 개발 브랜치 `feat/harness-content-import`에서 `HARNESS_IMPORT` 준비 방식을 추가했다.
-  `TestPreparationSource`, `SourceCUTPath`, `SourceHarnessName`으로 기준을 지정하며 기준
-  Targets 행은 비활성화해야 한다.
-- 대상은 SLDV·Signal Editor 생성·Assessment 생성·기대값 갱신을 건너뛰고, 저장된
-  기준 Harness의 테스트 블록과 독립 입력 MAT, 실행 설정을 사용한다. Test Manager는
-  복사하지 않고 가져온 시나리오 순서로 다시 만든다.
-- 적용 전에 컴파일된 CUT interface, 버스 요소, 표준 Harness 구조·배선을 검사한다.
-  모든 대상 사전 검사가 끝난 뒤에만 변경하며 실패 시 모델·외부 Harness·manifest를
-  `result/harness_import/transactions` 백업에서 복원한다.
-- 2026-09-08에 긴 컴파일을 피하는 명시적 옵션을 추가했다. 직접 API의
-  `SkipCompile=true`와 workflow의 `SkipImportCompile=true`는 Top Model compile과
-  적용 후 Harness update를 모두 생략하며 선언 포트·구조·배선·fingerprint만 검사한다.
-  기본값은 false이고 결과의 `InterfaceCheck=STATIC_ONLY`로 미검증 범위를 남긴다.
-- MISS_HIT로 새 파일과 수정 연결부의 정적 구문 검사를 통과했다. 전체 저장소 검사에서
-  보고되는 `import(reader)`와 `arguments` 식별자 오류는 기준 브랜치에도 있는 도구의
-  최신 MATLAB 문법 오인이다.
-- 현재 PC에는 MATLAB이 없어 R2025b 런타임 검증은 미수행이다. 실제 PC에서
-  `tests/integration/test_harness_import_runtime.m`을 실행하고 내부/외부 Harness,
-  복수 시나리오, 버스, 중간 실패 rollback, bundle 재실행을 확인해야 한다.
+- `09b16ee` 및 `b6d30a8`의 Import 전용 변경만 제거하고 후속 명세서 개선은 유지했다.
+- `HARNESS_CLONE`, `SourceCUTPath`, `SourceHarnessName`으로 Template을 선택한다.
+  SourceCUTPath는 원본 모델 이름을 포함한 전체 경로다. 기본 `OverwriteHarness=false`.
+- clone은 DestinationOwner를 명시한다. 입력 MAT를 독립 보존한 뒤 기존 SLDV·입력·
+  Assessment·Harness 설정 함수를 재사용한다. Step1은 비어 있고 Step2 전이는
+  after(ExpectedValueSampleTime, sec), 기본 0.01초다.
+- 기존 대상 교체는 recovery Harness clone을 저장한 뒤 수행한다. 복구 실패 시
+  로그의 recovery Harness와 result/harness_clone transaction을 보존한다.
+- 실패 CUT는 후속 준비와 실행에서 제외하며 정상 CUT는 계속 처리한다.
+- 세부 사용법과 런타임 체크: `docs/harness-template-clone.md`.
+- MATLAB은 이 PC에서 발견되지 않았다. 새 단위/통합 테스트는 런타임 미수행이다.
+  정적 검사 결과만으로 clone/CUT 연결이나 복구가 런타임 검증됐다고 표현하지 않는다.
+
 
 ### 2026-09-04 테스트 명세서 추출 추가
 
@@ -216,3 +212,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 2. 18비트 전체 코드, CUT별 6비트 코드와 상세 산출물을 분석해 필요한 수정만 새
    커밋으로 반영한다.
 3. CERTIFY + BOTH와 수동 GUI 증거가 끝난 뒤에만 PR과 main 통합을 결정한다.
+
+정적 검증: 변경·추가 MATLAB 파일 중 37개가 MISS_HIT UTF-8 검사에 통과했다.
+Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e`에서도
+동일하게 재현되는 기존 도구 제한이다. MATLAB 단위·통합 테스트 실행 결과와 구분한다.

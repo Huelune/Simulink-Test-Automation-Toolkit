@@ -2,18 +2,6 @@
 
 ## Unreleased
 
-- Added opt-in compile skipping for Harness content import. `SkipCompile=true`
-  on the direct API or `SkipImportCompile=true` on workflows retains declared
-  port, Harness structure, wiring, and fingerprint checks while skipping the
-  Top Model compile and post-import Harness update. Results report
-  `InterfaceCheck=STATIC_ONLY` and the safe default remains compiled validation.
-
-- Added `HARNESS_IMPORT` preparation for copying saved Signal Editor scenarios,
-  Test Sequence/Assessment logic and expected values, and Harness runtime settings
-  between compatible, same-named CUTs in one model. Imported targets bypass SLDV
-  and expected-value regeneration, use independent input files, rebuild Test
-  Manager iterations from copied scenarios, and roll back file changes on failure.
-
 - Fixed specification workbook writing when MaxTime is NaN or text is missing.
   Overflow checks now preserve numeric cells and normalize missing strings to
   empty cells before character conversion.
@@ -230,3 +218,10 @@
 - Corrected the temporary path feature to read Excel native cell indentation rather than a numeric Depth column.
 - Added `st_fill_temp_paths_from_indent`.
 - Kept `st_fill_temp_paths_from_depth` as a compatibility wrapper.
+
+## 2026-09-09 Template Harness clone
+
+- 완전 복사/Import 구현을 backup/harness-full-copy(b6d30a8)에 보존하고 전용 경로만 제거.
+- HARNESS_CLONE 행을 sltest.harness.clone + DestinationOwner로 생성하고 기존 입력·Assessment 구성 재사용.
+- OverwriteHarness=false 기본값, 교체 recovery clone, 입력 MAT 독립 보존 및 대상 실패 격리 추가.
+- 명세서 출력·CVF·일반 생성 동작 유지. MATLAB 런타임 검증은 미수행.

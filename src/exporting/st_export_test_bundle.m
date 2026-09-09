@@ -198,7 +198,6 @@ stageTimer = start_step(currentStage);
 sldvManifestBundlePath = '';
 targetInventory = collect_target_inputs( ...
     targets, cfg, stagingDirectory, templateDirectory);
-st_export_import_profiles(targets,cfg,templateDirectory,targetInventory);
 if isfile(cfg.SldvManifestFile)
     sldvManifestOutput = fullfile( ...
         templateDirectory, 'result', 'sldv', 'sldv_manifest.mat');
@@ -456,13 +455,7 @@ for i = 1:height(targets)
         i, height(targets), item.CUTName, item.HarnessName, item.SldvMode);
 
     try
-    if st_is_harness_import(row)
-        importedProfile = st_get_test_profile(row,cfg);
-        if ~importedProfile.HasSignalEditor
-            inventory(end + 1, 1) = item; %#ok<AGROW>
-            continue;
-        end
-    elseif strcmpi(item.SldvMode, 'OFF')
+    if strcmpi(item.SldvMode, 'OFF')
         directInports = find_system( ...
             item.CUTPath, 'SearchDepth', 1, ...
             'Type', 'Block', 'BlockType', 'Inport');

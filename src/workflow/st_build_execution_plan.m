@@ -5,7 +5,7 @@ workflowKind = upper(char(string(workflowKind)));
 [state, stateLoadStatus] = st_load_workflow_state(cfg);
 
 stages = ["HARNESS", "SLDV", "HARNESS_CONFIG", "SIGNAL_EDITOR", ...
-    "ASSESSMENT", "COVERAGE_FILTER", "TEST_MANAGER", "ALIGNMENT", "HARNESS_IMPORT"];
+    "ASSESSMENT", "COVERAGE_FILTER", "TEST_MANAGER", "ALIGNMENT"];
 n = height(T);
 
 modelSignature = st_file_signature(cfg.ModelFile);
@@ -79,12 +79,7 @@ for i = 1:n
         reasons(6) = "Coverage filter artifact is missing";
     end
 
-    if st_is_harness_import(T(i,:))
-        % Import itself checks content on every run, independently of file mtime.
-        % It invalidates consumers only if its verified content changes.
-        dirty(2:5) = false;
-        reasons(2:5) = "HARNESS_IMPORT preserves copied test content";
-    elseif ~isfile(cfg.SldvManifestFile)
+    if ~isfile(cfg.SldvManifestFile)
         dirty(2:end) = true;
         reasons(2:end) = "SLDV manifest is missing";
     elseif ~dirty(2)
@@ -98,7 +93,6 @@ for i = 1:n
 
     if strcmp(mode, 'FORCE')
         forceIndex = find(stages == string(fromStage), 1);
-        if strcmp(fromStage, 'HARNESS_IMPORT'), forceIndex = 2; end
         if isempty(forceIndex)
             forceIndex = 2;
         end
@@ -116,16 +110,6 @@ for i = 1:n
                 reasons(s) = "Upstream stage invalidated";
             end
         end
-    end
-
-    if st_is_harness_import(T(i,:))
-        dirty(2:5) = false;
-        reasons(2:5) = "HARNESS_IMPORT preserves copied test content";
-        dirty(9) = true;
-        reasons(9) = "Inspect source and destination content fingerprints";
-    else
-        dirty(9) = false;
-        reasons(9) = "Existing preparation source";
     end
 
     for s = 1:numel(stages)
@@ -154,12 +138,10 @@ if cfg.OverwriteTestFile && any(runValues(:,7))
 end
 
 plan = table(Key, T.No, T.CUTName, T.CUTPath, T.HarnessName, ...
-    T.TestCaseName, T.TestPreparationSource, T.SourceCUTPath, ...
-    T.SourceHarnessName, T.CoverageFilterMode, T.CoverageFilterAction, ...
+    T.TestCaseName, T.CoverageFilterMode, T.CoverageFilterAction, ...
     T.CoverageFilterRationale, Mode, FromStage, ...
     'VariableNames', {'Key','No','CUTName','CUTPath','HarnessName', ...
-    'TestCaseName','TestPreparationSource','SourceCUTPath', ...
-    'SourceHarnessName','CoverageFilterMode','CoverageFilterAction', ...
+    'TestCaseName','CoverageFilterMode','CoverageFilterAction', ...
     'CoverageFilterRationale','PreparationMode','PreparationFromStage'});
 
 for s = 1:numel(stages)
@@ -227,13 +209,10 @@ common = struct('Identity', identity, ...
     'MATLABRelease', version('-release'), ...
     'Toolkit', toolkit);
 
-importSource = common;
-if st_is_harness_import(row)
-    importSource.SourceCUTPath = char(row.SourceCUTPath);
-    importSource.SourceHarnessName = char(row.SourceHarnessName);
+if st_is_harness_clone(row)
+    common.Template = st_clone_template_signature(row, cfg);
+    common.OverwriteHarness = cfg.OverwriteHarness;
 end
-signatures.HARNESS_IMPORT = st_hash_value(importSource);
-
 harness = common;
 harness.CreateWithoutCompile = false;
 signatures.HARNESS = st_hash_value(harness);
