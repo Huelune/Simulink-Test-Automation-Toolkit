@@ -31,21 +31,44 @@ st_log(cfg, 'INFO', 'Specification Assessment read start | Block=%s | Scenarios=
 bindingNotes = "";
 bindings = struct('Name', {}, 'Scenario', {}, 'Input', {}, 'Note', {});
 signalBlock = '';
+signalEditorAvailable = false;
 signalNote = "";
-ports = find_system(char(base(9)), 'SearchDepth', 1, ...
-    'Type', 'Block', 'BlockType', 'Inport');
-noInput = isempty(ports) && strcmpi(target.SldvMode, 'OFF');
+inputPath = '';
+inputSignature = [];
 try
-    if noInput
-        base(4) = "해당 없음";
-    else
-        signalBlock = st_find_signal_editor_block(harness);
-        configuredFile = get_param(signalBlock, 'Filename');
-        [~, stem, extension] = fileparts(configuredFile);
-        base(4) = string([stem extension]);
+    signalBlock = st_find_signal_editor_block(harness);
+    signalEditorAvailable = true;
+    options = st_normalize_options( ...
+        get_param(signalBlock, 'options@ActiveScenario'));
+    activeScenario = char(get_param(signalBlock, 'ActiveScenario'));
+    if isempty(options) || isempty(activeScenario) || ...
+            ~ismember(activeScenario, options)
+        error('simtest:SignalEditorActiveScenarioInvalid', ...
+            ['Signal Editor ActiveScenario is empty or unavailable. ' ...
+             'Active=%s | Available=[%s] | Block=%s'], ...
+            activeScenario, strjoin(options, ', '), signalBlock);
     end
+    configuredFile = get_param(signalBlock, 'Filename');
+    inputPath = st_resolve_data_file(configuredFile, cfg.TopModel);
+    inputSignature = st_file_signature(inputPath);
+    inputFiles = string(inputPath);
+    [~, stem, extension] = fileparts(configuredFile);
+    base(4) = string([stem extension]);
 catch ME
-    signalNote = string(ME.message);
+    if strcmpi(target.SldvMode, 'OFF') && ...
+            strcmp(ME.identifier, 'simtest:SignalEditorBlockMissing')
+        signalBlock = '';
+        signalEditorAvailable = false;
+        base(4) = "해당 없음";
+        signalNote = ...
+            "SKIP_NO_SIGNAL_EDITOR: Harness has no Signal Editor block.";
+        st_log(cfg, 'WARN', ...
+            ['Specification input scenario omitted | Case=%s | ' ...
+             'Harness=%s | reason=no Signal Editor block'], ...
+            target.TestCaseName, target.HarnessName);
+    else
+        rethrow(ME);
+    end
 end
 
 % A broken Test Manager link must not hide Assessment-only scenarios.
@@ -108,18 +131,7 @@ catch ME
     bindings = struct('Name', {}, 'Scenario', {}, 'Input', {}, 'Note', {});
 end
 
-inputPath = '';
-inputSignature = [];
 inputCache = containers.Map('KeyType', 'char', 'ValueType', 'any');
-if ~isempty(signalBlock)
-    try
-        inputPath = st_resolve_data_file(get_param(signalBlock, 'Filename'), cfg.TopModel);
-        inputSignature = st_file_signature(inputPath);
-        inputFiles = string(inputPath);
-    catch ME
-        signalNote = join_notes(signalNote, string(ME.message));
-    end
-end
 
 for s = 1:numel(scenarios)
     row = base;
@@ -149,11 +161,12 @@ for s = 1:numel(scenarios)
             linked(10) = bindings(b).Name;
             linked(11) = bindings(b).Input;
             linked(13) = join_notes(linked(13), bindings(b).Note);
-            if strlength(bindings(b).Input) == 0
+            if ~signalEditorAvailable
+                linked(6) = "해당 없음";
+            elseif strlength(bindings(b).Input) == 0
                 linked(6) = "연결 없음";
-                if ~noInput
-                    linked(13) = join_notes(linked(13), "Signal Editor scenario binding missing.");
-                end
+                linked(13) = join_notes(linked(13), ...
+                    "Signal Editor scenario binding missing.");
             elseif ~isempty(inputPath)
                 name = char(bindings(b).Input);
                 if ~isKey(inputCache, name)
@@ -163,11 +176,15 @@ for s = 1:numel(scenarios)
                         if ~isfield(data, name)
                             error('simtest:SpecificationInputMissing', 'MAT scenario variable missing: %s', name);
                         end
-                        [content, note, inputMaxTime] = st_specification_input_lines(data.(name));
-                        inputCache(name) = {content, note, inputMaxTime};
+                        [content, note, inputMaxTime, readStatus] = ...
+                            st_specification_input_scenario( ...
+                            data.(name), target.SldvMode);
+                        inputCache(name) = ...
+                            {content, note, inputMaxTime, readStatus};
                         st_log(cfg, 'DEBUG', 'Specification MAT read end | Scenario=%s', name);
                     catch ME
-                        inputCache(name) = {"<읽기 실패>", string(ME.message), NaN};
+                        inputCache(name) = ...
+                            {"<읽기 실패>", string(ME.message), NaN, "FAIL"};
                         st_log(cfg, 'ERROR', 'Specification MAT read failed | File=%s | Scenario=%s | %s', ...
                             inputPath, name, ME.message);
                     end
@@ -176,11 +193,13 @@ for s = 1:numel(scenarios)
                 linked(6) = item{1};
                 linked(13) = join_notes(linked(13), item{2});
                 inputMaxTime = item{3};
+                if item{4} == "FAIL", linked(12) = "FAIL"; end
             else
                 linked(6) = "<읽기 실패>";
+                linked(12) = "FAIL";
             end
         end
-        if noInput, linked(6) = "해당 없음"; end
+        if ~signalEditorAvailable, linked(6) = "해당 없음"; end
         [maxTime, rowMaxTimeSource, maxTimeNote] = st_specification_max_time( ...
             target.SldvMode, harnessStopTime, inputMaxTime);
         linked(13) = join_notes(linked(13), maxTimeNote);

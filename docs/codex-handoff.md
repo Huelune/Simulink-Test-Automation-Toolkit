@@ -127,7 +127,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 9. 각 CUT의 MLDATX, CVT, CVF, Excel, HTML과 선택적 PDF를 확인한다.
 10. 모델, Test File, Excel과 입력 파일의 원본 checksum 불변을 확인한다.
 11. 직계 Inport 없음+Signal Editor 있음, Signal Editor 없음, 손상/중복 Signal
-    Editor의 성공·WARN·실패 경계를 각각 확인한다.
+    Editor의 성공·WARN·실패 경계를 TC 연결과 명세서 추출에서 각각 확인한다.
 12. ORIGINAL/STANDALONE_HARNESS × OFF/CUT_ONLY와 기존 필터 동시 적용을 확인한다.
 13. 여러 CUT가 manifest 순서대로 실행되고 각 standalone 모델이 다음 CUT 전에
     닫히는지 확인한다.
@@ -172,6 +172,9 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - `CoverageBoundaryMode=OFF|CUT_ONLY`는 기존 CoverageFilterMode와 독립적으로
   해석한다. OFF+CUT_ONLY도 AUTO에서 PER_CUT을 선택하며 internal Harness와
   standalone 모델의 실제 실행 CUT를 기준으로 외부 규칙을 생성한다.
+- `st_export_test_specification`도 직계 Inport가 아니라 Signal Editor 존재와 실제
+  TC 연결을 기준으로 입력을 추출한다. OFF+no-Inport라도 연결된 시나리오를 출력하고,
+  Signal Editor 자체가 없을 때만 `SKIP_NO_SIGNAL_EDITOR` WARN으로 처리한다.
 - 현재 PC에는 MATLAB과 MISS_HIT 실행 환경이 없다. `git diff --check`와 정적 계약
   테스트 소스 검토만 수행했으며 MATLAB 단위/통합/fixture는 실행하지 못했다.
 - R2025b에서는 위 "반드시 확인할 항목"의 15개 증거와 `CVF-CHECK-v2`,
@@ -204,7 +207,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - `test_specification_verify_modes.m`에 스텝 선택·순서·부분 실패·동적 열/셀 제한
   회귀 검사를 추가했다. MATLAB 없는 PC에서 정적 검사만 가능하며 실제 대상은 실행하지 않는다.
 - 추가 요청으로 MaxTime 열을 넣었다. 이후 의미를 생성 방식별로 바로잡아 SLDV
-  `FILE/GENERATE`는 연결된 TC 입력 시나리오의 Tmax를, `OFF` 및 가져온 하네스는
+  `FILE/GENERATE`는 연결된 TC 입력 시나리오의 Tmax를, `OFF` 대상은
   실제 Harness Solver `StopTime`을 기록한다. 해당 기준값을 확인할 수 없으면
   NaN(Excel 빈 셀)과 비고를 남기며 다른 기준으로 자동 대체하지 않는다.
 - 시간값 선택은 `st_specification_max_time`으로 분리했고, OFF에 시간 입력이 있어도

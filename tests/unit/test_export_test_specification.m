@@ -52,6 +52,22 @@ verifyEqual(testCase, text, join(["ABC: 2"; "DDD(1): 5"; "DDD(2): 6"], newline))
 verifyEqual(testCase, notes, "");
 end
 
+function testEmptyDatasetIsAValidOffInputScenario(testCase)
+assumeTrue(testCase, ...
+    ~isempty(which('Simulink.SimulationData.Dataset')));
+scenario = Simulink.SimulationData.Dataset;
+[text, notes, maxTime, status] = ...
+    st_specification_input_scenario(scenario, 'OFF');
+verifyEqual(testCase, text, "<입력 신호 없음>");
+verifyEqual(testCase, notes, "");
+verifyTrue(testCase, isnan(maxTime));
+verifyEqual(testCase, status, "OK");
+
+[~, ~, ~, generatedStatus] = ...
+    st_specification_input_scenario(scenario, 'GENERATE');
+verifyEqual(testCase, generatedStatus, "FAIL");
+end
+
 function testVerifyKeepsIndexAndLiteralWithoutEvaluation(testCase)
 action = sprintf(['verify(AAA(1) == 0);\nverify(AAA(2) == 1);\n' ...
     'verify(BBB(1,2).CC(3) == uint8(2));\nverify(AAA(1) == 4);']);

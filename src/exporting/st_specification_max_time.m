@@ -1,7 +1,7 @@
 function [maxTime, source, note] = st_specification_max_time(sldvMode, harnessStopTime, inputMaxTime)
 %ST_SPECIFICATION_MAX_TIME Select the exported MaxTime by test-data origin.
 % SLDV FILE/GENERATE cases use the linked input scenario's maximum time.
-% OFF and Harness-import cases use the Harness solver StopTime.
+% OFF cases use the Harness solver StopTime even when an input is linked.
 mode = upper(strtrim(string(sldvMode)));
 if ~isscalar(mode)
     error('simtest:SpecificationMaxTimeMode', 'SldvMode must be scalar.');

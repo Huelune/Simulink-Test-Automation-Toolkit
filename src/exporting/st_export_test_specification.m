@@ -6,8 +6,10 @@ function [specification, outputFile] = st_export_test_specification(varargin)
 %   VerifyMode: 'STEP2' (default) accepts direct Step 2 names such as
 %   step2, step_2, Step 2, or STEP-02. 'ALL_STEPS_COLUMNS' puts each
 %   verify-bearing step in a separate column with its relative step path.
+%   Input scenarios are read from the actual Test Manager binding whenever
+%   the Harness contains a Signal Editor, regardless of direct CUT Inports.
 %   MaxTime is the input scenario Tmax for SLDV FILE/GENERATE cases, and
-%   the Harness solver StopTime for OFF and imported-Harness cases.
+%   the Harness solver StopTime for OFF cases.
 %   DecisionBlocks is a readable D-numbered list of direct child decision
 %   block Names. DecisionBlockDetails retains types, paths, and JSON.
 p = inputParser;
