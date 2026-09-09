@@ -24,6 +24,22 @@ verifyFalse(testCase, cfg.IgnoreUnexpectedSldvInputs);
 end
 
 
+function testSldvSubsystemPathMismatchIsTemporarilyAllowed(testCase)
+cfg = st_config();
+
+verifyTrue(testCase, cfg.AllowSldvSubsystemPathMismatch);
+
+source = fileread(fullfile(st_project_root(), ...
+    'src', 'sldv', 'st_prepare_sldv_targets.m'));
+verifyTrue(testCase, contains(source, ...
+    "if ~allowPathMismatch"));
+verifyTrue(testCase, contains(source, ...
+    "SLDV subsystem mismatch allowed by temporary compatibility"));
+verifyTrue(testCase, contains(source, ...
+    "Harness input interface validation remains enabled"));
+end
+
+
 function testExpectedUpdateIsAppliedByDefault(testCase)
 cfg = st_config();
 

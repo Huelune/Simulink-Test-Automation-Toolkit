@@ -142,6 +142,7 @@ cfg.CoverageFilterExistingPolicy
 cfg.PreparationMode
 cfg.CheckSharedSignalEditorDataFile
 cfg.IgnoreUnexpectedSldvInputs
+cfg.AllowSldvSubsystemPathMismatch
 cfg.SaveResultFiles
 ```
 
@@ -504,6 +505,12 @@ SLDV MAT에 Harness `ActiveScenario`에 없는 신규 입력이 포함되면 기
 변경할 수 있습니다. 이때 신규 입력은 Signal Editor Scenario에서 제외되고,
 공통 입력만 SLDV 값으로 교체됩니다. 제외 내역은 `SldvGenerationResult`의
 `IgnoredSldvInputs`, `IgnoredSldvInputCount` 열에서 확인합니다.
+
+현재 `cfg.AllowSldvSubsystemPathMismatch=true`는 같은 라이브러리 구현을 서로 다른
+모델 계층에서 사용하는 임시 호환을 위해, `FILE+SLDV` MAT에 기록된
+`ModelInformation.SubsystemPath`가 대상 CUT과 달라도 WARN만 남기고 계속합니다.
+Harness 입력 인터페이스 검증은 유지됩니다. 경로 오사용을 다시 엄격하게 차단하려면
+이 설정을 `false`로 변경합니다.
 
 ### 9.3 `GENERATE`
 

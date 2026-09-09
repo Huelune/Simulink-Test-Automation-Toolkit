@@ -285,6 +285,16 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   정리 콜백을 인수를 캡처하는 로컬 함수로 분리했다. 미저장 보호는 유지하며, 해당 오류
   경로의 회귀 검사를 추가했다. 수정 후 실제 MATLAB 재검증은 아직 미수행이다.
 
+### 2026-09-09 SLDV 서브시스템 경로 임시 호환
+
+- `cfg.AllowSldvSubsystemPathMismatch=true`를 기본값으로 추가했다. `FILE+SLDV`
+  MAT의 `sldvData.ModelInformation.SubsystemPath`가 대상 CUT 전체 경로와 달라도
+  예상·실제 경로와 파일을 WARN으로 기록하고 계속 준비한다.
+- Harness ActiveScenario 입력 인터페이스, SLDV 입력 선택과 이후 Scenario 검증은
+  그대로 유지한다. 엄격 차단으로 복귀할 때는 설정을 `false`로 바꾸면 된다.
+- 해당 설정을 SLDV 증분 실행 signature에 포함했다. 현재 PC에는 MATLAB이 없어
+  정적 계약 검사만 수행했으며 실제 라이브러리 링크 CUT 재사용은 R2025b에서 확인해야 한다.
+
 ### 기존 통합 검증
 
 1. R2025b PC에서 최신 활성 브랜치를 fast-forward하고 실제 PER_CUT 실행을 수행한다.

@@ -275,6 +275,11 @@ st_run_from_harness( ...
 `TreatAsAtomicUnit=on`으로 변경하며, 이 모델 변경은 유지됩니다. 자동 변경을
 원하지 않으면 설정을 `false`로 바꾸고 모델을 미리 준비해야 합니다.
 
+현재 임시 호환 정책인 `cfg.AllowSldvSubsystemPathMismatch=true`에서는
+`FILE+SLDV` MAT 내부의 `ModelInformation.SubsystemPath`가 대상 CUT과 달라도
+WARN을 남기고 계속 진행합니다. Harness 입력 인터페이스 검증은 그대로 수행됩니다.
+엄격한 경로 일치 검사를 다시 적용하려면 이 값을 `false`로 설정하십시오.
+
 각 CUT의 최장 SLDV 종료 시각을 `Tmax`로 사용합니다. 기본적으로 0.01초 격자에
 올림하여 Harness StopTime, Assessment transition, expected-value sampling에
 동일하게 적용합니다.

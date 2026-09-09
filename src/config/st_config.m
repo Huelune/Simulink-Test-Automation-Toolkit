@@ -163,6 +163,16 @@ cfg.AutoConvertSldvTargetsToAtomic = true;
 %   preparation result and manifest.
 cfg.IgnoreUnexpectedSldvInputs = false;
 
+% true (temporary compatibility mode):
+%   Continue FILE+SLDV preparation when the source MAT was generated for a
+%   different subsystem path. The mismatch is logged as WARN; Harness input
+%   interface validation still applies before scenarios are configured.
+%
+% false:
+%   Reject an SLDV MAT whose ModelInformation.SubsystemPath differs from the
+%   configured CUT path.
+cfg.AllowSldvSubsystemPathMismatch = true;
+
 % true:
 %   Open every registered Harness before SLDV configuration and fail when
 %   multiple Harnesses use the same Signal Editor MAT file.

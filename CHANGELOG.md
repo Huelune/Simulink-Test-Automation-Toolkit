@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Temporarily allow `FILE+SLDV` MAT files whose recorded subsystem path differs
+  from the configured CUT when `cfg.AllowSldvSubsystemPathMismatch=true` (the
+  default), while logging a warning and retaining Harness input-interface checks.
 - Targets with no usable Harness output now configure an empty verify action and
   report `SKIP_NO_VERIFY_OUTPUT` during verify-timing validation and expected-value
   update. Missing or untested verify results still fail when an output exists.
