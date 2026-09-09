@@ -289,7 +289,7 @@ for i = 1:n
             if strcmp(dataFileFormat, 'MAT')
                 st_validate_mat_harness_interface( ...
                     harnessInput, meta.InputNames, meta.InputTypes, ...
-                    meta.InputDimensions);
+                    meta.InputDimensions, cfg);
                 sldvDrivenNames = meta.InputNames;
                 preservedHarnessNames = cell(0,1);
             else

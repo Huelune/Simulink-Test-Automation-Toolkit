@@ -153,6 +153,19 @@ verifyError(testCase, ...
     'simtest:MatHarnessInterfaceMismatch');
 end
 
+function testBusVectorOrientationIsCompatible(testCase)
+verifyTrue(testCase, st_signal_dimensions_match([1 5], [5 1], 'bus'));
+verifyTrue(testCase, st_signal_dimensions_match([5 1], [1 5], 'BUS'));
+verifyFalse(testCase, st_signal_dimensions_match([1 5], [5 1], 'double'));
+verifyFalse(testCase, st_signal_dimensions_match([2 3], [3 2], 'bus'));
+verifyFalse(testCase, st_signal_dimensions_match([1 5], [1 6], 'bus'));
+
+harness = struct('Names', {{'Snapshot_Data_IN'}}, ...
+    'Types', {{'bus'}}, 'Dimensions', {{[5 1]}});
+st_validate_mat_harness_interface( ...
+    harness, {'Snapshot_Data_IN'}, {'bus'}, {[1 5]});
+end
+
 function testDatasetNamesUseGetElementNamesAndMatSkipsSldvParameters(testCase)
 root = st_project_root();
 signatureSource = fileread(fullfile( ...
