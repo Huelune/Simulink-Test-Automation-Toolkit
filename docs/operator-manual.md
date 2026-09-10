@@ -490,14 +490,19 @@ Scenario의 기존 값으로 보존됩니다. 번호 기반 대응이 불가능�
 `ActiveScenario`, `InputScenario`, 유일한 Dataset 순으로 단일 템플릿을
 선택하며, 둘 이상이 모호하게 남으면 임의 선택하지 않고 실패합니다.
 
-`FILE`과 `GENERATE` 대상은 모두 Atomic Subsystem이어야 합니다. 기본 설정인
-`cfg.AutoConvertSldvTargetsToAtomic=true`에서는 `TreatAsAtomicUnit=off`인 CUT을
-SLDV 준비 전에 `on`으로 바꾸고 되돌리지 않습니다. 전체 workflow를 실행하면
-뒤의 Harness 구성 단계가 모델을 저장합니다. `st_prepare_sldv_targets`만 단독으로
-호출했다면 모델이 Dirty 상태로 남으므로 검토 후 직접 저장해야 합니다.
-자동 변경을 금지하려면 이 설정을 `false`로 바꾸며, 이 경우 비-Atomic CUT은
-명확한 오류로 중단됩니다. 처리 결과는 `SldvGenerationResult`의
-`AtomicAction` 열에서 확인합니다.
+`FILE+SLDV`와 `GENERATE` 대상은 Atomic Subsystem이어야 합니다. 기본 설정인
+`cfg.AutoConvertSldvTargetsToAtomic=true`에서는 링크가 없는
+`TreatAsAtomicUnit=off` CUT만 SLDV 준비 전에 `on`으로 바꿉니다. 라이브러리 linked
+CUT는 링크 훼손을 막기 위해 자동 변경하지 않고 `SldvLinkedCUTRequiresAtomic`으로
+중단합니다. 이 경우 원본 library block을 Atomic으로 설정하고 instance link를
+갱신해야 합니다. 일반 `FILE+MAT` Dataset은 SLDV 분석을 실행하지 않으므로 Atomic
+변환을 생략하며 `AtomicAction=NOT_REQUIRED_MAT`를 기록합니다.
+
+라이브러리 linked CUT에 연결된 Harness는 workflow 시작 시 `SyncOnOpen`으로
+보정합니다. 이는 Harness를 열 때 원본 CUT를 Harness로 가져오되, Harness 종료 시
+CUT 복사본이 원본 모델로 push되는 동작을 차단합니다. Harness 생성·clone 전후에는
+`StaticLinkStatus`와 `ReferenceBlock`을 비교하며 달라지면
+`HarnessChangedLibraryLink`으로 즉시 중단합니다.
 
 SLDV MAT에 Harness `ActiveScenario`에 없는 신규 입력이 포함되면 기본
 `cfg.IgnoreUnexpectedSldvInputs=false`에서는 준비 단계가 실패합니다. 신규 입력이

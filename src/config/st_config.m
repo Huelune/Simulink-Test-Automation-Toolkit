@@ -144,8 +144,10 @@ cfg.SldvManifestFile = ...
 cfg.SldvTmaxResolution = 0.01;
 
 % true (default):
-%   Before FILE validation or GENERATE execution, convert a non-atomic SLDV
-%   target Subsystem to TreatAsAtomicUnit=on and keep that model change.
+%   Before FILE+SLDV validation or GENERATE execution, convert a non-atomic
+%   unlinked target Subsystem to TreatAsAtomicUnit=on and keep that model
+%   change. Library-linked CUTs are never modified automatically. Ordinary
+%   FILE+MAT inputs do not require atomic conversion.
 %   The normal workflow saves the model during Harness configuration.
 %
 % false:

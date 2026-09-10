@@ -189,7 +189,15 @@ for i = 1:n
             Message(i) = 'Legacy single-scenario workflow';
 
         else
-            profile.AtomicAction = ensure_atomic_sldv_cut(cfg, ownerPath);
+            if strcmp(mode, 'FILE') && strcmp(dataFileFormat, 'MAT')
+                profile.AtomicAction = 'NOT_REQUIRED_MAT';
+                st_log(cfg, 'DEBUG', ...
+                    ['[SLDV %d/%d] atomic conversion skipped for ordinary ' ...
+                     'MAT input | CUT=%s'], ...
+                    i, n, ownerPath);
+            else
+                profile.AtomicAction = ensure_atomic_sldv_cut(cfg, ownerPath);
+            end
             AtomicAction(i) = string(profile.AtomicAction);
 
             % Runtime input interface is defined by the target Harness
@@ -600,6 +608,16 @@ validate_subsystem_cut(ownerPath);
 if strcmp(get_param(ownerPath, 'TreatAsAtomicUnit'), 'on')
     action = 'ALREADY_ATOMIC';
     return;
+end
+
+linkState = st_cut_library_link_state(ownerPath);
+if linkState.IsLinked
+    error('simtest:SldvLinkedCUTRequiresAtomic', ...
+        ['SLDV FILE/GENERATE requires an atomic CUT, but automatic ' ...
+         'conversion is prohibited for a library-linked CUT because it ' ...
+         'can change or break the link. Set TreatAsAtomicUnit=on in the ' ...
+         'source library and refresh the link first: %s | Reference=%s'], ...
+        ownerPath, linkState.ReferenceBlock);
 end
 
 if ~isfield(cfg, 'AutoConvertSldvTargetsToAtomic') || ...

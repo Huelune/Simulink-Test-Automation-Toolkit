@@ -144,6 +144,10 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
     Assessment 구성, verify timing, ExpectedUpdateMode=APPLY가 각각
     SKIP_NO_VERIFY_OUTPUT으로 계속되는지 확인한다. 출력이 있는 대상의 verify 결과
     누락과 Untested는 계속 실패하는 반대 사례도 함께 보관한다.
+19. 실제 library-linked CUT에서 일반 생성과 HARNESS_CLONE을 각각 수행해 Harness가
+    SyncOnOpen이고 원본 CUT의 StaticLinkStatus·ReferenceBlock·library 파일 checksum이
+    전후 동일한지 확인한다. FILE+MAT는 Atomic 변환을 생략하고, 비-Atomic
+    FILE+SLDV/GENERATE는 원본 링크를 바꾸지 않은 채 명시적으로 실패해야 한다.
 
 실패 시 최소 전달 자료:
 
@@ -234,6 +238,21 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   매핑을 보존한다.
 - 현재 PC에는 MATLAB이 없어 순수 정책 테스트와 정적 계약 검사만 작성했다. R2025b
   런타임 검증은 위 18번 증거를 추가한 뒤에만 완료로 판단한다.
+
+### 2026-09-10 library-linked CUT Harness 보호
+
+- 실제 `st_run_after_harness(..., 'ExecutionMode','PER_CUT')` 사용 중 원본을 복구해야
+  할 정도로 library link가 끊긴 사례가 보고됐다. 당시 모델은 이미 원복되어 정확한
+  StaticLinkStatus와 crash dump는 확보하지 못했다.
+- linked CUT Harness는 `SyncOnOpen`으로 생성하고, 기존·clone Harness도 처음 열기 전에
+  같은 모드로 보정한다. Harness 종료 시 CUT 복사본을 원본으로 push하는
+  SyncOnOpenAndClose 경로를 사용하지 않는다.
+- create/clone/close 전후 StaticLinkStatus와 ReferenceBlock을 비교해 변화가 있으면
+  `HarnessChangedLibraryLink`으로 즉시 중단한다.
+- FILE+MAT는 Atomic 변환을 생략한다. FILE+SLDV와 GENERATE의 비-Atomic linked CUT는
+  자동 수정하지 않고 `SldvLinkedCUTRequiresAtomic`으로 실패시킨다.
+- R2025b용 실제 library fixture를 추가했지만 현재 PC에는 MATLAB이 없어 실행하지
+  못했다. 위 19번 증거 전에는 runtime 해결 완료로 판단하지 않는다.
 
 
 ### 2026-09-04 테스트 명세서 추출 추가

@@ -257,6 +257,10 @@ st_run_from_harness( ...
 
 - 기존 Harness는 삭제하지 않고, 없는 Harness만 생성합니다.
 - Harness 생성은 compile을 포함하므로 수 분 이상 걸릴 수 있습니다.
+- 라이브러리에 연결된 CUT의 Harness는 `SyncOnOpen`으로 생성·보정하여 Harness를
+  닫을 때 CUT 내용이 원본 모델로 역전파되지 않게 합니다. 생성·clone 전후의
+  `StaticLinkStatus`와 `ReferenceBlock`이 달라지면 모델을 저장하지 말라는 오류로
+  즉시 중단합니다.
 - 기본 Test Manager 정책은 `cfg.OverwriteTestFile=false`인 증분 갱신입니다.
 - 기존 Test File과 Test Case를 보존하고 없는 Test Case만 추가합니다.
 - SLDV 행은 대상 Test Case의 Iteration만 Scenario 수에 맞게 다시 구성합니다.
@@ -270,10 +274,11 @@ st_run_from_harness( ...
 | `FILE` | `DataFileFormat`에 따라 `sldvData` 결과 또는 일반 Dataset MAT를 검증해 Scenario로 변환 |
 | `GENERATE` | Top Model의 Design Verifier 설정을 복사해 CUT용 테스트 생성 |
 
-`FILE`과 `GENERATE` 대상은 Atomic Subsystem이어야 합니다. 기본
-`cfg.AutoConvertSldvTargetsToAtomic=true`는 비-Atomic CUT을
-`TreatAsAtomicUnit=on`으로 변경하며, 이 모델 변경은 유지됩니다. 자동 변경을
-원하지 않으면 설정을 `false`로 바꾸고 모델을 미리 준비해야 합니다.
+`FILE+SLDV`와 `GENERATE` 대상은 Atomic Subsystem이어야 합니다. 기본
+`cfg.AutoConvertSldvTargetsToAtomic=true`는 링크가 없는 비-Atomic CUT만
+`TreatAsAtomicUnit=on`으로 변경합니다. 라이브러리 linked CUT는 자동 변경하지
+않고, 원본 library에서 Atomic으로 설정한 뒤 링크를 갱신하라는 오류로 중단합니다.
+일반 `FILE+MAT` 입력에는 Design Verifier용 Atomic 변환을 적용하지 않습니다.
 
 현재 임시 호환 정책인 `cfg.AllowSldvSubsystemPathMismatch=true`에서는
 `FILE+SLDV` MAT 내부의 `ModelInformation.SubsystemPath`가 대상 CUT과 달라도

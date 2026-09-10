@@ -34,6 +34,16 @@ Template을 변경할 수 있는 행은 활성 대상 목록에서 제외한다.
    일반 대상의 `VerifyAtSampleTimeOnly` 동작은 바꾸지 않는다.
 7. Harness update, 저장 및 닫기를 완료하고 다음 CUT를 처리한다.
 
+원본 Template 또는 대상 CUT가 library-linked block이면 각 Harness를 처음 열기 전에
+동기화 모드를 `SyncOnOpen`으로 바꿉니다. 따라서 Harness를 닫을 때 CUT 복사본이 원본
+모델로 push되지 않습니다. Template close, clone, 대상의 첫 close와 최종 update/close 전후의
+`StaticLinkStatus`와 `ReferenceBlock`도 비교하며 변경이 감지되면 자동 rollback이
+손상 상태를 저장하지 않도록 즉시 중단합니다.
+
+`FILE+SLDV` 또는 `GENERATE`가 비-Atomic linked CUT를 대상으로 하면 자동으로
+`TreatAsAtomicUnit`을 변경하지 않습니다. 원본 library block을 Atomic으로 만든 뒤
+instance link를 갱신해야 합니다. `FILE+MAT`는 Atomic 변환이 필요하지 않습니다.
+
 `st_create_harnesses`를 직접 호출해도 clone 대상의 입력·Assessment 보정까지
 수행한다. `st_run_after_harness`는 기존 Harness 후속 준비 진입점이며 새 clone이
 필요하면 `st_run_from_harness`를 사용한다. Test Manager는 기존 생성기를 사용한다.
@@ -76,6 +86,7 @@ runtests('tests/unit/test_harness_clone.m')
 runtests('tests/unit/test_incremental_workflow.m')
 runtests('tests/unit/test_export_test_specification.m')
 runtests('tests/integration/test_harness_clone_runtime.m')
+runtests('tests/integration/test_library_link_harness_runtime.m')
 ```
 
 통합 테스트는 임시 프로젝트와 서로 다른 두 모델을 만든다. 원래 프로젝트의

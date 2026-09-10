@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Protected library-linked CUTs during Harness creation and reuse. Linked CUT
+  Harnesses now use one-way `SyncOnOpen` synchronization, link status and
+  reference identity are checked around create/clone operations, and automatic
+  Atomic conversion fails safely instead of modifying a linked block. Ordinary
+  `FILE+MAT` input no longer requests an SLDV-only Atomic conversion.
 - Temporarily allow `FILE+SLDV` MAT files whose recorded subsystem path differs
   from the configured CUT when `cfg.AllowSldvSubsystemPathMismatch=true` (the
   default), while logging a warning and retaining Harness input-interface checks.

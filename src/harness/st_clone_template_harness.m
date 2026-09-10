@@ -1,6 +1,7 @@
 function [status, message] = st_clone_template_harness(row, cfg)
 %ST_CLONE_TEMPLATE_HARNESS Clone and prepare one target as a recoverable unit.
 owner = st_normalize_cut_path(row.CUTPath,cfg.TopModel);
+linkState = st_cut_library_link_state(owner);
 name = char(row.HarnessName);
 source = char(row.SourceCUTPath);
 source(source == char(92)) = '/';
@@ -25,6 +26,7 @@ st_log(cfg,'DEBUG','Template load start | Model=%s',sourceModel);
 load_system(sourceModel);
 st_log(cfg,'DEBUG','Template load end | Model=%s',sourceModel);
 source = st_normalize_cut_path(source,sourceModel);
+sourceLinkState = st_cut_library_link_state(source);
 if strcmp(source,owner) && strcmp(sourceName,name)
     error('simtest:CloneTemplateIsTarget','Cannot replace the Template itself.');
 end
@@ -39,6 +41,15 @@ end
 if bdIsLoaded(sourceName) || bdIsLoaded(name)
     error('simtest:CloneHarnessOpen','Close source and destination Harnesses before cloning.');
 end
+if sourceLinkState.IsLinked
+    sourceProtectionChanged = st_protect_linked_cut_harness( ...
+        source,sourceName,cfg);
+    if sourceProtectionChanged
+        save_logged(sourceModel,cfg);
+    end
+end
+st_assert_cut_library_link_unchanged( ...
+    sourceLinkState,source,'Template Harness synchronization protection');
 % Reuse the compiled port/bus analyzer separately for each owning model.
 sourceCfg = cfg;
 sourceCfg.TopModel = sourceModel;
@@ -56,6 +67,8 @@ if ~isfile(inputFile)
     error('simtest:CloneInputMissing','Template input MAT is missing: %s',inputFile);
 end
 clear templateCleanup;
+st_assert_cut_library_link_unchanged( ...
+    sourceLinkState,source,'Template Harness close');
 
 root = fullfile(cfg.ResultDir,'harness_clone');
 if ~isfolder(root), mkdir(root); end
@@ -69,15 +82,34 @@ hadManifest = isfile(cfg.SldvManifestFile);
 if hadManifest, copyfile(cfg.SldvManifestFile,manifestBackup); end
 try
     if ~isempty(existing)
+        if linkState.IsLinked
+            destinationProtectionChanged = st_protect_linked_cut_harness( ...
+                owner,name,cfg);
+            if destinationProtectionChanged
+                save_logged(cfg.TopModel,cfg);
+            end
+        end
+        st_assert_cut_library_link_unchanged( ...
+            linkState,owner,'Existing destination Harness protection');
         [~,token] = fileparts(transaction);
         backupName = matlab.lang.makeValidName(['clone_recovery_' token]);
         clone_logged(owner,name,owner,backupName,cfg);
+        if linkState.IsLinked
+            st_protect_linked_cut_harness(owner,backupName,cfg);
+        end
+        st_assert_cut_library_link_unchanged( ...
+            linkState,owner,'Recovery Harness clone');
         save_logged(cfg.TopModel,cfg);
         st_log(cfg,'INFO','Recovery Harness saved | CUT=%s | Harness=%s',owner,backupName);
     end
     destinationTouched = true;
     if ~isempty(existing), sltest.harness.delete(owner,name); end
     clone_logged(source,sourceName,owner,name,cfg);
+    if linkState.IsLinked
+        st_protect_linked_cut_harness(owner,name,cfg);
+    end
+    st_assert_cut_library_link_unchanged( ...
+        linkState,owner,'sltest.harness.clone');
     actual = sltest.harness.find(owner,'SearchDepth',0,'Name',name);
     if numel(actual) ~= 1 || ~strcmp(actual.ownerFullPath,owner)
         error('simtest:CloneOwnerMismatch','Cloned Harness owner is not %s.',owner);
@@ -91,6 +123,8 @@ try
     set_param(signal,'Filename',independentInput);
     save_logged(name,cfg);
     clear harnessCleanup;
+    st_assert_cut_library_link_unchanged( ...
+        linkState,owner,'Cloned Harness first close');
     save_logged(cfg.TopModel,cfg);
 
     scope = st_target_scope('enter',row); %#ok<NASGU>
@@ -116,11 +150,15 @@ try
     if bdIsLoaded(name)
         error('simtest:CloneCloseFailed','Cloned Harness did not close: %s',name);
     end
+    st_assert_cut_library_link_unchanged( ...
+        linkState,owner,'Cloned Harness update and close');
     save_logged(cfg.TopModel,cfg);
     committed = true;
     if ~isempty(backupName)
         try
             sltest.harness.delete(owner,backupName);
+            st_assert_cut_library_link_unchanged( ...
+                linkState,owner,'Recovery Harness cleanup');
             save_logged(cfg.TopModel,cfg);
         catch cleanupError
             st_log(cfg,'WARN','Clone committed; recovery cleanup failed | Harness=%s | %s', ...
@@ -133,6 +171,16 @@ try
 catch ME
     if committed, rethrow(ME); end
     close_harness(owner,name,cfg);
+    try
+        st_assert_cut_library_link_unchanged( ...
+            linkState,owner,'Harness clone failure path');
+    catch linkError
+        st_log(cfg,'ERROR', ...
+            ['Harness clone changed library link; automatic rollback is ' ...
+             'stopped to avoid saving the damaged link | CUT=%s | %s'], ...
+            owner,linkError.message);
+        rethrow(linkError);
+    end
     st_log(cfg,'ERROR','Harness clone failed | CUT=%s | Harness=%s | %s',owner,name,ME.message);
     try
         if destinationTouched
@@ -140,9 +188,16 @@ catch ME
             if ~isempty(current), sltest.harness.delete(owner,name); end
             if ~isempty(backupName)
                 clone_logged(owner,backupName,owner,name,cfg);
+                if linkState.IsLinked
+                    st_protect_linked_cut_harness(owner,name,cfg);
+                end
+                st_assert_cut_library_link_unchanged( ...
+                    linkState,owner,'Recovery Harness restore');
                 save_logged(cfg.TopModel,cfg);
                 sltest.harness.delete(owner,backupName);
             end
+            st_assert_cut_library_link_unchanged( ...
+                linkState,owner,'Harness clone rollback');
             save_logged(cfg.TopModel,cfg);
         end
         if hadManifest

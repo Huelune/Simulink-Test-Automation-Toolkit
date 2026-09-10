@@ -63,6 +63,7 @@ for i = 1:n
         char(T.HarnessName(i));
 
     timerValue = tic;
+    linkState = [];
 
     st_log(cfg, 'DEBUG', ...
         '[HarnessCreate %d/%d] target resolved | CUT=%s | Harness=%s', ...
@@ -110,6 +111,8 @@ for i = 1:n
                 ownerPath);
         end
 
+        linkState = st_cut_library_link_state(ownerPath);
+
 
         st_log(cfg, 'DEBUG', ...
             '[HarnessCreate %d/%d] checking existing Harness', ...
@@ -137,6 +140,16 @@ for i = 1:n
             fprintf('  -> SKIP : already exists\n');
 
         else
+
+            synchronizationMode = 'SyncOnOpenAndClose';
+            if linkState.IsLinked
+                synchronizationMode = 'SyncOnOpen';
+                st_log(cfg, 'WARN', ...
+                    ['Library-linked CUT detected; creating Harness with ' ...
+                     'SyncOnOpen to prevent close-time push | CUT=%s | ' ...
+                     'Harness=%s'], ...
+                    ownerPath, harnessName);
+            end
 
             st_log(cfg, 'DEBUG', ...
                 '[HarnessCreate %d/%d] forcing model stopped', ...
@@ -168,7 +181,7 @@ for i = 1:n
                 'RebuildOnOpen', false, ...
                 'RebuildModelData', false, ...
                 'SaveExternally', false, ...
-                'SynchronizationMode', 'SyncOnOpenAndClose');
+                'SynchronizationMode', synchronizationMode);
 
 
             fprintf('  -> Harness create returned at %s\n', ...
@@ -196,6 +209,9 @@ for i = 1:n
                     harnessName);
             end
 
+            st_assert_cut_library_link_unchanged( ...
+                linkState, ownerPath, 'sltest.harness.create');
+
 
             st_log(cfg, 'DEBUG', ...
                 '[HarnessCreate %d/%d] save_system start', ...
@@ -216,6 +232,18 @@ for i = 1:n
 
 
     catch ME
+
+        if ~isempty(linkState)
+            try
+                st_assert_cut_library_link_unchanged( ...
+                    linkState, ownerPath, 'Harness creation failure path');
+            catch linkError
+                st_log(cfg, 'ERROR', ...
+                    'Harness creation changed library link | CUT=%s | %s', ...
+                    ownerPath, linkError.message);
+                rethrow(linkError);
+            end
+        end
 
         if st_is_user_interrupt(ME)
 
