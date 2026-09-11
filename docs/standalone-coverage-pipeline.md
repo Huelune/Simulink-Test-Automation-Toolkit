@@ -126,6 +126,14 @@ ResultSet 최상위가 아니라 TestCaseResult 또는 TestIterationResult에만
 있다. 파이프라인은 최상위 aggregate를 우선 사용하고 비어 있을 때만 하위 결과까지
 내려가서 Coverage 객체를 수집한다.
 
+Coverage Filter, `cvsave`, `cvhtml`은 절대 출력 경로를 전달해도 현재 MATLAB 폴더가
+쓰기 가능한지 별도로 검사한다. 각 API 호출은 짧은 `tempdir` scratch로 잠시 이동해
+수행하고 원래 폴더를 즉시 복원한다. standalone bundle의 중간 PER_CUT 보고서도
+긴 `workspace/workspace/result` 아래가 아니라 execution의 짧은 `r` 폴더에 둔다.
+Coverage 무결성은 실행 중 바뀔 수 있는 cvdata ID가 아니라 root, checksum, 정규화한
+CVF 참조로 비교한다. standalone Coverage가 모델 root metadata만 제공하면 기록된
+`StandaloneCUTPath`의 모델 구간과 연결해 CUT metric을 추출한다.
+
 ## 결과 구조
 
 ```text

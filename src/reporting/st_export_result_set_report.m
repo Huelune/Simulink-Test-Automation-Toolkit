@@ -153,7 +153,7 @@ if strcmp(coverageReportMode, 'FULL') || includePortableCoverageDetail
     detailDirectory = fullfile(coverageDirectory, 'detail');
     mkdir(detailDirectory);
     artifacts = export_coverage_html( ...
-        artifacts, resultObj, detailDirectory, 5, 6);
+        artifacts, resultObj, detailDirectory, logConfig, 5, 6);
 end
 coverageArtifactTypes = ismember(artifacts.Type, ...
     ["HTML","CVT","CVF_COPY"]);
@@ -174,7 +174,7 @@ try
     end
     if ~isequal(integrityAfter, integrityBaseline)
         error('simtest:ResultCoverageChangedDuringExport', ...
-            ['Result coverage ID, root, or filter reference changed while ' ...
+            ['Result coverage root, checksum, or filter reference changed while ' ...
              'portable artifacts were created.']);
     end
     artifacts = record_artifact(artifacts, 'RESULT_INTEGRITY', '', ...
@@ -256,8 +256,12 @@ for i = 1:numel(coverageObjects)
     basePath = fullfile(dataDirectory, sprintf('%02d_%s', ...
         i, st_export_safe_name(root)));
     cvtPath = [basePath '.cvt'];
+    writableCleanup = [];
     try
+        writableCleanup = st_enter_writable_coverage_directory( ...
+            cfg, 'CVSAVE');
         cvsave(basePath, cvd);
+        clear writableCleanup;
         if ~isfile(cvtPath)
             error('simtest:CoverageDataSaveMissing', ...
                 'cvsave did not create the expected CVT: %s', cvtPath);
@@ -265,6 +269,7 @@ for i = 1:numel(coverageObjects)
         artifacts = record_artifact(artifacts, 'CVT', cvtPath, ...
             'OK', ['Coverage root: ' root]);
     catch ME
+        clear writableCleanup;
         st_log(cfg, 'ERROR', ...
             'Portable coverage CVT save failed | %s: %s', ...
             ME.identifier, ME.message);
@@ -342,7 +347,7 @@ end
 end
 
 function artifacts = export_coverage_html( ...
-        artifacts, resultObj, folder, step, stepCount)
+        artifacts, resultObj, folder, cfg, step, stepCount)
 try
     coverageObjects = st_collect_result_coverage_objects(resultObj);
 catch ME
@@ -363,8 +368,12 @@ for i = 1:numel(coverageObjects)
     root = coverage_root(cvd);
     path = fullfile(folder, sprintf('%02d_%s.html', ...
         i, st_export_safe_name(root)));
+    writableCleanup = [];
     try
+        writableCleanup = st_enter_writable_coverage_directory( ...
+            cfg, 'CVHTML');
         report = cvhtml(path, cvd, '-sRT=0');
+        clear writableCleanup;
         if isstruct(report) && isfield(report, 'fileName') && ...
                 isfield(report, 'path')
             path = fullfile(char(report(1).path), ...
@@ -373,6 +382,7 @@ for i = 1:numel(coverageObjects)
         artifacts = record_artifact(artifacts, 'HTML', path, ...
             'OK', ['Coverage root: ' root]);
     catch ME
+        clear writableCleanup;
         artifacts = record_artifact(artifacts, 'HTML', path, ...
             'FAIL', ME.message);
     end
@@ -513,21 +523,41 @@ end
 function snapshot = coverage_integrity_snapshot(resultObj)
 coverageObjects = st_collect_result_coverage_objects(resultObj);
 n = numel(coverageObjects);
-Id = zeros(n,1);
 RootPath = strings(n,1);
+Checksum = strings(n,1);
 FilterReferences = strings(n,1);
 for i = 1:n
     cvd = coverageObjects{i};
-    Id(i) = double(cvd.id);
     testObject = cvd.test;
-    RootPath(i) = string(testObject.rootPath);
+    RootPath(i) = normalize_integrity_path(testObject.rootPath);
+    try
+        Checksum(i) = string(st_hash_value(cvd.checksum));
+    catch
+    end
     filters = string(cvd.filter);
     filters = filters(:);
     filters(ismissing(filters)) = "";
     filters = filters(strlength(filters) > 0);
-    FilterReferences(i) = strjoin(filters, "|");
+    for j = 1:numel(filters)
+        filters(j) = normalize_integrity_path(filters(j));
+    end
+    FilterReferences(i) = strjoin(sort(filters), "|");
 end
-snapshot = table(Id, RootPath, FilterReferences);
+snapshot = sortrows(table(RootPath, Checksum, FilterReferences));
+end
+
+function value = normalize_integrity_path(value)
+value = string(value);
+if strlength(value) == 0, return; end
+candidate = char(value);
+if isfile(candidate)
+    [ok, attributes] = fileattrib(candidate);
+    if ok && isstruct(attributes) && isfield(attributes, 'Name')
+        candidate = attributes.Name;
+    end
+end
+value = replace(string(candidate), '\', '/');
+if ispc, value = lower(value); end
 end
 
 function T = empty_artifact_table()

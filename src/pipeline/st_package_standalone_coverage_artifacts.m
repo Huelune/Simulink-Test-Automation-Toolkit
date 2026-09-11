@@ -184,7 +184,7 @@ cvtPath = fullfile(targetDirectory, ...
     [st_export_safe_name(item.CUTName) '_CoverageResult.cvt']);
 delete_if_present(cvtPath);
 st_log(cfg, 'DEBUG', 'STEP5 cvsave start | CUT=%s', item.CUTName);
-save_cvt(cvtPath, coverageObjects);
+save_cvt(cvtPath, coverageObjects, cfg);
 st_log(cfg, 'DEBUG', 'STEP5 cvsave complete | CUT=%s', item.CUTName);
 item.CoverageResult = cvtPath;
 item.CoverageResultSHA256 = st_file_signature(cvtPath).SHA256;
@@ -215,7 +215,9 @@ st_log(cfg, 'DEBUG', ...
     item.CUTName, numel(coverageObjects));
 for i = 1:numel(coverageObjects)
     path = fullfile(coverageDirectory, sprintf('%02d_coverage.html', i));
+    writableCleanup = st_enter_writable_coverage_directory(cfg, 'CVHTML');
     cvhtml(path, coverageObjects{i}, '-sRT=0');
+    clear writableCleanup;
 end
 st_log(cfg, 'DEBUG', 'STEP5 cvhtml complete | CUT=%s', item.CUTName);
 item.TestReport = reportDirectory;
@@ -314,11 +316,13 @@ item.([prefix 'Percentage']) = percentage;
 item.([prefix 'PercentageText']) = char(percentageText);
 end
 
-function save_cvt(path, objects)
+function save_cvt(path, objects, cfg)
 [folder, name] = fileparts(path);
 base = fullfile(folder, name);
 arguments = [{base}; objects(:)];
+writableCleanup = st_enter_writable_coverage_directory(cfg, 'CVSAVE');
 cvsave(arguments{:});
+clear writableCleanup;
 if ~isfile(path)
     error('simtest:StandalonePipelineCVTSaveMissing', ...
         'cvsave did not create the expected file: %s', path);

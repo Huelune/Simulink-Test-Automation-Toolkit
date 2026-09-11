@@ -401,6 +401,12 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - 첫 AF 상세 출력은 main/helper가 `lines(end+1)` 선형 인덱싱으로 서로 다른 모양의
   string row를 만든 뒤 결합되어 R2025b의 ambiguous dimension 오류가 발생했다. 모든
   행 추가를 명시적인 `lines(end+1,1)` column append로 수정했다.
+- 수정된 AF 캡처에서 모든 CUT의 ResultFilter/restore와 Coverage 객체는 성공했고,
+  STEP234 실패는 `COVERAGE_DATA` 4건, `RESULT_INTEGRITY` 4건, read-only cwd의 CVT/HTML
+  각 3건과 후속 Excel 3건이었다. standalone model-root metadata를 CUT path와 매칭하고,
+  cvdata의 불안정한 ID 대신 root/checksum/정규화 CVF로 무결성을 비교한다. CVSAVE와
+  CVHTML은 짧은 writable scratch에서 호출하며, bundle PER_CUT 출력 루트도 execution
+  바로 아래 `r`로 줄였다. STEP5의 CVSAVE/CVHTML에도 같은 scratch 처리를 적용했다.
 
 정적 검증: 변경·추가 MATLAB 파일 중 37개가 MISS_HIT UTF-8 검사에 통과했다.
 Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e`에서도

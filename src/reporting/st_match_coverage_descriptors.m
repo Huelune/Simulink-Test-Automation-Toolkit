@@ -14,6 +14,7 @@ for i = 1:numel(required)
 end
 
 target = normalize_path(targetPath);
+targetModel = extractBefore(target + "/", "/");
 scores = zeros(height(descriptors), 1);
 for i = 1:height(descriptors)
     ownerBlock = normalize_path(descriptors.OwnerBlock(i));
@@ -27,6 +28,13 @@ for i = 1:height(descriptors)
         scores(i) = 3;
     elseif same_path(root, target)
         scores(i) = 2;
+    elseif contains(target, '/') && ( ...
+            same_path(root, targetModel) || ...
+            same_path(ownerModel, targetModel) || ...
+            same_path(analyzedModel, targetModel))
+        % A standalone Harness is covered as a model root even though the
+        % requested metric path identifies its top-level exported CUT.
+        scores(i) = 1.5;
     elseif ~contains(target, '/') && same_path(ownerModel, target)
         scores(i) = 1;
     end

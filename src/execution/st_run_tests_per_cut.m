@@ -21,6 +21,8 @@ addParameter(p, 'ResultFilterMode', 'DURING_RUN', ...
 addParameter(p, 'TargetConfig', [], @(x) isempty(x) || istable(x));
 addParameter(p, 'TestFile', [], @(x) true);
 addParameter(p, 'TestCases', [], @(x) true);
+addParameter(p, 'RunRootDirectory', '', ...
+    @(x) ischar(x) || isstring(x));
 parse(p, varargin{:});
 
 continueOnFailure = logical(p.Results.ContinueOnFailure);
@@ -67,7 +69,11 @@ if numel(testCases) ~= n
         'Enabled target count and resolved Test Case count differ.');
 end
 
-[runId, runDirectory] = create_run_directory(cfg.PerCutRunRootDir);
+runRootDirectory = strtrim(char(string(p.Results.RunRootDirectory)));
+if isempty(runRootDirectory)
+    runRootDirectory = cfg.PerCutRunRootDir;
+end
+[runId, runDirectory] = create_run_directory(runRootDirectory);
 mkdir(fullfile(runDirectory, 'targets'));
 mkdir(fullfile(runDirectory, 'logs'));
 logPath = fullfile(runDirectory, 'logs', 'execution.log');
