@@ -157,8 +157,14 @@ if ~isfolder(destination)
     mkdir(destination);
 end
 bundleId = make_bundle_id();
-stagingDirectory = tempname(destination);
-mkdir(stagingDirectory);
+% tempname() returns a long GUID-based name (~38 chars). The export tree
+% nests several more fixed segments below this (template/workspace/
+% standalone/{CUTName}/...), so a deep project path combined with a long
+% CUT name can push the total path past the Windows 260-character limit
+% (MATLAB:cd:DirectoryNameTooLong). A short random token is unique enough
+% for a directory that only needs to avoid colliding with other concurrent
+% exports into the same destination.
+stagingDirectory = short_staging_directory(destination);
 stagingCleanup = onCleanup(@() remove_staging(stagingDirectory)); %#ok<NASGU>
 
 templateDirectory = fullfile(stagingDirectory, 'template');
@@ -710,6 +716,23 @@ function value = make_bundle_id()
 stamp = char(datetime('now', 'Format', 'yyyyMMdd_HHmmss_SSS'));
 uuid = char(java.util.UUID.randomUUID());
 value = sprintf('%s_%s', stamp, uuid(1:8));
+end
+
+function directory = short_staging_directory(parentDirectory)
+%SHORT_STAGING_DIRECTORY Create a compact, collision-safe staging folder.
+for attempt = 1:20
+    uuid = char(java.util.UUID.randomUUID());
+    token = uuid(~ismember(uuid, '-'));
+    candidate = fullfile(parentDirectory, ['~exp' token(1:8)]);
+    if ~isfolder(candidate) && ~isfile(candidate)
+        mkdir(candidate);
+        directory = candidate;
+        return;
+    end
+end
+error('simtest:ExportStagingDirectoryUnavailable', ...
+    'Could not create a unique staging directory under: %s', ...
+    parentDirectory);
 end
 
 function value = timestamp_text()

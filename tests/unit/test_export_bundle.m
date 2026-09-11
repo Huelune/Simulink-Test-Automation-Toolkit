@@ -285,6 +285,20 @@ verifyTrue(testCase, contains(snapshotText, ...
     "'IncludeReferenceReport', false"));
 end
 
+function testStagingDirectoryNameIsShortenedForDeepPaths(testCase)
+% tempname() adds a ~38-character GUID segment on top of the fixed
+% template/workspace/standalone/{CUTName} nesting the bundle already
+% creates. Combined with a deep project path this can exceed the Windows
+% 260-character MAX_PATH limit (MATLAB:cd:DirectoryNameTooLong). The
+% staging directory must use a short helper instead.
+root = st_project_root();
+text = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_test_bundle.m'));
+verifyTrue(testCase, contains(text, 'short_staging_directory'));
+verifyFalse(testCase, contains(text, 'tempname(destination)'));
+end
+
+
 function targets = asset_target_fixture(names)
 n = numel(names);
 No = (1:n)';
