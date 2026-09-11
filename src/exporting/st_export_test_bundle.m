@@ -249,6 +249,9 @@ if isfile(cfg.SldvManifestFile)
     sldvManifestBundlePath = ...
         bundle_path(stagingDirectory, sldvManifestOutput);
 end
+if strcmp(executionModelMode, 'STANDALONE_HARNESS')
+    assert_top_model_not_loaded(cfg.TopModel);
+end
 finish_step(currentStage, stageTimer);
 
 currentStage = 'Copy Reference Report';
@@ -525,6 +528,16 @@ end
 function inventory = collect_target_inputs( ...
         targets, cfg, bundleRoot, templateRoot)
 inventory = repmat(empty_target(), 0, 1);
+% sltest.harness.load below loads cfg.TopModel as a side effect when it is
+% not already loaded. Only close_harness is called afterward (the Harness,
+% not the model), so without this restore the model is left loaded when it
+% was not before. A later step (or a later STEP234 run's bundle runner)
+% can then find a model with the same name already loaded from outside
+% the bundle. Best-effort only: warn instead of erroring here so a
+% genuine failure inside the loop is never masked by a cleanup-time error.
+topModelWasLoaded = bdIsLoaded(cfg.TopModel);
+collectCleanup = onCleanup( ...
+    @() restore_top_model_load_state(cfg.TopModel, topModelWasLoaded)); %#ok<NASGU>
 for i = 1:height(targets)
     row = targets(i, :);
     item = empty_target();
@@ -605,6 +618,42 @@ for i = 1:height(targets)
         rethrow(ME);
     end
 end
+clear collectCleanup;
+end
+
+function assert_top_model_not_loaded(topModel)
+%ASSERT_TOP_MODEL_NOT_LOADED Isolation guard before the bundle runner
+% starts. The exported bundle loads its own copy of topModel under the
+% same name; if the source is still loaded here, the bundle runner would
+% either collide with it (simtest:BundleModelAlreadyLoaded, a safety
+% check this function does not replace) or silently exercise the wrong
+% copy. Never auto-saves or auto-discards a dirty model.
+if ~bdIsLoaded(topModel)
+    return;
+end
+dirtyText = '';
+if strcmp(get_param(topModel, 'Dirty'), 'on')
+    dirtyText = ' It has unsaved changes; save or discard them first.';
+end
+error('simtest:StandaloneModelStillLoadedBeforeRun', ...
+    ['%s is still loaded after collecting standalone export inputs. ' ...
+     'It must not be loaded when the exported bundle runs, since the ' ...
+     'bundle loads its own copy under the same name.%s'], ...
+    topModel, dirtyText);
+end
+
+function restore_top_model_load_state(topModel, wasLoadedBefore)
+if wasLoadedBefore || ~bdIsLoaded(topModel)
+    return;
+end
+if strcmp(get_param(topModel, 'Dirty'), 'on')
+    warning('simtest:ExportTopModelDirtyAfterCollect', ...
+        ['%s became dirty while collecting target inputs and was left ' ...
+         'open instead of being closed automatically. Review and save ' ...
+         'or discard the changes before exporting again.'], topModel);
+    return;
+end
+close_system(topModel, 0);
 end
 
 function output = copy_optional_input(profile, fieldName, outputDir, root)

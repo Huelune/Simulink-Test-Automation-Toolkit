@@ -90,4 +90,57 @@ afterExcel = st_file_signature(cfg.ManagementExcel);
 verifyEqual(testCase, afterModel.SHA256, beforeModel.SHA256);
 verifyEqual(testCase, afterTest.SHA256, beforeTest.SHA256);
 verifyEqual(testCase, afterExcel.SHA256, beforeExcel.SHA256);
+
+% STANDALONE_HARNESS export reloads the source model as a side effect of
+% collecting each target's Signal Editor/SLDV input (sltest.harness.load
+% loads its owner if not already loaded). If that model is left loaded
+% afterward, a later STEP234 run's bundle runner refuses to start because
+% a model with the same name is already loaded outside the bundle
+% (simtest:BundleModelAlreadyLoaded).
+verifyFalse(testCase, bdIsLoaded(testCase.TestData.TopModel));
+end
+
+function testStandaloneExportRestoresSessionWhenATargetFails(testCase)
+% Forces st_export_standalone_harnesses to fail partway through its
+% per-target loop so its onCleanup-driven session restore runs during
+% exception unwinding. A prior implementation used a nested cleanup
+% function sharing this function's own workspace, which has been observed
+% to fail unwinding with "... already removed from the workspace of the
+% existing function" instead of propagating the real error.
+cfg = st_require_runtime_target();
+if ~bdIsLoaded(cfg.TopModel)
+    load_system(cfg.ModelFile);
+end
+wasLoadedBefore = bdIsLoaded(cfg.TopModel);
+wasOpenBefore = wasLoadedBefore && ...
+    strcmp(get_param(cfg.TopModel, 'Open'), 'on');
+
+targets = st_load_targets(false);
+badTarget = targets(1,:);
+badTarget.HarnessName = "NoSuchHarnessForRegressionTest";
+
+destination = fullfile(testCase.TestData.Root, 'standalone_export_fail');
+bundleRoot = testCase.TestData.Root;
+
+caughtError = [];
+try
+    st_export_standalone_harnesses( ...
+        cfg.ModelFile, cfg.TopModel, badTarget, destination, bundleRoot);
+catch caughtError
+end
+
+verifyNotEmpty(testCase, caughtError);
+verifyEqual(testCase, caughtError.identifier, 'simtest:AssetHarnessMissing');
+
+% The session must be restored to exactly how it was found, and no
+% leftover scratch work folder (~w...) should remain under destination.
+verifyEqual(testCase, bdIsLoaded(cfg.TopModel), wasLoadedBefore);
+if wasLoadedBefore
+    verifyEqual(testCase, ...
+        strcmp(get_param(cfg.TopModel, 'Open'), 'on'), wasOpenBefore);
+end
+if isfolder(destination)
+    leftoverWork = dir(fullfile(destination, '~w*'));
+    verifyEmpty(testCase, leftoverWork);
+end
 end
