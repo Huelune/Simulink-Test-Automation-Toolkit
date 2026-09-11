@@ -299,6 +299,21 @@ verifyFalse(testCase, contains(text, 'tempname(destination)'));
 end
 
 
+function testMissingDependenciesDropInModelNameFalsePositives(testCase)
+% dependencies.fileDependencyAnalysis can report a Simulink Function name
+% (called through a Function Caller block) as a missing external file even
+% though it is fully defined inside the model being exported. The export
+% must filter those out before treating the export as incomplete, but only
+% when a block with that exact name actually exists in the model.
+root = st_project_root();
+text = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_test_bundle.m'));
+verifyTrue(testCase, contains(text, 'drop_in_model_name_false_positives'));
+verifyTrue(testCase, contains(text, ...
+    "find_system(topModel, 'FindAll', 'on', 'Name', name)"));
+end
+
+
 function targets = asset_target_fixture(names)
 n = numel(names);
 No = (1:n)';

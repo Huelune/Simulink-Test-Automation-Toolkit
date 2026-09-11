@@ -122,6 +122,8 @@ st_log(cfg, 'DEBUG', 'Dependency analysis start | Model=%s', ...
 if reproducible
     [dependencyFiles, missingDependencies] = ...
         discover_dependencies(cfg.ModelFile);
+    missingDependencies = drop_in_model_name_false_positives( ...
+        missingDependencies, cfg.TopModel, cfg);
     if ~isempty(missingDependencies)
         error('simtest:ExportDependencyMissing', ...
             'Cannot create a complete bundle. Missing dependencies: %s', ...
@@ -471,6 +473,38 @@ missing = text_list(missing);
 missing = missing(~cellfun('isempty', missing));
 files = unique(files, 'stable');
 missing = unique(missing, 'stable');
+end
+
+function missing = drop_in_model_name_false_positives(missing, topModel, cfg)
+%DROP_IN_MODEL_NAME_FALSE_POSITIVES Ignore missing entries that are really
+% in-model block names.
+%
+% dependencies.fileDependencyAnalysis can report a Simulink Function name
+% (called through a Function Caller block) as a missing external file even
+% though the function is fully defined inside the model being exported.
+% An entry is dropped only when a block with that exact name actually
+% exists somewhere in the model, so a genuinely missing external file with
+% a name that happens to collide is not silently ignored.
+if isempty(missing)
+    return;
+end
+keep = true(size(missing));
+for i = 1:numel(missing)
+    name = missing{i};
+    try
+        found = find_system(topModel, 'FindAll', 'on', 'Name', name);
+    catch
+        found = [];
+    end
+    if ~isempty(found)
+        keep(i) = false;
+        st_log(cfg, 'WARN', ...
+            ['[Export] Ignoring dependency-analysis false positive: ' ...
+             '"%s" matches an in-model block name and is already ' ...
+             'included with the copied model.'], name);
+    end
+end
+missing = missing(keep);
 end
 
 function products = discover_products(files)
