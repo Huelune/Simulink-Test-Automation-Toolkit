@@ -149,8 +149,12 @@ mkdir(pipelineRoot);
 mkdir(fullfile(pipelineRoot, 'logs'));
 workRoot = fullfile(pipelineRoot, '.work');
 mkdir(workRoot);
-exportRoot = fullfile(workRoot, 'exports');
-mkdir(exportRoot);
+% Exporting straight into workRoot (instead of a nested "exports" folder)
+% saves a path segment. The deep nesting st_export_test_bundle/
+% st_export_standalone_harnesses build below this point (template/
+% workspace/standalone/{CUTName}) can otherwise push a deeply nested
+% project path past the Windows 260-character MAX_PATH limit.
+exportRoot = workRoot;
 
 st_log(cfg, 'INFO', ...
     'Standalone coverage STEP234 start | PipelineId=%s', pipelineId);

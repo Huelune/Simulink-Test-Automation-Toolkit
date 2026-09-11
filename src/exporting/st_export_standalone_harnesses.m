@@ -23,7 +23,11 @@ if ~isfolder(destination), mkdir(destination); end
 
 bundlePaths = strings(height(targets), 1);
 details = repmat(empty_detail(), height(targets), 1);
-workRoot = tempname(destination);
+% tempname() adds a ~38-character GUID segment. destination is already
+% deeply nested (template/workspace/standalone/...), and each per-target
+% output folder created below inherits that full prefix, so a short token
+% here matters for the Windows 260-character MAX_PATH budget.
+workRoot = short_work_directory(destination);
 mkdir(workRoot);
 sourceWasLoaded = bdIsLoaded(topModel);
 sourceWasOpen = false;
@@ -176,8 +180,32 @@ log_message(logConfig, 'INFO', ...
 end
 
 function folder = target_folder(row)
-folder = sprintf('%04d_%s', round(double(row.No)), ...
-    st_export_safe_name(char(string(row.CUTName))));
+% The %04d No prefix already makes this folder name unique per target, so
+% the CUT-name portion can be capped well below st_export_safe_name's
+% general 80-character limit to leave headroom for the Windows 260-
+% character MAX_PATH budget under a deeply nested destination.
+maxNameLength = 32;
+safeName = st_export_safe_name(char(string(row.CUTName)));
+if numel(safeName) > maxNameLength
+    safeName = safeName(1:maxNameLength);
+end
+folder = sprintf('%04d_%s', round(double(row.No)), safeName);
+end
+
+function directory = short_work_directory(parentDirectory)
+%SHORT_WORK_DIRECTORY Create a compact, collision-safe scratch folder.
+for attempt = 1:20
+    uuid = char(java.util.UUID.randomUUID());
+    token = uuid(~ismember(uuid, '-'));
+    candidate = fullfile(parentDirectory, ['~w' token(1:6)]);
+    if ~isfolder(candidate) && ~isfile(candidate)
+        directory = candidate;
+        return;
+    end
+end
+error('simtest:StandaloneWorkDirectoryUnavailable', ...
+    'Could not create a unique work directory under: %s', ...
+    parentDirectory);
 end
 
 function name = standalone_model_name(harnessName, row, mode)
