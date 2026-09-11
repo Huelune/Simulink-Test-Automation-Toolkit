@@ -32,7 +32,12 @@ if isempty(runMode) || ~ismember(runMode, validModes)
         'RunMode is required and must be one of: %s.', ...
         strjoin(validModes, ', '));
 end
-cfg = st_require_runtime_target();
+% STEP1 reuses the preparation workflow, whose existing contract loads the
+% selected source model. All remaining modes operate on saved artifacts and
+% must not load the source merely while resolving cfg: the bundle runner
+% later loads an isolated copy with the same model name.
+loadSourceModel = strcmp(runMode, 'STEP1');
+cfg = st_require_runtime_target('LoadModel', loadSourceModel);
 outputRoot = strtrim(char(string(p.Results.OutputRoot)));
 if isempty(outputRoot), outputRoot = cfg.StandaloneCoverageRootDir; end
 if ~isfolder(outputRoot), mkdir(outputRoot); end

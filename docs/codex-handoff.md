@@ -355,6 +355,12 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   내부 로드한 clean 모델을 정리하도록 수정했다. exporter의 runner 전용 guard는
   pipeline의 export 전·runner 전 격리 검사로 이동했다. Dirty 모델은 자동 저장이나
   폐기하지 않는다. 수정 후 R2025b 재검증은 아직 미수행이다.
+- 후속 재현에서 실제 최초 로더는 pipeline 진입 시 호출한
+  `st_require_runtime_target()`임을 확인했다. 이 함수가 모델을 무조건 로드하던 기존
+  기본 동작은 유지하되 `LoadModel=false` 옵션을 추가하고, STEP1 이외의 standalone
+  pipeline 단계와 bundle exporter는 이 옵션으로 saved target만 검증한다. exporter가
+  최초 상태를 캡처하기 전에 같은 함수로 모델을 로드하지 않도록 함께 변경했다.
+  프로젝트와 모델을 열지 않은 실제 사용자 경로에서 R2025b 재검증이 필요하다.
 
 정적 검증: 변경·추가 MATLAB 파일 중 37개가 MISS_HIT UTF-8 검사에 통과했다.
 Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e`에서도

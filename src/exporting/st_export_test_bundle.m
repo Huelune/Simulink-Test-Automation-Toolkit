@@ -43,7 +43,10 @@ addParameter(p, 'ExecutionModelMode', 'ORIGINAL', ...
     @(x) ischar(x) || isstring(x));
 parse(p, varargin{:});
 
-cfg = st_require_runtime_target();
+% Export operates on saved files and manages any temporary model loads in
+% its own scoped helpers. Do not let runtime-target validation load the
+% source before the caller-visible entry state is captured below.
+cfg = st_require_runtime_target('LoadModel', false);
 % Capture the caller-visible model state before dependency analysis or any
 % Harness API can load the model as an implementation side effect. Later
 % cleanup must use this baseline, not the state observed midway through the
@@ -500,6 +503,15 @@ function missing = drop_in_model_name_false_positives(missing, topModel, cfg)
 if isempty(missing)
     return;
 end
+wasLoadedBefore = bdIsLoaded(topModel);
+if ~wasLoadedBefore
+    load_system(cfg.ModelFile);
+end
+inspectionCleanup = onCleanup(@() restore_top_model_load_state( ...
+    topModel, wasLoadedBefore)); %#ok<NASGU>
+st_log(cfg, 'DEBUG', ...
+    'Dependency false-positive inspection start | Candidates=%d', ...
+    numel(missing));
 keep = true(size(missing));
 for i = 1:numel(missing)
     name = missing{i};
@@ -517,6 +529,10 @@ for i = 1:numel(missing)
     end
 end
 missing = missing(keep);
+clear inspectionCleanup;
+st_log(cfg, 'DEBUG', ...
+    'Dependency false-positive inspection complete | Remaining=%d', ...
+    numel(missing));
 end
 
 function products = discover_products(files)

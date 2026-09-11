@@ -68,6 +68,9 @@ if bdIsLoaded(cfg.TopModel)
     close_system(cfg.TopModel, 0);
 end
 verifyFalse(testCase, bdIsLoaded(cfg.TopModel));
+validatedCfg = st_require_runtime_target('LoadModel', false);
+verifyEqual(testCase, validatedCfg.TopModel, cfg.TopModel);
+verifyFalse(testCase, bdIsLoaded(cfg.TopModel));
 
 runInfo = st_run_standalone_coverage_pipeline( ...
     'RunMode', 'STEP234', ...
