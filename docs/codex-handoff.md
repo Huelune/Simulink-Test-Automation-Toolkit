@@ -366,6 +366,13 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   객체 이름"으로 실패했다. `collect_target_inputs`가 원본 모델을 해당 범위 안에서
   명시적으로 로드하고 기존 export-entry cleanup으로 다시 unload하도록 보강했다.
   이전처럼 모델을 전역적으로 미리 로드하는 동작으로 되돌린 것은 아니다.
+- 후속 실행은 standalone TC readback과 PER_CUT 진입까지 성공했다. 모든 CUT의 CVF
+  저장에서 `Slvnv:simcoverage:ioerrors:ReadOnlyDirectory`가 발생했는데,
+  `slcoverage.Filter.save`가 절대 파일 경로와 별도로 현재 MATLAB 폴더의 쓰기 가능
+  여부를 검사하는 경로였다. save 호출 동안만 `tempdir`로 이동하고 즉시 원래 폴더로
+  복원하도록 보강했다. 이후 실패 target을 pipeline manifest로 변환할 때 발생한
+  `MATLAB:heterogeneousStructAssignment`는 `empty_target_state`에 빠져 있던
+  `CoverageFilterMode` 필드를 추가해 수정했다. 두 변경 모두 R2025b 재검증이 필요하다.
 
 정적 검증: 변경·추가 MATLAB 파일 중 37개가 MISS_HIT UTF-8 검사에 통과했다.
 Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e`에서도

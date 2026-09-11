@@ -46,6 +46,8 @@ verifyTrue(testCase, contains(text, 'CoverageFilterRationale'));
 verifyTrue(testCase, contains(text, 'assert_source_unchanged'));
 verifyTrue(testCase, contains(text, ...
     'StandalonePipelineRequiresFilterReplacement'));
+verifyNotEmpty(testCase, regexp(text, ...
+    "'CoverageFilterMode', '', 'CoverageBoundaryMode', ''", 'once'));
 end
 
 function testPipelineStateIsAtomicAndChecksumProtected(testCase)

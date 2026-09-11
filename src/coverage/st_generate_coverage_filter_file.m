@@ -103,15 +103,25 @@ try
     st_log(cfg, 'TRACE', ...
         'Coverage filter save start | temporary=%s | final=%s', ...
         temporaryFile, filterPath);
-    save(filterObj, temporaryBase);
-    if ~isfile(temporaryFile) && isfile(temporaryBase)
-        temporaryFile = temporaryBase;
+    [saveBase, saveDirectoryCleanup] = ...
+        enter_writable_save_directory(cfg); %#ok<NASGU>
+    save(filterObj, saveBase);
+    saveFile = [saveBase '.cvf'];
+    if ~isfile(saveFile) && isfile(saveBase)
+        saveFile = saveBase;
     end
-    if ~isfile(temporaryFile)
+    if ~isfile(saveFile)
         error('simtest:CoverageFilterSaveFailed', ...
             'Coverage filter API did not create the expected file: %s', ...
-            temporaryFile);
+            saveFile);
     end
+    [copied, copyMessage] = copyfile(saveFile, temporaryFile, 'f');
+    if ~copied
+        error('simtest:CoverageFilterSaveFailed', ...
+            'Cannot stage coverage filter %s: %s', ...
+            temporaryFile, copyMessage);
+    end
+    clear saveDirectoryCleanup;
     [moved, moveMessage] = movefile(temporaryFile, filterPath, 'f');
     if ~moved
         error('simtest:CoverageFilterSaveFailed', ...
@@ -142,6 +152,49 @@ try
 catch ME
     st_log(cfg, 'ERROR', ...
         'Coverage filter generation failed | %s: %s', ...
+        ME.identifier, ME.message);
+    rethrow(ME);
+end
+end
+
+function [saveBase, cleanup] = enter_writable_save_directory(cfg)
+%ENTER_WRITABLE_SAVE_DIRECTORY Satisfy the Coverage API's pwd check.
+% slcoverage.Filter.save validates the current MATLAB directory even when
+% fileName is an absolute path. Exported workspaces can be reported as
+% read-only or exceed legacy path limits. Save into a short system scratch
+% directory first, then let the caller atomically replace the final file.
+previousDirectory = pwd;
+writableDirectory = tempname(tempdir);
+[created, createMessage] = mkdir(writableDirectory);
+if ~created
+    st_log(cfg, 'ERROR', ...
+        'Coverage filter writable directory unavailable | %s | %s', ...
+        writableDirectory, createMessage);
+    error('simtest:CoverageFilterWritableDirectoryUnavailable', ...
+        'Cannot create the Coverage filter scratch directory %s: %s', ...
+        writableDirectory, createMessage);
+end
+st_log(cfg, 'DEBUG', ...
+    'Coverage filter writable directory enter | From=%s | To=%s', ...
+    previousDirectory, writableDirectory);
+cd(writableDirectory);
+saveBase = fullfile(writableDirectory, 'coverage_filter');
+cleanup = onCleanup(@() restore_save_directory( ...
+    previousDirectory, writableDirectory, cfg));
+end
+
+function restore_save_directory(previousDirectory, writableDirectory, cfg)
+try
+    cd(previousDirectory);
+    if isfolder(writableDirectory)
+        rmdir(writableDirectory, 's');
+    end
+    st_log(cfg, 'DEBUG', ...
+        'Coverage filter writable directory restored | %s', ...
+        previousDirectory);
+catch ME
+    st_log(cfg, 'ERROR', ...
+        'Coverage filter directory restore failed | %s: %s', ...
         ME.identifier, ME.message);
     rethrow(ME);
 end
