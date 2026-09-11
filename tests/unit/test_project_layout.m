@@ -12,6 +12,12 @@ expectedRoot = ...
 verifyEqual(testCase, st_project_root(), expectedRoot);
 end
 
+function testStandaloneCoveragePipelineEntryPointExists(testCase)
+rootDir = st_project_root();
+verifyTrue(testCase, isfile(fullfile(rootDir, 'src', 'pipeline', ...
+    'st_run_standalone_coverage_pipeline.m')));
+end
+
 
 function testConfigKeepsRepositoryRelativePaths(testCase)
 cfg = st_config();

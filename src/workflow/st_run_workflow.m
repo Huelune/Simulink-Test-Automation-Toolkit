@@ -15,6 +15,8 @@ if isempty(requestedExecutionMode)
 end
 executionMode = st_resolve_execution_mode( ...
     requestedExecutionMode, T);
+executeTests = option_or_default(options.ExecuteTests, ...
+    cfg.RunGeneratedTests);
 % Pass the resolved policy into fingerprint/artifact planning. AUTO itself
 % is not sufficient to decide whether a shared CVF should exist.
 cfg.ExecutionMode = executionMode;
@@ -39,7 +41,8 @@ fprintf('Incremental Simulink Test Automation\n');
 fprintf('Workflow : %s\n', upper(char(string(workflowKind))));
 fprintf('Model    : %s\n', cfg.TopModel);
 fprintf('State    : %s\n', context.StateLoadStatus);
-fprintf('Execute  : %s\n', executionMode);
+fprintf('Execute  : %s (%s)\n', executionMode, ...
+    execution_flag_text(executeTests));
 fprintf('Start    : %s\n', timestamp_text());
 fprintf('============================================\n');
 print_plan(plan);
@@ -138,7 +141,7 @@ if any(failedCloneRows)
     st_log(cfg,'WARN','Clone batch excludes %d failed target(s) from execution.',sum(failedCloneRows));
 end
 executionScope = st_target_scope('enter',T(~failedCloneRows,:)); %#ok<NASGU>
-if cfg.RunGeneratedTests && any(~failedCloneRows)
+if executeTests && any(~failedCloneRows)
     if strcmp(executionMode, 'PER_CUT')
         continueOnFailure = option_or_default( ...
             options.ContinueOnFailure, cfg.PerCutContinueOnFailure);
@@ -159,7 +162,7 @@ if cfg.RunGeneratedTests && any(~failedCloneRows)
             'Run Generated Tests', @() st_run_generated_tests());
     end
 else
-    fprintf('\nRun Generated Tests: SKIP (cfg.RunGeneratedTests=false)\n');
+    fprintf('\nRun Generated Tests: SKIP (ExecuteTests=false)\n');
 end
 
 state.Artifacts.Model = st_file_signature(cfg.ModelFile);
@@ -179,14 +182,14 @@ end
 workflowResult = table(Stage, RunCount, CachedCount, FailCount);
 st_write_result('WorkflowResult', workflowResult);
 
-if cfg.RunGeneratedTests && any(~failedCloneRows) && strcmp(executionMode, 'PER_CUT')
+if executeTests && any(~failedCloneRows) && strcmp(executionMode, 'PER_CUT')
     % st_run_tests_per_cut writes its report before each filter is restored.
-elseif cfg.RunGeneratedTests && any(~failedCloneRows) && cfg.GenerateTestReport
+elseif executeTests && any(~failedCloneRows) && cfg.GenerateTestReport
     reportInfo = execute_timed_step( ...
         'Generate Integrated Test Report', ...
         @() st_generate_test_report( ...
             runContext, workflowResult, plan));
-elseif cfg.RunGeneratedTests
+elseif executeTests
     fprintf(['\nGenerate Integrated Test Report: SKIP ' ...
         '(cfg.GenerateTestReport=false)\n']);
 end
@@ -206,6 +209,14 @@ end
 function value = option_or_default(value, defaultValue)
 if isempty(value)
     value = defaultValue;
+end
+end
+
+function value = execution_flag_text(executeTests)
+if executeTests
+    value = 'RUN';
+else
+    value = 'PREPARE_ONLY';
 end
 end
 

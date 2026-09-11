@@ -18,6 +18,8 @@ verifyEqual(testCase, cfg.ExecutionMode, 'AUTO');
 verifyTrue(testCase, cfg.PerCutContinueOnFailure);
 verifyEqual(testCase, cfg.PerCutReportMode, 'SUMMARY');
 verifyFalse(testCase, cfg.PerCutFailOnNonPass);
+verifyTrue(testCase, endsWith(string(cfg.StandaloneCoverageRootDir), ...
+    fullfile('result', 'standalone_coverage')));
 end
 
 function testWorkflowOptionOverrides(testCase)
@@ -37,11 +39,13 @@ options = st_parse_workflow_options( ...
     'ExecutionMode', 'per_cut', ...
     'ContinueOnFailure', false, ...
     'ReportMode', 'full', ...
-    'FailOnNonPass', false);
+    'FailOnNonPass', false, ...
+    'ExecuteTests', false);
 verifyEqual(testCase, options.ExecutionMode, 'PER_CUT');
 verifyFalse(testCase, options.ContinueOnFailure);
 verifyEqual(testCase, options.ReportMode, 'FULL');
 verifyFalse(testCase, options.FailOnNonPass);
+verifyFalse(testCase, options.ExecuteTests);
 end
 
 function testInvalidWorkflowOptionRejected(testCase)

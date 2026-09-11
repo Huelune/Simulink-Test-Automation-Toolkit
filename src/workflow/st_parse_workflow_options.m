@@ -11,6 +11,8 @@ addParameter(p, 'ContinueOnFailure', [], ...
 addParameter(p, 'ReportMode', '', @(v) ischar(v) || isstring(v));
 addParameter(p, 'FailOnNonPass', [], ...
     @(v) isempty(v) || (islogical(v) && isscalar(v)));
+addParameter(p, 'ExecuteTests', [], ...
+    @(v) isempty(v) || (islogical(v) && isscalar(v)));
 parse(p, varargin{:});
 
 options = struct();
@@ -22,6 +24,7 @@ options.ExecutionMode = upper(strtrim(char(string( ...
 options.ContinueOnFailure = p.Results.ContinueOnFailure;
 options.ReportMode = upper(strtrim(char(string(p.Results.ReportMode))));
 options.FailOnNonPass = p.Results.FailOnNonPass;
+options.ExecuteTests = p.Results.ExecuteTests;
 
 if ~isempty(options.PreparationMode) && ...
         ~ismember(options.PreparationMode, {'AUTO','FORCE'})
