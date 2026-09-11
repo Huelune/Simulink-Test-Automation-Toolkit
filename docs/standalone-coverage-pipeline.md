@@ -59,6 +59,21 @@ info = st_run_standalone_coverage_pipeline( ...
 st_set_standalone_coverage_root('');
 ```
 
+## 실패 상태 한 화면 출력
+
+파이프라인 실행이 끝나거나 실패한 직후 아래 명령을 실행한다.
+
+```matlab
+clc
+st_print_standalone_coverage_status( ...
+    'OutputRoot', 'D:\stcov', ...
+    'PipelineId', 'LATEST');
+```
+
+`STANDALONE-STATUS-v1 BEGIN`부터 `END`까지 보이도록 명령창을 캡처해 전달한다.
+출력은 코드 경로 중복과 수정 반영 flag, STEP 상태, CUT별 작업/최종 파일 존재,
+ResultSet 최상위와 하위 계층 Coverage 객체 수를 한 화면 크기로 요약한다.
+
 ## 원본 모델 세션 격리
 
 pipeline은 같은 모델명의 standalone 사본을 실행하므로 시작 시 원본 Top Model이

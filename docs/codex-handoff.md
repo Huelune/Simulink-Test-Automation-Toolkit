@@ -389,6 +389,11 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   STEP5가 CUT 폴더의 model/input 복사까지 생략해 Summary와 Test Manager만 남겼으므로,
   이제 standalone 모델·존재하는 입력·target manifest는 필터 결과와 무관하게 먼저
   보존하고 CVF/CVT/report만 검증 성공 시 생성한다. R2025b 재검증이 필요하다.
+- 캡처 한 장으로 반복 실패 상태를 전달하도록
+  `st_print_standalone_coverage_status`를 추가했다. 이 함수는 기존 LATEST manifest와
+  결과를 읽어 코드 중복/수정 flag, STEP 상태, CUT별 작업·최종 파일 존재,
+  root/hierarchy Coverage 객체 수와 축약 오류를 BEGIN/END 한 블록으로 출력한다.
+  ZIP이나 별도 진단 파일은 생성하지 않는다.
 
 정적 검증: 변경·추가 MATLAB 파일 중 37개가 MISS_HIT UTF-8 검사에 통과했다.
 Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e`에서도
