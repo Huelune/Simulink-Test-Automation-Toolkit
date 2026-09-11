@@ -61,7 +61,9 @@ ModelFile = modelFile; %#ok<NASGU>
 save(fullfile(workRoot, 'runtime_target.mat'), 'TopModel', 'ModelFile');
 
 previousDirectory = pwd;
-pathCleanup = onCleanup(@() restore_environment(previousDirectory, workRoot)); %#ok<NASGU>
+previousPath = path;
+pathCleanup = onCleanup(@() restore_environment( ...
+    previousDirectory, previousPath)); %#ok<NASGU>
 cd(workRoot);
 addpath(workRoot, '-begin');
 clear st_setup st_config st_project_root
@@ -325,12 +327,9 @@ else
 end
 end
 
-function restore_environment(previousDirectory, workRoot)
+function restore_environment(previousDirectory, previousPath)
 cd(previousDirectory);
-try
-    rmpath(genpath(workRoot));
-catch
-end
+path(previousPath);
 end
 
 function close_harness_quietly(owner, harness)

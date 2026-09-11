@@ -88,6 +88,11 @@ pipeline에서 거부한다. 실행 후 `cvdata.filter`에 CVF 절대 경로를 
 `decisioninfo`/`executioninfo`, MLDATX export/import와 filter readback이 모두
 성공해야 해당 CUT가 성공한다.
 
+Harness SUT를 standalone Model SUT로 재연결한 직후 작업용 Test File, Test Suite,
+Test Case의 `RecordCoverage`를 다시 활성화하고 저장 후 readback한다. 따라서 SUT
+전환 과정에서 유효 Coverage 설정이 초기화되면 실행 전에 명시적으로 실패하며,
+성공한 TC 결과에는 사후 CVF를 연결할 model coverage 객체가 있어야 한다.
+
 ## 결과 구조
 
 ```text

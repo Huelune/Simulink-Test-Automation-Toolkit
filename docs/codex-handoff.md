@@ -373,6 +373,14 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   복원하도록 보강했다. 이후 실패 target을 pipeline manifest로 변환할 때 발생한
   `MATLAB:heterogeneousStructAssignment`는 `empty_target_state`에 빠져 있던
   `CoverageFilterMode` 필드를 추가해 수정했다. 두 변경 모두 R2025b 재검증이 필요하다.
+- 다음 실행에서는 CVF 생성과 Test Case 실행까지 성공했지만 결과에 model coverage
+  객체가 없어 `ResultCoverageDataMissing`으로 사후 필터 등록이 실패했다. Harness
+  SUT를 standalone Model SUT로 바꾼 뒤 작업용 Test File/Suite/Case의
+  `RecordCoverage`, file metric과 referenced-model 설정을 다시 적용하고 저장 후
+  readback하도록 보강했다. 원본 무결성 검사에서 Harness inventory cell이 scalar
+  snapshot struct를 1x4로 확장해 발생한 intermediate indexing 오류는 struct field를
+  cell wrapper로 넣어 수정했다. runner 종료 시 이미 제거된 standalone path에 대한
+  반복 `rmpath` 경고는 실행 전 전체 path snapshot 복원으로 대체했다.
 
 정적 검증: 변경·추가 MATLAB 파일 중 37개가 MISS_HIT UTF-8 검사에 통과했다.
 Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e`에서도

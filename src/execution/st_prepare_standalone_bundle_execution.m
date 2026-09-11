@@ -21,6 +21,7 @@ suiteNames = strings(numel(suiteCases),1);
 for i = 1:numel(suiteCases)
     suiteNames(i) = string(suiteCases(i).Name);
 end
+configure_standalone_coverage(tf, suite, [], cfg);
 
 n = numel(manifest.Targets);
 order = zeros(n,1);
@@ -105,6 +106,7 @@ for i = 1:n
         verify_property(tc, 'HarnessOwner', '');
         verify_property(tc, 'HarnessName', '');
         verify_property(tc, 'TestSequenceBlock', assessment);
+        configure_standalone_coverage(tf, suite, tc, cfg);
         rewiredIterationSignature = iteration_signature(tc);
         if rewiredIterationSignature ~= originalIterationSignature
             error('simtest:StandaloneIterationChanged', ...
@@ -144,6 +146,7 @@ for i = 1:n
     verify_property(testCases(i), 'HarnessName', '');
     verify_property(testCases(i), 'TestSequenceBlock', ...
         char(AssessmentBlock(i)));
+    verify_coverage_enabled(testCases(i));
     if iteration_signature(testCases(i)) ~= IterationSignature(i)
         error('simtest:StandaloneTestCaseSavedReadbackFailed', ...
             ['Saved Test File changed Iteration or Signal Editor/Test ' ...
@@ -166,6 +169,53 @@ st_write_result('StandaloneBundlePreparationResult', result);
 st_log(cfg, 'INFO', ...
     'Standalone bundle preparation complete | Targets=%d | elapsed=%.3f sec', ...
     n, toc(totalTimer));
+end
+
+function configure_standalone_coverage(tf, suite, tc, cfg)
+%CONFIGURE_STANDALONE_COVERAGE Reassert coverage after changing the SUT.
+% TestCase.setProperty can change effective settings when a Harness SUT is
+% converted to a Model SUT. Explicitly enable and verify coverage throughout
+% the copied Test File hierarchy before it is saved and executed.
+st_log(cfg, 'DEBUG', ...
+    'Standalone coverage settings update start | TestCase=%s', ...
+    coverage_case_name(tc));
+fileCoverage = getCoverageSettings(tf);
+fileCoverage.RecordCoverage = true;
+fileCoverage.MetricSettings = cfg.CoverageMetricSettings;
+fileCoverage.MdlRefCoverage = ...
+    logical(cfg.CoverageIncludeReferencedModels);
+suiteCoverage = getCoverageSettings(suite);
+suiteCoverage.RecordCoverage = true;
+if ~isempty(tc)
+    caseCoverage = getCoverageSettings(tc);
+    caseCoverage.RecordCoverage = true;
+    verify_coverage_enabled(tc);
+end
+if ~logical(fileCoverage.RecordCoverage) || ...
+        ~logical(suiteCoverage.RecordCoverage)
+    error('simtest:StandaloneCoverageSettingsReadbackFailed', ...
+        'Test File or Test Suite coverage enable readback failed.');
+end
+st_log(cfg, 'DEBUG', ...
+    'Standalone coverage settings update complete | TestCase=%s', ...
+    coverage_case_name(tc));
+end
+
+function verify_coverage_enabled(tc)
+coverage = getCoverageSettings(tc);
+if ~logical(coverage.RecordCoverage)
+    error('simtest:StandaloneCoverageSettingsReadbackFailed', ...
+        'Test Case coverage is disabled after standalone SUT rewiring: %s', ...
+        char(string(tc.Name)));
+end
+end
+
+function value = coverage_case_name(tc)
+if isempty(tc)
+    value = '<file-and-suite>';
+else
+    value = char(string(tc.Name));
+end
 end
 
 function value = iteration_signature(tc)
