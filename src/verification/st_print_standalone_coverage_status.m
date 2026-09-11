@@ -20,21 +20,21 @@ st_log(cfg, 'INFO', ...
     'Standalone coverage compact diagnosis start | Root=%s', outputRoot);
 
 lines = strings(0, 1);
-lines(end+1) = "STANDALONE-STATUS-v1 BEGIN";
-lines(end+1) = "ENV Release=" + string(version('-release')) + ...
+lines(end+1,1) = "STANDALONE-STATUS-v1 BEGIN";
+lines(end+1,1) = "ENV Release=" + string(version('-release')) + ...
     " ST=" + license('test', 'Simulink_Test') + ...
     " CV=" + license('test', 'Simulink_Coverage') + ...
     " RootExists=" + isfolder(outputRoot);
-lines(end+1) = function_status_line();
+lines(end+1,1) = function_status_line();
 
 try
     [manifest, manifestPath] = st_load_standalone_pipeline_manifest( ...
         outputRoot, p.Results.PipelineId);
 catch ME
-    lines(end+1) = "MANIFEST ERROR=" + string(ME.identifier);
-    lines(end+1) = "MSG " + compact_text(ME.message, 140);
-    lines(end+1) = "ROOT " + string(outputRoot);
-    lines(end+1) = "STANDALONE-STATUS-v1 END";
+    lines(end+1,1) = "MANIFEST ERROR=" + string(ME.identifier);
+    lines(end+1,1) = "MSG " + compact_text(ME.message, 140);
+    lines(end+1,1) = "ROOT " + string(outputRoot);
+    lines(end+1,1) = "STANDALONE-STATUS-v1 END";
     report = char(strjoin(lines, newline));
     fprintf('%s\n', report);
     st_log(cfg, 'ERROR', ...
@@ -44,18 +44,18 @@ catch ME
 end
 
 pipelineRoot = fileparts(manifestPath);
-lines(end+1) = "PIPE Id=" + string(manifest.PipelineId) + ...
+lines(end+1,1) = "PIPE Id=" + string(manifest.PipelineId) + ...
     " Status=" + field_text(manifest, 'Status') + ...
     " 234=" + step_status(manifest, 'STEP234') + ...
     " 5=" + step_status(manifest, 'STEP5') + ...
     " 6=" + step_status(manifest, 'STEP6');
 counts = artifact_counts(pipelineRoot);
-lines(end+1) = sprintf( ...
+lines(end+1,1) = sprintf( ...
     'FILES work[slx=%d mat=%d result=%d cvf=%d] final[slx=%d mat=%d cvf=%d cvt=%d xlsx=%d]', ...
     counts.WorkSLX, counts.WorkMAT, counts.WorkResult, counts.WorkCVF, ...
     counts.FinalSLX, counts.FinalMAT, counts.FinalCVF, ...
     counts.FinalCVT, counts.FinalXLSX);
-lines(end+1) = "LEGEND 234=STEP234 RF=result-filter RS=restore S5=STEP5 " + ...
+lines(end+1,1) = "LEGEND 234=STEP234 RF=result-filter RS=restore S5=STEP5 " + ...
     "WM/WI=work model/input PM/PI=packaged RCV/HCV=root/hierarchy coverage";
 lines = [lines; step234_artifact_failure_lines(manifest)]; %#ok<AGROW>
 
@@ -64,7 +64,7 @@ for i = 1:numel(targets)
     item = targets(i);
     [rootCoverage, hierarchyCoverage, resultState] = ...
         inspect_target_result(item);
-    lines(end+1) = sprintf( ...
+    lines(end+1,1) = sprintf( ...
         ['T%d %s | 234=%s RF=%s RS=%s S5=%s | ' ...
          'WM=%s WI=%s PM=%s PI=%s CVF=%s | R=%s RCV=%s HCV=%s'], ...
         i, compact_text(field_text(item, 'CUTName'), 34), ...
@@ -80,13 +80,13 @@ for i = 1:numel(targets)
         rootCoverage, hierarchyCoverage); %#ok<AGROW>
     message = field_text(item, 'Message');
     if ~isempty(message) && ~strcmp(message, '-')
-        lines(end+1) = "  MSG " + compact_text(message, 155); %#ok<AGROW>
+        lines(end+1,1) = "  MSG " + compact_text(message, 155); %#ok<AGROW>
     end
 end
 
-lines(end+1) = "ROOT " + string(outputRoot);
-lines(end+1) = "PIPE_ROOT " + string(pipelineRoot);
-lines(end+1) = "STANDALONE-STATUS-v1 END";
+lines(end+1,1) = "ROOT " + string(outputRoot);
+lines(end+1,1) = "PIPE_ROOT " + string(pipelineRoot);
+lines(end+1,1) = "STANDALONE-STATUS-v1 END";
 report = char(strjoin(lines, newline));
 fprintf('%s\n', report);
 st_log(cfg, 'INFO', ...
@@ -98,18 +98,18 @@ function lines = step234_artifact_failure_lines(manifest)
 lines = strings(0, 1);
 runDirectory = field_text(manifest, 'PerCutRunDirectory');
 if strcmp(runDirectory, '-')
-    lines(end+1) = "234-DETAIL PerCutRunDirectory=<NONE>";
+    lines(end+1,1) = "234-DETAIL PerCutRunDirectory=<NONE>";
     return;
 end
 runManifest = fullfile(runDirectory, 'manifest.json');
 if ~isfile(runManifest)
-    lines(end+1) = "234-DETAIL manifest.json=MISSING";
+    lines(end+1,1) = "234-DETAIL manifest.json=MISSING";
     return;
 end
 try
     value = jsondecode(fileread(runManifest));
     if ~isfield(value, 'Artifacts') || isempty(value.Artifacts)
-        lines(end+1) = "234-DETAIL artifact-records=0";
+        lines(end+1,1) = "234-DETAIL artifact-records=0";
         return;
     end
     artifacts = value.Artifacts;
@@ -119,7 +119,7 @@ try
     end
     artifacts = artifacts(failed);
     if isempty(artifacts)
-        lines(end+1) = "234-DETAIL artifact-failures=0";
+        lines(end+1,1) = "234-DETAIL artifact-failures=0";
         return;
     end
     keys = strings(numel(artifacts), 1);
@@ -128,7 +128,7 @@ try
             compact_text(field_text(artifacts(i), 'Message'), 120);
     end
     [uniqueKeys, first, groups] = unique(keys, 'stable'); %#ok<ASGLU>
-    lines(end+1) = "234-DETAIL artifact-failures=" + numel(artifacts) + ...
+    lines(end+1,1) = "234-DETAIL artifact-failures=" + numel(artifacts) + ...
         " groups=" + numel(uniqueKeys);
     maxGroups = min(6, numel(uniqueKeys));
     for g = 1:maxGroups
@@ -138,17 +138,17 @@ try
             numbers(j) = string(field_text(artifacts(members(j)), 'No'));
         end
         sample = artifacts(first(g));
-        lines(end+1) = "  AF " + field_text(sample, 'Type') + ...
+        lines(end+1,1) = "  AF " + field_text(sample, 'Type') + ...
             " x" + numel(members) + ...
             " T=" + strjoin(unique(numbers, 'stable'), ',') + ...
             " | " + compact_text(field_text(sample, 'Message'), 120); %#ok<AGROW>
     end
     if numel(uniqueKeys) > maxGroups
-        lines(end+1) = "  AF ... additional-groups=" + ...
+        lines(end+1,1) = "  AF ... additional-groups=" + ...
             (numel(uniqueKeys) - maxGroups);
     end
 catch ME
-    lines(end+1) = "234-DETAIL read-error=" + string(ME.identifier) + ...
+    lines(end+1,1) = "234-DETAIL read-error=" + string(ME.identifier) + ...
         " | " + compact_text(ME.message, 120);
 end
 end

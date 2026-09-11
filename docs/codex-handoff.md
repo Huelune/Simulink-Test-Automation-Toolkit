@@ -398,6 +398,9 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   성공했지만 STEP234 대상 상태는 Initial report incomplete로 FAIL이었다. compact
   진단이 원인을 숨기지 않도록 PER_CUT manifest의 FAIL artifact를 type/message별로
   묶어 최대 6개 `AF` 행으로 출력하도록 보강했다.
+- 첫 AF 상세 출력은 main/helper가 `lines(end+1)` 선형 인덱싱으로 서로 다른 모양의
+  string row를 만든 뒤 결합되어 R2025b의 ambiguous dimension 오류가 발생했다. 모든
+  행 추가를 명시적인 `lines(end+1,1)` column append로 수정했다.
 
 정적 검증: 변경·추가 MATLAB 파일 중 37개가 MISS_HIT UTF-8 검사에 통과했다.
 Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e`에서도
