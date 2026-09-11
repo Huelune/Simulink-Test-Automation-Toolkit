@@ -60,6 +60,11 @@ pipeline과 bundle exporter의 대상 설정 확인은
 모델은 unload 상태여야 한다. 내부 로드가 남거나 모델이 뜻하지 않게 Dirty가 되면
 자동 저장·폐기하지 않고 명시적인 세션 복원 오류로 중단한다.
 
+Subsystem 소유 Harness의 Signal Editor 입력을 읽는 동안에는 해당 CUT 경로를
+Simulink 객체로 해석하기 위해 저장된 원본 모델을 입력 수집 범위 안에서만 명시적으로
+로드한다. 각 Harness를 닫은 뒤 원본 모델도 export 진입 당시 상태로 복원하며,
+standalone bundle runner와 동시에 로드된 상태로 두지 않는다.
+
 ## 필수 Targets 정책
 
 이 pipeline은 결과 필터가 선택 사항이 아니므로 모든 활성 대상에서 다음 설정을

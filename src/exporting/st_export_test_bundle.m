@@ -553,16 +553,22 @@ end
 function inventory = collect_target_inputs( ...
         targets, cfg, bundleRoot, templateRoot, topModelWasLoadedAtEntry)
 inventory = repmat(empty_target(), 0, 1);
-% sltest.harness.load below loads cfg.TopModel as a side effect when it is
-% not already loaded. Only close_harness is called afterward (the Harness,
-% not the model), so without this restore the model is left loaded when it
-% was not before. A later step (or a later STEP234 run's bundle runner)
-% can then find a model with the same name already loaded from outside
-% the bundle. Best-effort only: warn instead of erroring here so a
-% genuine failure inside the loop is never masked by a cleanup-time error.
+% A subsystem owner path is not a valid Simulink object until its top model
+% is loaded. Load the saved source explicitly for this scope rather than
+% relying on sltest.harness.load to do so: R2025b rejects an unloaded
+% subsystem path before it can resolve the Harness. Cleanup still uses the
+% export-entry baseline, so a model opened only for input collection is
+% closed again before the standalone bundle runner starts.
 collectCleanup = onCleanup( ...
     @() restore_top_model_load_state( ...
         cfg.TopModel, topModelWasLoadedAtEntry)); %#ok<NASGU>
+if ~bdIsLoaded(cfg.TopModel)
+    st_log(cfg, 'DEBUG', ...
+        'Target input source model load start | Model=%s', cfg.TopModel);
+    load_system(cfg.ModelFile);
+    st_log(cfg, 'DEBUG', ...
+        'Target input source model load complete | Model=%s', cfg.TopModel);
+end
 for i = 1:height(targets)
     row = targets(i, :);
     item = empty_target();

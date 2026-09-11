@@ -361,6 +361,11 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   pipeline 단계와 bundle exporter는 이 옵션으로 saved target만 검증한다. exporter가
   최초 상태를 캡처하기 전에 같은 함수로 모델을 로드하지 않도록 함께 변경했다.
   프로젝트와 모델을 열지 않은 실제 사용자 경로에서 R2025b 재검증이 필요하다.
+- 이 수정 적용 후 pipeline은 입력 수집까지 진행했지만, 닫힌 Top Model 아래의
+  subsystem CUTPath를 `sltest.harness.load`에 바로 전달하여 "유효하지 않은 Simulink
+  객체 이름"으로 실패했다. `collect_target_inputs`가 원본 모델을 해당 범위 안에서
+  명시적으로 로드하고 기존 export-entry cleanup으로 다시 unload하도록 보강했다.
+  이전처럼 모델을 전역적으로 미리 로드하는 동작으로 되돌린 것은 아니다.
 
 정적 검증: 변경·추가 MATLAB 파일 중 37개가 MISS_HIT UTF-8 검사에 통과했다.
 Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e`에서도
