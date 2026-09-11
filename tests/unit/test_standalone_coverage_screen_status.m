@@ -12,6 +12,11 @@ verifyTrue(testCase, contains(text, 'FILES work[slx='));
 verifyTrue(testCase, contains(text, 'flags[preserve=%d hierarchy=%d]'));
 verifyTrue(testCase, contains(text, 'RCV=%s HCV=%s'));
 verifyTrue(testCase, contains(text, ...
+    '234-DETAIL artifact-failures='));
+verifyTrue(testCase, contains(text, ...
+    'AF " + field_text(sample, ''Type'')'));
+verifyTrue(testCase, contains(text, "unique(keys, 'stable')"));
+verifyTrue(testCase, contains(text, ...
     'st_collect_result_coverage_objects(imported(i))'));
 verifyFalse(testCase, contains(text, 'zip('));
 verifyFalse(testCase, contains(text, 'writetable('));

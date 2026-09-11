@@ -394,6 +394,10 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   결과를 읽어 코드 중복/수정 flag, STEP 상태, CUT별 작업·최종 파일 존재,
   root/hierarchy Coverage 객체 수와 축약 오류를 BEGIN/END 한 블록으로 출력한다.
   ZIP이나 별도 진단 파일은 생성하지 않는다.
+- 첫 실제 STATUS-v1 캡처에서 모든 CUT의 RF/restore와 root/hierarchy Coverage가 1로
+  성공했지만 STEP234 대상 상태는 Initial report incomplete로 FAIL이었다. compact
+  진단이 원인을 숨기지 않도록 PER_CUT manifest의 FAIL artifact를 type/message별로
+  묶어 최대 6개 `AF` 행으로 출력하도록 보강했다.
 
 정적 검증: 변경·추가 MATLAB 파일 중 37개가 MISS_HIT UTF-8 검사에 통과했다.
 Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e`에서도

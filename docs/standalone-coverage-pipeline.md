@@ -73,6 +73,8 @@ st_print_standalone_coverage_status( ...
 `STANDALONE-STATUS-v1 BEGIN`부터 `END`까지 보이도록 명령창을 캡처해 전달한다.
 출력은 코드 경로 중복과 수정 반영 flag, STEP 상태, CUT별 작업/최종 파일 존재,
 ResultSet 최상위와 하위 계층 Coverage 객체 수를 한 화면 크기로 요약한다.
+STEP234가 WARN/FAIL이면 PER_CUT manifest의 실패 artifact를 유형과 메시지 기준으로
+묶어 `AF <Type> x<개수> T=<대상 번호> | <오류>` 형식으로 최대 6개 출력한다.
 
 ## 원본 모델 세션 격리
 

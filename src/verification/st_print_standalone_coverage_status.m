@@ -57,6 +57,7 @@ lines(end+1) = sprintf( ...
     counts.FinalCVT, counts.FinalXLSX);
 lines(end+1) = "LEGEND 234=STEP234 RF=result-filter RS=restore S5=STEP5 " + ...
     "WM/WI=work model/input PM/PI=packaged RCV/HCV=root/hierarchy coverage";
+lines = [lines; step234_artifact_failure_lines(manifest)]; %#ok<AGROW>
 
 targets = manifest.Targets;
 for i = 1:numel(targets)
@@ -91,6 +92,65 @@ fprintf('%s\n', report);
 st_log(cfg, 'INFO', ...
     'Standalone coverage compact diagnosis complete | elapsed=%.3f sec', ...
     toc(timerValue));
+end
+
+function lines = step234_artifact_failure_lines(manifest)
+lines = strings(0, 1);
+runDirectory = field_text(manifest, 'PerCutRunDirectory');
+if strcmp(runDirectory, '-')
+    lines(end+1) = "234-DETAIL PerCutRunDirectory=<NONE>";
+    return;
+end
+runManifest = fullfile(runDirectory, 'manifest.json');
+if ~isfile(runManifest)
+    lines(end+1) = "234-DETAIL manifest.json=MISSING";
+    return;
+end
+try
+    value = jsondecode(fileread(runManifest));
+    if ~isfield(value, 'Artifacts') || isempty(value.Artifacts)
+        lines(end+1) = "234-DETAIL artifact-records=0";
+        return;
+    end
+    artifacts = value.Artifacts;
+    failed = false(numel(artifacts), 1);
+    for i = 1:numel(artifacts)
+        failed(i) = strcmpi(field_text(artifacts(i), 'Status'), 'FAIL');
+    end
+    artifacts = artifacts(failed);
+    if isempty(artifacts)
+        lines(end+1) = "234-DETAIL artifact-failures=0";
+        return;
+    end
+    keys = strings(numel(artifacts), 1);
+    for i = 1:numel(artifacts)
+        keys(i) = string(field_text(artifacts(i), 'Type')) + "|" + ...
+            compact_text(field_text(artifacts(i), 'Message'), 120);
+    end
+    [uniqueKeys, first, groups] = unique(keys, 'stable'); %#ok<ASGLU>
+    lines(end+1) = "234-DETAIL artifact-failures=" + numel(artifacts) + ...
+        " groups=" + numel(uniqueKeys);
+    maxGroups = min(6, numel(uniqueKeys));
+    for g = 1:maxGroups
+        members = find(groups == g);
+        numbers = strings(numel(members), 1);
+        for j = 1:numel(members)
+            numbers(j) = string(field_text(artifacts(members(j)), 'No'));
+        end
+        sample = artifacts(first(g));
+        lines(end+1) = "  AF " + field_text(sample, 'Type') + ...
+            " x" + numel(members) + ...
+            " T=" + strjoin(unique(numbers, 'stable'), ',') + ...
+            " | " + compact_text(field_text(sample, 'Message'), 120); %#ok<AGROW>
+    end
+    if numel(uniqueKeys) > maxGroups
+        lines(end+1) = "  AF ... additional-groups=" + ...
+            (numel(uniqueKeys) - maxGroups);
+    end
+catch ME
+    lines(end+1) = "234-DETAIL read-error=" + string(ME.identifier) + ...
+        " | " + compact_text(ME.message, 120);
+end
 end
 
 function line = function_status_line()
