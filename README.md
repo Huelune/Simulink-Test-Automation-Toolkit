@@ -150,6 +150,7 @@ st_find_target_paths              % 같은 이름의 후보를 문맥으로 순�
 | `st_run_from_harness` | Harness가 없을 수 있는 전체 workflow |
 | `st_run_after_harness` | 기존 Harness를 검증한 뒤 SLDV 단계부터 실행 |
 | `st_run_tests_per_cut` | 이미 준비된 Test File을 CUT별로 직접 실행 |
+| `st_run_standalone_coverage_pipeline` | standalone Harness Coverage를 STEP1/STEP234/STEP5/STEP6으로 실행·재개 |
 
 두 workflow 진입점은 다음 네 개의 결과를 반환할 수 있습니다.
 
@@ -194,6 +195,7 @@ st_find_target_paths              % 같은 이름의 후보를 문맥으로 순�
 | `ContinueOnFailure` | `true` | 테스트·보고서 실패 후 필터 복원이 확인되면 다음 CUT 진행 |
 | `ReportMode` | `SUMMARY` | `SUMMARY` 또는 `FULL` |
 | `FailOnNonPass` | `false` | `true`이면 모든 CUT 처리 후 Test 판정 또는 실행기·보고서 실패를 MATLAB 오류로 전달 |
+| `ResultFilterMode` | `DURING_RUN` | 일반 실행은 기존 동작 유지. `POST_RUN_REQUIRED`는 standalone pipeline이 필터 없는 Coverage 실행 후 결과 CVF 등록·readback을 필수화할 때 사용 |
 
 Test Case의 `FAILED`, `UNTESTED`, `INCOMPLETE` 판정은 `FinalOutcome`에 보존되고
 대상 실행 상태는 `WARN`으로 기록됩니다. 이는 실행기 예외가 아니므로 다음 CUT을

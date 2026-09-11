@@ -260,6 +260,8 @@ verifyTrue(testCase, any(files == "st_run_from_harness.m"));
 verifyTrue(testCase, any(files == "st_run_after_harness.m"));
 verifyTrue(testCase, any(files == "st_run_tests_per_cut.m"));
 verifyTrue(testCase, any(files == "st_export_test_specification.m"));
+verifyTrue(testCase, any(files == ...
+    "st_run_standalone_coverage_pipeline.m"));
 verifyTrue(testCase, any(files == "st_check_actual_system.m"));
 verifyFalse(testCase, any(files == "st_run_workflow.m"));
 end

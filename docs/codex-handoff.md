@@ -148,6 +148,13 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
     SyncOnOpen이고 원본 CUT의 StaticLinkStatus·ReferenceBlock·library 파일 checksum이
     전후 동일한지 확인한다. FILE+MAT는 Atomic 변환을 생략하고, 비-Atomic
     FILE+SLDV/GENERATE는 원본 링크를 바꾸지 않은 채 명시적으로 실패해야 한다.
+20. `st_run_standalone_coverage_pipeline`의 STEP1 prepare-only 회귀, STEP234 뒤 새
+    MATLAB 세션에서 STEP5/STEP6 재개, standalone TC property readback, 결과
+    `cvdata.filter`와 MLDATX export/import readback, 공식 ZIP의 report.html, CVT,
+    `%03d` 폴더와 CoverageSummary.xlsx를 확인한다. Decision/Execution 분모 0은
+    N/A여야 하며 원본 모델·Test File·Excel checksum, Dirty와 Harness inventory가
+    전후 같아야 한다. Test Manager GUI의 Results and Artifacts → Results →
+    Coverage Filters 표시도 수동 증거로 남긴다.
 
 실패 시 최소 전달 자료:
 
@@ -320,6 +327,28 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 2. 18비트 전체 코드, CUT별 6비트 코드와 상세 산출물을 분석해 필요한 수정만 새
    커밋으로 반영한다.
 3. CERTIFY + BOTH와 수동 GUI 증거가 끝난 뒤에만 PR과 main 통합을 결정한다.
+
+### 2026-09-11 Standalone Harness Coverage 단계형 pipeline
+
+- 구현 커밋은 `debff6a`(controller/prepare-only), `5f935d9`(결과 CVF 사후 등록),
+  마지막 `feat(report): CUT별 산출물과 Coverage Excel 정리` 순서다.
+- `st_run_standalone_coverage_pipeline`은 `STEP1`, `STEP234`, `STEP5`, `STEP6`,
+  `STEP2_TO_6`을 지원한다. STEP1은 `ExecuteTests=false` override로 기존 준비
+  workflow를 실행하고 기존 entry point의 기본 실행 동작은 유지한다.
+- STEP234는 재현 번들의 standalone Harness 작업 사본과 재연결된 Test File을
+  사용한다. 모든 활성 대상은 ALL_CONTENT+CUT_ONLY+EXCLUDE와 rationale이
+  필수다. 일반 PER_CUT 기본은 DURING_RUN을 유지하고 pipeline만
+  POST_RUN_REQUIRED를 사용한다.
+- 결과 필터 helper는 cvdata, cv.cvdatagroup, cell 반환을 평탄화하고 filter 절대
+  경로 readback과 decisioninfo/executioninfo를 검증한다. 선택 결과 MLDATX를 다시
+  import한 뒤 filter가 유지되지 않으면 CUT를 실패시킨다.
+- pipeline manifest와 SHA-256은 원자적으로 갱신되며 latest.json으로 재개한다.
+  STEP5는 공유 Test Manager 사본, CUT별 standalone 모델·input·CVF·CVT·공식 ZIP
+  report.html·cvhtml을 만들고 STEP6은 실패 CUT도 포함한 CoverageSummary.xlsx를
+  원자적으로 교체한다.
+- 현재 PC에는 MATLAB과 MISS_HIT 실행 환경이 없어 `git diff --check`와 정적 계약
+  검사만 수행할 수 있다. `tests/integration/test_standalone_coverage_pipeline_runtime.m`
+  및 위 20번 R2025b/GUI 증거 전에는 main에 통합하지 않는다.
 
 정적 검증: 변경·추가 MATLAB 파일 중 37개가 MISS_HIT UTF-8 검사에 통과했다.
 Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e`에서도
