@@ -61,6 +61,14 @@ beforeModel = st_file_signature(cfg.ModelFile);
 beforeTest = st_file_signature(cfg.TestFile);
 beforeExcel = st_file_signature(cfg.ManagementExcel);
 
+% Establish the reported production precondition explicitly: the user did
+% not open the source model. STEP234 must keep this state even if dependency
+% analysis or Harness APIs load the model internally.
+if bdIsLoaded(cfg.TopModel)
+    close_system(cfg.TopModel, 0);
+end
+verifyFalse(testCase, bdIsLoaded(cfg.TopModel));
+
 runInfo = st_run_standalone_coverage_pipeline( ...
     'RunMode', 'STEP234', ...
     'ContinueOnFailure', true, ...

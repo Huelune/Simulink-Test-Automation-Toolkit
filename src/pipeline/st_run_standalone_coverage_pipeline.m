@@ -166,6 +166,7 @@ if ~strcmp(st_coverage_filter_existing_policy( ...
         ['The pipeline must collect coverage without inherited filters. ' ...
          'Set cfg.CoverageFilterExistingPolicy to REPLACE.']);
 end
+assert_pipeline_source_unloaded(cfg, 'before standalone export');
 source = source_snapshot(cfg);
 manifest = initial_manifest(pipelineId, pipelineRoot, source, options);
 manifest.Steps.STEP234 = step_state('RUNNING', 'Standalone export started');
@@ -178,6 +179,7 @@ try
         'ExecutionModelMode', 'STANDALONE_HARNESS', ...
         'CreateArchive', false, ...
         'IncludeReferenceReport', false);
+    assert_pipeline_source_unloaded(cfg, 'before bundle runner');
     manifest.BundleDirectory = bundle.BundleDirectory;
     manifest.BundleManifest = bundle.Manifest;
     manifest = checkpoint(outputRoot, manifest, 'STEP234', ...
@@ -222,6 +224,27 @@ catch ME
         ME.identifier, ME.message);
     rethrow(ME);
 end
+end
+
+function assert_pipeline_source_unloaded(cfg, context)
+%ASSERT_PIPELINE_SOURCE_UNLOADED Keep the source and replay copies isolated.
+if ~bdIsLoaded(cfg.TopModel)
+    st_log(cfg, 'DEBUG', ...
+        'Standalone source isolation OK | Context=%s | Model=%s', ...
+        context, cfg.TopModel);
+    return;
+end
+dirtyText = '';
+if strcmp(get_param(cfg.TopModel, 'Dirty'), 'on')
+    dirtyText = ' It has unsaved changes; save or discard them first.';
+end
+st_log(cfg, 'ERROR', ...
+    ['Standalone source isolation failed | Context=%s | Model=%s%s'], ...
+    context, cfg.TopModel, dirtyText);
+error('simtest:StandaloneModelStillLoadedBeforeRun', ...
+    ['%s must be unloaded %s because the exported bundle loads its own ' ...
+     'copy under the same model name.%s'], ...
+    cfg.TopModel, context, dirtyText);
 end
 
 function execution = invoke_bundle_runner(bundleDirectory, options)

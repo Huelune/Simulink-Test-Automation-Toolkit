@@ -349,6 +349,12 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - 현재 PC에는 MATLAB과 MISS_HIT 실행 환경이 없어 `git diff --check`와 정적 계약
   검사만 수행할 수 있다. `tests/integration/test_standalone_coverage_pipeline_runtime.m`
   및 위 20번 R2025b/GUI 증거 전에는 main에 통합하지 않는다.
+- 실제 R2025b에서 사용자가 Top Model을 열지 않았는데도 target 입력 수집 후
+  `StandaloneModelStillLoadedBeforeRun`이 발생했다. export 중간 상태가 아니라
+  `st_export_test_bundle` 진입 전 load 상태를 기준으로 dependency/Harness API가
+  내부 로드한 clean 모델을 정리하도록 수정했다. exporter의 runner 전용 guard는
+  pipeline의 export 전·runner 전 격리 검사로 이동했다. Dirty 모델은 자동 저장이나
+  폐기하지 않는다. 수정 후 R2025b 재검증은 아직 미수행이다.
 
 정적 검증: 변경·추가 MATLAB 파일 중 37개가 MISS_HIT UTF-8 검사에 통과했다.
 Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e`에서도

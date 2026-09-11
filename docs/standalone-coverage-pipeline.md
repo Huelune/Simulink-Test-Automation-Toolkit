@@ -48,6 +48,15 @@ st_set_standalone_coverage_root('D:\stt_work');
 st_set_standalone_coverage_root('');
 ```
 
+## 원본 모델 세션 격리
+
+pipeline은 같은 모델명의 standalone 사본을 실행하므로 시작 시 원본 Top Model이
+로드되어 있으면 즉시 중단한다. 반면 dependency 분석이나 Harness 입력 수집이
+내부적으로 모델을 로드한 경우에는 export 진입 당시 상태를 기준으로 자동 정리한다.
+따라서 사용자가 모델을 열지 않은 상태로 시작했다면 bundle runner 직전에도 원본
+모델은 unload 상태여야 한다. 내부 로드가 남거나 모델이 뜻하지 않게 Dirty가 되면
+자동 저장·폐기하지 않고 명시적인 세션 복원 오류로 중단한다.
+
 ## 필수 Targets 정책
 
 이 pipeline은 결과 필터가 선택 사항이 아니므로 모든 활성 대상에서 다음 설정을
