@@ -51,6 +51,21 @@ verifyTrue(testCase, contains(prepare, ...
     'StandaloneIterationChanged'));
 end
 
+function testStandaloneExportPathsStayShort(testCase)
+% destination here is already deeply nested (template/workspace/
+% standalone/...) under whatever the caller passed. tempname() and an
+% unbounded CUT-name folder both risk pushing a deeply nested project
+% path past the Windows 260-character MAX_PATH limit
+% (MATLAB:cd:DirectoryNameTooLong).
+root = st_project_root();
+source = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_standalone_harnesses.m'));
+verifyTrue(testCase, contains(source, 'short_work_directory'));
+verifyFalse(testCase, contains(source, 'tempname(destination)'));
+verifyTrue(testCase, contains(source, 'maxNameLength = 32'));
+end
+
+
 function testExpectedUpdateSupportsStandaloneRoot(testCase)
 root = st_project_root();
 update = fileread(fullfile(root, 'src', 'execution', ...

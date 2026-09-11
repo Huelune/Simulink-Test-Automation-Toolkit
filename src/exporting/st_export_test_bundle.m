@@ -754,10 +754,15 @@ end
 
 function directory = short_staging_directory(parentDirectory)
 %SHORT_STAGING_DIRECTORY Create a compact, collision-safe staging folder.
+% Deeply nested content is built below this directory (template/workspace/
+% standalone/{CUTName}/...), so every character here counts toward the
+% Windows 260-character MAX_PATH budget. A 6-character token is unique
+% enough for a directory that only needs to avoid colliding with other
+% concurrent exports into the same destination.
 for attempt = 1:20
     uuid = char(java.util.UUID.randomUUID());
     token = uuid(~ismember(uuid, '-'));
-    candidate = fullfile(parentDirectory, ['~exp' token(1:8)]);
+    candidate = fullfile(parentDirectory, ['~x' token(1:6)]);
     if ~isfolder(candidate) && ~isfile(candidate)
         mkdir(candidate);
         directory = candidate;

@@ -56,6 +56,18 @@ verifyTrue(testCase, contains(loader, ...
     'StandalonePipelineManifestChecksumMismatch'));
 end
 
+function testStep234ExportDestinationSkipsExtraNesting(testCase)
+% st_export_test_bundle already builds template/workspace/standalone/
+% {CUTName} below its Destination. A project checked out under a deep
+% path can push that combination past the Windows 260-character
+% MAX_PATH limit, so STEP234 must not add its own extra "exports"
+% segment on top of the pipeline's .work scratch folder.
+text = source('pipeline', 'st_run_standalone_coverage_pipeline.m');
+verifyTrue(testCase, contains(text, 'exportRoot = workRoot'));
+verifyFalse(testCase, contains(text, "fullfile(workRoot, 'exports')"));
+end
+
+
 function testStep5PerformsRequiredResultRoundTrip(testCase)
 text = source('pipeline', ...
     'st_package_standalone_coverage_artifacts.m');
