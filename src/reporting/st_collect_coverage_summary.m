@@ -15,7 +15,7 @@ matchCoverageObjects = p.Results.MatchCoverageObjects;
 progressFcn = p.Results.ProgressFcn;
 
 coverage = empty_coverage_table();
-resultCoverage = getCoverageResults(resultObj);
+resultCoverage = st_flatten_coverage_results(getCoverageResults(resultObj));
 resultDescriptors = describe_coverage_objects(resultCoverage);
 
 % Overall CUT rows come from the aggregated ResultSet coverage so repeated
@@ -70,7 +70,7 @@ for c = 1:numel(caseResults)
         continue;
     end
     target = targetConfig(targetIndex,:);
-    caseCoverage = getCoverageResults(tcResult);
+    caseCoverage = st_flatten_coverage_results(getCoverageResults(tcResult));
     targetPath = coverage_target_path(target);
     caseMatches = select_coverage_objects( ...
         describe_coverage_objects(caseCoverage), targetPath, ...
@@ -84,7 +84,8 @@ for c = 1:numel(caseResults)
     iterResults = safe_iterations(tcResult);
     for i = 1:numel(iterResults)
         iterName = iteration_name(iterResults(i), i);
-        iterCoverage = getCoverageResults(iterResults(i));
+        iterCoverage = st_flatten_coverage_results( ...
+            getCoverageResults(iterResults(i)));
         iterationMatches = select_coverage_objects( ...
             describe_coverage_objects(iterCoverage), targetPath, ...
             matchCoverageObjects);
@@ -134,13 +135,14 @@ OwnerBlock = strings(n, 1);
 AnalyzedModel = strings(n, 1);
 DataType = strings(n, 1);
 for i = 1:n
-    Root(i) = string(coverage_source_root(coverageObjects(i)));
+    cvd = coverageObjects{i};
+    Root(i) = string(coverage_source_root(cvd));
     try
-        DataType(i) = string(coverageObjects(i).type);
+        DataType(i) = string(cvd.type);
     catch
     end
     try
-        info = coverageObjects(i).modelinfo;
+        info = cvd.modelinfo;
         OwnerModel(i) = metadata_value(info, 'ownerModel');
         OwnerBlock(i) = metadata_value(info, 'ownerBlock');
         AnalyzedModel(i) = metadata_value(info, 'analyzedModel');
@@ -169,7 +171,7 @@ end
 function coverage = append_object_coverage(coverage, coverageObjects, ...
         runLabel, level, target, testCaseName, iterationName, objectPath)
 for c = 1:numel(coverageObjects)
-    cvd = coverageObjects(c);
+    cvd = coverageObjects{c};
     sourceRoot = coverage_source_root(cvd);
     checksum = coverage_checksum(cvd);
     coverage = append_metric(coverage, cvd, @decisioninfo, ...

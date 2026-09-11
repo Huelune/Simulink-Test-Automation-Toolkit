@@ -1,27 +1,44 @@
 function result = st_apply_result_coverage_filters( ...
-        resultObj, filterFiles, cfg)
+        resultObj, filterFiles, cfg, varargin)
 %ST_APPLY_RESULT_COVERAGE_FILTERS Attach exact CVFs to result coverage data.
+%
+% Normal PER_CUT execution keeps its Test Manager-time filter behavior. The
+% standalone pipeline opts into this strict post-run registration path.
+
+p = inputParser;
+addParameter(p, 'RequireCoverage', false, ...
+    @(x) islogical(x) && isscalar(x));
+addParameter(p, 'CoveragePath', '', ...
+    @(x) ischar(x) || isstring(x));
+addParameter(p, 'ReadOnly', false, ...
+    @(x) islogical(x) && isscalar(x));
+parse(p, varargin{:});
 
 totalTimer = tic;
-st_log(cfg, 'DEBUG', ...
-    'Result coverage filter attach start');
+st_log(cfg, 'INFO', 'Result coverage filter attach start');
 try
     filterFiles = resolve_filter_files(filterFiles);
-    coverageObjects = getCoverageResults(resultObj);
+    coverageObjects = st_flatten_coverage_results( ...
+        getCoverageResults(resultObj));
     result = struct( ...
         'CoverageObjectCount', numel(coverageObjects), ...
         'FilterFiles', filterFiles, ...
+        'MetricReadbackCount', 0, ...
         'Status', 'OK', ...
         'Message', 'Coverage filters attached to result data');
 
     if isempty(filterFiles)
         result.Message = 'No coverage filters to attach';
-        st_log(cfg, 'DEBUG', ...
+        st_log(cfg, 'INFO', ...
             ['Result coverage filter attach complete | no filters | ' ...
              'elapsed=%.3f sec'], toc(totalTimer));
         return;
     end
     if isempty(coverageObjects)
+        if p.Results.RequireCoverage
+            error('simtest:ResultCoverageDataMissing', ...
+                'ResultSet contains no model coverage objects.');
+        end
         result.Status = 'WARN';
         result.Message = 'ResultSet contains no coverage objects';
         st_log(cfg, 'WARN', ...
@@ -30,13 +47,14 @@ try
         return;
     end
 
-    st_log(cfg, 'DEBUG', ...
-        'Result coverage filter attach resolved | objects=%d | filters=%d', ...
-        numel(coverageObjects), numel(filterFiles));
     propertyValue = filter_property_value(filterFiles);
+    metricCount = 0;
     for i = 1:numel(coverageObjects)
-        coverageObjects(i).filter = propertyValue;
-        returned = string(coverageObjects(i).filter);
+        cvd = coverageObjects{i};
+        if ~p.Results.ReadOnly
+            cvd.filter = propertyValue;
+        end
+        returned = string(cvd.filter);
         returned = returned(:);
         returned(ismissing(returned)) = "";
         returned = returned(strlength(returned) > 0);
@@ -53,8 +71,14 @@ try
                 i, join_filter_values(filterFiles), ...
                 join_filter_values(returned));
         end
+        metricCount = metricCount + verify_metric_readback( ...
+            cvd, char(string(p.Results.CoveragePath)));
     end
-    st_log(cfg, 'DEBUG', ...
+    result.MetricReadbackCount = metricCount;
+    if p.Results.ReadOnly
+        result.Message = 'Coverage filter readback verified';
+    end
+    st_log(cfg, 'INFO', ...
         'Result coverage filter attach complete | elapsed=%.3f sec', ...
         toc(totalTimer));
 catch ME
@@ -65,20 +89,38 @@ catch ME
 end
 end
 
+function count = verify_metric_readback(cvd, coveragePath)
+count = 0;
+if isempty(coveragePath)
+    return;
+end
+try
+    decisioninfo(cvd, coveragePath);
+    count = count + 1;
+catch ME
+    error('simtest:ResultCoverageDecisionReadbackFailed', ...
+        'decisioninfo failed after CVF registration for %s: %s', ...
+        coveragePath, ME.message);
+end
+try
+    executioninfo(cvd, coveragePath);
+    count = count + 1;
+catch ME
+    error('simtest:ResultCoverageExecutionReadbackFailed', ...
+        'executioninfo failed after CVF registration for %s: %s', ...
+        coveragePath, ME.message);
+end
+end
 
 function files = normalize_filter_values(values)
 files = string(values(:));
 files(ismissing(files)) = "";
 files = files(strlength(files) > 0);
 for i = 1:numel(files)
-    candidate = char(files(i));
-    [resolved, found] = existing_filter_path(candidate, true);
-    if found
-        files(i) = resolved;
-    end
+    [resolved, found] = existing_filter_path(char(files(i)), true);
+    if found, files(i) = resolved; end
 end
 end
-
 
 function files = resolve_filter_files(values)
 files = string(values(:));
@@ -97,14 +139,9 @@ end
 files = unique(files, 'stable');
 end
 
-
 function [path, found] = existing_filter_path(candidate, tryExtension)
 located = '';
-if isfile(candidate)
-    located = candidate;
-else
-    located = which(candidate);
-end
+if isfile(candidate), located = candidate; else, located = which(candidate); end
 if isempty(located) && tryExtension && ...
         ~endsWith(candidate, '.cvf', 'IgnoreCase', true)
     candidateWithExtension = [candidate '.cvf'];
@@ -114,13 +151,11 @@ if isempty(located) && tryExtension && ...
         located = which(candidateWithExtension);
     end
 end
-
 found = ~isempty(located);
 if ~found
     path = string(candidate);
     return;
 end
-
 [attributeStatus, attributes] = fileattrib(located);
 if attributeStatus && isstruct(attributes) && isfield(attributes, 'Name')
     located = attributes.Name;
@@ -130,67 +165,42 @@ end
 path = string(located);
 end
 
-
 function tf = is_absolute_path(path)
 if ispc
-    tf = ~isempty(regexp(path, '^[A-Za-z]:[\\/]', 'once')) || ...
-        startsWith(path, '\\');
+    tf = ~isempty(regexp(path, '^[A-Za-z]:[\\/]', 'once')) || startsWith(path, '\\');
 else
     tf = startsWith(path, '/');
 end
 end
 
-
 function keys = path_keys(paths)
 keys = replace(string(paths(:)), '/', filesep);
-if ispc
-    keys = lower(keys);
+if ispc, keys = lower(keys); end
 end
-end
-
 
 function tf = filter_sets_match(expected, actual)
-expectedPaths = path_keys(expected);
-actualPaths = path_keys(actual);
-if all(ismember(expectedPaths, actualPaths))
+if all(ismember(path_keys(expected), path_keys(actual)))
     tf = true;
     return;
 end
-
-% Some releases retain only the CVF basename (and may omit .cvf) after a
-% valid absolute path is assigned to cvdata.filter. The basename is safe to
-% accept here because PER_CUT names every CVF after its unique Test Case and
-% registers that exact filter directory on the MATLAB path.
-tf = all(ismember(filter_name_keys(expected), ...
-    filter_name_keys(actual)));
+tf = all(ismember(filter_name_keys(expected), filter_name_keys(actual)));
 end
-
 
 function keys = filter_name_keys(paths)
 paths = string(paths(:));
 keys = strings(size(paths));
 for i = 1:numel(paths)
     [~, name, extension] = fileparts(char(paths(i)));
-    if isempty(extension)
-        extension = '.cvf';
-    end
+    if isempty(extension), extension = '.cvf'; end
     keys(i) = string([name lower(extension)]);
 end
-if ispc
-    keys = lower(keys);
+if ispc, keys = lower(keys); end
 end
-end
-
 
 function value = join_filter_values(values)
 values = string(values(:));
-if isempty(values)
-    value = '<empty>';
-else
-    value = char(strjoin(values, ' | '));
+if isempty(values), value = '<empty>'; else, value = char(strjoin(values, ' | ')); end
 end
-end
-
 
 function value = filter_property_value(files)
 if numel(files) == 1

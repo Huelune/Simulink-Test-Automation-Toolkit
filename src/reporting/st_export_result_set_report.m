@@ -233,7 +233,8 @@ timer = tic;
 st_log(cfg, 'DEBUG', ...
     'Portable coverage CVT save start | directory=%s', dataDirectory);
 try
-    coverageObjects = getCoverageResults(resultObj);
+    coverageObjects = st_flatten_coverage_results( ...
+        getCoverageResults(resultObj));
 catch ME
     st_log(cfg, 'ERROR', ...
         'Portable coverage CVT lookup failed | %s: %s', ...
@@ -251,12 +252,13 @@ if isempty(coverageObjects)
 end
 
 for i = 1:numel(coverageObjects)
-    root = coverage_root(coverageObjects(i));
+    cvd = coverageObjects{i};
+    root = coverage_root(cvd);
     basePath = fullfile(dataDirectory, sprintf('%02d_%s', ...
         i, st_export_safe_name(root)));
     cvtPath = [basePath '.cvt'];
     try
-        cvsave(basePath, coverageObjects(i));
+        cvsave(basePath, cvd);
         if ~isfile(cvtPath)
             error('simtest:CoverageDataSaveMissing', ...
                 'cvsave did not create the expected CVT: %s', cvtPath);
@@ -283,10 +285,11 @@ timer = tic;
 st_log(cfg, 'DEBUG', ...
     'Portable coverage filter copy start | directory=%s', filterDirectory);
 try
-    coverageObjects = getCoverageResults(resultObj);
+    coverageObjects = st_flatten_coverage_results( ...
+        getCoverageResults(resultObj));
     sources = strings(0,1);
     for i = 1:numel(coverageObjects)
-        values = string(coverageObjects(i).filter);
+        values = string(coverageObjects{i}.filter);
         values = values(:);
         values(ismissing(values)) = "";
         sources = [sources; values(strlength(values) > 0)]; %#ok<AGROW>
@@ -343,7 +346,8 @@ end
 function artifacts = export_coverage_html( ...
         artifacts, resultObj, folder, step, stepCount)
 try
-    coverageObjects = getCoverageResults(resultObj);
+    coverageObjects = st_flatten_coverage_results( ...
+        getCoverageResults(resultObj));
 catch ME
     artifacts = record_artifact(artifacts, 'HTML', folder, ...
         'FAIL', ME.message);
@@ -358,11 +362,12 @@ end
 for i = 1:numel(coverageObjects)
     report_progress(step, stepCount, 'Coverage object', ...
         i, numel(coverageObjects));
-    root = coverage_root(coverageObjects(i));
+    cvd = coverageObjects{i};
+    root = coverage_root(cvd);
     path = fullfile(folder, sprintf('%02d_%s.html', ...
         i, st_export_safe_name(root)));
     try
-        report = cvhtml(path, coverageObjects(i), '-sRT=0');
+        report = cvhtml(path, cvd, '-sRT=0');
         if isstruct(report) && isfield(report, 'fileName') && ...
                 isfield(report, 'path')
             path = fullfile(char(report(1).path), ...
@@ -509,16 +514,18 @@ text = char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss.SSS'));
 end
 
 function snapshot = coverage_integrity_snapshot(resultObj)
-coverageObjects = getCoverageResults(resultObj);
+coverageObjects = st_flatten_coverage_results( ...
+    getCoverageResults(resultObj));
 n = numel(coverageObjects);
 Id = zeros(n,1);
 RootPath = strings(n,1);
 FilterReferences = strings(n,1);
 for i = 1:n
-    Id(i) = double(coverageObjects(i).id);
-    testObject = coverageObjects(i).test;
+    cvd = coverageObjects{i};
+    Id(i) = double(cvd.id);
+    testObject = cvd.test;
     RootPath(i) = string(testObject.rootPath);
-    filters = string(coverageObjects(i).filter);
+    filters = string(cvd.filter);
     filters = filters(:);
     filters(ismissing(filters)) = "";
     filters = filters(strlength(filters) > 0);

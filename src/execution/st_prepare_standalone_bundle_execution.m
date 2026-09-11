@@ -29,6 +29,7 @@ ExecutionModel = strings(n,1);
 StandaloneCUTPath = strings(n,1);
 ModelFile = strings(n,1);
 AssessmentBlock = strings(n,1);
+IterationSignature = strings(n,1);
 Status = repmat("FAIL", n, 1);
 Message = strings(n,1);
 
@@ -94,6 +95,7 @@ for i = 1:n
         save_system(model);
 
         tc = suiteCases(caseMatch);
+        originalIterationSignature = iteration_signature(tc);
         setProperty(tc, ...
             'Model', model, ...
             'HarnessOwner', '', ...
@@ -103,6 +105,12 @@ for i = 1:n
         verify_property(tc, 'HarnessOwner', '');
         verify_property(tc, 'HarnessName', '');
         verify_property(tc, 'TestSequenceBlock', assessment);
+        rewiredIterationSignature = iteration_signature(tc);
+        if rewiredIterationSignature ~= originalIterationSignature
+            error('simtest:StandaloneIterationChanged', ...
+                ['Standalone Test Case rewiring changed Iteration or ' ...
+                 'Signal Editor/Test Sequence Scenario settings.']);
+        end
 
         order(i) = targetMatch;
         testCases(i,1) = tc;
@@ -110,6 +118,7 @@ for i = 1:n
         StandaloneCUTPath(i) = string(cutPath);
         ModelFile(i) = string(modelFile);
         AssessmentBlock(i) = string(assessment);
+        IterationSignature(i) = rewiredIterationSignature;
         Status(i) = "OK";
         Message(i) = "Test Case rewired and API readback verified";
         close_model(model);
@@ -126,20 +135,52 @@ for i = 1:n
     end
 end
 
+st_log(cfg, 'DEBUG', 'Standalone Test File saveToFile start');
 saveToFile(tf);
+st_log(cfg, 'DEBUG', 'Standalone Test File saveToFile complete');
+for i = 1:n
+    verify_property(testCases(i), 'Model', char(ExecutionModel(i)));
+    verify_property(testCases(i), 'HarnessOwner', '');
+    verify_property(testCases(i), 'HarnessName', '');
+    verify_property(testCases(i), 'TestSequenceBlock', ...
+        char(AssessmentBlock(i)));
+    if iteration_signature(testCases(i)) ~= IterationSignature(i)
+        error('simtest:StandaloneTestCaseSavedReadbackFailed', ...
+            ['Saved Test File changed Iteration or Signal Editor/Test ' ...
+             'Sequence Scenario settings for %s.'], ...
+            char(string(testCases(i).Name)));
+    end
+end
 targets = sourceTargets(order,:);
 targets.ExecutionModel = ExecutionModel;
 targets.StandaloneCUTPath = StandaloneCUTPath;
 targets.ExecutionModelFile = ModelFile;
 result = table(double(targets.No), string(targets.TestCaseName), ...
     ExecutionModel, StandaloneCUTPath, ModelFile, AssessmentBlock, ...
+    IterationSignature, ...
     Status, Message, ...
     'VariableNames', {'No','TestCaseName','ExecutionModel', ...
-    'StandaloneCUTPath','ModelFile','AssessmentBlock','Status','Message'});
+    'StandaloneCUTPath','ModelFile','AssessmentBlock', ...
+    'IterationSignature','Status','Message'});
 st_write_result('StandaloneBundlePreparationResult', result);
 st_log(cfg, 'INFO', ...
     'Standalone bundle preparation complete | Targets=%d | elapsed=%.3f sec', ...
     n, toc(totalTimer));
+end
+
+function value = iteration_signature(tc)
+iterations = getIterations(tc);
+parts = strings(numel(iterations),1);
+for i = 1:numel(iterations)
+    params = iterations(i).TestParams;
+    try
+        paramsText = jsonencode(params);
+    catch
+        paramsText = evalc('disp(params)');
+    end
+    parts(i) = string(iterations(i).Name) + "|" + string(paramsText);
+end
+value = strjoin(parts, newline);
 end
 
 function path = execution_path(bundleRoot, workRoot, bundlePath)

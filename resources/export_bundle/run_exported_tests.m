@@ -11,6 +11,15 @@ function info = run_exported_tests(varargin)
 p = inputParser;
 addParameter(p, 'AllowReleaseMismatch', false, ...
     @(x) islogical(x) && isscalar(x));
+addParameter(p, 'ContinueOnFailure', true, ...
+    @(x) islogical(x) && isscalar(x));
+addParameter(p, 'FailOnNonPass', false, ...
+    @(x) islogical(x) && isscalar(x));
+addParameter(p, 'ReportMode', 'SUMMARY', ...
+    @(x) ismember(upper(string(x)), ["SUMMARY","FULL"]));
+addParameter(p, 'ResultFilterMode', 'DURING_RUN', ...
+    @(x) ismember(upper(string(x)), ...
+    ["DURING_RUN","POST_RUN_REQUIRED"]));
 parse(p, varargin{:});
 
 bundleRoot = fileparts(mfilename('fullpath'));
@@ -58,6 +67,9 @@ addpath(workRoot, '-begin');
 clear st_setup st_config st_project_root
 st_setup();
 addpath(genpath(fullfile(workRoot, 'workspace')), '-begin');
+if strcmp(executionModelMode, 'STANDALONE_HARNESS')
+    remove_standalone_model_paths(bundleRoot, workRoot, manifest);
+end
 
 rewrite_sldv_manifest(bundleRoot, workRoot, manifest);
 cfg = st_require_runtime_target();
@@ -71,7 +83,11 @@ if strcmp(executionModelMode, 'STANDALONE_HARNESS')
         manifest, bundleRoot, workRoot);
     [~, updates, reportInfo] = st_run_tests_per_cut( ...
         'TargetConfig', executionTargets, ...
-        'TestFile', tf, 'TestCases', testCases);
+        'TestFile', tf, 'TestCases', testCases, ...
+        'ContinueOnFailure', p.Results.ContinueOnFailure, ...
+        'FailOnNonPass', p.Results.FailOnNonPass, ...
+        'ReportMode', p.Results.ReportMode, ...
+        'ResultFilterMode', p.Results.ResultFilterMode);
 else
     rewrite_signal_editor_paths(bundleRoot, workRoot, manifest, modelFile);
     [~, updates, runContext] = st_run_generated_tests();
@@ -101,6 +117,7 @@ info = struct( ...
     'ExecutionModelMode', executionModelMode, ...
     'Preparation', table2struct(preparation), ...
     'ExpectedUpdates', table2struct(updates), ...
+    'ResultFilterMode', upper(char(string(p.Results.ResultFilterMode))), ...
     'Report', reportInfo, ...
     'ReferenceRunId', char(manifest.ReferenceRunId), ...
     'CompletedAt', timestamp_text());
@@ -116,6 +133,33 @@ if isfield(manifest, 'ReferenceReport') && ...
 else
     fprintf('Reference : NONE (verification snapshot)\n');
 end
+end
+
+function remove_standalone_model_paths(bundleRoot, workRoot, manifest)
+for i = 1:numel(manifest.Targets)
+    modelFile = work_path(bundleRoot, workRoot, ...
+        char(manifest.Targets(i).StandaloneModelFile));
+    folder = fileparts(modelFile);
+    if path_contains(folder)
+        rmpath(folder);
+    end
+end
+end
+
+function tf = path_contains(folder)
+entries = string(strsplit(path, pathsep));
+folder = string(char(java.io.File(folder).getCanonicalPath()));
+for i = 1:numel(entries)
+    if strlength(entries(i)) == 0, continue; end
+    candidate = string(char(java.io.File(char(entries(i))).getCanonicalPath()));
+    if ispc
+        equal = strcmpi(candidate, folder);
+    else
+        equal = strcmp(candidate, folder);
+    end
+    if equal, tf = true; return; end
+end
+tf = false;
 end
 
 function validate_release(manifest, allowMismatch)
