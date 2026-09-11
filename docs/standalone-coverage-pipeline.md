@@ -27,6 +27,27 @@ info = st_run_standalone_coverage_pipeline('RunMode', 'STEP2_TO_6');
 만든다. `STEP5`/`STEP6`의 기본 `LATEST`는
 `result/standalone_coverage/latest.json`이 가리키는 기존 실행을 읽는다.
 
+## 출력 루트가 깊게 중첩된 저장소에서 경로 길이 초과
+
+이 pipeline은 export한 Harness 모델을
+`template/workspace/standalone/{CUTName}/...`까지 여러 단계로 중첩한다.
+저장소 checkout 경로 자체가 깊으면(예: 회사 표준 폴더 구조) 합쳐진 전체 경로가
+Windows 260자 제한(`MATLAB:cd:DirectoryNameTooLong`)을 넘을 수 있다.
+
+출력 루트를 프로젝트 바깥의 짧은 경로로 옮기면 해결된다. 이 설정은 로컬
+`runtime_target.mat`에 저장되므로 저장소 기본값(`st_config.m`)에는 영향이
+없고, 머신마다 따로 지정한다.
+
+```matlab
+st_set_standalone_coverage_root('D:\stt_work');
+```
+
+원래 기본값(저장소 아래 `result/standalone_coverage`)으로 되돌리려면:
+
+```matlab
+st_set_standalone_coverage_root('');
+```
+
 ## 필수 Targets 정책
 
 이 pipeline은 결과 필터가 선택 사항이 아니므로 모든 활성 대상에서 다음 설정을

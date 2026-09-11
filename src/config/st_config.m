@@ -394,9 +394,30 @@ cfg.ExportRootDir = ...
     fullfile(rootDir, 'result', 'exports');
 
 % Resumable standalone Harness coverage pipelines are isolated from normal
-% export bundles and PER_CUT reports.
+% export bundles and PER_CUT reports. A deeply nested repository checkout
+% combined with this pipeline's own nested export folders can exceed the
+% Windows 260-character MAX_PATH limit, so a local, untracked override is
+% read from runtime_target.mat when present (set it with
+% st_set_standalone_coverage_root, for example to a short path on another
+% drive). The tracked default stays under the repository.
 cfg.StandaloneCoverageRootDir = ...
     fullfile(rootDir, 'result', 'standalone_coverage');
+
+if isfile(cfg.RuntimeTargetFile)
+
+    standaloneOverride = load(cfg.RuntimeTargetFile);
+
+    if isfield(standaloneOverride, 'StandaloneCoverageRootDir')
+
+        overrideDir = ...
+            strtrim(char(string( ...
+                standaloneOverride.StandaloneCoverageRootDir)));
+
+        if ~isempty(overrideDir)
+            cfg.StandaloneCoverageRootDir = overrideDir;
+        end
+    end
+end
 
 % Standalone verification runs and latest pointers are stored separately
 % from normal workflow reports. QUICK inspections never write elsewhere.
