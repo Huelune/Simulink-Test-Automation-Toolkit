@@ -66,6 +66,74 @@ verifyTrue(testCase, contains(source, 'maxNameLength = 32'));
 end
 
 
+function testCleanupSessionUsesReferenceStateNotNestedFunction(testCase)
+% onCleanup(@nestedFunction) sharing this function's own workspace has
+% been observed to fail during exception unwinding with "... already
+% removed from the workspace of the existing function" instead of
+% propagating the real error. cleanup_export_session must be a plain
+% (non-nested) function driven by a containers.Map, whose mutations are
+% visible regardless of how the caller's stack frame is torn down.
+root = st_project_root();
+source = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_standalone_harnesses.m'));
+verifyTrue(testCase, contains(source, 'containers.Map()'));
+verifyTrue(testCase, contains(source, ...
+    "onCleanup(@() cleanup_export_session(state))"));
+verifyFalse(testCase, contains(source, ...
+    'onCleanup(@cleanup_export_session)'));
+verifyTrue(testCase, contains(source, ...
+    'function cleanup_export_session(state)'));
+verifyFalse(testCase, contains(source, ...
+    'function cleanup_export_session()'));
+end
+
+
+function testCollectTargetInputsRestoresTopModelLoadState(testCase)
+% collect_target_inputs calls sltest.harness.load per target, which loads
+% cfg.TopModel as a side effect when it is not already loaded; only the
+% Harness was being closed afterward. A model left loaded here makes a
+% later bundle runner invocation fail with
+% simtest:BundleModelAlreadyLoaded even though nothing the user did left
+% it open.
+root = st_project_root();
+source = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_test_bundle.m'));
+verifyTrue(testCase, contains(source, ...
+    'topModelWasLoaded = bdIsLoaded(cfg.TopModel)'));
+verifyTrue(testCase, contains(source, ...
+    'restore_top_model_load_state(cfg.TopModel, topModelWasLoaded)'));
+verifyTrue(testCase, contains(source, ...
+    'function restore_top_model_load_state(topModel, wasLoadedBefore)'));
+% Never auto-save a model that became dirty as a side effect; warn and
+% leave it for the user instead.
+verifyTrue(testCase, contains(source, ...
+    "strcmp(get_param(topModel, 'Dirty'), 'on')"));
+verifyFalse(testCase, contains(source, ...
+    'save_system(topModel)'));
+end
+
+
+function testStandaloneRunGuardsAgainstLeftoverLoadedModel(testCase)
+% Isolation guard before the bundle runner starts: the exported bundle
+% loads its own copy of cfg.TopModel under the same name, so the source
+% must not still be loaded at that point. This does not replace
+% run_exported_tests' own BundleModelAlreadyLoaded check; it is meant to
+% fail earlier with a clearer, more specific message.
+root = st_project_root();
+source = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_test_bundle.m'));
+verifyTrue(testCase, contains(source, ...
+    'function assert_top_model_not_loaded(topModel)'));
+verifyTrue(testCase, contains(source, ...
+    "assert_top_model_not_loaded(cfg.TopModel)"));
+verifyTrue(testCase, contains(source, ...
+    "strcmp(executionModelMode, 'STANDALONE_HARNESS')"));
+runner = fileread(fullfile(root, 'resources', 'export_bundle', ...
+    'run_exported_tests.m'));
+verifyTrue(testCase, contains(runner, 'BundleModelAlreadyLoaded'));
+end
+
+
 function testExpectedUpdateSupportsStandaloneRoot(testCase)
 root = st_project_root();
 update = fileread(fullfile(root, 'src', 'execution', ...

@@ -29,12 +29,26 @@ details = repmat(empty_detail(), height(targets), 1);
 % here matters for the Windows 260-character MAX_PATH budget.
 workRoot = short_work_directory(destination);
 mkdir(workRoot);
-sourceWasLoaded = bdIsLoaded(topModel);
-sourceWasOpen = false;
-openHarnesses = repmat(struct( ...
+
+% Session state for cleanup_export_session is kept in a containers.Map
+% (a handle/reference object) rather than plain local variables. A plain
+% onCleanup(@nestedFunction) shares this function's own workspace, and
+% that combination has been observed to fail during exception unwinding
+% with "attempted to read or write a variable ... already removed from
+% the workspace of the existing function". A Map is an independent object
+% on the heap: mutating it (state('SourceDetached') = true, etc.) is
+% always visible to the cleanup callback regardless of how this function's
+% stack frame is torn down.
+state = containers.Map();
+state('WorkRoot') = workRoot;
+state('TopModel') = char(topModel);
+state('SourceModelFile') = char(sourceModelFile);
+state('SourceWasLoaded') = bdIsLoaded(topModel);
+state('SourceWasOpen') = false;
+state('OpenHarnesses') = repmat(struct( ...
     'Owner', '', 'Name', '', 'WasOpen', false), 0, 1);
-sourceDetached = false;
-sessionCleanup = onCleanup(@cleanup_export_session); %#ok<NASGU>
+state('SourceDetached') = false;
+sessionCleanup = onCleanup(@() cleanup_export_session(state)); %#ok<NASGU>
 
 [~, sourceName, extension] = fileparts(sourceModelFile);
 if ~strcmp(sourceName, char(topModel))
@@ -48,25 +62,25 @@ temporaryModel = char(topModel);
 temporaryModelFile = fullfile(workRoot, [sourceName extension]);
 copy_checked(sourceModelFile, temporaryModelFile);
 
-if sourceWasLoaded
+if state('SourceWasLoaded')
     try
-        sourceWasOpen = strcmp(get_param(topModel, 'Open'), 'on');
+        state('SourceWasOpen') = strcmp(get_param(topModel, 'Open'), 'on');
     catch
     end
 end
-if ~sourceWasLoaded, load_system(sourceModelFile); end
-openHarnesses = close_open_source_harnesses(topModel);
+if ~state('SourceWasLoaded'), load_system(sourceModelFile); end
+state('OpenHarnesses') = close_open_source_harnesses(topModel);
 try
     close_system(topModel, 0);
 catch ME
     if bdIsLoaded(topModel)
-        restore_source_harnesses(openHarnesses);
+        restore_source_harnesses(state('OpenHarnesses'));
     else
-        sourceDetached = true;
+        state('SourceDetached') = true;
     end
     rethrow(ME);
 end
-sourceDetached = true;
+state('SourceDetached') = true;
 
 load_system(temporaryModelFile);
 loadedTemporaryFile = char(get_param(temporaryModel, 'FileName'));
@@ -153,30 +167,35 @@ clear sessionCleanup;
 log_message(logConfig, 'INFO', ...
     'Standalone Harness export complete | Targets=%d | elapsed=%.3f sec', ...
     height(targets), toc(totalTimer));
+end
 
-    function cleanup_export_session()
-        restoreError = [];
-        try
-            if sourceDetached
-                close_model(topModel);
-                if sourceWasLoaded
-                    load_system(sourceModelFile);
-                    loadedSourceFile = char(get_param(topModel, 'FileName'));
-                    if ~same_path(loadedSourceFile, sourceModelFile)
-                        error('simtest:AssetSourceRestoreMismatch', ...
-                            ['MATLAB restored a different source model ' ...
-                             'file: %s'], loadedSourceFile);
-                    end
-                    if sourceWasOpen, open_system(topModel); end
-                    restore_source_harnesses(openHarnesses);
-                end
+function cleanup_export_session(state)
+%CLEANUP_EXPORT_SESSION Restore the source model session, then always
+% remove the scratch work folder. state is a containers.Map so this plain
+% (non-nested) function sees whatever the caller last wrote to it, even
+% when invoked by onCleanup during exception unwinding.
+restoreError = [];
+try
+    if state('SourceDetached')
+        close_model(state('TopModel'));
+        if state('SourceWasLoaded')
+            load_system(state('SourceModelFile'));
+            loadedSourceFile = char(get_param( ...
+                state('TopModel'), 'FileName'));
+            if ~same_path(loadedSourceFile, state('SourceModelFile'))
+                error('simtest:AssetSourceRestoreMismatch', ...
+                    ['MATLAB restored a different source model ' ...
+                     'file: %s'], loadedSourceFile);
             end
-        catch ME
-            restoreError = ME;
+            if state('SourceWasOpen'), open_system(state('TopModel')); end
+            restore_source_harnesses(state('OpenHarnesses'));
         end
-        remove_work_root(workRoot);
-        if ~isempty(restoreError), rethrow(restoreError); end
     end
+catch ME
+    restoreError = ME;
+end
+remove_work_root(state('WorkRoot'));
+if ~isempty(restoreError), rethrow(restoreError); end
 end
 
 function folder = target_folder(row)
