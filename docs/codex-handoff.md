@@ -381,6 +381,14 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   snapshot struct를 1x4로 확장해 발생한 intermediate indexing 오류는 struct field를
   cell wrapper로 넣어 수정했다. runner 종료 시 이미 제거된 standalone path에 대한
   반복 `rmpath` 경고는 실행 전 전체 path snapshot 복원으로 대체했다.
+- 후속 실행은 4개 Test Case 모두 끝까지 실행했지만 ResultSet 최상위의
+  `getCoverageResults`가 빈 결과를 반환하여 모든 CUT가
+  `ResultCoverageDataMissing`으로 실패했다. 직접 `run(testCase)` 결과에서 Coverage가
+  TestCaseResult/TestIterationResult에만 노출되는 구성도 처리하도록 aggregate가
+  비었을 때 결과 계층을 내려가는 collector를 추가했다. STEP234가 실패하면 기존
+  STEP5가 CUT 폴더의 model/input 복사까지 생략해 Summary와 Test Manager만 남겼으므로,
+  이제 standalone 모델·존재하는 입력·target manifest는 필터 결과와 무관하게 먼저
+  보존하고 CVF/CVT/report만 검증 성공 시 생성한다. R2025b 재검증이 필요하다.
 
 정적 검증: 변경·추가 MATLAB 파일 중 37개가 MISS_HIT UTF-8 검사에 통과했다.
 Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e`에서도

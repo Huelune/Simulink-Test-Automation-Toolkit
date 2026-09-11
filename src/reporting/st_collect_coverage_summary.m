@@ -15,7 +15,7 @@ matchCoverageObjects = p.Results.MatchCoverageObjects;
 progressFcn = p.Results.ProgressFcn;
 
 coverage = empty_coverage_table();
-resultCoverage = st_flatten_coverage_results(getCoverageResults(resultObj));
+resultCoverage = st_collect_result_coverage_objects(resultObj);
 resultDescriptors = describe_coverage_objects(resultCoverage);
 
 % Overall CUT rows come from the aggregated ResultSet coverage so repeated

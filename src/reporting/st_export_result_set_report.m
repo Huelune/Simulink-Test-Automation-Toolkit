@@ -233,8 +233,7 @@ timer = tic;
 st_log(cfg, 'DEBUG', ...
     'Portable coverage CVT save start | directory=%s', dataDirectory);
 try
-    coverageObjects = st_flatten_coverage_results( ...
-        getCoverageResults(resultObj));
+    coverageObjects = st_collect_result_coverage_objects(resultObj);
 catch ME
     st_log(cfg, 'ERROR', ...
         'Portable coverage CVT lookup failed | %s: %s', ...
@@ -285,8 +284,7 @@ timer = tic;
 st_log(cfg, 'DEBUG', ...
     'Portable coverage filter copy start | directory=%s', filterDirectory);
 try
-    coverageObjects = st_flatten_coverage_results( ...
-        getCoverageResults(resultObj));
+    coverageObjects = st_collect_result_coverage_objects(resultObj);
     sources = strings(0,1);
     for i = 1:numel(coverageObjects)
         values = string(coverageObjects{i}.filter);
@@ -346,8 +344,7 @@ end
 function artifacts = export_coverage_html( ...
         artifacts, resultObj, folder, step, stepCount)
 try
-    coverageObjects = st_flatten_coverage_results( ...
-        getCoverageResults(resultObj));
+    coverageObjects = st_collect_result_coverage_objects(resultObj);
 catch ME
     artifacts = record_artifact(artifacts, 'HTML', folder, ...
         'FAIL', ME.message);
@@ -514,8 +511,7 @@ text = char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss.SSS'));
 end
 
 function snapshot = coverage_integrity_snapshot(resultObj)
-coverageObjects = st_flatten_coverage_results( ...
-    getCoverageResults(resultObj));
+coverageObjects = st_collect_result_coverage_objects(resultObj);
 n = numel(coverageObjects);
 Id = zeros(n,1);
 RootPath = strings(n,1);

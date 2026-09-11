@@ -39,14 +39,34 @@ for i = 1:numel(manifest.Targets)
     st_log(cfg, 'INFO', ...
         '[STEP5 %d/%d] start | CUT=%s', ...
         i, numel(manifest.Targets), item.CUTName);
+    try
+        item = package_execution_inputs(item, targetDirectory, cfg);
+    catch ME
+        item.Step5Status = 'FAIL';
+        item.Message = append_message(item.Message, ...
+            sprintf('%s: %s', ME.identifier, ME.message));
+        write_target_manifest(item.TargetManifest, item);
+        manifest.Targets(i) = item;
+        st_log(cfg, 'ERROR', ...
+            ['[STEP5 %d/%d] standalone inputs packaging failed | ' ...
+             'CUT=%s | %s: %s'], ...
+            i, numel(manifest.Targets), item.CUTName, ...
+            ME.identifier, ME.message);
+        continue;
+    end
     if strcmpi(item.Step234Status, 'FAIL') || ...
             ~strcmpi(item.ResultFilterStatus, 'OK')
         item.Step5Status = 'SKIP';
         item.Message = append_message(item.Message, ...
             ['STEP5 skipped because STEP234 did not produce ' ...
-             'a verified filtered result']);
+             ['a verified filtered result; standalone model and input ' ...
+              'were preserved for diagnosis']]);
         write_target_manifest(item.TargetManifest, item);
         manifest.Targets(i) = item;
+        st_log(cfg, 'WARN', ...
+            ['[STEP5 %d/%d] filtered artifacts skipped; standalone ' ...
+             'inputs preserved | CUT=%s'], ...
+            i, numel(manifest.Targets), item.CUTName);
         continue;
     end
     try
@@ -97,30 +117,6 @@ end
 function item = package_target(item, targetDirectory, pipelineRoot, ...
         reportMode, cfg)
 pathCleanup = register_target_folder(targetDirectory); %#ok<NASGU>
-if ~isfile(item.StandaloneModelFile)
-    error('simtest:StandalonePipelineModelMissing', ...
-        'Standalone model is missing: %s', item.StandaloneModelFile);
-end
-[~, modelName, modelExtension] = fileparts(item.StandaloneModelFile);
-modelDestination = fullfile(targetDirectory, ...
-    [modelName modelExtension]);
-copy_checked(item.StandaloneModelFile, modelDestination);
-item.PackagedStandaloneModel = modelDestination;
-item.PackagedStandaloneModelSHA256 = ...
-    st_file_signature(modelDestination).SHA256;
-
-if ~isempty(item.SignalEditorInput)
-    if ~isfile(item.SignalEditorInput)
-        error('simtest:StandalonePipelineInputMissing', ...
-            'Standalone input is missing: %s', item.SignalEditorInput);
-    end
-    inputDestination = fullfile(targetDirectory, ...
-        [st_export_safe_name(item.CUTName) '_Input.mat']);
-    copy_checked(item.SignalEditorInput, inputDestination);
-    item.PackagedInput = inputDestination;
-    item.PackagedInputSHA256 = ...
-        st_file_signature(inputDestination).SHA256;
-end
 
 sourceCVF = item.CVFPath;
 if isfield(item, 'ExecutionCVFPath') && ...
@@ -178,12 +174,12 @@ st_apply_result_coverage_filters(roundtripResult, finalCVF, cfg, ...
 st_log(cfg, 'DEBUG', ...
     'STEP5 result import/readback complete | CUT=%s', item.CUTName);
 
-coverageObjects = st_flatten_coverage_results( ...
-    getCoverageResults(roundtripResult));
+coverageObjects = st_collect_result_coverage_objects(roundtripResult);
 if isempty(coverageObjects)
     error('simtest:StandalonePipelineCoverageMissing', ...
         'Round-trip result contains no coverage objects.');
 end
+
 cvtPath = fullfile(targetDirectory, ...
     [st_export_safe_name(item.CUTName) '_CoverageResult.cvt']);
 delete_if_present(cvtPath);
@@ -238,6 +234,37 @@ item.MetricSnapshot = metricSnapshot;
 item.MetricSnapshotSHA256 = st_file_signature(metricSnapshot).SHA256;
 item = assign_metric(item, metrics, 'Decision');
 item = assign_metric(item, metrics, 'Execution');
+end
+
+function item = package_execution_inputs(item, targetDirectory, cfg)
+st_log(cfg, 'DEBUG', ...
+    'STEP5 standalone inputs packaging start | CUT=%s', item.CUTName);
+if ~isfile(item.StandaloneModelFile)
+    error('simtest:StandalonePipelineModelMissing', ...
+        'Standalone model is missing: %s', item.StandaloneModelFile);
+end
+[~, modelName, modelExtension] = fileparts(item.StandaloneModelFile);
+modelDestination = fullfile(targetDirectory, ...
+    [modelName modelExtension]);
+copy_checked(item.StandaloneModelFile, modelDestination);
+item.PackagedStandaloneModel = modelDestination;
+item.PackagedStandaloneModelSHA256 = ...
+    st_file_signature(modelDestination).SHA256;
+
+if ~isempty(item.SignalEditorInput)
+    if ~isfile(item.SignalEditorInput)
+        error('simtest:StandalonePipelineInputMissing', ...
+            'Standalone input is missing: %s', item.SignalEditorInput);
+    end
+    inputDestination = fullfile(targetDirectory, ...
+        [st_export_safe_name(item.CUTName) '_Input.mat']);
+    copy_checked(item.SignalEditorInput, inputDestination);
+    item.PackagedInput = inputDestination;
+    item.PackagedInputSHA256 = ...
+        st_file_signature(inputDestination).SHA256;
+end
+st_log(cfg, 'DEBUG', ...
+    'STEP5 standalone inputs packaging complete | CUT=%s', item.CUTName);
 end
 
 function cleanup = register_target_folder(folder)

@@ -20,8 +20,7 @@ totalTimer = tic;
 st_log(cfg, 'INFO', 'Result coverage filter attach start');
 try
     filterFiles = resolve_filter_files(filterFiles);
-    coverageObjects = st_flatten_coverage_results( ...
-        getCoverageResults(resultObj));
+    coverageObjects = st_collect_result_coverage_objects(resultObj);
     result = struct( ...
         'CoverageObjectCount', numel(coverageObjects), ...
         'FilterFiles', filterFiles, ...
@@ -48,6 +47,9 @@ try
              'objects | elapsed=%.3f sec'], toc(totalTimer));
         return;
     end
+    st_log(cfg, 'DEBUG', ...
+        'Result coverage objects resolved | count=%d', ...
+        numel(coverageObjects));
 
     propertyValue = filter_property_value(filterFiles);
     metricCount = 0;

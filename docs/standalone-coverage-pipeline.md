@@ -42,6 +42,17 @@ Windows 260자 제한(`MATLAB:cd:DirectoryNameTooLong`)을 넘을 수 있다.
 st_set_standalone_coverage_root('D:\stt_work');
 ```
 
+설정을 저장하지 않고 한 번의 실행 위치만 바꾸려면 `OutputRoot`를 지정한다.
+
+```matlab
+info = st_run_standalone_coverage_pipeline( ...
+    'RunMode', 'STEP2_TO_6', ...
+    'OutputRoot', 'D:\stcov', ...
+    'ContinueOnFailure', true, ...
+    'FailOnNonPass', false, ...
+    'ReportMode', 'FULL');
+```
+
 원래 기본값(저장소 아래 `result/standalone_coverage`)으로 되돌리려면:
 
 ```matlab
@@ -93,6 +104,11 @@ Test Case의 `RecordCoverage`를 다시 활성화하고 저장 후 readback한�
 전환 과정에서 유효 Coverage 설정이 초기화되면 실행 전에 명시적으로 실패하며,
 성공한 TC 결과에는 사후 CVF를 연결할 model coverage 객체가 있어야 한다.
 
+직접 `run(testCase)`한 결과는 MATLAB 릴리스와 결과 구성에 따라 model coverage가
+ResultSet 최상위가 아니라 TestCaseResult 또는 TestIterationResult에만 노출될 수
+있다. 파이프라인은 최상위 aggregate를 우선 사용하고 비어 있을 때만 하위 결과까지
+내려가서 Coverage 객체를 수집한다.
+
 ## 결과 구조
 
 ```text
@@ -116,6 +132,9 @@ result/standalone_coverage/<PipelineId>/
 `CoverageSummary.xlsx`는 실패 CUT도 한 행으로 유지한다. Decision 또는 Execution
 분모가 없으면 manifest의 숫자는 `NaN`이며 Excel 백분율은 `N/A`다.
 `.work`는 재개와 checksum 감사 증거이므로 성공 후에도 유지한다.
+STEP234의 사후 Coverage 등록이 실패해도 CUT별 폴더에 standalone 모델, 존재하는
+Signal Editor 입력과 `target-manifest.json`은 진단 자료로 먼저 복사한다. 이 경우
+CVF/CVT/Test Report는 검증된 filtered result가 아니므로 생성하지 않는다.
 
 ## 안전 경계와 검증 상태
 

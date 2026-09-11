@@ -93,6 +93,10 @@ verifyTrue(testCase, contains(text, ...
 verifyTrue(testCase, contains(text, 'unzip(zipPath, reportDirectory)'));
 verifyTrue(testCase, contains(text, 'cvhtml('));
 verifyTrue(testCase, contains(text, "sprintf('%03d_%s'"));
+verifyTrue(testCase, contains(text, ...
+    'package_execution_inputs(item, targetDirectory, cfg)'));
+verifyTrue(testCase, contains(text, ...
+    'standalone inputs preserved'));
 end
 
 function testStep6UsesNAForMissingDenominator(testCase)
@@ -109,6 +113,7 @@ end
 
 function testResultFilterFlattensAllSupportedShapes(testCase)
 helper = source('coverage', 'st_flatten_coverage_results.m');
+collector = source('coverage', 'st_collect_result_coverage_objects.m');
 filter = source('coverage', 'st_apply_result_coverage_filters.m');
 verifyTrue(testCase, contains(helper, "isa(value, 'cvdata')"));
 verifyTrue(testCase, contains(helper, "isa(value, 'cv.cvdatagroup')"));
@@ -118,6 +123,12 @@ verifyTrue(testCase, contains(filter, "'ReadOnly', false"));
 verifyTrue(testCase, contains(filter, "'RequireExactSet', false"));
 verifyTrue(testCase, contains(filter, 'decisioninfo(cvd, coveragePath)'));
 verifyTrue(testCase, contains(filter, 'executioninfo(cvd, coveragePath)'));
+verifyTrue(testCase, contains(filter, ...
+    'st_collect_result_coverage_objects(resultObj)'));
+verifyTrue(testCase, contains(collector, ...
+    'st_collect_test_case_results(resultObj)'));
+verifyTrue(testCase, contains(collector, ...
+    'getIterationResults(caseResult)'));
 end
 
 function text = source(folder, file)
