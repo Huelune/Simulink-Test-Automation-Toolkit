@@ -195,10 +195,14 @@ cleanup 산출물 계약을 만족한다.
 
 ## 6. 패키지 Test Manager 열기
 
-`TestManager` 폴더의 `.mldatx` 파일을 UI에서 직접 열지 않는다. 그 파일의 Model
-SUT는 원본 Harness가 아니라 CUT별로 패키징된 standalone `.slx`이며, 각 모델은 서로
-다른 target 폴더에 있다. 아래 launcher는 해당 폴더들을 MATLAB path에 추가하고 모델을
-명시적으로 load한 뒤, 각 Test Case에 패키징 CVF를 적용한 상태로 Test Manager를 연다.
+`TestManager` 폴더의 `.mldatx`는 Test File이며, standalone Harness 모델은 CUT별
+결과 폴더의 `PackagedStandaloneModel`이다. Test Manager의 Model 속성은 파일 경로가
+아닌 모델명이다. 따라서 UI에서 모델 파일만 선택하고 Refresh/All을 누르면 해당 폴더가
+MATLAB path에 없을 때 `...Harness1`을 다시 찾지 못할 수 있다.
+
+Model Editor에서 Harness `.slx`를 먼저 열어 loaded 상태로 만든 뒤, Test Manager의 Model
+필드에서 그 모델명을 선택한다. 이 동작은 original model이나 original Harness를 바꾸지
+않고 패키지 standalone Harness만 연다.
 
 ```matlab
 [m, ~] = st_load_standalone_pipeline_manifest( ...
@@ -209,9 +213,22 @@ assert(isfile(m.TestManagerLauncher), ...
 run(m.TestManagerLauncher)
 ```
 
-launcher가 출력하는 `Models=N | CVFs=N`에서 N이 target 수와 같아야 한다. 이후
-Test Manager의 Refresh/All이 `..._Harness1`을 찾지 못하면 launcher 출력 전체를
-공유한다.
+launcher는 Harness 모델을 먼저 load하고 CVF를 적용한 뒤 Test Manager를 연다. 수동으로
+동일한 순서를 재현하려면 아래처럼 한 CUT의 `PackagedStandaloneModel`을 먼저 연 뒤
+Test File을 load한다.
+
+```matlab
+t = m.Targets(1);
+assert(isfile(t.PackagedStandaloneModel));
+load_system(t.PackagedStandaloneModel)
+assert(bdIsLoaded(t.StandaloneModel));
+sltest.testmanager.load(m.TestManagerFile);
+sltest.testmanager.view
+```
+
+이후 Test Manager에서 해당 Test Case의 Model은 `t.StandaloneModel` 이름으로 선택한다.
+Refresh/All 직전에 이 모델을 닫거나 `rmpath(fileparts(t.PackagedStandaloneModel))` 하면
+동일한 `Harness1` not found 오류가 재현된다.
 
 ## 7. 원본 HTML의 CVF 적용 근거
 

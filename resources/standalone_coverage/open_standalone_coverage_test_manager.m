@@ -74,12 +74,39 @@ for k = 1:numel(targets)
     coverage = getCoverageSettings(testCases(matches));
     coverage.CoverageFilterFilename = filterFile;
     actual = string(coverage.CoverageFilterFilename);
-    if ~any(strcmpi(actual, string(filterFile)))
+    if ~filter_readback_matches(filterFile, actual)
         error('simtest:PackagedTestManagerFilterReadbackFailed', ...
-            'Coverage filter readback failed for %s.', char(testCaseName));
+            ['Coverage filter readback failed for %s. ' ...
+             'Expected=%s | Actual=%s'], ...
+            char(testCaseName), filterFile, char(strjoin(actual, ' | ')));
     end
+    fprintf('Coverage filter applied | TestCase=%s | Filter=%s\n', ...
+        char(testCaseName), filterFile);
 end
 
 sltest.testmanager.view;
 fprintf(['Standalone Test Manager loaded | TestFile=%s | ' ...
     'Models=%d | CVFs=%d\n'], testFilePath, numel(targets), numel(targets));
+
+function tf = filter_readback_matches(expected, actual)
+% CoverageSettings may return a canonical full path or just the CVF name.
+actual = string(actual(:));
+actual(ismissing(actual)) = "";
+actual = actual(strlength(actual) > 0);
+if isempty(actual)
+    tf = false;
+    return;
+end
+if any(strcmpi(actual, string(expected)))
+    tf = true;
+    return;
+end
+[~, expectedName, expectedExtension] = fileparts(expected);
+expectedKey = string([expectedName lower(expectedExtension)]);
+actualKeys = strings(size(actual));
+for i = 1:numel(actual)
+    [~, actualName, actualExtension] = fileparts(char(actual(i)));
+    actualKeys(i) = string([actualName lower(actualExtension)]);
+end
+tf = any(strcmpi(actualKeys, expectedKey));
+end

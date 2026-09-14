@@ -395,6 +395,10 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   CVSAVE/CVHTML/metric에 실제로 넘길 새 객체에 CVF를 다시 bind하고 그 즉시 readback한
   뒤 진행한다. 새 `ALL`에서 `Standalone original Coverage report CVF binding complete`
   로그와 CVF의 Excluded/Justified HTML 표시를 확인해야 한다.
+- packaged Test Manager launcher의 `CoverageFilterFilename` readback은 R2025b에서
+  canonical absolute path 대신 CVF basename을 반환할 수 있다. 빈 readback은 계속
+  실패로 처리하되 동일 basename은 성공으로 인정한다. 이미 PACKAGE가 완료된 결과는
+  새 template을 `m.TestManagerLauncher`로 복사한 뒤 다시 실행해 재패키징 없이 연다.
 - 실제 R2025b에서 사용자가 Top Model을 열지 않았는데도 target 입력 수집 후
   `StandaloneModelStillLoadedBeforeRun`이 발생했다. export 중간 상태가 아니라
   `st_export_test_bundle` 진입 전 load 상태를 기준으로 dependency/Harness API가
