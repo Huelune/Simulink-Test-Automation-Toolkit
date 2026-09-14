@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Packaged standalone Coverage artifacts now use the safe Test Case name:
+  `{TestCaseName}.cvf`, `{TestCaseName}.cvt`, and `{TestCaseName}.html` at the
+  target root. The original `cvhtml` report binds a matching short filter name
+  so the HTML names the CVF that sits beside it, and the validated absolute CVF
+  binding is restored before final metric extraction.
+- Fixed the per-CUT Coverage report filter helpers being nested inside
+  `capture_package_evidence`, which left them unreachable from the report
+  subfunctions that bind and restore the CVF.
+- CoverageSummary.xlsx now reports the Decision and Execution objective counts
+  next to each percentage (`Decision Executed`, `Decision Total`,
+  `Execution Executed`, `Execution Total`). `st_check_standalone_coverage`
+  verifies the eleven-column set and the Test Case artifact names.
 - Fixed standalone Coverage packaging after per-CUT model cleanup. Each
   original Coverage `cvhtml` report, CVT, and final metric snapshot is now
   captured while its execution model is still open; PACKAGE verifies and

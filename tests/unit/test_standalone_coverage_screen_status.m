@@ -240,16 +240,15 @@ sourceState = struct( ...
         'SHA256', st_file_signature(inputSource).SHA256));
 targets = repmat(empty_target(), count, 1);
 for i = 1:count
-    targetDirectory = fullfile(pipelineRoot, sprintf('%03d_CUT_%d', i, i));
+    targetDirectory = fullfile(pipelineRoot, sprintf('%03d_TC_%d', i, i));
     mkdir(targetDirectory);
     harness = sprintf('Harness%d', i);
     model = fullfile(targetDirectory, [harness '.slx']);
     input = fullfile(targetDirectory, sprintf('input%d.mat', i));
-    cvf = fullfile(targetDirectory, sprintf('cut%d.cvf', i));
-    cvt = fullfile(targetDirectory, sprintf('cut%d.cvt', i));
-    reportDirectory = fullfile(targetDirectory, 'TestReport');
-    mkdir(reportDirectory);
-    html = fullfile(reportDirectory, 'report.html');
+    cvf = fullfile(targetDirectory, sprintf('TC_%d.cvf', i));
+    cvt = fullfile(targetDirectory, sprintf('TC_%d.cvt', i));
+    reportDirectory = targetDirectory;
+    html = fullfile(reportDirectory, sprintf('TC_%d.html', i));
     write_text(model, 'model');
     write_text(input, 'input');
     write_text(cvf, 'cvf');
@@ -329,12 +328,18 @@ CUT_NAME = "CUT_" + string(NUM);
 CUT_PATH = "Top/CUT_" + string(NUM);
 TestCaseName = "TC_" + string(NUM);
 HarnessName = "Harness" + string(NUM);
+DecisionExecuted = ones(count, 1);
+DecisionTotal = repmat(2, count, 1);
 Decision = repmat("50.00", count, 1);
+ExecutionExecuted = repmat(3, count, 1);
+ExecutionTotal = repmat(4, count, 1);
 Execution = repmat("75.00", count, 1);
 T = table(NUM, CUT_NAME, CUT_PATH, TestCaseName, HarnessName, ...
-    Decision, Execution, 'VariableNames', ...
+    DecisionExecuted, DecisionTotal, Decision, ...
+    ExecutionExecuted, ExecutionTotal, Execution, 'VariableNames', ...
     {'NUM','CUT_NAME','CUT_PATH','Test Case Name','Harness Name', ...
-    'Decision (%)','Execution (%)'});
+    'Decision Executed','Decision Total','Decision (%)', ...
+    'Execution Executed','Execution Total','Execution (%)'});
 writetable(T, summaryPath, 'Sheet', 'CoverageSummary');
 
 manifest = struct( ...

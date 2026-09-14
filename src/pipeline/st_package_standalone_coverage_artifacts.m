@@ -165,7 +165,7 @@ if ~isfile(sourceCVF)
         'Generated CVF is missing: %s', sourceCVF);
 end
 finalCVF = fullfile(targetDirectory, ...
-    [st_export_safe_name(item.TestCaseName) '_CoverageFilter.cvf']);
+    [st_export_safe_name(item.TestCaseName) '.cvf']);
 copy_checked(sourceCVF, finalCVF);
 item.PackagedCVF = finalCVF;
 item.PackagedCVFSHA256 = st_file_signature(finalCVF).SHA256;
@@ -200,7 +200,7 @@ try
         'simtest:StandalonePipelinePackageCoverageInvalid');
 
     cvtPath = fullfile(targetDirectory, ...
-        [st_export_safe_name(item.TestCaseName) '_CoverageResult.cvt']);
+        [st_export_safe_name(item.TestCaseName) '.cvt']);
     delete_if_present(cvtPath);
     st_log(cfg, 'INFO', ...
         'PACKAGE captured coverage data promotion start | CUT=%s', item.CUTName);
@@ -215,8 +215,17 @@ try
     reportDirectory = targetDirectory;
     unzip(reportZip, reportDirectory);
     ensure_report_html(reportDirectory);
+    reportHTML = fullfile(reportDirectory, ...
+        [st_export_safe_name(item.TestCaseName) '.html']);
+    rootReport = fullfile(reportDirectory, 'report.html');
+    [moved, moveMessage] = movefile(rootReport, reportHTML, 'f');
+    if ~moved
+        error('simtest:StandalonePipelinePackageReportRenameFailed', ...
+            'Cannot rename report %s to %s: %s', ...
+            rootReport, reportHTML, moveMessage);
+    end
     item.TestReport = reportDirectory;
-    item.ReportHTML = fullfile(reportDirectory, 'report.html');
+    item.ReportHTML = reportHTML;
 
     item = assign_metric(item, evidence.Decision, 'Decision');
     item = assign_metric(item, evidence.Execution, 'Execution');

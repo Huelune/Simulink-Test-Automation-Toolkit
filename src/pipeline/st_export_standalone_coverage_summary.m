@@ -20,7 +20,11 @@ CUT_NAME = strings(n,1);
 CUT_PATH = strings(n,1);
 TestCaseName = strings(n,1);
 HarnessName = strings(n,1);
+DecisionExecuted = NaN(n,1);
+DecisionTotal = NaN(n,1);
 Decision = strings(n,1);
+ExecutionExecuted = NaN(n,1);
+ExecutionTotal = NaN(n,1);
 Execution = strings(n,1);
 for i = 1:n
     item = manifest.Targets(i);
@@ -29,7 +33,11 @@ for i = 1:n
     CUT_PATH(i) = string(item.CUTPath);
     TestCaseName(i) = string(item.TestCaseName);
     HarnessName(i) = string(item.HarnessName);
+    DecisionExecuted(i) = double(item.DecisionCovered);
+    DecisionTotal(i) = double(item.DecisionTotal);
     Decision(i) = string(item.DecisionPercentageText);
+    ExecutionExecuted(i) = double(item.ExecutionCovered);
+    ExecutionTotal(i) = double(item.ExecutionTotal);
     Execution(i) = string(item.ExecutionPercentageText);
     if strcmpi(item.PackageStatus, 'OK')
         manifest.Targets(i).SummaryStatus = 'OK';
@@ -39,9 +47,11 @@ for i = 1:n
 end
 
 summary = table(NUM, CUT_NAME, CUT_PATH, TestCaseName, HarnessName, ...
-    Decision, Execution, 'VariableNames', ...
+    DecisionExecuted, DecisionTotal, Decision, ...
+    ExecutionExecuted, ExecutionTotal, Execution, 'VariableNames', ...
     {'NUM','CUT_NAME','CUT_PATH','Test Case Name','Harness Name', ...
-    'Decision (%)','Execution (%)'});
+    'Decision Executed','Decision Total','Decision (%)', ...
+    'Execution Executed','Execution Total','Execution (%)'});
 summaryPath = fullfile(pipelineRoot, 'CoverageSummary.xlsx');
 st_log(cfg, 'DEBUG', ...
     'SUMMARY Excel write start | Path=%s', summaryPath);

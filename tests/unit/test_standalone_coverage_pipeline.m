@@ -235,6 +235,7 @@ end
 function testPackageUsesTestCaseNamesAndPlacesHtmlAtTargetRoot(testCase)
 package = source('pipeline', ...
     'st_package_standalone_coverage_artifacts.m');
+perCut = source('execution', 'st_run_tests_per_cut.m');
 verifyTrue(testCase, contains(package, ...
     "st_export_safe_name(item.TestCaseName)"));
 verifyFalse(testCase, contains(package, ...
@@ -242,8 +243,18 @@ verifyFalse(testCase, contains(package, ...
 verifyTrue(testCase, contains(package, ...
     'reportDirectory = targetDirectory'));
 verifyTrue(testCase, contains(package, ...
-    "item.ReportHTML = fullfile(reportDirectory, 'report.html')"));
+    "[st_export_safe_name(item.TestCaseName) '.html']"));
+verifyTrue(testCase, contains(package, ...
+    "[st_export_safe_name(item.TestCaseName) '.cvf']"));
+verifyTrue(testCase, contains(package, ...
+    "[st_export_safe_name(item.TestCaseName) '.cvt']"));
+verifyTrue(testCase, contains(package, 'movefile(rootReport, reportHTML'));
 verifyFalse(testCase, contains(package, "'_CoverageReport'"));
+verifyTrue(testCase, contains(perCut, ...
+    'bind_report_filter_display_name(coverageObjects, row, coverageFilterPath'));
+verifyTrue(testCase, contains(perCut, ...
+    "displayFilter = [st_export_safe_name(char(string(row.TestCaseName))) '.cvf']"));
+verifyTrue(testCase, contains(perCut, 'coverageObjects{1}.filter = displayFilter'));
 end
 
 function testCoverageWithoutObjectivesUsesValidZeroDenominatorMetric(testCase)
@@ -262,13 +273,17 @@ verifyTrue(testCase, contains(prepare, "contains(metricSettings, 'd')"));
 verifyFalse(testCase, contains(prepare, "contains(metricSettings, 'e')"));
 end
 
-function testSummaryUsesExactSevenColumns(testCase)
+function testSummaryUsesDecisionAndExecutionCounts(testCase)
 text = source('pipeline', ...
     'st_export_standalone_coverage_summary.m');
 verifyTrue(testCase, contains(text, ...
     "{'NUM','CUT_NAME','CUT_PATH','Test Case Name','Harness Name', ..."));
 verifyTrue(testCase, contains(text, ...
-    "'Decision (%)','Execution (%)'"));
+    "'Decision Executed','Decision Total','Decision (%)', ..."));
+verifyTrue(testCase, contains(text, ...
+    "'Execution Executed','Execution Total','Execution (%)'"));
+verifyTrue(testCase, contains(text, 'DecisionExecuted(i) = double(item.DecisionCovered)'));
+verifyTrue(testCase, contains(text, 'ExecutionExecuted(i) = double(item.ExecutionCovered)'));
 verifyFalse(testCase, contains(text, 'MetricSnapshot'));
 verifyFalse(testCase, contains(text, 'load('));
 [percentage, percentageText] = st_coverage_percentage(0, 0);

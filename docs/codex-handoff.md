@@ -152,7 +152,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 20. `st_run_standalone_coverage_pipeline`의 `ALL` live Result 경로와 `EXECUTE` 뒤
     새 MATLAB 세션에서 `PACKAGE`/`SUMMARY`를 재개하는 경로를 모두 확인한다.
     standalone TC property readback, Test Case별 run 1회와 CVF 등록 1회, 공식 ZIP의
-    root report.html, CVT, `%03d` 폴더와 정확한 7열 CoverageSummary.xlsx를 확인한다.
+    TC 이름의 HTML/CVF/CVT, `%03d` TC 이름 폴더와 정확한 11열 CoverageSummary.xlsx를 확인한다.
     Decision/Execution 분모 0은 N/A여야 하며 원본 모델·Test File·Excel·Input
     checksum, Dirty와 Harness inventory가 전후 같아야 한다. 최종
     `st_check_standalone_coverage`가 `1111111111 PASS`인지 확인하고 Test Manager
@@ -349,7 +349,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - pipeline manifest와 SHA-256은 원자적으로 갱신되며 latest.json으로 재개한다.
   `PACKAGE`는 공유 Test Manager 사본, CUT별 standalone 모델·input·CVF·CVT와
   Test Manager Coverage Results의 REPORT 화살표가 여는 원본 `cvhtml` root
-  report.html을 만들고 `SUMMARY`는 정확한 7열 CoverageSummary.xlsx를 원자적으로
+  TC 이름 `.html`을 만들고 `SUMMARY`는 정확한 11열 CoverageSummary.xlsx를 원자적으로
   교체한다. PDF, TestSummary.xlsx와 coverage-metrics.mat는 만들지 않는다.
 - bundle 실행 후 copied Test File과 copied Top Model을 닫고 caller의 MATLAB path와
   현재 폴더를 복원한다. 이 상태와 외부 Harness/Input 파일 checksum도 manifest와
@@ -360,7 +360,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - PACKAGE의 남은 `cvsave`는 닫힌 execution model을 참조하는 Coverage 객체를
   직렬화하므로, 실행 model이 열린 `capture_package_evidence`로 이동했다. PACKAGE는
   CVT/HTML/metric evidence의 SHA-256을 검증해 복사만 한다. R2025b에서는 ALL 및
-  EXECUTE→PACKAGE→SUMMARY 모두 `Package=OK`, CUT별 `report.html`/`.cvt` 생성과
+  EXECUTE→PACKAGE→SUMMARY 모두 `Package=OK`, CUT별 TC 이름 `.html`/`.cvt` 생성과
   `st_check_standalone_coverage = 1111111111`을 확인해야 한다. PACKAGE 예외는
   `PackageFailure.Stack`에 최초 호출 파일·라인을 보존한다. 실행 명령은
   `docs/manual/standalone-coverage-runtime.md`에 있다.

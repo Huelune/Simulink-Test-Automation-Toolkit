@@ -59,9 +59,9 @@ PACKAGE로 전달하므로 export/import를 수행하지 않는다. `PACKAGE`와
 
 - Harness명과 같은 파일 stem의 standalone model
 - Signal Editor Input MAT(대상에 Input이 있을 때)
-- CVF
-- CVT
-- Test Manager Coverage Results의 REPORT 화살표가 여는 원본 Coverage HTML과 root `report.html`
+- `{TC_NAME}.cvf`
+- `{TC_NAME}.cvt`
+- Test Manager Coverage Results의 REPORT 화살표가 여는 원본 `{TC_NAME}.html`
 - target manifest
 
 파이프라인 root에는 copied Test File, pipeline manifest, JSONL lifecycle event log,
@@ -69,8 +69,8 @@ PACKAGE로 전달하므로 export/import를 수행하지 않는다. `PACKAGE`와
 추가된다.
 
 `FilteredResults.mldatx`, `coverage-metrics.mat`, `TestSummary.xlsx`, PDF와 별도
-보조 Coverage HTML은 만들지 않는다. `report.html`은 CUT별 원본 `cvhtml` Coverage
-보고서 하나만 보존한다.
+보조 Coverage HTML은 만들지 않는다. `{TC_NAME}.html`은 CUT별 원본 `cvhtml` Coverage
+보고서 하나만 보존하며, 렌더링에 필요한 부속 asset은 같은 대상 폴더에 둔다.
 
 ## CoverageSummary.xlsx
 
@@ -82,7 +82,11 @@ CUT_NAME
 CUT_PATH
 Test Case Name
 Harness Name
+Decision Executed
+Decision Total
 Decision (%)
+Execution Executed
+Execution Total
 Execution (%)
 ```
 
