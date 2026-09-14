@@ -120,7 +120,15 @@ for i = 1:height(targets)
     folderCleanup = onCleanup(@() cd(previousFolder)); %#ok<NASGU>
     cd(outputFolder);
     try
-        save_system(temporaryModel);
+        % Only re-save the copied top model when it is actually dirty.
+        % Nothing in this loop modifies temporaryModel, so it stays clean
+        % after the initial load; re-saving an already-saved, unchanged SLX
+        % on every iteration has been observed to eventually fail with
+        % Simulink:LoadSave:PartAlreadyWritten on its ModelWorkspace part,
+        % even right after a full MATLAB restart.
+        if strcmp(get_param(temporaryModel, 'Dirty'), 'on')
+            save_system(temporaryModel);
+        end
         sltest.harness.export( ...
             sourceOwner, harnessName, 'Name', outputModel);
         if bdIsLoaded(outputModel)

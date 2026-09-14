@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Guarded the copied top model's re-save during standalone Harness export
+  with a Dirty check. Calling `save_system` on every target in a large loop,
+  even when the model had not changed since the last save, was eventually
+  raising `Simulink:LoadSave:PartAlreadyWritten` on its ModelWorkspace part
+  -- reproducible even right after a full MATLAB restart.
 - Fixed standalone Coverage reporting after per-CUT model cleanup. Each
   official Test Manager report and final metric snapshot is now captured while
   its execution model is still open; PACKAGE verifies and promotes that

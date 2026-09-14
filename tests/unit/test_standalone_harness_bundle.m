@@ -182,3 +182,26 @@ verifyTrue(testCase, contains(prepare, ...
 verifyTrue(testCase, contains(prepare, ...
     'targets.ExpectedUpdateMode(:) = "OFF"'));
 end
+
+
+function testTopModelResaveIsGuardedByDirtyState(testCase)
+% Repeatedly calling save_system on the same unchanged copied top model,
+% once per target across a large loop, has been observed to eventually
+% fail with Simulink:LoadSave:PartAlreadyWritten on its ModelWorkspace
+% part -- even immediately after a full MATLAB restart. save_system must
+% only run when the model actually became dirty.
+root = st_project_root();
+source = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_standalone_harnesses.m'));
+verifyTrue(testCase, contains(source, ...
+    "if strcmp(get_param(temporaryModel, 'Dirty'), 'on')"));
+guardAt = strfind(source, ...
+    "if strcmp(get_param(temporaryModel, 'Dirty'), 'on')");
+saveAt = strfind(source, 'save_system(temporaryModel);');
+exportAt = strfind(source, 'sltest.harness.export( ...');
+verifyNotEmpty(testCase, guardAt);
+verifyNotEmpty(testCase, saveAt);
+verifyNotEmpty(testCase, exportAt);
+verifyLessThan(testCase, guardAt(1), saveAt(1));
+verifyLessThan(testCase, saveAt(1), exportAt(1));
+end
