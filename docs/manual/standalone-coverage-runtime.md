@@ -197,12 +197,18 @@ cleanup 산출물 계약을 만족한다.
 
 `TestManager` 폴더의 `.mldatx`는 Test File이며, standalone Harness 모델은 CUT별
 결과 폴더의 `PackagedStandaloneModel`이다. Test Manager의 Model 속성은 파일 경로가
-아닌 모델명이다. 따라서 UI에서 모델 파일만 선택하고 Refresh/All을 누르면 해당 폴더가
-MATLAB path에 없을 때 `...Harness1`을 다시 찾지 못할 수 있다.
+아닌 모델명이다. 따라서 폴더 버튼으로 `.slx`를 선택해도 그 결과 폴더가 MATLAB path에
+없으면 Refresh/All이 `...Harness1`을 다시 찾지 못할 수 있다.
+
+수동 UI 사용 시에는 Harness `.slx`가 있는 대상 결과 폴더를 MATLAB Current Folder에서
+**Add to Path → Selected Folders**로 먼저 등록한 뒤 `.mldatx`를 열고, Model 필드의 폴더
+버튼으로 같은 Harness를 선택한다. 이 경로 등록은 MATLAB 세션/개인 설정의 일부이며
+`.mldatx`에 외부 모델 경로가 이식 가능하게 저장되는 것은 아니다. 다른 사용자는 같은
+결과 폴더를 받은 뒤에도 한 번은 해당 폴더를 path에 추가하거나 Harness를 열어야 한다.
 
 Model Editor에서 Harness `.slx`를 먼저 열어 loaded 상태로 만든 뒤, Test Manager의 Model
-필드에서 그 모델명을 선택한다. 이 동작은 original model이나 original Harness를 바꾸지
-않고 패키지 standalone Harness만 연다.
+필드에서 그 모델명을 선택하는 방법도 가능하다. 이 동작은 original model이나 original
+Harness를 바꾸지 않고 패키지 standalone Harness만 연다.
 
 ```matlab
 [m, ~] = st_load_standalone_pipeline_manifest( ...

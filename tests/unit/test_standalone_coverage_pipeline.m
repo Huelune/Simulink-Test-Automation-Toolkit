@@ -232,6 +232,20 @@ rewireIsolationAt = rewireIsolationAt( ...
 verifyLessThan(testCase, rewireIsolationAt(1), rewireCleanupAt(1));
 end
 
+function testPackageUsesTestCaseNamesAndPlacesHtmlAtTargetRoot(testCase)
+package = source('pipeline', ...
+    'st_package_standalone_coverage_artifacts.m');
+verifyTrue(testCase, contains(package, ...
+    "st_export_safe_name(item.TestCaseName)"));
+verifyFalse(testCase, contains(package, ...
+    "st_export_safe_name(item.CUTName)"));
+verifyTrue(testCase, contains(package, ...
+    'reportDirectory = targetDirectory'));
+verifyTrue(testCase, contains(package, ...
+    "item.ReportHTML = fullfile(reportDirectory, 'report.html')"));
+verifyFalse(testCase, contains(package, "'_CoverageReport'"));
+end
+
 function testCoverageWithoutObjectivesUsesValidZeroDenominatorMetric(testCase)
 metrics = source('reporting', 'st_collect_final_cut_coverage_metrics.m');
 summary = source('reporting', 'st_collect_coverage_summary.m');

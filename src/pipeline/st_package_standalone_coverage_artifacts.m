@@ -23,7 +23,7 @@ manifest = package_test_file(manifest, pipelineRoot, cfg);
 for i = 1:numel(manifest.Targets)
     item = manifest.Targets(i);
     folderName = sprintf('%03d_%s', round(double(item.No)), ...
-        st_export_safe_name(item.CUTName));
+        st_export_safe_name(item.TestCaseName));
     targetDirectory = fullfile(pipelineRoot, folderName);
     if ~isfolder(targetDirectory), mkdir(targetDirectory); end
     item.OutputDirectory = targetDirectory;
@@ -165,7 +165,7 @@ if ~isfile(sourceCVF)
         'Generated CVF is missing: %s', sourceCVF);
 end
 finalCVF = fullfile(targetDirectory, ...
-    [st_export_safe_name(item.CUTName) '_CoverageFilter.cvf']);
+    [st_export_safe_name(item.TestCaseName) '_CoverageFilter.cvf']);
 copy_checked(sourceCVF, finalCVF);
 item.PackagedCVF = finalCVF;
 item.PackagedCVFSHA256 = st_file_signature(finalCVF).SHA256;
@@ -200,7 +200,7 @@ try
         'simtest:StandalonePipelinePackageCoverageInvalid');
 
     cvtPath = fullfile(targetDirectory, ...
-        [st_export_safe_name(item.CUTName) '_CoverageResult.cvt']);
+        [st_export_safe_name(item.TestCaseName) '_CoverageResult.cvt']);
     delete_if_present(cvtPath);
     st_log(cfg, 'INFO', ...
         'PACKAGE captured coverage data promotion start | CUT=%s', item.CUTName);
@@ -210,10 +210,9 @@ try
     st_log(cfg, 'INFO', ...
         'PACKAGE captured coverage data promotion complete | CUT=%s', item.CUTName);
 
-    reportDirectory = fullfile(targetDirectory, ...
-        [st_export_safe_name(item.CUTName) '_CoverageReport']);
-    if isfolder(reportDirectory), rmdir(reportDirectory, 's'); end
-    mkdir(reportDirectory);
+    % Keep report.html at the target root. cvhtml's companion assets must
+    % remain beside it, otherwise the official report cannot be rendered.
+    reportDirectory = targetDirectory;
     unzip(reportZip, reportDirectory);
     ensure_report_html(reportDirectory);
     item.TestReport = reportDirectory;
