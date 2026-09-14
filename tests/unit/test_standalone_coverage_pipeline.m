@@ -257,6 +257,19 @@ verifyTrue(testCase, contains(perCut, ...
 verifyTrue(testCase, contains(perCut, 'coverageObjects{1}.filter = displayFilter'));
 end
 
+function testReportFilterHelpersAreFileLevelSubfunctions(testCase)
+% Nested helpers stay invisible to the report subfunctions that bind the
+% display CVF and restore the validated absolute binding, so
+% capture_package_evidence must close before them.
+perCut = source('execution', 'st_run_tests_per_cut.m');
+verifyNotEmpty(testCase, regexp(perCut, ...
+    'rethrow\(ME\);\s*end\s*end\s*function apply_package_report_filter', ...
+    'once'));
+calls = strfind(perCut, ...
+    'apply_package_report_filter(coverageObjects, row, coverageFilterPath, cfg);');
+verifyEqual(testCase, numel(calls), 2);
+end
+
 function testCoverageWithoutObjectivesUsesValidZeroDenominatorMetric(testCase)
 metrics = source('reporting', 'st_collect_final_cut_coverage_metrics.m');
 summary = source('reporting', 'st_collect_coverage_summary.m');

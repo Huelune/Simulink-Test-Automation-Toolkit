@@ -405,10 +405,15 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   재발할 수 있다. 수동 UI 경로는 folder를 Add to Path 한 뒤 같은 Harness를 선택하는
   것이며 launcher는 그 반복 작업의 편의 수단일 뿐 portable path를 저장하는 해법은
   아니다. CVF 표시 metadata는 filter name=`TestCaseName`, description=`none`, 모든
-  rule rationale=`none`으로 고정했다. PACKAGE target folder, packaged CVF/CVT는
-  `TestCaseName`을 안전화한 이름을 사용하고 공식 report tree는 별도
-  `_CoverageReport` 폴더 없이 target root에 배치한다. HTML의 companion asset은
-  report render를 위해 같은 root에 유지한다. R2025b 재검증이 필요하다.
+  rule rationale=`none`으로 고정했다. PACKAGE target folder, packaged CVF/CVT와
+  공식 report HTML은 `TestCaseName`을 안전화한 `{TC}.cvf`/`{TC}.cvt`/`{TC}.html`
+  이름을 사용하고 report tree는 별도 `_CoverageReport` 폴더 없이 target root에
+  배치한다. HTML의 companion asset은 report render를 위해 같은 root에 유지한다.
+  `cvhtml`에는 같은 폴더에 놓일 짧은 표시용 CVF 이름을 bind하고, scratch 폴더가
+  제거된 뒤 최종 metric 추출이 같은 coverage 객체를 재사용하므로 보고서 생성
+  직후 검증된 절대 경로 CVF 바인딩을 복원한다. 이 bind/복원 helper는
+  `capture_package_evidence`의 nested function이면 보고서 subfunction에서 호출할
+  수 없으므로 file-level subfunction으로 유지해야 한다. R2025b 재검증이 필요하다.
 - 실제 R2025b에서 사용자가 Top Model을 열지 않았는데도 target 입력 수집 후
   `StandaloneModelStillLoadedBeforeRun`이 발생했다. export 중간 상태가 아니라
   `st_export_test_bundle` 진입 전 load 상태를 기준으로 dependency/Harness API가

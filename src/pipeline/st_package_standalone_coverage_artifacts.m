@@ -218,11 +218,13 @@ try
     reportHTML = fullfile(reportDirectory, ...
         [st_export_safe_name(item.TestCaseName) '.html']);
     rootReport = fullfile(reportDirectory, 'report.html');
-    [moved, moveMessage] = movefile(rootReport, reportHTML, 'f');
-    if ~moved
-        error('simtest:StandalonePipelinePackageReportRenameFailed', ...
-            'Cannot rename report %s to %s: %s', ...
-            rootReport, reportHTML, moveMessage);
+    if ~strcmpi(rootReport, reportHTML)
+        [moved, moveMessage] = movefile(rootReport, reportHTML, 'f');
+        if ~moved
+            error('simtest:StandalonePipelinePackageReportRenameFailed', ...
+                'Cannot rename report %s to %s: %s', ...
+                rootReport, reportHTML, moveMessage);
+        end
     end
     item.TestReport = reportDirectory;
     item.ReportHTML = reportHTML;

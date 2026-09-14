@@ -236,6 +236,43 @@ sltest.testmanager.view
 Refresh/All 직전에 이 모델을 닫거나 `rmpath(fileparts(t.PackagedStandaloneModel))` 하면
 동일한 `Harness1` not found 오류가 재현된다.
 
+launcher 없이 모든 CUT을 한 번에 여는 수동 절차는 아래와 같다. `<PipelineId>` 자리에는
+`latest.json`을 따르는 `'LATEST'`도 쓸 수 있다.
+
+```matlab
+[m, ~] = st_load_standalone_pipeline_manifest( ...
+    cfg.StandaloneCoverageRootDir, '<PipelineId>');
+
+% 동일 모델명이 이미 열려 있으면 충돌 방지를 위해 먼저 닫습니다.
+for k = 1:numel(m.Targets)
+    t = m.Targets(k);
+    assert(~bdIsLoaded(t.StandaloneModel), ...
+        '이미 열린 모델을 먼저 닫으세요: %s', t.StandaloneModel);
+    assert(isfolder(t.OutputDirectory));
+    assert(isfile(t.PackagedStandaloneModel));
+end
+
+% 모든 결과 폴더를 MATLAB path에 등록
+folders = cellstr(unique(string({m.Targets.OutputDirectory}), 'stable'));
+addpath(folders{:});
+
+% 모든 standalone Harness를 로드
+for k = 1:numel(m.Targets)
+    t = m.Targets(k);
+    load_system(t.PackagedStandaloneModel);
+    assert(bdIsLoaded(t.StandaloneModel), ...
+        'Harness load 실패: %s', t.StandaloneModel);
+end
+
+% 패키지 Test Manager 파일 열기
+sltest.testmanager.load(m.TestManagerFile);
+sltest.testmanager.view
+```
+
+이 절차는 CVF를 적용하지 않으므로 Coverage 결과를 다시 보려면 launcher를 쓰거나 각
+Test Case의 Coverage Settings에서 `t.PackagedCVF`를 직접 지정한다. 등록한 path는
+세션 설정이므로 작업 후 `rmpath(folders{:})`로 되돌린다.
+
 ## 7. 원본 HTML의 CVF 적용 근거
 
 PIPELINE은 Test Manager 실행 뒤 결과 Coverage에 CVF를 붙인다. Test Manager가 결과를
