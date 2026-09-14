@@ -37,6 +37,11 @@
   `TestIteration.TestParams` 실제 readback 형태, Assessment step 직렬화 안정성,
   예제의 기대값/APPLY 이후 재시작, EXCEPT와 저장 결과 import, 재생성 후 checker 전 비트.
   다른 릴리스에서 해석할 수 없는 binding은 성공으로 추정하지 않고 차단한다.
+- 2026-09-15 후속: STANDALONE_HARNESS export의 전체 Top Model dependency 분석은
+  unrelated branch와 Function Caller 이름 때문에 장시간/실패할 수 있어, 생성된
+  standalone 모델별 분석으로 변경했다. runner와 standalone preparation은 설정용
+  Top Model을 로드하지 않는다. R2025b에서 실제 dependency union, dependency 없는
+  standalone 모델, 누락 standalone dependency의 fail-closed 경계를 검증해야 한다.
 - 원본 모델이 바뀐 뒤 과거 결과를 재생성하면 현재 소스 불변 검사 B9는 실패할 수 있다.
   원본/파생 이력을 삭제·이동하기 전 재생성 및 provenance 경로 의존성을 안내한다.
 - 사용자는 `docs/manual/README.md`부터 읽는다. 이 handoff는 사용자 설명을 대체하지 않는다.

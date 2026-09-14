@@ -5,7 +5,8 @@ function [results, updates, summary] = st_run_tests_per_cut(varargin)
 %     'ContinueOnFailure', true, ...
 %     'ReportMode', 'SUMMARY', ...
 %     'FailOnNonPass', false, ...
-%     'ResultFilterMode', 'DURING_RUN')
+%     'ResultFilterMode', 'DURING_RUN', ...
+%     'LoadRuntimeModel', true)
 
 p = inputParser;
 p.FunctionName = 'st_run_tests_per_cut';
@@ -33,6 +34,11 @@ addParameter(p, 'ResultFile', '', ...
     @(x) ischar(x) || isstring(x));
 addParameter(p, 'CapturePackageEvidence', false, ...
     @(x) islogical(x) && isscalar(x));
+% Standalone exported bundles rewire Test Cases to disposable Harness
+% models.  They must not load cfg.TopModel solely to read runtime config,
+% because that would reintroduce unrelated whole-model dependencies.
+addParameter(p, 'LoadRuntimeModel', true, ...
+    @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 
 continueOnFailure = logical(p.Results.ContinueOnFailure);
@@ -45,12 +51,13 @@ writeRunSummaryExcel = logical(p.Results.WriteRunSummaryExcel);
 saveTestResult = logical(p.Results.SaveTestResult);
 resultFile = strtrim(char(string(p.Results.ResultFile)));
 capturePackageEvidence = logical(p.Results.CapturePackageEvidence);
+loadRuntimeModel = logical(p.Results.LoadRuntimeModel);
 if saveTestResult && isempty(resultFile)
     error('simtest:PerCutResultFileRequired', ...
         'ResultFile is required when SaveTestResult=true.');
 end
 
-cfg = st_require_runtime_target();
+cfg = st_require_runtime_target('LoadModel', loadRuntimeModel);
 existingFilterPolicy = st_coverage_filter_existing_policy( ...
     cfg.CoverageFilterExistingPolicy);
 if ~strcmp(st_coverage_filter_application_mode( ...

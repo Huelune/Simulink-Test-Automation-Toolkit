@@ -49,7 +49,10 @@ Signal Editor·SLDV 입력과 결과 보고서·Coverage를 복사합니다. 독
 - `ExecutionModelMode=STANDALONE_HARNESS`는 원본 모델의 일회용 복사본에서만
   Harness를 export하므로 원본 모델과 Harness 관계를 바꾸지 않습니다.
 - 파일 복사 전후 모델과 Test File의 SHA-256을 비교합니다.
-- 모델 dependency 분석에서 누락 파일이 발견되면 부분 번들을 만들지 않습니다.
+- `ORIGINAL`은 Top Model 전체 dependency를 분석하고 누락 파일이 있으면 부분
+  번들을 만들지 않습니다. `STANDALONE_HARNESS`는 생성된 standalone Harness 모델만
+  분석해 관련 없는 Top Model branch의 dependency를 delivery 조건으로 삼지 않습니다.
+  standalone 모델에서 실제 누락이 발견되면 역시 부분 번들을 만들지 않습니다.
 - 번들 `template/`은 기준 상태이며 실행 중 직접 수정하지 않습니다.
 - 각 재실행은 `executions/{timestamp}/workspace`에 새 작업 사본을 만듭니다.
 - 받는 쪽에서 변경되는 Harness Filename, SLDV manifest, 기대값과 Test File은
@@ -72,7 +75,7 @@ result/exports/{timestamp}_{id}/
 │   ├── src/
 │   ├── TestManagement.xlsx
 │   ├── {TopModel}.mldatx
-│   ├── workspace/          # 모델과 분석된 모델 dependency
+│   ├── workspace/          # 설정용 Top Model, standalone 모델과 scope 분석 dependency
 │   │   └── standalone/     # 선택 시 대상별 독립 Harness 모델
 │   ├── inputs/
 │   │   ├── signal_editor/{target}/
@@ -88,7 +91,7 @@ result/exports/{timestamp}_{id}/
 
 ## Manifest와 재실행
 
-manifest v2는 번들 ID, MATLAB 릴리스, `ExecutionModelMode`, 대상별 standalone
+manifest v2는 번들 ID, MATLAB 릴리스, `ExecutionModelMode`, `Policy.DependencyScope`, 대상별 standalone
 모델 경로와 CUT 경로, `CoverageBoundaryMode`, 상대 경로, 필요한 제품,
 모든 기준 파일의 SHA-256과 크기를 기록합니다. 로컬 절대 source path는
 기록하지 않습니다.
@@ -98,6 +101,7 @@ manifest v2는 번들 ID, MATLAB 릴리스, `ExecutionModelMode`, 대상별 stan
 1. MATLAB 릴리스와 기준 파일 checksum을 검사합니다.
 2. `template/`을 새 실행 작업 공간에 복사합니다.
 3. 작업 사본에만 `runtime_target.mat`을 만들고 SLDV manifest 경로를 바꿉니다.
+   STANDALONE_HARNESS는 설정용 Top Model을 열지 않고 독립 모델만 로드합니다.
 4. ORIGINAL은 내부 Harness의 Signal Editor Filename을 바꿉니다.
 5. STANDALONE_HARNESS는 Test Case의 Model을 독립 모델로 바꾸고 HarnessOwner와
    HarnessName을 지운 뒤 Assessment 경로를 독립 모델 루트로 재설정·재검증합니다.

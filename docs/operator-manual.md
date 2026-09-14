@@ -687,6 +687,11 @@ info = st_export_test_bundle( ...
 사본의 Test Case만 해당 모델로 재배선합니다. 원본 모델·Harness·Test File은
 checksum과 Harness inventory를 다시 검사합니다.
 
+이 모드의 dependency 분석 범위는 원본 Top Model 전체가 아니라 생성된 standalone
+Harness 모델입니다. 따라서 대상 CUT와 무관한 Top Model branch의 Function Caller 또는
+외부 의존성이 bundle 생성을 막지 않습니다. standalone 모델에서 실제로 필요한 파일이
+누락되면 export는 계속 중단합니다.
+
 특정 run report를 참조 결과로 포함:
 
 ```matlab

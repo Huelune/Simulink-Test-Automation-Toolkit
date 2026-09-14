@@ -130,14 +130,26 @@ stageTimer = start_step(currentStage);
 st_log(cfg, 'DEBUG', 'Dependency analysis start | Model=%s', ...
     cfg.ModelFile);
 if reproducible
-    [dependencyFiles, missingDependencies] = ...
-        discover_dependencies(cfg.ModelFile);
-    missingDependencies = drop_in_model_name_false_positives( ...
-        missingDependencies, cfg.TopModel, cfg);
-    if ~isempty(missingDependencies)
-        error('simtest:ExportDependencyMissing', ...
-            'Cannot create a complete bundle. Missing dependencies: %s', ...
-            strjoin(missingDependencies, ', '));
+    if strcmp(executionModelMode, 'STANDALONE_HARNESS')
+        % The delivery runs only exported Harness models. Analysing every
+        % branch of the source Top Model is both expensive and can reject
+        % unrelated Function Caller names before the scoped models exist.
+        % Keep the source model as a configuration artifact, then inspect
+        % the generated standalone models below.
+        dependencyFiles = {canonical_path(cfg.ModelFile)};
+        st_log(cfg, 'INFO', ...
+            'Whole-model dependency analysis deferred | Scope=STANDALONE_HARNESS');
+        fprintf('Dependency scope: deferred to generated standalone Harness models\n');
+    else
+        [dependencyFiles, missingDependencies] = ...
+            discover_dependencies(cfg.ModelFile);
+        missingDependencies = drop_in_model_name_false_positives( ...
+            missingDependencies, cfg.ModelFile, cfg.TopModel, cfg);
+        if ~isempty(missingDependencies)
+            error('simtest:ExportDependencyMissing', ...
+                'Cannot create a complete bundle. Missing dependencies: %s', ...
+                strjoin(missingDependencies, ', '));
+        end
     end
 else
     dependencyFiles = {canonical_path(cfg.ModelFile)};
@@ -204,29 +216,7 @@ testFileName = [cfg.TopModel '.mldatx'];
 copyfile_checked(cfg.TestFile, ...
     fullfile(templateDirectory, testFileName));
 
-dependencyRoot = st_export_common_root(dependencyFiles);
-dependencyInventory = repmat(empty_dependency(), 0, 1);
 modelBundlePath = '';
-for i = 1:numel(dependencyFiles)
-    relativePath = st_export_relative_path( ...
-        dependencyFiles{i}, dependencyRoot);
-    outputPath = fullfile(workspaceDirectory, relativePath);
-    copyfile_checked(dependencyFiles{i}, outputPath);
-    item = empty_dependency();
-    item.BundlePath = bundle_path(stagingDirectory, outputPath);
-    item.Role = 'MODEL_DEPENDENCY';
-    if same_path(dependencyFiles{i}, cfg.ModelFile)
-        item.Role = 'MODEL';
-        modelBundlePath = item.BundlePath;
-    end
-    dependencyInventory(end + 1, 1) = item; %#ok<AGROW>
-    fprintf('[%d/%d] COPY %s\n', ...
-        i, numel(dependencyFiles), item.BundlePath);
-end
-if isempty(modelBundlePath)
-    error('simtest:ExportModelCopyMissing', ...
-        'The selected model was not included in dependency analysis.');
-end
 finish_step(currentStage, stageTimer);
 
 standaloneDetails = repmat(empty_standalone_detail(), height(targets), 1);
@@ -238,7 +228,31 @@ if strcmp(executionModelMode, 'STANDALONE_HARNESS')
         cfg.ModelFile, cfg.TopModel, targets, standaloneDirectory, ...
         stagingDirectory, 'LogConfig', cfg);
     finish_step(currentStage, stageTimer);
+
+    currentStage = 'Discover Standalone Harness Dependencies';
+    stageTimer = start_step(currentStage);
+    standaloneDependencies = discover_standalone_harness_dependencies( ...
+        standaloneDetails, stagingDirectory, workspaceDirectory, cfg);
+    dependencyFiles = unique([{canonical_path(cfg.ModelFile)}; ...
+        standaloneDependencies(:)], 'stable');
+    assert_saved_dependency_models(dependencyFiles);
+    st_log(cfg, 'INFO', ...
+        'Standalone dependency analysis complete | Scope=STANDALONE_HARNESS | Files=%d', ...
+        numel(dependencyFiles));
+    fprintf('Standalone dependencies : %d\n', numel(dependencyFiles) - 1);
+    finish_step(currentStage, stageTimer);
 end
+
+currentStage = 'Copy Bundle Model Dependencies';
+stageTimer = start_step(currentStage);
+[dependencyInventory, modelBundlePath] = copy_dependencies_to_workspace( ...
+    dependencyFiles, cfg.ModelFile, workspaceDirectory, stagingDirectory, ...
+    executionModelMode);
+if isempty(modelBundlePath)
+    error('simtest:ExportModelCopyMissing', ...
+        'The selected model was not included in dependency analysis.');
+end
+finish_step(currentStage, stageTimer);
 
 currentStage = 'Collect Target Inputs';
 stageTimer = start_step(currentStage);
@@ -325,6 +339,7 @@ manifest.Policy = struct( ...
     'FreshWorkspacePerRun', logical(reproducible), ...
     'SequentialStandaloneExecution', ...
         strcmp(executionModelMode, 'STANDALONE_HARNESS'), ...
+    'DependencyScope', dependency_scope(executionModelMode), ...
     'ExactMATLABReleaseRequiredByDefault', logical(reproducible), ...
     'PreparationWorkflowIncluded', false, ...
     'ReferenceReportIncluded', logical(includeReferenceReport));
@@ -489,7 +504,83 @@ files = unique(files, 'stable');
 missing = unique(missing, 'stable');
 end
 
-function missing = drop_in_model_name_false_positives(missing, topModel, cfg)
+function files = discover_standalone_harness_dependencies( ...
+        details, stagingDirectory, workspaceDirectory, cfg)
+%DISCOVER_STANDALONE_HARNESS_DEPENDENCIES Analyse delivered models only.
+%
+% The Top Model is intentionally not analysed here: in standalone mode it
+% only supplies configuration and target metadata at runtime. Each unique
+% exported Harness model is the executable delivery boundary.
+files = {};
+seenModels = strings(0,1);
+for i = 1:numel(details)
+    relative = char(string(details(i).StandaloneModelFile));
+    model = char(string(details(i).StandaloneModel));
+    if isempty(relative) || isempty(model)
+        error('simtest:ExportStandaloneDependencyModelMissing', ...
+            'Standalone Harness dependency inspection lacks model metadata.');
+    end
+    modelFile = fullfile(stagingDirectory, strrep(relative, '/', filesep));
+    key = string(lower(canonical_path(modelFile)));
+    if any(seenModels == key), continue; end
+    seenModels(end+1,1) = key; %#ok<AGROW>
+    if ~isfile(modelFile)
+        error('simtest:ExportStandaloneDependencyModelMissing', ...
+            'Standalone Harness model is missing: %s', modelFile);
+    end
+    st_log(cfg, 'DEBUG', ...
+        'Standalone dependency analysis start | Model=%s | File=%s', ...
+        model, modelFile);
+    [modelFiles, missing] = discover_dependencies(modelFile);
+    missing = drop_in_model_name_false_positives( ...
+        missing, modelFile, model, cfg);
+    if ~isempty(missing)
+        error('simtest:ExportStandaloneDependencyMissing', ...
+            ['Cannot create a complete standalone Harness delivery. ' ...
+             'Model=%s | Missing dependencies: %s'], ...
+            model, strjoin(missing, ', '));
+    end
+    for j = 1:numel(modelFiles)
+        candidate = canonical_path(modelFiles{j});
+        % The exported model is already inside template/workspace. Do not
+        % re-copy it or let it influence the external dependency root.
+        if is_under_directory(candidate, workspaceDirectory), continue; end
+        files{end+1,1} = candidate; %#ok<AGROW>
+    end
+    st_log(cfg, 'DEBUG', ...
+        'Standalone dependency analysis complete | Model=%s | Files=%d', ...
+        model, numel(modelFiles));
+end
+files = unique(files, 'stable');
+end
+
+function [inventory, modelBundlePath] = copy_dependencies_to_workspace( ...
+        files, sourceModelFile, workspaceDirectory, stagingDirectory, mode)
+%COPY_DEPENDENCIES_TO_WORKSPACE Copy the union after its scope is known.
+dependencyRoot = st_export_common_root(files);
+inventory = repmat(empty_dependency(), 0, 1);
+modelBundlePath = '';
+for i = 1:numel(files)
+    relativePath = st_export_relative_path(files{i}, dependencyRoot);
+    outputPath = fullfile(workspaceDirectory, relativePath);
+    copyfile_checked(files{i}, outputPath);
+    item = empty_dependency();
+    item.BundlePath = bundle_path(stagingDirectory, outputPath);
+    item.Role = 'MODEL_DEPENDENCY';
+    if strcmp(mode, 'STANDALONE_HARNESS')
+        item.Role = 'STANDALONE_MODEL_DEPENDENCY';
+    end
+    if same_path(files{i}, sourceModelFile)
+        item.Role = 'MODEL';
+        modelBundlePath = item.BundlePath;
+    end
+    inventory(end + 1, 1) = item; %#ok<AGROW>
+    fprintf('[%d/%d] COPY %s\n', i, numel(files), item.BundlePath);
+end
+end
+
+function missing = drop_in_model_name_false_positives( ...
+        missing, modelFile, modelName, cfg)
 %DROP_IN_MODEL_NAME_FALSE_POSITIVES Ignore missing entries that are really
 % in-model block names.
 %
@@ -502,12 +593,17 @@ function missing = drop_in_model_name_false_positives(missing, topModel, cfg)
 if isempty(missing)
     return;
 end
-wasLoadedBefore = bdIsLoaded(topModel);
+wasLoadedBefore = bdIsLoaded(modelName);
+if wasLoadedBefore && ~same_path(get_param(modelName, 'FileName'), modelFile)
+    error('simtest:ExportDependencyInspectionModelConflict', ...
+        'A different model named %s is loaded: %s', ...
+        modelName, get_param(modelName, 'FileName'));
+end
 if ~wasLoadedBefore
-    load_system(cfg.ModelFile);
+    load_system(modelFile);
 end
 inspectionCleanup = onCleanup(@() restore_top_model_load_state( ...
-    topModel, wasLoadedBefore)); %#ok<NASGU>
+    modelName, wasLoadedBefore)); %#ok<NASGU>
 st_log(cfg, 'DEBUG', ...
     'Dependency false-positive inspection start | Candidates=%d', ...
     numel(missing));
@@ -515,7 +611,7 @@ keep = true(size(missing));
 for i = 1:numel(missing)
     name = missing{i};
     try
-        found = find_system(topModel, 'FindAll', 'on', 'Name', name);
+        found = find_system(modelName, 'FindAll', 'on', 'Name', name);
     catch
         found = [];
     end
@@ -532,6 +628,25 @@ clear inspectionCleanup;
 st_log(cfg, 'DEBUG', ...
     'Dependency false-positive inspection complete | Remaining=%d', ...
     numel(missing));
+end
+
+function value = dependency_scope(executionModelMode)
+if strcmp(executionModelMode, 'STANDALONE_HARNESS')
+    value = 'STANDALONE_HARNESS_MODELS';
+else
+    value = 'WHOLE_TOP_MODEL';
+end
+end
+
+function tf = is_under_directory(path, directory)
+path = canonical_path(path);
+directory = canonical_path(directory);
+if ispc
+    path = lower(path); directory = lower(directory);
+end
+prefix = directory;
+if prefix(end) ~= filesep, prefix = [prefix filesep]; end
+tf = strcmp(path,directory) || startsWith(path,prefix);
 end
 
 function products = discover_products(files)

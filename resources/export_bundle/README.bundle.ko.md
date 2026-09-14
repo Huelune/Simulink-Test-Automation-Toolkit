@@ -24,12 +24,15 @@ run_exported_tests
 Test Case가 대상별 독립 Harness 모델로 재배선되고 manifest 순서대로 하나씩
 실행됩니다. 각 모델은 실행 후 닫히며 기대값 APPLY와 선택적 재실행도 같은
 작업 사본 안에서 처리됩니다.
+이 모드에서는 설정 보존용 Top Model을 실행 중 로드하지 않으며, manifest의
+`Policy.DependencyScope=STANDALONE_HARNESS_MODELS`에 기록된 독립 모델 dependency만
+필요합니다.
 
 ## 포함된 파일
 
 | 위치 | 내용 |
 |---|---|
-| `template/workspace/` | 내부 Test Harness를 포함한 저장 모델과 분석된 모델 의존 파일 |
+| `template/workspace/` | 설정용 저장 Top Model, 독립 Harness 모델과 scope 분석 의존 파일 |
 | `template/inputs/` | 대상별 Signal Editor 및 SLDV 테스트 입력 |
 | `template/{{TOP_MODEL}}.mldatx` | Test Case와 Iteration을 포함한 Test File |
 | `template/TestManagement.xlsx` | 실행 대상과 옵션 설정 |

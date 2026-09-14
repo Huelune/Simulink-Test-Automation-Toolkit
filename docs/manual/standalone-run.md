@@ -20,6 +20,11 @@ disp(details)
 기존 `st_run_standalone_coverage_pipeline()`의 기본 `ALL + SaveTestResult=false`는
 그대로이며, 그 결과에서 PACKAGE를 새로 생성하려면 저장 Result가 없으므로 EXECUTE가 필요합니다.
 
+Standalone export는 Top Model 전체가 아니라 생성된 standalone Harness 모델의 dependency만
+수집합니다. 따라서 대상과 무관한 Top Model branch의 미해결 dependency는 export를 막지
+않습니다. 반대로 standalone `.slx` 자체가 필요한 파일을 찾지 못하면 받는 PC에서 열리지
+않는 제출물을 만들지 않도록 export가 중단됩니다.
+
 정상 완료 기준은 `1111111111 PASS`, TC별 standalone 모델·Input·`{TC_NAME}.cvf`·
 `{TC_NAME}.cvt`·원본 `{TC_NAME}.html`, root의 11열 `CoverageSummary.xlsx`입니다.
 HTML은 Test Manager 요약 보고서가 아닌 Coverage REPORT 화살표의 원본이며 부속 asset도

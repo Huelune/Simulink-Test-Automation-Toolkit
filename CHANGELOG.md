@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Standalone Harness export no longer runs dependency analysis over every
+  branch of the source Top Model. It analyses the generated standalone
+  models, copies their union of dependencies, and leaves the configuration
+  Top Model unloaded during replay. Actual standalone dependency gaps still
+  fail the export rather than producing a partial delivery.
 - Added local named model profiles, a generated anonymous FILE/MAT example,
   read-only `st_check_readiness`, and strict `st_run_from_stage` execution.
   Valid predecessors are inspected and reused; invalid predecessors block

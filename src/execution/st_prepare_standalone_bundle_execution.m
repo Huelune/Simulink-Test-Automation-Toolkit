@@ -3,7 +3,10 @@ function [targets, testCases, result, tf] = ...
         manifest, bundleRoot, workRoot)
 %ST_PREPARE_STANDALONE_BUNDLE_EXECUTION Rewire a copied Test File to models.
 
-cfg = st_require_runtime_target();
+% The copied Top Model is configuration-only in this path. All Test Cases
+% are rewired below to standalone models, so do not load unrelated source
+% model branches while preparing the isolated execution.
+cfg = st_require_runtime_target('LoadModel', false);
 totalTimer = tic;
 st_log(cfg, 'INFO', ...
     'Standalone bundle preparation start | Targets=%d', ...

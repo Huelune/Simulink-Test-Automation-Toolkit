@@ -78,6 +78,9 @@ runInfo = st_run_standalone_coverage_pipeline( ...
     'ContinueOnFailure', true, ...
     'FailOnNonPass', false);
 verifyTrue(testCase, isfile(runInfo.Manifest));
+bundleManifest = jsondecode(fileread(runInfo.BundleManifest));
+verifyEqual(testCase,string(bundleManifest.Policy.DependencyScope), ...
+    "STANDALONE_HARNESS_MODELS");
 verifyEqual(testCase, string(runInfo.Targets(1).ResultFilterStatus), "OK");
 verifyEqual(testCase, runInfo.Targets(1).RunCount, 1);
 verifyEqual(testCase, runInfo.Targets(1).ResultFilterAttachCount, 1);
