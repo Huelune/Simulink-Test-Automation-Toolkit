@@ -382,6 +382,7 @@ for i = 1:n
     item.PackageEvidenceStatus = char(string(row.PackageEvidenceStatus));
     item.ExecutionStatus = char(string(row.Status));
     item.Message = char(string(row.Message));
+    reportedExecutionStatus = upper(string(item.ExecutionStatus));
     if item.RunCount ~= 1 || item.RerunPerformed || ...
             item.ResultFilterAttachCount ~= 1 || ...
             ~strcmp(item.CVFGenerationStatus, 'OK') || ...
@@ -390,7 +391,11 @@ for i = 1:n
             ~strcmp(item.ModelCleanupStatus, 'OK') || ...
             ~strcmp(item.PathCleanupStatus, 'OK') || ...
             ~strcmp(item.PackageEvidenceStatus, 'OK')
-        item.ExecutionStatus = 'FAIL';
+        if reportedExecutionStatus == "EXCEPT"
+            item.ExecutionStatus = 'EXCEPT';
+        else
+            item.ExecutionStatus = 'FAIL';
+        end
         item.Message = append_message(item.Message, ...
             'Standalone lifecycle contract did not pass');
     end
@@ -752,7 +757,7 @@ end
 
 function status = target_action_status(targets, field)
 values = upper(string({targets.(field)}));
-if any(values == "FAIL" | values == "SKIP")
+if any(values == "FAIL" | values == "EXCEPT" | values == "SKIP")
     status = 'WARN';
 else
     status = 'OK';

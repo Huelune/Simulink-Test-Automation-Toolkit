@@ -414,6 +414,12 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   직후 검증된 절대 경로 CVF 바인딩을 복원한다. 이 bind/복원 helper는
   `capture_package_evidence`의 nested function이면 보고서 subfunction에서 호출할
   수 없으므로 file-level subfunction으로 유지해야 한다. R2025b 재검증이 필요하다.
+- Test Case 실행 예외(예: simulation overflow)는 `ExecutionStatus=EXCEPT`로 기록한다.
+  해당 상태여도
+  PACKAGE는 standalone Harness, 존재하는 Signal Editor input, target manifest를 먼저
+  대상 folder에 보존한다. 이후 CVF/CVT/HTML만 `FAIL`로 남긴다. 모델/input 보존 자체가
+  실패한 경우에는 그 실패가 PackageStatus에 기록된다. `ContinueOnFailure=true`에서는
+  다음 target도 계속 처리한다. R2025b 재검증이 필요하다.
 - 실제 R2025b에서 사용자가 Top Model을 열지 않았는데도 target 입력 수집 후
   `StandaloneModelStillLoadedBeforeRun`이 발생했다. export 중간 상태가 아니라
   `st_export_test_bundle` 진입 전 load 상태를 기준으로 dependency/Harness API가

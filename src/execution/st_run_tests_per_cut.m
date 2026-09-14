@@ -480,12 +480,12 @@ for i = 1:n
             FilterRestoreStatus(i) = "NOT_REQUIRED";
         end
 
-        Status(i) = "FAIL";
+        Status(i) = "EXCEPT";
         Message(i) = string(targetError.message);
         st_log(cfg, 'ERROR', ...
-            '[PER_CUT %d/%d] failed | %s: %s', ...
+            '[PER_CUT %d/%d] exception | %s: %s', ...
             i, n, targetError.identifier, targetError.message);
-        append_event(logPath, i, 'TARGET_FAIL', targetError.message);
+        append_event(logPath, i, 'TARGET_EXCEPT', targetError.message);
 
         if isempty(abortError) && ~continueOnFailure
             abortError = targetError;
@@ -495,7 +495,7 @@ for i = 1:n
     [ModelCleanupStatus(i), cleanupMessage] = close_execution_model(row, cfg);
     append_event(logPath, i, 'MODEL_CLEANUP', cleanupMessage);
     if ModelCleanupStatus(i) == "FAIL"
-        Status(i) = "FAIL";
+        Status(i) = "EXCEPT";
         Message(i) = "Execution model cleanup failed: " + cleanupMessage;
         if isempty(abortError)
             abortError = MException('simtest:ExecutionModelCleanupFailed', ...
@@ -507,7 +507,7 @@ for i = 1:n
     append_event(logPath, i, 'PATH_CLEANUP', ...
         char(PathCleanupStatus(i)));
     if PathCleanupStatus(i) == "FAIL"
-        Status(i) = "FAIL";
+        Status(i) = "EXCEPT";
         Message(i) = "Execution model path cleanup failed";
         if isempty(abortError)
             abortError = MException('simtest:ExecutionModelPathCleanupFailed', ...
@@ -535,7 +535,7 @@ for i = 1:n
         artifacts(end+1,:) = {No(i), "TARGET", "MANIFEST", ...
             string(manifestPath), "OK", "Target manifest written"};
     catch manifestME
-        Status(i) = "FAIL";
+        Status(i) = "EXCEPT";
         Message(i) = "Target manifest write failed: " + ...
             string(manifestME.message);
         artifacts(end+1,:) = {No(i), "TARGET", "MANIFEST", ...
@@ -597,7 +597,7 @@ if ~isempty(abortError)
         'Partial PER_CUT report was written to %s.', summary.Manifest));
     throw(abortError);
 end
-nonPassMask = ismember(Status, ["FAIL","WARN"]);
+nonPassMask = ismember(Status, ["FAIL","EXCEPT","WARN"]);
 if failOnNonPass && (any(nonPassMask) || strcmp(summary.Status, 'FAIL'))
     nonPassCount = sum(nonPassMask);
     if nonPassCount > 0

@@ -33,7 +33,17 @@ for i = 1:numel(manifest.Targets)
         '[PACKAGE %d/%d] start | CUT=%s', ...
         i, numel(manifest.Targets), item.CUTName);
     try
-        if strcmpi(item.ExecutionStatus, 'FAIL')
+        % Preserve the standalone harness and its local input even when
+        % this target's Test Manager execution ended in an exception.
+        item = package_execution_inputs(item, targetDirectory, cfg);
+        st_log(cfg, 'INFO', ...
+            '[PACKAGE %d/%d] standalone inputs preserved | CUT=%s', ...
+            i, numel(manifest.Targets), item.CUTName);
+        executionStatus = upper(string(item.ExecutionStatus));
+        if executionStatus == "EXCEPT"
+            error('simtest:StandalonePipelineExecuteTargetException', ...
+                'EXECUTE ended with an exception; coverage artifacts are unavailable.');
+        elseif executionStatus == "FAIL"
             error('simtest:StandalonePipelineExecuteTargetFailed', ...
                 'EXECUTE did not satisfy the target lifecycle contract.');
         end
@@ -158,7 +168,6 @@ st_log(cfg, 'INFO', ...
 end
 
 function item = package_target(item, resultObj, targetDirectory, cfg) %#ok<INUSD>
-item = package_execution_inputs(item, targetDirectory, cfg);
 sourceCVF = item.ExecutionCVFPath;
 if ~isfile(sourceCVF)
     error('simtest:StandalonePipelineCVFMissing', ...
@@ -481,7 +490,7 @@ end
 
 function status = target_action_status(targets, field)
 values = upper(string({targets.(field)}));
-if any(values == "FAIL" | values == "SKIP")
+if any(values == "FAIL" | values == "EXCEPT" | values == "SKIP")
     status = 'WARN';
 else
     status = 'OK';

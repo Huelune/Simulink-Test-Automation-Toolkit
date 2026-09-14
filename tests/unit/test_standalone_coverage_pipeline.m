@@ -257,6 +257,27 @@ verifyTrue(testCase, contains(perCut, ...
 verifyTrue(testCase, contains(perCut, 'coverageObjects{1}.filter = displayFilter'));
 end
 
+function testFailedExecutionStillPreservesStandaloneInputs(testCase)
+package = source('pipeline', ...
+    'st_package_standalone_coverage_artifacts.m');
+inputAt = strfind(package, ...
+    'item = package_execution_inputs(item, targetDirectory, cfg);');
+executionFailureAt = strfind(package, ...
+    'if executionStatus == "EXCEPT"');
+verifyEqual(testCase, numel(inputAt), 1);
+verifyNotEmpty(testCase, executionFailureAt);
+verifyLessThan(testCase, inputAt(1), executionFailureAt(1));
+verifyTrue(testCase, contains(package, ...
+    'standalone inputs preserved | CUT=%s'));
+verifyTrue(testCase, contains(package, ...
+    'StandalonePipelineExecuteTargetException'));
+controller = source('pipeline', 'st_run_standalone_coverage_pipeline.m');
+verifyTrue(testCase, contains(controller, ...
+    'if reportedExecutionStatus == "EXCEPT"'));
+verifyTrue(testCase, contains(controller, ...
+    'values == "FAIL" | values == "EXCEPT" | values == "SKIP"'));
+end
+
 function testReportFilterHelpersAreFileLevelSubfunctions(testCase)
 % Nested helpers stay invisible to the report subfunctions that bind the
 % display CVF and restore the validated absolute binding, so
