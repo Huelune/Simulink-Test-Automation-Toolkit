@@ -13,6 +13,7 @@ addParameter(p, 'FailOnNonPass', [], ...
     @(v) isempty(v) || (islogical(v) && isscalar(v)));
 addParameter(p, 'ExecuteTests', [], ...
     @(v) isempty(v) || (islogical(v) && isscalar(v)));
+addParameter(p, 'StrictRestart', false, @(v) islogical(v) && isscalar(v));
 parse(p, varargin{:});
 
 options = struct();
@@ -25,6 +26,7 @@ options.ContinueOnFailure = p.Results.ContinueOnFailure;
 options.ReportMode = upper(strtrim(char(string(p.Results.ReportMode))));
 options.FailOnNonPass = p.Results.FailOnNonPass;
 options.ExecuteTests = p.Results.ExecuteTests;
+options.StrictRestart = p.Results.StrictRestart;
 
 if ~isempty(options.PreparationMode) && ...
         ~ismember(options.PreparationMode, {'AUTO','FORCE'})
@@ -35,6 +37,7 @@ end
 validStages = {'START','HARNESS','SLDV','HARNESS_CONFIG', ...
     'SIGNAL_EDITOR','ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER', ...
     'ALIGNMENT'};
+if options.StrictRestart, validStages{end+1} = 'EXECUTE'; end
 if ~isempty(options.FromStage) && ...
         ~ismember(options.FromStage, validStages)
     error('simtest:InvalidPreparationFromStage', ...

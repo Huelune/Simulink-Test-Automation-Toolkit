@@ -10,7 +10,7 @@ Coverage 수집, 결과 보고서와 재실행 번들까지 만드는 MATLAB 자
 | --- | --- |
 | 버전 | `0.9.6` candidate 이후 `Unreleased` |
 | 기본 브랜치 | `main` |
-| 이 README의 작업 브랜치 | `feat/per-cut-filtered-execution` |
+| 이 README의 작업 브랜치 | `feat/harness-workflow-v2` |
 | 기본 기대값 정책 | `APPLY` |
 | 기본 실행 정책 | `AUTO` |
 | 현재 검증 상태 | 코드·정적 검토 단계, MATLAB R2025b 전체 인증 미완료 |
@@ -35,6 +35,9 @@ TestManagement.xlsx
 | 영역 | 제공 기능 |
 | --- | --- |
 | 대상 관리 | Excel 행별 CUT, Harness, Test Case, SLDV, 기대값, CVF 정책 |
+| 여러 모델 관리 | 이름별 로컬 profile로 모델·Excel·Test File·결과·checkpoint 경로 분리; 한 번에 하나 선택 |
+| 명시적 재시작 | 선행 단계 읽기 전용 검사 후 선택 단계부터 끝까지 실행; 무효 선행 단계는 자동 수정 없이 차단 |
+| 결과 재생성 | 저장 증거에서 PACKAGE/SUMMARY를 새 PipelineId로 생성; 테스트 재실행·기존 결과 덮어쓰기 없음 |
 | 준비 자동화 | 누락 Harness 생성, Signal Editor Scenario, Assessment, Iteration 구성 |
 | 증분 처리 | 대상·단계별 fingerprint와 checkpoint를 사용한 준비 결과 재사용 |
 | 테스트 실행 | 모든 Test Case 일괄 실행 또는 Excel 순서의 CUT별 독립 실행 |
@@ -70,6 +73,10 @@ TestManagement.xlsx
 Git에 추가하지 않습니다.
 
 ## 3. 가장 빠른 시작
+
+작업별로 복사할 코드는 [수동 실행 안내](docs/manual/README.md)에 모았습니다.
+처음 사용하는 동료는 [익명 예제](docs/manual/example.md), 실제 모델은
+[profile 등록](docs/manual/model-profiles.md)부터 시작하세요. 아래 기존 명령도 유지합니다.
 
 MATLAB에서 저장소 루트를 Current Folder로 연 뒤 다음 순서로 실행합니다.
 
@@ -152,6 +159,10 @@ st_find_target_paths              % 같은 이름의 후보를 문맥으로 순�
 | `st_run_tests_per_cut` | 이미 준비된 Test File을 CUT별로 직접 실행 |
 | `st_run_standalone_coverage_pipeline` | standalone Harness Coverage를 `EXECUTE/PACKAGE/SUMMARY/ALL` Action으로 실행·재개 |
 | `st_check_standalone_coverage` | standalone 결과를 10비트 코드와 최대 20줄 화면으로 읽기 전용 검사 |
+| `st_create_example` | 익명 모델·Dataset MAT·관리 Excel을 로컬 생성; 실행은 하지 않음 |
+| `st_save_model_profile` / `st_select_model_profile` | 모델별 설정 등록 / 이름 또는 목록 선택 |
+| `st_check_readiness` | 모델 연결·선행 단계·저장 증거를 검사; 준비·시뮬레이션은 하지 않음 |
+| `st_run_from_stage` | 선행 결과를 검증하고 선택 단계부터 workflow 끝까지 실행 |
 
 두 workflow 진입점은 다음 네 개의 결과를 반환할 수 있습니다.
 

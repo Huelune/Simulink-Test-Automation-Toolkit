@@ -45,8 +45,9 @@ st_run_standalone_coverage_pipeline( ...
 `SaveTestResult` 기본값은 `ALL=false`, `EXECUTE=true`이다. `ALL`은 live Result를
 PACKAGE로 전달하므로 export/import를 수행하지 않는다. `PACKAGE`와 `SUMMARY`에는
 `SaveTestResult`를 지정할 수 없다. lifecycle 횟수를 보존하기 위해 각 PipelineId의
-`PACKAGE`와 `SUMMARY`는 한 번만 실행할 수 있으며, 다시 생성해야 하면 새
-`EXECUTE`로 새 PipelineId를 만든다.
+`PACKAGE`와 `SUMMARY`는 한 번만 실행할 수 있다. 다시 생성할 때는
+`st_run_from_stage`가 저장 증거를 검증하고 **새 PipelineId**를 만든다.
+증거가 없거나 변했으면 재생성을 차단하고 `EXECUTE`부터 다시 실행하도록 안내한다.
 업데이트 전 `EXECUTE`가 만든 PipelineId에는 report/metric 임시 증거가 없으므로
 현재 `PACKAGE`에 재사용하지 않고 새 `EXECUTE`를 실행한다.
 
@@ -103,21 +104,25 @@ ZIP만 package evidence 경로로 승격한다.
 
 패키지의 `TestManager` 폴더에는 rewired MLDATX와
 `open_standalone_coverage_test_manager.m` launcher가 함께 생성된다. standalone model은
-CUT별 target 폴더에 보존되므로 MLDATX를 직접 열지 않고 launcher로 model path/load와
-packaged CVF의 Test Case readback을 준비한 뒤 Test Manager를 열어야 한다.
+CUT별 target 폴더에 보존된다. launcher는 편의 기능이며 필수가 아니다.
+대상 폴더를 MATLAB path에 추가하고 MLDATX를 열어 각 Test Case의 Model 폴더 버튼으로
+같은 폴더의 standalone `.slx`를 선택해도 된다. 이 파일은 Top Model 아래의 Harness가
+아니라 독립 Model이므로 Test Harness 항목은 비워 둔다.
+다른 PC에서는 path와 CVF 경로를 다시 확인한다. 자세한 절차는
+[결과 열기](manual/open-results.md)를 따른다.
 
 ## 한 화면 검사 비트
 
 | 비트 | 검사 |
 |---|---|
-| B1 | manifest v2, Action, Result 저장/재개 정책, 주요 함수 중복 경로 |
+| B1 | manifest v2/v3, Action, Result 저장/재개 정책 또는 재생성 provenance, 주요 함수 중복 경로 |
 | B2 | Harness명 = standalone model명 = `.slx` stem |
 | B3 | SUT/iteration/input/assessment readback |
 | B4 | `RunCount=1`, rerun 없음, lifecycle event 일치 |
 | B5 | CVF 생성, rule/file/hash, Result 등록 1회 |
 | B6 | 필수 패키지와 금지 artifact 부재 |
 | B7 | Decision/Execution scalar 및 metric source |
-| B8 | Summary 파일, 7개 열, CUT row 수 |
+| B8 | Summary 파일, 11개 열, CUT row 수 |
 | B9 | 원본 model/Test File/Harness/Input/Excel 불변 |
 | B10 | filter restore, model/path cleanup, CUT 폴더 격리 |
 

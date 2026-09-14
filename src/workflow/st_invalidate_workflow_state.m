@@ -16,6 +16,14 @@ for i = 1:height(plan)
             state.Targets(index).StageSignatures = ...
                 rmfield(state.Targets(index).StageSignatures, stage);
         end
+        if plan.(sprintf('Run%s', stage))(i) && ...
+                isfield(state,'RestartEvidence') && ~isempty(state.RestartEvidence)
+            matched = strcmp({state.RestartEvidence.Key},char(plan.Key(i))) & ...
+                strcmp({state.RestartEvidence.Stage},stage);
+            for r = find(matched)
+                state.RestartEvidence(r).Status = 'NOT_RUN';
+            end
+        end
     end
 end
 end

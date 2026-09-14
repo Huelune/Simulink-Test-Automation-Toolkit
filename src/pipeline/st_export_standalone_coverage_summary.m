@@ -33,11 +33,11 @@ for i = 1:n
     CUT_PATH(i) = string(item.CUTPath);
     TestCaseName(i) = string(item.TestCaseName);
     HarnessName(i) = string(item.HarnessName);
-    DecisionExecuted(i) = double(item.DecisionCovered);
-    DecisionTotal(i) = double(item.DecisionTotal);
+    DecisionExecuted(i) = scalar_metric(item.DecisionCovered);
+    DecisionTotal(i) = scalar_metric(item.DecisionTotal);
     Decision(i) = string(item.DecisionPercentageText);
-    ExecutionExecuted(i) = double(item.ExecutionCovered);
-    ExecutionTotal(i) = double(item.ExecutionTotal);
+    ExecutionExecuted(i) = scalar_metric(item.ExecutionCovered);
+    ExecutionTotal(i) = scalar_metric(item.ExecutionTotal);
     Execution(i) = string(item.ExecutionPercentageText);
     if strcmpi(item.PackageStatus, 'OK')
         manifest.Targets(i).SummaryStatus = 'OK';
@@ -70,6 +70,11 @@ st_log(cfg, 'INFO', ...
     n, toc(timerValue));
 end
 
+function value = scalar_metric(raw)
+value = NaN;
+if isnumeric(raw) && isscalar(raw), value = double(raw); end
+end
+
 function write_excel_atomic(path, summary, manifest)
 folder = fileparts(path);
 temporary = [tempname(folder) '.xlsx'];
@@ -90,7 +95,7 @@ end
 end
 
 function require_package(manifest)
-if double(manifest.Version) ~= 2 || ~isfield(manifest, 'Actions') || ...
+if ~ismember(double(manifest.Version), [2 3]) || ~isfield(manifest, 'Actions') || ...
         ~isfield(manifest.Actions, 'PACKAGE') || ...
         ~ismember(upper(string(manifest.Actions.PACKAGE.Status)), ["OK","WARN"])
     error('simtest:StandalonePipelineActionNotReady', ...

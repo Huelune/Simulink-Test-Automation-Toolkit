@@ -17,7 +17,7 @@ verifyTrue(testCase, contains(text, ...
     "'ResultFilterMode', 'POST_RUN_REQUIRED'"));
 verifyTrue(testCase, contains(text, ...
     "st_require_runtime_target('LoadModel', false)"));
-verifyTrue(testCase, contains(text, "'Version', 2"));
+verifyTrue(testCase, contains(text, "'Version', 3"));
 verifyTrue(testCase, contains(text, "'Actions', struct("));
 verifyTrue(testCase, contains(text, "'Inputs', {input_inventory(cfg)}"));
 verifyTrue(testCase, contains(text, ...
@@ -316,7 +316,7 @@ verifyTrue(testCase, contains(text, ...
     "'Decision Executed','Decision Total','Decision (%)', ..."));
 verifyTrue(testCase, contains(text, ...
     "'Execution Executed','Execution Total','Execution (%)'"));
-verifyTrue(testCase, contains(text, 'DecisionExecuted(i) = double(item.DecisionCovered)'));
+verifyTrue(testCase, contains(text, 'DecisionExecuted(i) = scalar_metric(item.DecisionCovered)'));
 verifyTrue(testCase, contains(text, 'ExecutionExecuted(i) = double(item.ExecutionCovered)'));
 verifyFalse(testCase, contains(text, 'MetricSnapshot'));
 verifyFalse(testCase, contains(text, 'load('));

@@ -141,6 +141,19 @@ end
 % a model with the same name is already loaded outside the bundle
 % (simtest:BundleModelAlreadyLoaded).
 verifyFalse(testCase, bdIsLoaded(testCase.TestData.TopModel));
+
+% Regeneration creates new histories without touching any source bytes.
+sourceState = file_state(fileparts(finalInfo.Manifest));
+derived = st_run_from_stage('Workflow','STANDALONE','FromStage','PACKAGE', ...
+    'SourcePipelineId',finalInfo.PipelineId);
+verifyNotEqual(testCase,derived.PipelineId,finalInfo.PipelineId);
+verifyEqual(testCase,derived.LocalExecutionCount,0);
+verifyEqual(testCase,file_state(fileparts(finalInfo.Manifest)),sourceState);
+verifyEqual(testCase,st_check_standalone_coverage('PipelineId',derived.PipelineId),'1111111111');
+summaryOnly = st_run_from_stage('Workflow','STANDALONE','FromStage','SUMMARY', ...
+    'SourcePipelineId',derived.PipelineId);
+verifyEqual(testCase,summaryOnly.LocalExecutionCount,0);
+verifyEqual(testCase,st_check_standalone_coverage('PipelineId',summaryOnly.PipelineId),'1111111111');
 end
 
 function testAllUsesLiveResultsWithoutResultRoundTrip(testCase)

@@ -3,7 +3,20 @@
 이 문서는 사용자가 직접 실행하는 MATLAB 진입점과 필요할 때 단계별로 실행할 수
 있는 기능 단위를 정리한다. 내부 helper와 호환용 alias는 포함하지 않는다.
 `st_export_test_specification`이 생성하는 Excel의 첫 번째 `사용법` 탭에도 같은
-기준의 표가 포함된다.
+기준의 표가 포함된다. 새 profile·readiness·명시 재시작 명령의 복사 코드는
+[수동 실행 안내](manual/README.md)에 별도로 정리한다.
+
+## 모델 선택과 명시적 재시작
+
+`st_save_model_profile`로 모델별 경로를 저장하고 `st_select_model_profile('이름')`
+또는 인수 없는 목록 선택으로 전환한다. profile별로 Excel/Test File/결과와 checkpoint를
+분리하며, 동시에 여러 모델을 실행하지는 않는다.
+
+`st_check_readiness('Workflow','FROM_HARNESS','FromStage','ASSESSMENT')`는 선행
+결과를 읽기 전용 검사한다. `st_run_from_stage`에 같은 Workflow/FromStage를 주면
+검사 통과 후 해당 단계부터 끝까지 실행하며, 앞 단계의 무효 결과는 자동 수정하지 않는다.
+`STANDALONE`의 PACKAGE/SUMMARY는 명시적 `SourcePipelineId`의 증거를 검사하고
+새 id로 재생성한다. 자세한 제한은 [재시작](manual/restart.md)을 따른다.
 
 ## 기본 실행 순서
 

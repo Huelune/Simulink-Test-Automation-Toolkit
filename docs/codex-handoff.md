@@ -6,7 +6,7 @@
 
 ## 현재 기준
 
-- 기준일: 2026-09-14
+- 기준일: 2026-09-15
 - 활성 개발 브랜치: feat/harness-workflow-v2
 - Standalone Action 단순화 작업 시작 기준: 3e5ed63
 - 필수 기능 기준: feat/per-cut-filtered-execution의 7f0825e
@@ -15,6 +15,31 @@
 - MATLAB R2025b 검증: 미수행
 - 현재 PC: MATLAB 실행 파일과 실제 result 폴더 없음
 - 완료 표현: 정적 구현 완료까지만 허용하며 인증 완료나 PR 준비 완료로 표현하지 않는다.
+
+## 2026-09-15 profile / 단계 재시작 구현
+
+- `st_save_model_profile`, `st_list_model_profiles`, `st_select_model_profile`:
+  로컬 `model_profiles.mat`, 활성 선택 `runtime_target.mat`. profile별 결과/상태 경로 분리.
+  여러 모델 병렬 실행 기능이 아니며 기존 단일 모델 선택도 유지한다.
+- `st_create_example(destination)`: FILE/MAT 익명 model/Excel/input 로컬 생성만 수행.
+- `st_check_readiness` / `st_run_from_stage`: 선행 단계 무수정 검사 후 명시 단계부터
+  끝까지 실행. 기존 AUTO/FORCE 동작과 구분한다. 무효 선행 단계는 자동 복구하지 않는다.
+- workflow state v2 `RestartEvidence`: 독립 stage input/output hash, RUNNING/FAIL/
+  UNVERIFIED/OK 상태. 기존 v1 구조 readback은 허용하지만 ASSESSMENT와 non-OFF SLDV는
+  새 증거가 필요하다. readback 실패는 기존 workflow를 깨지 않고 WARN으로 남는다.
+- pipeline manifest v3: ReplayInputs/PackageInventory; v2 로드는 유지한다.
+  PACKAGE/SUMMARY 재생성은 새 id와 provenance 사본을 만들고 실행 0회, export 0회를 기록한다.
+  PACKAGE import 1회 / SUMMARY import 0회. 기존 id의 Action 1회 제한은 바꾸지 않는다.
+  실패/부분 파생 결과는 latest를 바꾸지 않는다. `.work` 유실 시 PACKAGE 재생성 불가.
+- 실제 업무 MATLAB 실행은 하지 않았다. MISS_HIT 문법 검사와 diff 검사만 수행한다.
+  `docs/manual/runtime-verification.md`에 새/기존 integration과 수동 GUI 검증을 모았다.
+- 미검증 핵심: R2025b Harness read-only load/close의 Dirty/synchronization 동작,
+  `TestIteration.TestParams` 실제 readback 형태, Assessment step 직렬화 안정성,
+  예제의 기대값/APPLY 이후 재시작, EXCEPT와 저장 결과 import, 재생성 후 checker 전 비트.
+  다른 릴리스에서 해석할 수 없는 binding은 성공으로 추정하지 않고 차단한다.
+- 원본 모델이 바뀐 뒤 과거 결과를 재생성하면 현재 소스 불변 검사 B9는 실패할 수 있다.
+  원본/파생 이력을 삭제·이동하기 전 재생성 및 provenance 경로 의존성을 안내한다.
+- 사용자는 `docs/manual/README.md`부터 읽는다. 이 handoff는 사용자 설명을 대체하지 않는다.
 
 ## 변경 불가 핵심 결정
 

@@ -4,6 +4,14 @@ function [resultObj, updateResult, workflowResult, reportInfo] = ...
 
 cfg = st_require_runtime_target();
 options = st_parse_workflow_options(varargin{:});
+if options.StrictRestart
+    st_workflow_stages(workflowKind,options.FromStage);
+    if ~isempty(options.ExecutionMode) && ~strcmp(options.ExecutionMode,'AUTO') && ...
+            ~strcmp(options.ExecutionMode,cfg.ExecutionMode)
+        error('simtest:RestartExecutionModeOverride', ...
+            'Strict restart uses the selected configuration execution mode; omit ExecutionMode override.');
+    end
+end
 T = st_load_targets(cfg.OnlyEnabled);
 cloneRows = st_is_harness_clone(T);
 failedCloneRows = false(height(T),1);
@@ -22,6 +30,15 @@ executeTests = option_or_default(options.ExecuteTests, ...
 cfg.ExecutionMode = executionMode;
 [plan, state, context] = ...
     st_build_execution_plan(T, cfg, workflowKind, options);
+if options.StrictRestart
+    [readiness, checks] = st_check_readiness('Workflow',workflowKind, ...
+        'FromStage',options.FromStage);
+    if ~readiness.Ready
+        disp(checks(checks.Status == "BLOCKED",:));
+        error('simtest:RestartBlocked','Restart blocked. Required start: %s',readiness.RecommendedFromStage);
+    end
+    plan = st_restart_plan(plan,options.FromStage);
+end
 
 state = st_invalidate_workflow_state(state, plan);
 state.Artifacts.Model = context.ModelSignature;
@@ -47,22 +64,31 @@ fprintf('Start    : %s\n', timestamp_text());
 fprintf('============================================\n');
 print_plan(plan);
 
+if ~options.StrictRestart || any(plan.RunHARNESS)
 linkProtectionResult = execute_timed_step( ...
     'Protect Library-Linked CUT Harnesses', ...
     @() st_protect_linked_cut_harnesses(T, cfg));
 require_success(linkProtectionResult, ...
     ['Library-link Harness protection failed. Check ' ...
      'LibraryLinkHarnessProtectionResult.']);
+end
 
-if strcmpi(workflowKind, 'FULL')
+runHarness = strcmpi(workflowKind, 'FULL') && (~options.StrictRestart || any(plan.RunHARNESS));
+if runHarness
     validationResult = execute_timed_step( ...
         'Pre-Validate CUT Paths', @() st_pre_validate_targets());
     require_success(validationResult(~cloneRows,:), ...
         'Pre-Validation failed. Check PreValidationResult.');
 
-    harnessResult = execute_timed_step( ...
-        'Create Harnesses', @() st_create_harnesses( ...
-        st_stage_selection(plan, 'HARNESS')));
+    state = st_record_restart_stage(state,plan,'HARNESS',cfg,'RUNNING');
+    try
+        harnessResult = execute_timed_step( ...
+            'Create Harnesses', @() st_create_harnesses( ...
+            st_stage_selection(plan, 'HARNESS')));
+    catch ME
+        state = st_record_restart_stage(state,plan,'HARNESS',cfg,'FAIL');
+        rethrow(ME);
+    end
     state = st_checkpoint_workflow_state( ...
         state, plan, 'HARNESS', harnessResult, cfg);
     failedCloneRows = cloneRows & strcmpi(string(harnessResult.Status),'FAIL');
@@ -78,7 +104,7 @@ if strcmpi(workflowKind, 'FULL')
         st_save_workflow_state(state, cfg);
         st_write_result('WorkflowPlanResult', plan);
     end
-else
+elseif ~options.StrictRestart
     validationResult = execute_timed_step( ...
         'Validate CUT / Harness Mapping', @() st_validate_targets());
     require_success(validationResult(~cloneRows,:), ...
@@ -99,7 +125,7 @@ stageFunctions = { ...
     @st_validate_scenario_alignment};
 
 % Clone preparation already completed these stages inside its recovery boundary.
-if strcmpi(workflowKind,'FULL')
+if runHarness
     completed = cloneRows & strcmpi(string(harnessResult.Status),'OK');
     for k = 1:4
         checkpointPlan = plan;
@@ -118,6 +144,11 @@ for s = 1:numel(stageNames)
     plan.(['Action' stage])(blocked) = "SKIP";
     plan.(['Reason' stage])(blocked) = "Clone preparation completed, skipped, or failed per target";
     selection = st_stage_selection(plan, stage);
+    if options.StrictRestart && ~any(selection.Run)
+        stageResults{s} = table(repmat("CACHED",height(T),1),'VariableNames',{'Status'});
+        st_log(cfg,'INFO','Restart reuses prerequisite | Stage=%s',stage);
+        continue;
+    end
     fn = stageFunctions{s};
     if strcmp(executionMode, 'PER_CUT') && ...
             strcmp(stage, 'COVERAGE_FILTER')
@@ -127,8 +158,14 @@ for s = 1:numel(stageNames)
         fn = @(value) st_create_test_manager( ...
             value, 'DeferCoverageFilters', true);
     end
-    stageResults{s} = execute_timed_step( ...
-        stageLabels{s}, @() fn(selection));
+    state = st_record_restart_stage(state,plan,stage,cfg,'RUNNING');
+    try
+        stageResults{s} = execute_timed_step( ...
+            stageLabels{s}, @() fn(selection));
+    catch ME
+        state = st_record_restart_stage(state,plan,stage,cfg,'FAIL');
+        rethrow(ME);
+    end
     state = st_checkpoint_workflow_state( ...
         state, plan, stage, stageResults{s}, cfg);
     failedCloneRows = failedCloneRows | ...
@@ -169,6 +206,14 @@ state.Artifacts.Model = st_file_signature(cfg.ModelFile);
 state.Artifacts.TestFile = st_file_signature(cfg.TestFile);
 st_save_workflow_state(state, cfg);
 
+% APPLY can legitimately change Assessment/Test Case state during execution.
+if executeTests
+    for stage = {'ASSESSMENT','TEST_MANAGER','ALIGNMENT'}
+        capturePlan = plan;
+        capturePlan.(['Run' stage{1}]) = ~failedCloneRows;
+        state = st_record_restart_stage(state,capturePlan,stage{1},cfg,'OK');
+    end
+end
 st_write_result('WorkflowPlanResult',plan);
 Stage = string(stageLabels(:));
 RunCount = zeros(numel(stageNames),1);

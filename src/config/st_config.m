@@ -464,4 +464,6 @@ cfg.SaveResultFiles = true;
 cfg.ResultReportDir = ...
     fullfile(cfg.ResultDir, 'reports');
 
+cfg = st_apply_model_profile(cfg);
+
 end

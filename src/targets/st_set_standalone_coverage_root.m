@@ -49,6 +49,19 @@ end
 
 StandaloneCoverageRootDir = rootDir; %#ok<NASGU>
 
+if ~isempty(cfg.ActiveModelProfile)
+    store = st_model_profile_store();
+    index = find(strcmp({store.Profiles.Name}, cfg.ActiveModelProfile), 1);
+    profile = store.Profiles(index);
+    if isempty(rootDir), rootDir = fullfile(profile.OutputRoot, 'standalone_coverage'); end
+    profile.StandaloneCoverageRootDir = rootDir;
+    values = rmfield(profile, 'Name');
+    args = reshape([fieldnames(values), struct2cell(values)]', 1, []);
+    st_save_model_profile(profile.Name, args{:}, 'Overwrite', true);
+    cfg = st_config();
+    return;
+end
+
 st_save_runtime_target_fields( ...
     cfg.RuntimeTargetFile, ...
     struct( ...

@@ -1,6 +1,6 @@
 # TODO and Deferred Decisions
 
-This file records decisions that are intentionally not presented as implemented features.
+This file separates completed implementation from deferred decisions and runtime validation.
 
 ## Safety and expected values
 
@@ -11,9 +11,13 @@ This file records decisions that are intentionally not presented as implemented 
 
 ## Examples and onboarding
 
-- [ ] Create an anonymized `examples/TestManagement.example.xlsx` matching the README schema.
-- [ ] Create a minimal redistributable Simulink model and expected workflow output.
-- [ ] Decide whether the example requires SLDV or keeps SLDV as a separate advanced example.
+- [x] Generate anonymous model, Dataset MAT and `TestManagement.example.xlsx` locally with `st_create_example`.
+- [x] Keep the basic example FILE/MAT; SLDV GENERATE is not required.
+- [x] Add task-oriented Korean copyable runbooks under `docs/manual/`.
+- [x] Add named model profiles with isolated output/checkpoint paths and CLI/list selection.
+- [x] Add read-only readiness and strict selected-stage restart through workflow completion.
+- [x] Add PACKAGE/SUMMARY regeneration into a new PipelineId from hash-verified saved evidence.
+- [ ] Run `docs/manual/runtime-verification.md` on R2025b and retain example output, restart/readiness evidence and Test Manager folder-button checks.
 - [ ] Rename the local working directory from the historical misspelling when workspace migration is safe.
 
 ## Package migration

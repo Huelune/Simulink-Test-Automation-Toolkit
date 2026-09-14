@@ -70,6 +70,7 @@ for i = 1:numel(manifest.Targets)
 end
 
 status = target_action_status(manifest.Targets, 'PackageStatus');
+manifest.PackageInventory = st_package_inventory(manifest);
 manifest.Actions.PACKAGE = action_state(status, ...
     'Model, Input, CVF, CVT, and one HTML report packaged per target');
 manifest.Status = pipeline_status(manifest);
@@ -415,7 +416,7 @@ end
 end
 
 function require_action(manifest, name)
-if double(manifest.Version) ~= 2 || ~isfield(manifest, 'Actions') || ...
+if ~ismember(double(manifest.Version), [2 3]) || ~isfield(manifest, 'Actions') || ...
         ~isfield(manifest.Actions, name) || ...
         ~ismember(upper(string(manifest.Actions.(name).Status)), ["OK","WARN"])
     error('simtest:StandalonePipelineActionNotReady', ...

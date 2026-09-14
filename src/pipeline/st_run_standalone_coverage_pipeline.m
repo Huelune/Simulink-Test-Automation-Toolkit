@@ -234,6 +234,19 @@ try
         manifest.PerCutRunDirectory, pipelineRoot);
     manifest.TestManagerWorkFile = execution.TestFile;
     manifest.Targets = build_target_state(bundle.Manifest, execution);
+    replayFiles = {manifest.TestManagerWorkFile};
+    for i = 1:numel(manifest.Targets)
+        replayFiles{end+1} = manifest.Targets(i).StandaloneModelFile; %#ok<AGROW>
+        if ~isempty(manifest.Targets(i).SignalEditorInput)
+            replayFiles{end+1} = manifest.Targets(i).SignalEditorInput; %#ok<AGROW>
+        end
+    end
+    manifest.ReplayInputs = repmat(struct('Path','','SHA256',''),0,1);
+    for i = 1:numel(replayFiles)
+        if any(arrayfun(@(entry) st_same_path(entry.Path,replayFiles{i}),manifest.ReplayInputs)), continue; end
+        signature = st_file_signature(replayFiles{i});
+        manifest.ReplayInputs(end+1,1) = struct('Path',replayFiles{i},'SHA256',signature.SHA256);
+    end
     manifest.BundleSessionCleanup = execution.SessionCleanup;
     manifest.RunnerEnvironmentCleanupStatus = ...
         runtimeContext.RunnerEnvironmentCleanupStatus;
@@ -662,7 +675,7 @@ end
 
 function manifest = initial_manifest(id, root, source, options, saveTestResult)
 manifest = struct( ...
-    'Version', 2, 'PipelineId', id, 'PipelineRoot', root, ...
+    'Version', 3, 'PipelineId', id, 'PipelineRoot', root, ...
     'Action', 'EXECUTE', 'Status', 'RUNNING', ...
     'CreatedAt', timestamp_text(), 'UpdatedAt', timestamp_text(), ...
     'SaveTestResult', logical(saveTestResult), ...

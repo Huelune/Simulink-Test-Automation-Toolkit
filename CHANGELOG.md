@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Added local named model profiles, a generated anonymous FILE/MAT example,
+  read-only `st_check_readiness`, and strict `st_run_from_stage` execution.
+  Valid predecessors are inspected and reused; invalid predecessors block
+  instead of being repaired implicitly. Preparation checkpoints now preserve
+  independent input/output readbacks and incomplete-stage status.
+- Added hash-verified PACKAGE/SUMMARY regeneration into a new v3 PipelineId,
+  recording source provenance and zero new test executions. Existing Action
+  once-per-PipelineId rules and v2 reads remain supported. Failed/partial
+  derivatives do not replace latest; missing saved evidence blocks regeneration.
+- Added Korean task runbooks, behavior tests and disposable R2025b restart
+  acceptance cases. Local MATLAB is unavailable; runtime validation is pending.
+
 - Packaged standalone Coverage artifacts now use the safe Test Case name:
   `{TestCaseName}.cvf`, `{TestCaseName}.cvt`, and `{TestCaseName}.html` at the
   target root. The original `cvhtml` report binds a matching short filter name

@@ -29,4 +29,14 @@ end
 state.Artifacts.Model = st_file_signature(cfg.ModelFile);
 state.Artifacts.TestFile = st_file_signature(cfg.TestFile);
 st_save_workflow_state(state, cfg);
+capturePlan = plan;
+capturePlan.(runColumn) = plan.(runColumn) & strcmpi(string(result.Status),'FAIL');
+state = st_record_restart_stage(state, capturePlan, stage, cfg, 'FAIL');
+capturePlan.(runColumn) = plan.(runColumn) & ~strcmpi(string(result.Status),'FAIL');
+state = st_record_restart_stage(state, capturePlan, stage, cfg, 'OK');
+if strcmp(stage,'SLDV')
+    % Input preparation may intentionally convert a source CUT to atomic.
+    capturePlan.RunHARNESS = capturePlan.(runColumn);
+    state = st_record_restart_stage(state,capturePlan,'HARNESS',cfg,'OK');
+end
 end
