@@ -317,7 +317,7 @@ verifyTrue(testCase, contains(text, ...
 verifyTrue(testCase, contains(text, ...
     "'Execution Executed','Execution Total','Execution (%)'"));
 verifyTrue(testCase, contains(text, 'DecisionExecuted(i) = scalar_metric(item.DecisionCovered)'));
-verifyTrue(testCase, contains(text, 'ExecutionExecuted(i) = double(item.ExecutionCovered)'));
+verifyTrue(testCase, contains(text, 'ExecutionExecuted(i) = scalar_metric(item.ExecutionCovered)'));
 verifyFalse(testCase, contains(text, 'MetricSnapshot'));
 verifyFalse(testCase, contains(text, 'load('));
 [percentage, percentageText] = st_coverage_percentage(0, 0);

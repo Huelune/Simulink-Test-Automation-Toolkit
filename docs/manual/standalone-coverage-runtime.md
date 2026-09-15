@@ -265,7 +265,7 @@ for k = 1:numel(m.Targets)
 end
 
 % 패키지 Test Manager 파일 열기
-sltest.testmanager.load(m.TestManagerFile);
+sltest.testmanager.TestFile(m.TestManagerFile);
 sltest.testmanager.view
 ```
 
