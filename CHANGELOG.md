@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Standalone Harness export now reports progress. Each target prints a
+  start line, the elapsed time of its source-copy save, Harness export and
+  standalone save, and a completion line; reused targets are named instead
+  of silently skipped. ZIP archiving reports the bundle size first.
 - Bundle manifest export now reports what it is doing. Toolbox dependency
   analysis, whole-bundle SHA-256 hashing, and the source-unchanged recheck
   each log a start/complete checkpoint with elapsed time, and the hashing

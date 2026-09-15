@@ -99,6 +99,11 @@ for i = 1:height(targets)
     if ~isempty(existing)
         bundlePaths(i) = keyPaths(existing);
         details(i) = keyDetails(existing);
+        fprintf('[%d/%d] REUSE %s | Harness=%s\n', ...
+            i, height(targets), sourceOwner, harnessName);
+        log_message(logConfig, 'INFO', ...
+            '[StandaloneHarness %d/%d] reused | Source=%s | Harness=%s', ...
+            i, height(targets), sourceOwner, harnessName);
         continue;
     end
 
@@ -111,6 +116,16 @@ for i = 1:height(targets)
             sourceOwner, harnessName);
     end
 
+    % Each target re-saves the whole source copy and runs a Harness export.
+    % Both are minutes-long on a large model, so report progress per target
+    % and per call instead of leaving the console silent.
+    targetTimer = tic;
+    fprintf('[%d/%d] START %s | Harness=%s\n', ...
+        i, height(targets), sourceOwner, harnessName);
+    log_message(logConfig, 'INFO', ...
+        '[StandaloneHarness %d/%d] start | Source=%s | Harness=%s', ...
+        i, height(targets), sourceOwner, harnessName);
+
     outputFolder = fullfile(destination, target_folder(targets(i,:)));
     if ~isfolder(outputFolder), mkdir(outputFolder); end
     outputModel = standalone_model_name(harnessName);
@@ -120,12 +135,18 @@ for i = 1:height(targets)
     folderCleanup = onCleanup(@() cd(previousFolder)); %#ok<NASGU>
     cd(outputFolder);
     try
+        stepTimer = tic;
         save_system(temporaryModel);
+        report_step(logConfig, 'save source copy', stepTimer);
+        stepTimer = tic;
         sltest.harness.export( ...
             sourceOwner, harnessName, 'Name', outputModel);
+        report_step(logConfig, 'harness export', stepTimer);
         if bdIsLoaded(outputModel)
+            stepTimer = tic;
             save_system(outputModel, outputPath);
             close_system(outputModel, 0);
+            report_step(logConfig, 'save standalone model', stepTimer);
         end
         if ~isfile(outputPath)
             error('simtest:AssetHarnessExportMissing', ...
@@ -150,11 +171,13 @@ for i = 1:height(targets)
         'StandaloneModelFile', relative, ...
         'StandaloneCUTPath', standaloneCutPath);
     keyDetails(end+1,1) = details(i); %#ok<AGROW>
-    log_message(logConfig, 'DEBUG', ...
+    fprintf('[%d/%d] DONE  %s | %.1f sec\n', ...
+        i, height(targets), outputModel, toc(targetTimer));
+    log_message(logConfig, 'INFO', ...
         ['[StandaloneHarness %d/%d] exported | Source=%s | ' ...
-         'Harness=%s | Model=%s | CUT=%s'], ...
+         'Harness=%s | Model=%s | CUT=%s | elapsed=%.3f sec'], ...
         i, height(targets), sourceOwner, harnessName, ...
-        outputModel, standaloneCutPath);
+        outputModel, standaloneCutPath, toc(targetTimer));
 end
 clear sessionCleanup;
 log_message(logConfig, 'INFO', ...
@@ -301,6 +324,13 @@ if numel(candidates) > limit
     parts(end+1,1) = "...+" + string(numel(candidates) - limit);
 end
 text = char(strjoin(parts, ', '));
+end
+
+function report_step(logConfig, label, timerValue)
+elapsed = toc(timerValue);
+fprintf('       %-22s %7.1f sec\n', label, elapsed);
+log_message(logConfig, 'DEBUG', ...
+    'Standalone Harness step | Step=%s | elapsed=%.3f sec', label, elapsed);
 end
 
 function value = empty_detail()

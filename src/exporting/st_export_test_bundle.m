@@ -407,7 +407,16 @@ if createArchive
     currentStage = 'Create ZIP Archive';
     stageTimer = start_step(currentStage);
     archivePath = [finalDirectory '.zip'];
+    % Compression time tracks the bundle size, which the manifest already
+    % measured. Print it so a multi-minute archive is expected, not a hang.
+    bundleBytes = 0;
+    if ~isempty(manifest.Files)
+        bundleBytes = sum([manifest.Files.Bytes]);
+    end
+    taskTimer = begin_task(cfg, 'ZIP archive', '%.1f MB in %d files', ...
+        bundleBytes / 1e6, numel(manifest.Files));
     zip(archivePath, bundleId, destination);
+    end_task(cfg, 'ZIP archive', taskTimer, 'file=%s', archivePath);
     finish_step(currentStage, stageTimer);
 else
     fprintf('\nCreate ZIP Archive: SKIP (CreateArchive=false)\n');
