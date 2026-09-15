@@ -5,7 +5,7 @@
 
 ```matlab
 st_setup
-cfg = st_select_model_profile('OBC');
+cfg = st_select_model_profile('MODEL_A');
 [ready, checks] = st_check_readiness('Workflow','STANDALONE','FromStage','EXECUTE');
 disp(checks)
 assert(ready.Ready, 'Resolve readiness checks first.');
@@ -40,7 +40,7 @@ HTML은 Test Manager 요약 보고서가 아닌 Coverage REPORT 화살표의 원
 
 ```matlab
 st_setup
-cfg = st_select_model_profile('OBC');
+cfg = st_select_model_profile('MODEL_A');
 pipelineId = '여기에_PipelineId';
 [m, manifestPath] = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir,pipelineId);
 fprintf('Manifest: %s\n',manifestPath);

@@ -7,7 +7,7 @@
 
 ```matlab
 st_setup
-cfg = st_select_model_profile('OBC');
+cfg = st_select_model_profile('MODEL_A');
 [ready, checks] = st_check_readiness('Workflow','FROM_HARNESS','FromStage','HARNESS');
 disp(checks)
 assert(ready.Ready, 'Resolve readiness checks first.');
@@ -18,7 +18,7 @@ info = st_run_from_stage('Workflow','FROM_HARNESS','FromStage','HARNESS');
 
 ```matlab
 st_setup
-cfg = st_select_model_profile('OBC');
+cfg = st_select_model_profile('MODEL_A');
 [ready, checks] = st_check_readiness('Workflow','AFTER_HARNESS','FromStage','SLDV');
 disp(checks)
 assert(ready.Ready, 'Resolve readiness checks first.');

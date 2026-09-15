@@ -9,7 +9,7 @@ TC별 실패만 골라 재실행하거나 중간 단계에서 멈추는 API는 �
 
 ```matlab
 st_setup
-cfg = st_select_model_profile('OBC');
+cfg = st_select_model_profile('MODEL_A');
 workflow = 'FROM_HARNESS';
 fromStage = 'ASSESSMENT';
 [ready, checks] = st_check_readiness('Workflow',workflow,'FromStage',fromStage);
@@ -37,7 +37,7 @@ readback이 판별하지 못하는 의미 변경은 있을 수 있으므로 배�
 
 ```matlab
 st_setup
-cfg = st_select_model_profile('OBC');
+cfg = st_select_model_profile('MODEL_A');
 sourceId = '여기에_원본_PipelineId';
 [ready, checks] = st_check_readiness('Workflow','STANDALONE', ...
     'FromStage','PACKAGE','SourcePipelineId',sourceId);

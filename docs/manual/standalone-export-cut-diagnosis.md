@@ -31,7 +31,7 @@ Source=<TopModel>/<...>/<CUT> | Model=<HarnessName> | Matches=0
 
 ```matlab
 st_setup
-cfg = st_select_model_profile('여기에_profile');
+cfg = st_select_model_profile('MODEL_A');
 src = '여기에_CUT_경로';        % 오류 메시지의 Source= 값
 
 load_system(cfg.ModelFile)
