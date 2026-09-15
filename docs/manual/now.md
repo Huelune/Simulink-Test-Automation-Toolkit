@@ -7,9 +7,11 @@
 
 ```matlab
 st_setup
-cfg = st_select_model_profile('MODEL_A');
 info = st_export_test_bundle('ExecutionModelMode', 'STANDALONE_HARNESS');
 ```
+
+지금까지 쓰던 모델 선택(`runtime_target.mat`)을 그대로 씁니다. profile을 만들 필요
+없습니다. 대상 모델을 바꾸려면 `st_select_target_model`을 먼저 실행하세요.
 
 ## 2. 결과 판정
 
@@ -55,3 +57,35 @@ n1 = numel(find_system(src,'SearchDepth',1, ...
 오류 없이 블록 필터로 해석해 `0`을 돌려주므로, `n1=0`이 나오면 오타입니다.
 
 MATLAB R2025b 실기 확인은 이 수정 이후 아직 이루어지지 않았습니다.
+
+---
+
+## 참고: 모델이 여러 개일 때만 — profile
+
+한 모델만 쓴다면 필요 없습니다. 모델마다 결과 폴더와 Test File을 따로 두고
+전환하고 싶을 때만 한 번 등록합니다.
+
+```matlab
+st_setup
+st_save_model_profile('MODEL_A', ...
+    'ModelFile',       'D:\models\MODEL_A\MODEL_A.slx', ...
+    'ManagementExcel', 'D:\models\MODEL_A\TestManagement.xlsx', ...
+    'OutputRoot',      'D:\results\MODEL_A');
+```
+
+- Model과 Excel은 **이미 존재해야** 합니다. 없으면 바로 실패합니다.
+- `TestFile`과 `StandaloneCoverageRootDir`은 생략하면 `OutputRoot` 아래로 잡힙니다.
+- `ManagementSheet`는 `Targets`, `TestSuiteName`은 `New Test Suite 1`이 기본값입니다.
+- `OutputRoot`는 다른 profile의 결과 경로와 겹치면 거부됩니다.
+- 같은 이름을 고칠 때만 `'Overwrite', true`를 붙입니다.
+
+등록 후 전환합니다. 선택만 하고 모델을 열지는 않습니다.
+
+```matlab
+cfg = st_select_model_profile('MODEL_A');   % 이름으로
+cfg = st_select_model_profile();            % 목록에서 고르기
+cfg = st_select_model_profile('');          % 기존 방식으로 되돌리기
+```
+
+profile을 고르면 결과·상태·export 경로가 모두 그 `OutputRoot` 아래로 바뀝니다.
+저장 위치는 저장소 루트의 `model_profiles.mat`이며 Git에 올라가지 않습니다.
