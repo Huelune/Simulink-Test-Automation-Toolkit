@@ -200,9 +200,14 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 14. ExpectedUpdateMode=APPLY 갱신과 선택적 재실행 결과가 종합 보고서에 남는지 확인한다.
 15. export 전후 원본 모델·Test File checksum, Dirty 상태와 Harness inventory가
     불변인지 확인한다.
-16. If/Switch/MinMax/MultiPortSwitch/SwitchCase가 있는 CUT의 명세서를 export하고,
-    블록 이름 다음 줄의 D번호·분기종류·저장 파라미터 표현과 DecisionBlockDetails의
-    Outcome/Expression/ReadStatus가 실제 블록 설정과 일치하는지 확인한다.
+16. If/Switch/MinMax/MultiPortSwitch/SwitchCase와 Saturate/Abs/DeadZone/RateLimiter/
+    Relay/Lookup_n-D/Interpolation_n-D/PreLookup/Integrator/DiscreteIntegrator/
+    ForIterator/WhileIterator/Logic이 있는 CUT의 명세서를 export하고, 블록 이름 다음
+    줄의 D번호·저장 파라미터 표현과 DecisionBlockDetails의
+    Outcome/Expression/ReadStatus가 실제 블록 설정과 일치하는지 확인한다. 메인 시트가
+    전부 `[T/F]`이고 세부 시트 `Outcome`만 종류별로 갈리는지 확인한다. 각 암시적
+    블록의 `BlockType` 문자열과 파라미터 이름이 실제 `get_param` 결과와 일치하는지,
+    철자가 틀려 조용히 0건으로 나오지 않는지 확인한다.
 17. FILE+MAT 단일/복수 Dataset, 명시적 MatVariableName, Scenario 간 및 Harness
     interface mismatch, Dataset 없음·시간 없음, nested dataNoEffect를 확인하고 MAT
     실행에서 sldvsimdata와 parameter override가 호출되지 않는 증거를 보관한다.
@@ -346,14 +351,37 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - 시간값 선택은 `st_specification_max_time`으로 분리했고, OFF에 시간 입력이 있어도
   입력 Tmax를 쓰지 않는 회귀 검사와 SLDV의 StopTime fallback 금지 검사를 추가했다.
   현재 PC에는 MATLAB이 없어 이 변경도 정적 검사만 수행했다.
-- 명세서의 `DecisionBlocks` 열은 CUT 아래 If/MinMax/Switch/MultiPortSwitch/SwitchCase
-  후보를 블록 이름과 `D번호 [분기종류]블록유형 (저장된 조건/선택 설정)` 두 줄씩
-  기록한다. If/Switch는 `[T/F]`, MinMax/MultiPortSwitch는 `[SELECT]`, SwitchCase는
-  `[CASE]`를 사용한다. 원본 Outcome, BlockType, Name, Expression, 전체 경로와 개별
-  JSON 객체, 읽기 상태는 `DecisionBlockDetails` 시트에 블록별 행으로 기록한다.
+- 명세서의 `DecisionBlocks` 열은 CUT 아래 명시적 분기(If/MinMax/Switch/
+  MultiPortSwitch/SwitchCase)와 암시적 분기(Saturate/Abs/DeadZone/RateLimiter/Relay/
+  Lookup_n-D/Interpolation_n-D/PreLookup/Integrator/DiscreteIntegrator/ForIterator/
+  WhileIterator/Logic) 후보를 블록 이름과 `D번호 [T/F]블록유형 (저장된 조건/선택
+  설정)` 두 줄씩 기록한다. **메인 시트는 분기 종류와 무관하게 항상 `[T/F]`를 쓴다.**
+  구체적인 Outcome(`SELECT`, `CASE`, `LIMIT`, `BAND`, `RATE`, `ON/OFF`, `SIGN`,
+  `INTERVAL`, `LOOP`, `CONDITION`)은 BlockType, Name, Expression, 전체 경로, 개별 JSON
+  객체, 읽기 상태와 함께 `DecisionBlockDetails` 시트에 블록별 행으로만 기록한다.
   Name은 경로 문자열을 분리하지 않고 `get_param(path,'Name')`으로 읽는다. `SearchDepth=1`로
   CUT의 직계 자식만 정렬·중복 제거하며 하위 Subsystem, 마스크, 라이브러리 링크,
   Variant, 참조 모델 내부 및 Stateflow/MATLAB Function 내부 분기는 포함하지 않는다.
+  자식 Enabled/Triggered Subsystem의 제어 포트 분기와 마스크 Subsystem으로 구현된
+  Saturation Dynamic/Dead Zone Dynamic/Unit Delay Enabled/Unit Delay Resettable은
+  `BlockType`이 `SubSystem`이므로 제외한다.
+- 스캔 대상 BlockType, Outcome 토큰, 표시 별칭, 읽을 파라미터는 전부
+  `src/exporting/st_specification_decision_catalog.m` 한 곳에 있다. 타입 추가는 catalog
+  한 행이며, 표현식 조립이 불규칙한 타입만 `st_specification_decision_descriptor`의
+  `case`를 추가로 필요로 한다(`Formatter` 열이 그 구분을 명시한다). 파라미터가
+  비활성이어도 행을 거르지 않고 상태를 표현식에 남긴다. breakpoint 등 값은 workspace
+  에서 평가하지 않고 저장된 문자열 그대로 옮긴다.
+- 의도적으로 열어 둔 확장점 두 가지. (1) `outcome`이 `switch` 앞에서 배정되므로
+  `Formatter="CUSTOM"` case가 읽은 값에 따라 Outcome을 덮어쓸 수 있다(메인 셀은
+  `[T/F]` 고정이라 영향 없음). (2) `Delay` 블록과 Enabled/Triggered Subsystem 지원은
+  각각 catalog 한 행 또는 포트 탐침 추가로 확장 가능하다.
+- MATLAB 없이 작성한 미검증 런타임 가정: `PreLookup`의 대문자 L, `Lookup_n-D`와
+  `Interpolation_n-D`의 하이픈 표기, `Saturate`(Saturation 블록) BlockType 철자.
+  `find_system`은 모르는 BlockType에 에러가 아니라 빈 결과를 주므로 철자가 틀리면
+  **조용히 0건**이 된다. 반면 필수 파라미터 이름이 틀리면 `조건식 읽기 실패` WARN 행이
+  되어 note에 원인이 남는다. 그래서 BlockType 철자 세 개를 가장 먼저 확인한다.
+  이름이 불확실한 파라미터는 catalog의 `OptionalParameters`에 두어 실패해도 표현식에서
+  빠지기만 하게 했고, 런타임 확인 후 `Parameters`로 승격한다.
 - 명세서 Excel의 첫 번째 시트는 `사용법`이다. 사용자 실행 진입점과 단계별 고급
   명령의 역할, 사용 시점, 대표 호출을 기록하며 같은 내용은
   `docs/execution-commands.md`에도 유지한다.

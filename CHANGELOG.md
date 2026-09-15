@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+- `DecisionBlocks` now inventories the block types that create Simulink
+  Coverage objectives without looking like a decision: Saturate, Abs,
+  DeadZone, RateLimiter, Relay, Lookup_n-D, Interpolation_n-D, PreLookup,
+  Integrator, DiscreteIntegrator, ForIterator, WhileIterator and Logic sit
+  next to If/Switch/MinMax/MultiPortSwitch/SwitchCase under the same
+  D-numbering. A CUT with no If or Switch block could already report Decision
+  coverage and the specification never said where it came from. Masked blocks
+  such as Saturation Dynamic and Unit Delay Enabled report BlockType SubSystem
+  and stay out of a SearchDepth=1 BlockType scan, as do the control ports of a
+  child Enabled or Triggered Subsystem.
+- The `DecisionBlocks` cell on the TestSpecification sheet now always prints
+  `[T/F]`, and the specific branch kind moved to the `Outcome` column of
+  DecisionBlockDetails. The main sheet says where the branches are, the detail
+  sheet says what kind they are. MinMax and Multiport Switch used to print
+  `[SELECT]` and Switch Case `[CASE]` in the main cell; those rows now read
+  `[T/F]` and keep `SELECT` and `CASE` in the detail sheet. Outcome tokens are
+  no longer rendered inline, so they were renamed for legibility and grouped by
+  branch kind rather than by block: LIMIT, BAND, RATE, ON/OFF, SIGN, INTERVAL,
+  LOOP and CONDITION.
+- Blocks whose branch parameters are inactive are listed rather than filtered.
+  An Integrator with `LimitOutput=off; ExternalReset=none` appears with that
+  state in its expression. The column is a static inventory of candidates and
+  claims no objective count, so filtering on saved parameters alone would be
+  wrong whenever the data type or optimization settings decide the outcome.
+  Breakpoint parameters are copied as saved text and never resolved in a
+  workspace, so a lookup table configured from a variable shows the variable
+  name.
+- Block type knowledge moved into `st_specification_decision_catalog`. The scan
+  list, the outcome token, the failed-read fallback outcome and the display
+  alias were four literal copies of the same table, and the fallback copy only
+  ran when an expression read had already failed, so drift there was invisible.
+  Adding a type is now one catalog row, and only a type whose expression needs
+  special assembly still touches `st_specification_decision_descriptor`.
 - File hashing now reads on the Java side instead of copying every chunk
   through MATLAB. The cost was never SHA-256 itself but marshalling the
   bytes across the boundary, which dominated delivery verification once a

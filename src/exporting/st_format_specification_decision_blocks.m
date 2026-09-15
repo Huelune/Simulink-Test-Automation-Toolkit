@@ -1,13 +1,30 @@
 function [specification, details] = st_format_specification_decision_blocks(specification, cfg)
 %ST_FORMAT_SPECIFICATION_DECISION_BLOCKS Make the main list readable in Excel.
 % The main DecisionBlocks cell contains a block Name line followed by a
-% "D<number> [outcome]Type (expression)" line. DecisionBlockDetails retains
-% structured fields and one JSON object per row so downstream processing
+% "D<number> [T/F]Type (expression)" line. The main cell prints T/F for every
+% branch kind so the sheet reads uniformly as "a branch lives here".
+% DecisionBlockDetails keeps the specific Outcome token together with the
+% structured fields and one JSON object per row, so downstream processing
 % does not depend on parsing the display.
 if nargin < 2, cfg = []; end
+mainOutcome = "T/F";
 headers = {'TestSpecificationRow','TestCaseName','CUTPath','Decision', ...
     'Outcome','BlockType','Name','Expression','Path','JSON','ReadStatus','Message'};
 rows = strings(0, numel(headers));
+displayCatalog = table(strings(0,1), strings(0,1), ...
+    'VariableNames', {'BlockType','DisplayType'});
+try
+    fullCatalog = st_specification_decision_catalog();
+    displayCatalog = fullCatalog(:, {'BlockType','DisplayType'});
+    log_message(cfg, 'DEBUG', ...
+        'Specification decision block display catalog loaded | Types=%d', ...
+        height(displayCatalog));
+catch ME
+    log_message(cfg, 'WARN', ...
+        'Specification decision block display catalog unavailable | %s | BlockType passthrough', ...
+        ME.message);
+end
+unknownTypes = strings(0,1);
 columnNames = string(specification.Properties.VariableNames);
 decisionIndex = find(columnNames == "DecisionBlocks", 1);
 log_message(cfg, 'INFO', ...
@@ -64,9 +81,15 @@ for row = 1:height(specification)
             readStatus = json_text(decoded(k), 'ExpressionStatus');
             message = json_optional_text(decoded(k), 'Message');
             displayName = regexprep(strtrim(name), '\s+', ' ');
-            displayType = decision_type(blockType);
+            [displayType, knownType] = display_type(blockType, displayCatalog);
+            if ~knownType && ~any(unknownTypes == blockType)
+                unknownTypes(end+1,1) = blockType; %#ok<AGROW>
+                log_message(cfg, 'WARN', ...
+                    'Specification decision block type not in catalog | Row=%d | Decision=%s | BlockType=%s', ...
+                    row + 1, decision, blockType);
+            end
             lines(2*k-1) = displayName;
-            lines(2*k) = decision + " [" + outcome + "]" + ...
+            lines(2*k) = decision + " [" + mainOutcome + "]" + ...
                 displayType + " " + parenthesize(expression);
             rows(end+1,:) = detail_row(row, testCaseName, cutPath, decision, ...
                 outcome, blockType, name, expression, path, itemJson, ...
@@ -131,11 +154,15 @@ if ~isscalar(value) || ismissing(value)
 end
 end
 
-function value = decision_type(blockType)
-if blockType == "If"
-    value = "IF";
+function [value, known] = display_type(blockType, displayCatalog)
+% An unknown type prints its own name, so re-formatting a workbook written
+% by an older catalog keeps working instead of failing the row.
+index = find(string(displayCatalog.BlockType) == string(blockType), 1);
+known = ~isempty(index);
+if known
+    value = string(displayCatalog.DisplayType(index));
 else
-    value = blockType;
+    value = string(blockType);
 end
 end
 

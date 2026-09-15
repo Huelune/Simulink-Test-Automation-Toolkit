@@ -632,9 +632,13 @@ result/verification/
 직계 Inport가 없는 OFF 대상도 Signal Editor와 TC 연결이 있으면 입력 시나리오를
 출력합니다. `MaxTime` 열은 `FILE/GENERATE` 테스트에는 TC별 입력 Tmax를,
 OFF 대상에는 Harness Solver `StopTime`을 초 단위로 기록합니다.
-`DecisionBlocks` 열에는 CUT의 직계 자식인 If/MinMax/Switch 계열 블록을 블록 이름과
-`D번호 [분기종류]블록유형 (저장된 조건/선택 설정)` 두 줄씩 표시합니다. Outcome,
-Expression, 종류, 전체 경로와 JSON 객체는 `DecisionBlockDetails` 시트에 기록합니다.
+`DecisionBlocks` 열에는 CUT의 직계 자식 중 If/Switch 계열과, 조건식 없이 저장된
+파라미터로 Coverage objective가 생기는 Saturate·Abs·Lookup·Relay·Integrator 등 암시적
+분기 블록을 블록 이름과 `D번호 [T/F]블록유형 (저장된 조건/선택 설정)` 두 줄씩
+표시합니다. 메인 시트는 분기 종류와 무관하게 항상 `[T/F]`로 적고, 구체적인 분기
+종류는 `DecisionBlockDetails` 시트의 `Outcome` 열에 기록합니다. Expression, 전체 경로와
+JSON 객체도 같은 시트에 있습니다. 자세한 규칙은
+[docs/test-specification.md](docs/test-specification.md)를 참고하세요.
 
 현재 Test Manager 결과나 저장된 toolkit run을 선택해 자산을 모으려면:
 

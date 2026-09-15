@@ -59,22 +59,76 @@ NaN이며 비고를 남긴다. 시간을 가진 SLDV 입력을 읽었지만 시�
 Harness `StopTime`이 숫자로 직접 해석되지 않거나 유한한 0 이상 값이 아니면 NaN과
 비고를 기록한다.
 
-`DecisionBlocks`는 CUT 바로 아래(`SearchDepth=1`)에서 정적으로 찾은 `If`, `MinMax`, `Switch`,
-`MultiPortSwitch`, `SwitchCase` 블록을 블록마다 이름 한 줄과
-`D번호 [분기종류]블록유형 (저장된 조건/선택 설정)` 한 줄로 표시한다. Path, BlockType
-순으로 정렬하고 중복을 제거하며 빈 목록은 빈 셀이다. 예를 들면 다음과 같다.
+`DecisionBlocks`는 CUT 바로 아래(`SearchDepth=1`)에서 정적으로 찾은 분기 후보 블록을
+블록마다 이름 한 줄과 `D번호 [T/F]블록유형 (저장된 조건/선택 설정)` 한 줄로 표시한다.
+Path, BlockType 순으로 정렬하고 중복을 제거하며 빈 목록은 빈 셀이다.
+
+대상은 두 그룹이다. 대화상자에 조건을 직접 적는 **명시적 분기**(`If`, `Switch`,
+`MinMax`, `MultiPortSwitch`, `SwitchCase`)와, 조건식은 없지만 저장된 파라미터 때문에
+Simulink Coverage objective가 생기는 **암시적 분기**(`Saturate`, `Abs`, `DeadZone`,
+`RateLimiter`, `Relay`, `Lookup_n-D`, `Interpolation_n-D`, `PreLookup`, `Integrator`,
+`DiscreteIntegrator`, `ForIterator`, `WhileIterator`, `Logic`). D번호는 두 그룹을
+구분하지 않고 정렬 결과에 연속으로 붙인다. 권위 있는 목록은
+`src/exporting/st_specification_decision_catalog.m` 한 곳이다.
+
+메인 시트의 `DecisionBlocks` 셀은 **분기 종류와 무관하게 항상 `[T/F]`로 적는다.**
+구체적인 분기 종류는 `DecisionBlockDetails` 시트의 `Outcome` 열과 JSON에만 기록한다.
+메인 시트는 분기의 존재와 위치를, 세부 시트는 분기의 종류를 담당한다. 예를 들면
+다음과 같다.
 
 ```text
 Dics Block 이름
 D1 [T/F]IF (u1 == 0)
 Dics Block 이름2
 D2 [T/F]Switch (u2 >= 5)
+MinMax 블록
+D3 [T/F]MinMax (max; Inputs=3)
+Sat 1
+D4 [T/F]Saturate (UpperLimit=1; LowerLimit=-1)
 ```
 
+위 네 줄에 대응하는 `DecisionBlockDetails`의 `Outcome`은 각각 `T/F`, `T/F`, `SELECT`,
+`LIMIT`이다.
+
+`DecisionBlockDetails`의 `Outcome` 토큰은 다음과 같다. 블록별이 아니라 분기 종류별로
+묶여 있으므로, 구체적인 블록은 같은 행의 `BlockType` 열과 함께 읽는다.
+
+| Outcome | 대상 BlockType | 의미 |
+| --- | --- | --- |
+| `T/F` | If, Switch | 참/거짓 2분기 |
+| `SELECT` | MinMax, MultiPortSwitch | N개 입력 중 선택 |
+| `CASE` | SwitchCase | case 값 분배 |
+| `LIMIT` | Saturate, Integrator, DiscreteIntegrator | 상/하한 포화, 외부 reset |
+| `BAND` | DeadZone | 구간 아래/안/위 |
+| `RATE` | RateLimiter | 상승/하강/제한 내 |
+| `ON/OFF` | Relay | 히스테리시스 on/off |
+| `SIGN` | Abs | 음수/비음수 |
+| `INTERVAL` | Lookup_n-D, Interpolation_n-D, PreLookup | breakpoint 구간 선택과 외삽 |
+| `LOOP` | ForIterator, WhileIterator | 루프 진입/지속/종료 |
+| `CONDITION` | Logic | Condition/MCDC |
+
 `If`는 `IfExpression`과 선택적인 `ElseIfExpressions`를, `Switch`는 `Criteria`와
-`Threshold`를 읽는다. `MinMax`, `MultiPortSwitch`, `SwitchCase`는 각각 `[SELECT]`,
-`[SELECT]`, `[CASE]`와 저장된 입력 선택 또는 case 설정을 표시한다. `[T/F]`는 실행
-Coverage 결과가 아니라 저장된 블록에 참/거짓 분기가 있다는 정적 표기다.
+`Threshold`를 읽는다. `MinMax`, `MultiPortSwitch`, `SwitchCase`는 저장된 입력 선택
+또는 case 설정을 표시한다. 암시적 분기 블록은 catalog가 지정한 파라미터를
+`이름=값; 이름=값` 형태로 이어 붙인다. 예를 들어 `Saturate`는
+`UpperLimit`/`LowerLimit`, `Relay`는 `OnSwitchValue`/`OffSwitchValue`, `Logic`은
+`Operator`/`Inputs`, `Integrator` 계열은 `LimitOutput`/`ExternalReset`을 읽는다.
+`Abs`는 파라미터를 읽지 않고 `u < 0`으로 표시한다. Lookup 계열의 breakpoint 값은
+workspace에서 평가하지 않고 저장된 문자열 그대로 옮기므로, 변수로 지정한 테이블은
+변수 이름이 보인다.
+
+파라미터가 비활성이어도 목록에서 빼지 않는다. 예를 들어 `LimitOutput=off;
+ExternalReset=none`인 `Integrator`도 그대로 남기고 상태를 표시한다. 이 열은 objective
+개수를 세지 않으며, 실제 objective 생성 여부는 대화상자 파라미터뿐 아니라 데이터
+타입과 최적화 설정도 관여하므로 저장된 파라미터만으로 거르면 틀릴 수 있다.
+
+메인 시트의 `[T/F]`는 실행 Coverage 결과가 아니라 저장된 블록에 분기가 있다는 정적
+표기이며, Decision objective를 뜻하지도 않는다. 모델에 `If`나 `Switch`가 하나도 없어도
+Simulink Coverage가 Decision을 보고하는 이유가 바로 위 암시적 분기 블록이다. 다만
+`Lookup_n-D`/`PreLookup`/`Interpolation_n-D`(`INTERVAL`)는 Lookup Table 지표로,
+`Logic`(`CONDITION`)은 Condition/MCDC 지표로 집계되므로 이 행들은 Decision objective
+수와 일치하지 않는다. 커버리지 숫자와 대조할 때는 반드시 세부 시트의 `Outcome` 열을
+본다.
 
 `DecisionBlockDetails` 시트에는 메인 시트 행, 테스트 케이스명, CUTPath, D번호,
 `Outcome`, `BlockType`, 원본 `Name`, `Expression`, 전체 Simulink `Path`, 개별 JSON
@@ -90,6 +144,16 @@ CUT의 직계 자식만 포함하므로 `CUT/Subsystem/Switch`처럼 하위 Subs
 블록은 포함하지 않는다. 이 값은 실행·컴파일 없이 만드는 제어 분기 후보 블록 목록이다. 실제 Decision
 coverage objective 개수나 Stateflow/MATLAB Function 내부 분기 수를 의미하지 않는다.
 마스크, 라이브러리 링크, Variant 또는 참조 모델 내부로 내려가서 탐색하지 않는다.
+
+따라서 다음은 의도적으로 제외한다.
+
+1. 자식 Enabled/Triggered Subsystem의 Enable/Trigger 분기. 블록 자체는 `BlockType`이
+   `SubSystem`이고 `EnablePort`는 `SearchDepth=1` 밖에 있다. 포트를 행으로 올리면
+   `DecisionBlockDetails`의 `Path`가 그 행이 설명하는 블록을 가리키지 않게 된다.
+2. `Saturation Dynamic`, `Dead Zone Dynamic`, `Unit Delay Enabled`,
+   `Unit Delay Resettable`처럼 마스크 Subsystem으로 구현된 블록. `BlockType`이
+   `SubSystem`이라 BlockType 필터로 일반 Subsystem과 구분할 수 없다.
+3. Stateflow와 MATLAB Function 블록 내부 분기.
 
 입력 내용은 각 신호의 마지막 저장 샘플이다. 신호마다 시간이 달라도 각자의 마지막
 샘플을 사용하며, StopTime에 대한 보간이나 외삽은 하지 않는다. 숫자 배열은 기존

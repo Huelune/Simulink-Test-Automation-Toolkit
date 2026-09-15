@@ -1,10 +1,12 @@
 function [text, count, note] = st_specification_decision_blocks( ...
-        cutPath, cfg, finder, nameReader, descriptorReader)
+        cutPath, cfg, finder, nameReader, descriptorReader, catalogReader)
 %ST_SPECIFICATION_DECISION_BLOCKS Export static control-decision candidates as JSON.
 % Each JSON array item contains BlockType, the actual block Name, full
 % Simulink Path, branch outcome kind, and saved-parameter expression.
 % Only direct child blocks of the CUT are searched.
 % This is a static inventory, not the number of compiled coverage objectives.
+% The scanned block types and their outcome tokens come from
+% st_specification_decision_catalog, which is the only place either is defined.
 if nargin < 3
     finder = @find_system;
 end
@@ -14,15 +16,35 @@ end
 if nargin < 5
     descriptorReader = @st_specification_decision_descriptor;
 end
-blockTypes = ["If"; "MinMax"; "Switch"; "MultiPortSwitch"; "SwitchCase"];
+if nargin < 6
+    catalogReader = @st_specification_decision_catalog;
+end
+try
+    catalog = catalogReader();
+    blockTypes = string(catalog.BlockType);
+    outcomeDefaults = string(catalog.Outcome);
+    if isempty(blockTypes)
+        error('simtest:SpecificationDecisionCatalog', ...
+            'Decision block catalog has no block type.');
+    end
+    st_log(cfg, 'DEBUG', ...
+        'Specification decision catalog loaded | Types=%d | Explicit=%d | Implicit=%d', ...
+        numel(blockTypes), sum(string(catalog.Kind) == "EXPLICIT"), ...
+        sum(string(catalog.Kind) == "IMPLICIT"));
+catch ME
+    st_log(cfg, 'WARN', 'Specification decision catalog unavailable | CUT=%s | %s', ...
+        cutPath, ME.message);
+    error('simtest:SpecificationDecisionCatalog', ...
+        'Decision block catalog is unavailable: %s', ME.message);
+end
 records = strings(0,7); % BlockType, Name, Path, Outcome, Expression, Status, Message
 notes = strings(0,1);
 st_log(cfg, 'INFO', 'Specification decision block scan start | CUT=%s | SearchDepth=1 | Types=%d', ...
     cutPath, numel(blockTypes));
 for k = 1:numel(blockTypes)
     blockType = blockTypes(k);
-    st_log(cfg, 'DEBUG', 'Specification decision block type scan start | CUT=%s | BlockType=%s', ...
-        cutPath, blockType);
+    st_log(cfg, 'DEBUG', 'Specification decision block type scan start | CUT=%s | BlockType=%s | Outcome=%s', ...
+        cutPath, blockType, outcomeDefaults(k));
     try
         paths = string(finder(char(cutPath), ...
             'SearchDepth', 1, 'Type', 'Block', 'BlockType', char(blockType)));
@@ -51,15 +73,15 @@ for k = 1:numel(blockTypes)
                 [outcomes(n), expressions(n)] = ...
                     descriptorReader(char(paths(n)), char(blockType));
             catch ME
-                outcomes(n) = fallback_outcome(blockType);
+                outcomes(n) = outcomeDefaults(k);
                 expressions(n) = "조건식 읽기 실패";
                 statuses(n) = "WARN";
                 messages(n) = string(ME.message);
                 notes(end+1,1) = string(sprintf('%s Expression: %s', ...
                     paths(n), ME.message)); %#ok<AGROW>
                 st_log(cfg, 'WARN', ...
-                    'Specification decision block expression read failed | Path=%s | BlockType=%s | %s', ...
-                    paths(n), blockType, ME.message);
+                    'Specification decision block expression read failed | Path=%s | BlockType=%s | Outcome=%s | %s', ...
+                    paths(n), blockType, outcomeDefaults(k), ME.message);
             end
         end
         records = [records; repmat(blockType, numel(paths), 1) names paths ...
@@ -99,14 +121,4 @@ end
 
 function name = read_name(path)
 name = get_param(path, 'Name');
-end
-
-function outcome = fallback_outcome(blockType)
-if ismember(string(blockType), ["If","Switch"])
-    outcome = "T/F";
-elseif string(blockType) == "SwitchCase"
-    outcome = "CASE";
-else
-    outcome = "SELECT";
-end
 end
