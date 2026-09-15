@@ -454,6 +454,34 @@ verifyEqual(testCase, summary.Status, 'PARTIAL');
 verifyEqual(testCase, summary.ExceptedTargetCount, 1);
 verifyEqual(testCase, char(details.Status(1)), 'PASS');
 verifyEqual(testCase, char(details.Status(2)), 'EXCEPT');
+% Result filtering and metrics never ran for that target, so those bits are
+% reported as not applicable rather than as defects.
+verifyEqual(testCase, char(details.B5(2)), '-');
+verifyEqual(testCase, char(details.B7(2)), '-');
+% Cleanup is still enforced: the model must be closed and the path restored.
+verifyEqual(testCase, char(details.B10(2)), '1');
+end
+
+function testExceptedTargetStillNeedsCleanup(testCase)
+% The EXCEPT allowance must not excuse a leaked execution model.
+[root, manifest] = complete_fixture(testCase, 2);
+delete(manifest.Targets(2).PackagedCVF);
+delete(manifest.Targets(2).CoverageResult);
+delete(manifest.Targets(2).ReportHTML);
+manifest.Targets(2).ExecutionStatus = 'EXCEPT';
+manifest.Targets(2).PackageStatus = 'FAIL';
+manifest.Targets(2).PackagedCVF = '';
+manifest.Targets(2).CoverageResult = '';
+manifest.Targets(2).ReportHTML = '';
+manifest.Targets(2).ModelCleanupStatus = 'FAIL';
+manifest.Actions.EXECUTE.Status = 'WARN';
+manifest.Actions.PACKAGE.Status = 'WARN';
+manifest.Actions.SUMMARY.Status = 'WARN';
+manifest.Status = 'PARTIAL';
+st_write_standalone_pipeline_manifest(root, manifest);
+evalc('[code, ~, details] = st_check_standalone_coverage(''OutputRoot'', root);');
+verifyNotEqual(testCase, code, '1111111111');
+verifyEqual(testCase, char(details.B10(2)), '0');
 end
 
 function testUnexplainedFailureStillBreaksTheContract(testCase)

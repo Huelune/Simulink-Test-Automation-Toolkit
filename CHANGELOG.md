@@ -8,6 +8,9 @@
   expected CVF/CVT/HTML counts exclude it, and an Action WARN explained
   entirely by excepted targets no longer zeroes the manifest bit for every
   target. Such a run reports PARTIAL with an EXCEPT row, never PASS.
+  Result filtering and coverage metrics are reported as not applicable for
+  an excepted target, while cleanup stays enforced so a leaked execution
+  model or an unrestored MATLAB path is still a failure.
 - `st_check_standalone_coverage` now scans for forbidden artifacts with a
   single recursive listing instead of five patterns per target directory.
   The unzipped Coverage report puts hundreds of companion assets in every
