@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Bundle manifest export now reports what it is doing. Toolbox dependency
+  analysis, whole-bundle SHA-256 hashing, and the source-unchanged recheck
+  each log a start/complete checkpoint with elapsed time, and the hashing
+  loop prints progress every five seconds.
 - Fixed standalone Harness export failing to re-identify a library-linked CUT.
   `find_system` defaults stop at a link boundary, so a CUT inside a library
   link reported no ports while its exported copy reported the real ones, and

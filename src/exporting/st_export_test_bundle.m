@@ -298,7 +298,11 @@ if reproducible
     runnerOutput = fullfile(stagingDirectory, 'run_exported_tests.m');
     copyfile_checked(fullfile(resourceDirectory, 'run_exported_tests.m'), ...
         runnerOutput);
+    taskTimer = begin_task(cfg, 'Toolbox products', ...
+        'models=%d', numel(dependencyFiles));
     products = discover_products(dependencyFiles);
+    end_task(cfg, 'Toolbox products', taskTimer, ...
+        'found=%d', numel(products));
     readmeResource = 'README.bundle.ko.md';
 else
     products = repmat(struct('Name', '', 'Version', ''), 0, 1);
@@ -354,8 +358,12 @@ readmeText = strrep(readmeText, '{{REFERENCE_RUN}}', referenceRunId);
 write_text(fullfile(stagingDirectory, 'README.md'), readmeText);
 
 if reproducible
+    taskTimer = begin_task(cfg, 'Bundle SHA-256', 'root=%s', ...
+        stagingDirectory);
     manifest.Files = inventory_files(stagingDirectory, ...
-        {'manifest.json'});
+        {'manifest.json'}, cfg);
+    end_task(cfg, 'Bundle SHA-256', taskTimer, ...
+        'files=%d', numel(manifest.Files));
 else
     manifest.Files = inventory_files_light(stagingDirectory, ...
         {'manifest.json'});
@@ -364,12 +372,17 @@ end
 write_json(fullfile(stagingDirectory, 'manifest.json'), manifest);
 
 if reproducible
+    % harness_inventory reloads the source Top Model when it is closed, so
+    % this check is not free on a large model.
+    taskTimer = begin_task(cfg, 'Source unchanged check', ...
+        'model=%s', cfg.TopModel);
     assert_source_unchanged(cfg.ModelFile, sourceModelSignature);
     assert_source_unchanged(cfg.TestFile, sourceTestSignature);
     if ~isequal(harness_inventory(cfg), sourceHarnessInventory)
         error('simtest:ExportChangedHarnessInventory', ...
             'Export unexpectedly changed the source Harness inventory.');
     end
+    end_task(cfg, 'Source unchanged check', taskTimer, 'result=OK');
 end
 assert_saved_dependency_models(dependencyFiles);
 fprintf('Inventory files : %d\n', numel(manifest.Files));
@@ -849,10 +862,12 @@ if isempty(runId) || ~isfolder(directory)
 end
 end
 
-function inventory = inventory_files(root, excluded)
+function inventory = inventory_files(root, excluded, cfg)
 listing = dir(fullfile(root, '**', '*'));
 inventory = repmat(struct( ...
     'BundlePath', '', 'SHA256', '', 'Bytes', 0), 0, 1);
+total = sum(~[listing.isdir]);
+progressTimer = tic;
 for i = 1:numel(listing)
     if listing(i).isdir
         continue;
@@ -861,6 +876,15 @@ for i = 1:numel(listing)
     relative = bundle_path(root, path);
     if any(strcmp(relative, excluded))
         continue;
+    end
+    % Hashing a large model or MAT can stall for a long time on its own.
+    if toc(progressTimer) >= 5
+        fprintf('%-22s : %d/%d files\n', 'Bundle SHA-256', ...
+            numel(inventory), total);
+        st_log(cfg, 'DEBUG', ...
+            'Bundle SHA-256 progress | Done=%d | Total=%d | Current=%s', ...
+            numel(inventory), total, relative);
+        progressTimer = tic;
     end
     signature = st_file_signature(path);
     item = struct( ...
@@ -985,6 +1009,25 @@ end
 function finish_step(label, timerValue)
 fprintf('DONE    : %s\n', label);
 fprintf('ELAPSED : %s\n', elapsed_text(toc(timerValue)));
+end
+
+function timerValue = begin_task(cfg, label, formatText, varargin)
+% The manifest stage is a long silent wait otherwise: toolbox analysis,
+% whole-bundle hashing and the source recheck each take model- or
+% file-proportional time with no output of their own.
+detail = sprintf(formatText, varargin{:});
+fprintf('%-22s : START  %s\n', label, detail);
+st_log(cfg, 'INFO', 'Manifest task start | Task=%s | %s', label, detail);
+timerValue = tic;
+end
+
+function end_task(cfg, label, timerValue, formatText, varargin)
+detail = sprintf(formatText, varargin{:});
+elapsed = toc(timerValue);
+fprintf('%-22s : DONE   %s | %s\n', label, elapsed_text(elapsed), detail);
+st_log(cfg, 'INFO', ...
+    'Manifest task complete | Task=%s | elapsed=%.3f sec | %s', ...
+    label, elapsed, detail);
 end
 
 function fail_step(label, timerValue, exception)

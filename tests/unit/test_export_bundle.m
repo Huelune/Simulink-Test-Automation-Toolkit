@@ -353,3 +353,25 @@ HarnessName = repmat("Harness", n, 1);
 TestCaseName = names(:);
 targets = table(No, CUTPath, HarnessName, TestCaseName);
 end
+
+function testManifestStageReportsProgress(testCase)
+% The manifest stage is minutes of silence otherwise: toolbox analysis,
+% whole-bundle hashing and the source recheck all scale with the model or
+% file count and print nothing of their own.
+root = st_project_root();
+source = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_test_bundle.m'));
+verifyTrue(testCase, contains(source, ...
+    "begin_task(cfg, 'Toolbox products'"));
+verifyTrue(testCase, contains(source, ...
+    "begin_task(cfg, 'Bundle SHA-256'"));
+verifyTrue(testCase, contains(source, ...
+    "begin_task(cfg, 'Source unchanged check'"));
+verifyEqual(testCase, numel(strfind(source, 'end_task(cfg,')), 3);
+verifyTrue(testCase, contains(source, ...
+    'Manifest task start | Task=%s'));
+verifyTrue(testCase, contains(source, ...
+    'Bundle SHA-256 progress | Done=%d'));
+verifyTrue(testCase, contains(source, ...
+    'inventory_files(stagingDirectory, ...'));
+end
