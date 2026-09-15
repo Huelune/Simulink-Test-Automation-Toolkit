@@ -7,6 +7,7 @@ MATLAB R2025b를 사용하는 동료를 위한 작업별 복사용 코드입니�
 
 | 하고 싶은 작업 | 문서 |
 | --- | --- |
+| **지금 무엇을 할지 모르겠을 때** | **[지금 할 일](now.md)** |
 | 처음 설치하고 익명 예제로 확인 | [예제 생성](example.md) |
 | 여러 모델의 설정을 따로 저장하고 전환 | [모델 profile](model-profiles.md) |
 | 새 Harness 생성 또는 기존 Harness 준비 | [준비 및 실행](prepare.md) |
@@ -15,7 +16,6 @@ MATLAB R2025b를 사용하는 동료를 위한 작업별 복사용 코드입니�
 | 원하는 단계부터 재시작 또는 결과만 재생성 | [재시작](restart.md) |
 | 다른 PC에서 배포 전 검증 | [R2025b 검증](runtime-verification.md) |
 | 기존 오류의 상세 메시지·stack 수집 | [Standalone 진단](standalone-coverage-runtime.md) |
-| Standalone export의 CUT 식별 실패 원인 가르기 | [CUT 식별 진단](standalone-export-cut-diagnosis.md) |
 
 일반 준비 workflow는 Harness·입력·Assessment·Test File을 변경하며 기본 기대값
 정책은 `APPLY`입니다. Standalone은 준비된 자산을 복사해서 실행하고 기대값을

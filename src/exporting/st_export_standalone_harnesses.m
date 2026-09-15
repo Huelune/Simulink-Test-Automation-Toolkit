@@ -232,8 +232,8 @@ end
 function path = identify_standalone_cut(sourceOwner, standaloneModel)
 sourceName = get_param(sourceOwner, 'Name');
 sourceSignature = interface_signature(sourceOwner);
-candidates = find_system(standaloneModel, ...
-    'SearchDepth', 1, 'Type', 'Block');
+candidates = find_system(standaloneModel, 'SearchDepth', 1, ...
+    'FollowLinks', 'on', 'LookUnderMasks', 'all', 'Type', 'Block');
 candidates = cellstr(string(candidates(:)));
 candidates = candidates(~strcmp(candidates, standaloneModel));
 matches = strings(0,1);
@@ -248,14 +248,21 @@ end
 if numel(matches) ~= 1
     error('simtest:StandaloneCUTIdentificationFailed', ...
         ['Expected exactly one exported CUT matching name and interface. ' ...
-         'Source=%s | Model=%s | Matches=%d'], ...
-        sourceOwner, standaloneModel, numel(matches));
+         'Source=%s | Model=%s | Matches=%d | Candidates=%s'], ...
+        sourceOwner, standaloneModel, numel(matches), ...
+        candidate_digest(candidates));
 end
 path = char(matches(1));
 end
 
 function signature = interface_signature(block)
-ports = find_system(block, 'SearchDepth', 1, 'Type', 'Block');
+% A library-linked CUT hides its content behind the link: find_system's
+% default 'FollowLinks','off' stops at the link boundary and reports no
+% ports at all. sltest.harness.export copies the CUT out of that link, so
+% the exported block reports its real ports and the two signatures can
+% never match unless both sides resolve links and masks the same way.
+ports = find_system(block, 'SearchDepth', 1, ...
+    'FollowLinks', 'on', 'LookUnderMasks', 'all', 'Type', 'Block');
 ports = cellstr(string(ports(:)));
 ports = ports(~strcmp(ports, block));
 rows = strings(0,1);
@@ -271,6 +278,29 @@ for i = 1:numel(ports)
         string(portNumber) + "|" + string(get_param(ports{i}, 'Name')); %#ok<AGROW>
 end
 signature = sort(rows);
+end
+
+function text = candidate_digest(candidates)
+% Name-only failures and interface-only failures look identical in the
+% error message otherwise.
+if isempty(candidates), text = '<none>'; return; end
+limit = min(numel(candidates), 10);
+parts = strings(0,1);
+for i = 1:limit
+    linkStatus = '';
+    try
+        linkStatus = char(string(get_param(candidates{i}, ...
+            'StaticLinkStatus')));
+    catch
+    end
+    parts(end+1,1) = string(get_param(candidates{i}, 'Name')) + ...
+        "(" + string(get_param(candidates{i}, 'BlockType')) + ...
+        "/" + string(linkStatus) + ")"; %#ok<AGROW>
+end
+if numel(candidates) > limit
+    parts(end+1,1) = "...+" + string(numel(candidates) - limit);
+end
+text = char(strjoin(parts, ', '));
 end
 
 function value = empty_detail()

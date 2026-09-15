@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fixed standalone Harness export failing to re-identify a library-linked CUT.
+  `find_system` defaults stop at a link boundary, so a CUT inside a library
+  link reported no ports while its exported copy reported the real ones, and
+  the interface could never match. Both sides now resolve links and masks, and
+  the failure message lists the candidate blocks with their link status.
 - Standalone Harness export no longer runs dependency analysis over every
   branch of the source Top Model. It analyses the generated standalone
   models, copies their union of dependencies, and leaves the configuration

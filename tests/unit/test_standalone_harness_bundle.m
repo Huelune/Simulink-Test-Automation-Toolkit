@@ -34,6 +34,24 @@ verifyTrue(testCase, contains(source, ...
     "folder = sprintf('%04d_%s', round(double(row.No)), safeName)"));
 end
 
+function testCUTIdentificationResolvesLibraryLinks(testCase)
+% A library-linked CUT reports no ports with find_system's defaults, while
+% the exported copy left that link behind and reports its real ports. Both
+% sides must resolve links and masks or the interface can never match.
+root = st_project_root();
+source = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_standalone_harnesses.m'));
+verifyEqual(testCase, numel(strfind(source, ...
+    "'FollowLinks', 'on', 'LookUnderMasks', 'all', 'Type', 'Block'")), 2);
+verifyFalse(testCase, contains(source, ...
+    "find_system(block, 'SearchDepth', 1, 'Type', 'Block')"));
+verifyFalse(testCase, contains(source, ...
+    "find_system(standaloneModel, ...
+    'SearchDepth', 1, 'Type', 'Block')"));
+verifyTrue(testCase, contains(source, 'candidate_digest(candidates)'));
+verifyTrue(testCase, contains(source, "'StaticLinkStatus'"));
+end
+
 function testRunnerRewiresAndUsesSequentialPath(testCase)
 root = st_project_root();
 runner = fileread(fullfile(root, 'resources', 'export_bundle', ...
