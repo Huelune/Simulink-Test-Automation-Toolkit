@@ -25,8 +25,10 @@ Standalone export는 Top Model 전체가 아니라 생성된 standalone Harness 
 않습니다. 반대로 standalone `.slx` 자체가 필요한 파일을 찾지 못하면 받는 PC에서 열리지
 않는 제출물을 만들지 않도록 export가 중단됩니다.
 
-정상 완료 기준은 `1111111111 PASS`, TC별 standalone 모델·Input·`{TC_NAME}.cvf`·
-`{TC_NAME}.cvt`·원본 `{TC_NAME}.html`, root의 11열 `CoverageSummary.xlsx`입니다.
+정상 완료 기준은 `1111111111 PASS`, TC별 standalone 모델·Input·
+`UT_REQ_{TC_NAME}.cvf`·`UT_REQ_{TC_NAME}.cvt`·원본 `UT_REQ_{TC_NAME}.html`,
+root의 11열 `CoverageSummary.xlsx`입니다. 대상 폴더는 `{NUM}_UT_REQ_{TC_NAME}`이며
+실행하지 못한 대상도 폴더는 만들어집니다.
 HTML은 Test Manager 요약 보고서가 아닌 Coverage REPORT 화살표의 원본이며 부속 asset도
 함께 보존합니다. 압축 파일은 캡처 증거용이지 최종 HTML 대신 제출하는 파일이 아닙니다.
 

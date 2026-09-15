@@ -378,7 +378,7 @@ end
 [~, cvtName, cvtExtension] = fileparts(field_text(item, 'CoverageResult'));
 [reportDirectory, reportName, reportExtension] = fileparts( ...
     field_text(item, 'ReportHTML'));
-artifactStem = st_export_safe_name(field_text(item, 'TestCaseName'));
+artifactStem = st_artifact_stem(field_text(item, 'TestCaseName'));
 if isempty(field_text(item, 'SignalEditorInput'))
     inputOK = isempty(field_text(item, 'PackagedInput')) && ...
         status_ok_or_not_required(item, 'PackagedInputReadbackStatus');

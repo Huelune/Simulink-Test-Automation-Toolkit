@@ -553,6 +553,8 @@ result/per_cut_runs/{run-id}/
   결과를 전달할 때는 HTML 파일 하나가 아니라 `initial/` 또는 `final/` 폴더
   전체를 복사해야 합니다.
 - `final/`은 기대값 변경 후 실제 재실행한 경우에만 생성됩니다.
+- `filter/{TestCaseName}.cvf`는 PER_CUT 실행 중간물이며 standalone 제출물의
+  `UT_REQ_` 이름 규칙과 다릅니다.
 - `filter/{TestCaseName}.cvf`는 CVF 활성 CUT에만 생성됩니다. Test Case 실행 전에
   해당 폴더를 MATLAB path에 등록하고 ResultSet coverage에도 절대 경로로 연결합니다.
 - root Excel은 모든 CUT의 최종 상태와 초기·최종 결과 연결을 인덱싱합니다.

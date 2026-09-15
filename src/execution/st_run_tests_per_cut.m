@@ -963,7 +963,9 @@ if isempty(sourceFilter) || ~isfile(sourceFilter)
         'Coverage report CVF is missing for %s: %s', ...
         char(string(row.CUTName)), sourceFilter);
 end
-displayFilter = [st_export_safe_name(char(string(row.TestCaseName))) '.cvf'];
+% Must equal the CVF that PACKAGE places beside this report, or the
+% filter name printed in the HTML points at a file that is not there.
+displayFilter = [st_artifact_stem(char(string(row.TestCaseName))) '.cvf'];
 destinationFilter = fullfile(scratchDirectory, displayFilter);
 st_log(cfg, 'INFO', ...
     ['Standalone original Coverage report display filter start | CUT=%s | ' ...

@@ -29,6 +29,8 @@
 - 확인된 산출물: `FILES model=26 input=26 cvf=25 cvt=25 html=25 result=0
   forbidden=0`, `SUMMARY rows=26 columns=11 status=OK`. 11열 CoverageSummary와
   TC 이름 기반 `{TC}.cvf`/`{TC}.cvt`/`{TC}.html` 계약이 실제로 성립했다.
+  이 확인 이후 제출물 이름 규칙에 `UT_REQ_` 접두사를 도입했으므로, 아래 기록의
+  `{TC}` 표기는 현재 코드에서 `UT_REQ_{TC}`로 읽는다.
 - 라이브러리 링크: CUT이 링크 **내부**에 있는 경우
   (`StaticLinkStatus='implicit'`, ReferenceBlock이 라이브러리 하위 블록)가 실재한다.
   `find_system` 기본값은 링크 경계를 넘지 않아 원본 CUT의 포트가 0개로 보이고
@@ -47,7 +49,8 @@
   pipeline/verification snapshot의 내부 번들은 무조건 끈다. checker는 금지 산출물
   스캔을 단일 순회로 바꾼 뒤에도 226초이며 남은 비용은 SHA-256 재해시다.
 - 이 실행으로 검증되지 **않은** 것: 패키지 Test Manager launcher와 MLDATX 열기,
-  Coverage REPORT 화살표가 여는 `{TC}.html`, HTML의 CVF 표시 이름, 결과 재생성(v3),
+  Coverage REPORT 화살표가 여는 `UT_REQ_{TC}.html`, HTML의 CVF 표시 이름,
+  결과 재생성(v3),
   model profile과 단계 재시작, `AnalyzeProducts=true`의 실제 소요시간,
   경고 억제(`cfg.SuppressedWarnings`).
 
@@ -222,7 +225,8 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 20. `st_run_standalone_coverage_pipeline`의 `ALL` live Result 경로와 `EXECUTE` 뒤
     새 MATLAB 세션에서 `PACKAGE`/`SUMMARY`를 재개하는 경로를 모두 확인한다.
     standalone TC property readback, Test Case별 run 1회와 CVF 등록 1회, 공식 ZIP의
-    TC 이름의 HTML/CVF/CVT, `%03d` TC 이름 폴더와 정확한 11열 CoverageSummary.xlsx를 확인한다.
+    `UT_REQ_` 접두사가 붙은 HTML/CVF/CVT, `%03d_UT_REQ_{TC}` 폴더와 정확한 11열
+    CoverageSummary.xlsx를 확인한다.
     Decision/Execution 분모 0은 N/A여야 하며 원본 모델·Test File·Excel·Input
     checksum, Dirty와 Harness inventory가 전후 같아야 한다. 최종
     `st_check_standalone_coverage`가 `1111111111 PASS`인지 확인하고 Test Manager
@@ -499,9 +503,11 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   것이며 launcher는 그 반복 작업의 편의 수단일 뿐 portable path를 저장하는 해법은
   아니다. CVF 표시 metadata는 filter name=`TestCaseName`, description=`none`, 모든
   rule rationale=`none`으로 고정했다. PACKAGE target folder, packaged CVF/CVT와
-  공식 report HTML은 `TestCaseName`을 안전화한 `{TC}.cvf`/`{TC}.cvt`/`{TC}.html`
-  이름을 사용하고 report tree는 별도 `_CoverageReport` 폴더 없이 target root에
-  배치한다. HTML의 companion asset은 report render를 위해 같은 root에 유지한다.
+  공식 report HTML은 `TestCaseName`을 안전화하고 `UT_REQ_` 접두사를 붙인
+  `UT_REQ_{TC}.cvf`/`.cvt`/`.html` 이름을 사용하고 report tree는 별도
+  `_CoverageReport` 폴더 없이 target root에 배치한다. 이 stem은
+  `st_artifact_stem`이 유일하게 만들며 생산자 4곳과 checker가 모두 그 함수를
+  호출해야 한다. 접두사 부여는 멱등이고 80자 상한 안에서 계산한다. HTML의 companion asset은 report render를 위해 같은 root에 유지한다.
   `cvhtml`에는 같은 폴더에 놓일 짧은 표시용 CVF 이름을 bind하고, scratch 폴더가
   제거된 뒤 최종 metric 추출이 같은 coverage 객체를 재사용하므로 보고서 생성
   직후 검증된 절대 경로 CVF 바인딩을 복원한다. 이 bind/복원 helper는

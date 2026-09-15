@@ -23,7 +23,7 @@ manifest = package_test_file(manifest, pipelineRoot, cfg);
 for i = 1:numel(manifest.Targets)
     item = manifest.Targets(i);
     folderName = sprintf('%03d_%s', round(double(item.No)), ...
-        st_export_safe_name(item.TestCaseName));
+        st_artifact_stem(item.TestCaseName));
     targetDirectory = fullfile(pipelineRoot, folderName);
     if ~isfolder(targetDirectory), mkdir(targetDirectory); end
     item.OutputDirectory = targetDirectory;
@@ -175,7 +175,7 @@ if ~isfile(sourceCVF)
         'Generated CVF is missing: %s', sourceCVF);
 end
 finalCVF = fullfile(targetDirectory, ...
-    [st_export_safe_name(item.TestCaseName) '.cvf']);
+    [st_artifact_stem(item.TestCaseName) '.cvf']);
 copy_checked(sourceCVF, finalCVF);
 item.PackagedCVF = finalCVF;
 item.PackagedCVFSHA256 = st_file_signature(finalCVF).SHA256;
@@ -210,7 +210,7 @@ try
         'simtest:StandalonePipelinePackageCoverageInvalid');
 
     cvtPath = fullfile(targetDirectory, ...
-        [st_export_safe_name(item.TestCaseName) '.cvt']);
+        [st_artifact_stem(item.TestCaseName) '.cvt']);
     delete_if_present(cvtPath);
     st_log(cfg, 'INFO', ...
         'PACKAGE captured coverage data promotion start | CUT=%s', item.CUTName);
@@ -226,7 +226,7 @@ try
     unzip(reportZip, reportDirectory);
     ensure_report_html(reportDirectory);
     reportHTML = fullfile(reportDirectory, ...
-        [st_export_safe_name(item.TestCaseName) '.html']);
+        [st_artifact_stem(item.TestCaseName) '.html']);
     rootReport = fullfile(reportDirectory, 'report.html');
     if ~strcmpi(rootReport, reportHTML)
         [moved, moveMessage] = movefile(rootReport, reportHTML, 'f');

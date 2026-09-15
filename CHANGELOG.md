@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Packaged standalone Coverage artifacts now carry a `UT_REQ_` prefix:
+  `{NUM}_UT_REQ_{TestCaseName}` target folders holding
+  `UT_REQ_{TestCaseName}.cvf`, `.cvt` and `.html`. The stem comes from the
+  new `st_artifact_stem`, which every producer and the checker share so the
+  names cannot drift apart; prefixing is idempotent and stays inside the
+  80-character cap. Harness, standalone model and input MAT names are
+  unchanged. Deliveries packaged before this change no longer satisfy the
+  checker and must be produced again.
 - `DecisionBlocks` now inventories the block types that create Simulink
   Coverage objectives without looking like a decision: Saturate, Abs,
   DeadZone, RateLimiter, Relay, Lookup_n-D, Interpolation_n-D, PreLookup,

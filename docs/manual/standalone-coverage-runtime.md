@@ -190,7 +190,8 @@ for k = 1:numel(m.Targets)
 end
 ```
 
-`{TC_NAME}.html`, `{TC_NAME}.cvt`가 모두 존재하고 각 `model closed` 값이 `1`이면 PACKAGE와
+`UT_REQ_{TC_NAME}.html`, `UT_REQ_{TC_NAME}.cvt`가 모두 존재하고 각 `model closed`
+값이 `1`이면 PACKAGE와
 cleanup 산출물 계약을 만족한다.
 
 ## 6. 패키지 Test Manager 열기

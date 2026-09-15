@@ -240,15 +240,16 @@ sourceState = struct( ...
         'SHA256', st_file_signature(inputSource).SHA256));
 targets = repmat(empty_target(), count, 1);
 for i = 1:count
-    targetDirectory = fullfile(pipelineRoot, sprintf('%03d_TC_%d', i, i));
+    targetDirectory = fullfile(pipelineRoot, ...
+        sprintf('%03d_UT_REQ_TC_%d', i, i));
     mkdir(targetDirectory);
     harness = sprintf('Harness%d', i);
     model = fullfile(targetDirectory, [harness '.slx']);
     input = fullfile(targetDirectory, sprintf('input%d.mat', i));
-    cvf = fullfile(targetDirectory, sprintf('TC_%d.cvf', i));
-    cvt = fullfile(targetDirectory, sprintf('TC_%d.cvt', i));
+    cvf = fullfile(targetDirectory, sprintf('UT_REQ_TC_%d.cvf', i));
+    cvt = fullfile(targetDirectory, sprintf('UT_REQ_TC_%d.cvt', i));
     reportDirectory = targetDirectory;
-    html = fullfile(reportDirectory, sprintf('TC_%d.html', i));
+    html = fullfile(reportDirectory, sprintf('UT_REQ_TC_%d.html', i));
     write_text(model, 'model');
     write_text(input, 'input');
     write_text(cvf, 'cvf');
