@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- File hashing now reads on the Java side instead of copying every chunk
+  through MATLAB. The cost was never SHA-256 itself but marshalling the
+  bytes across the boundary, which dominated delivery verification once a
+  project had hundreds of targets. Files above 256 MB still stream through
+  the chunked reader, which also remains the fallback.
 - Added scoped warning suppression. `cfg.SuppressedWarnings` lists the
   identifiers to silence while the standalone Harness export drives its
   per-target loop; they are logged once and the caller's warning state is
