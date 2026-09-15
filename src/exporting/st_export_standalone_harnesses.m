@@ -87,6 +87,12 @@ if ~same_path(loadedTemporaryFile, temporaryModelFile)
          'model file: %s'], loadedTemporaryFile);
 end
 
+% Simulink repeats the same model-level warning on every save in the loop
+% below, which buries the per-target progress. Suppress only what the
+% project configured, report it once, and restore on the way out.
+warningCleanup = st_suppress_warnings( ...
+    logConfig, 'STANDALONE_HARNESS_EXPORT'); %#ok<NASGU>
+
 keys = strings(0,1);
 keyPaths = strings(0,1);
 keyDetails = repmat(empty_detail(), 0, 1);

@@ -448,6 +448,13 @@ cfg.OnlyEnabled = true;
 %   Existing normal START / OK / FAIL / summary messages are still printed.
 cfg.VerboseLogging = true;
 
+% Simulink warning identifiers to suppress while the toolkit drives a
+% long API loop. Each entry is reported once through st_log and restored
+% afterwards, so the information survives without flooding the console.
+% Collect the identifiers for your model with
+% diagnostics/matlab/st_collect_warning_ids.m; leave empty to suppress none.
+cfg.SuppressedWarnings = {};
+
 
 %% ============================================================
 % Result

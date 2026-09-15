@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added scoped warning suppression. `cfg.SuppressedWarnings` lists the
+  identifiers to silence while the standalone Harness export drives its
+  per-target loop; they are logged once and the caller's warning state is
+  restored afterwards. Bare words are rejected so a typo cannot widen into
+  suppressing everything. `st_collect_warning_ids` gathers the identifiers
+  a run actually emits, which `lastwarn` cannot do.
 - `st_check_standalone_coverage` now understands `ExecutionStatus=EXCEPT`.
   A target whose Test Case raised an exception keeps only its standalone
   Harness and input, so it is judged against that reduced contract, the
