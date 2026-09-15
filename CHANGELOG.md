@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- `st_check_standalone_coverage` now understands `ExecutionStatus=EXCEPT`.
+  A target whose Test Case raised an exception keeps only its standalone
+  Harness and input, so it is judged against that reduced contract, the
+  expected CVF/CVT/HTML counts exclude it, and an Action WARN explained
+  entirely by excepted targets no longer zeroes the manifest bit for every
+  target. Such a run reports PARTIAL with an EXCEPT row, never PASS.
 - `st_check_standalone_coverage` now scans for forbidden artifacts with a
   single recursive listing instead of five patterns per target directory.
   The unzipped Coverage report puts hundreds of companion assets in every
