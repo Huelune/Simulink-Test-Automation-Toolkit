@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- The standalone coverage pipeline and the verification snapshot no longer
+  run the toolbox dependency analysis. Both build an internal bundle that
+  is executed in place rather than delivered, so the informational product
+  list never repaid loading every dependency model.
 - Added `st_export_test_bundle('AnalyzeProducts', false)` to skip the
   toolbox dependency analysis, which loads every dependency model and can
   outlast the rest of the export. `RequiredProducts` is a bundle README

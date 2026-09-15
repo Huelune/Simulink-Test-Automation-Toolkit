@@ -354,3 +354,13 @@ end
 function text = source(folder, file)
 text = string(fileread(fullfile(st_project_root(), 'src', folder, file)));
 end
+
+function testInternalBundleSkipsProductAnalysis(testCase)
+% The pipeline bundle is an execution vehicle under workRoot, not a
+% delivery, so it should not pay for the toolbox dependency analysis.
+controller = source('pipeline', 'st_run_standalone_coverage_pipeline.m');
+verifyTrue(testCase, contains(controller, "'CreateArchive', false, ..."));
+verifyTrue(testCase, contains(controller, "'AnalyzeProducts', false, ..."));
+snapshot = source('verification', 'st_create_verification_snapshot.m');
+verifyTrue(testCase, contains(snapshot, "'AnalyzeProducts', false, ..."));
+end
