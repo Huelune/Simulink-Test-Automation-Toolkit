@@ -45,3 +45,36 @@ run(m.TestManagerLauncher);
 launcher는 모델 경로와 CVF readback을 준비하는 편의 기능입니다. launcher에서
 filter readback 오류가 나면 해당 오류를 숨기지 말고 CVF 파일·대상 model·저장 경로를 확인합니다.
 이전에 한 번 열었다고 다른 PC의 MATLAB 경로까지 자동으로 연결되지는 않습니다.
+
+## CVF 내용을 볼 때 이름이 n/a로 나오는 경우
+
+정상 동작이며 CVF가 잘못 만들어진 것이 아닙니다. 규칙은 블록을 경로가 아니라
+**SID**로 지정하고, 뷰어의 Name 칸은 그 SID를 **로드된 모델에 대조해서** 이름을
+풀어냅니다. 모델이 열려 있지 않으면 풀 수가 없어 `n/a`로 표시됩니다.
+
+해당 CVF를 만든 standalone 모델을 먼저 열면 이름이 나옵니다. 그 모델은 CVF 바로
+옆에 `{HarnessName}.slx`로 들어 있습니다.
+
+```matlab
+folder = '여기에_대상_폴더';
+model = dir(fullfile(folder, '*.slx'));
+load_system(fullfile(folder, model(1).name));
+```
+
+이 상태에서 CVF를 열면 Name 칸이 채워집니다. 규칙이 가리키는 블록을 명령으로
+확인하려면 아래를 씁니다.
+
+```matlab
+f = slcoverage.Filter(fullfile(folder, '여기에_CVF_파일명'));
+r = getRules(f);
+for k = 1:numel(r)
+    fprintf('%s\n', getfullname(Simulink.ID.getHandle(char(r(k).Selector.Id))));
+end
+```
+
+**원본 Top Model을 열어서는 안 됩니다.** standalone 모델은 원본의 SID를 재사용하지
+않으므로, 그 CVF가 만들어진 바로 그 standalone 모델이어야 이름이 풀립니다.
+launcher가 Test Manager를 열기 전에 모든 standalone 모델을 로드하는 이유가 이것입니다.
+
+rule의 rationale이 `none`으로 보이는 것도 의도된 값입니다. 규칙 분류는 rationale
+문구가 아니라 selector 경로로 판정하므로 진단에 영향을 주지 않습니다.

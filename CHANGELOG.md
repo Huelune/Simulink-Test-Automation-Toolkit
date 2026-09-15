@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Documented why Coverage filter rules show `n/a` in the name column: the
+  rules address blocks by SID, which the viewer resolves against a loaded
+  model. Opening the standalone model that sits beside the CVF fills the
+  names in; the original Top Model does not, because standalone models do
+  not reuse its SIDs.
 - Packaged standalone Coverage artifacts now carry a `UT_REQ_` prefix:
   `{NUM}_UT_REQ_{TestCaseName}` target folders holding
   `UT_REQ_{TestCaseName}.cvf`, `.cvt` and `.html`. The stem comes from the
