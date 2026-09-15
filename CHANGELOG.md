@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `st_check_standalone_coverage` now scans for forbidden artifacts with a
+  single recursive listing instead of five patterns per target directory.
+  The unzipped Coverage report puts hundreds of companion assets in every
+  target root, so the old scan repeated that walk 5*(targets+1) times.
 - The standalone coverage pipeline and the verification snapshot no longer
   run the toolbox dependency analysis. Both build an internal bundle that
   is executed in place rather than delivered, so the informational product

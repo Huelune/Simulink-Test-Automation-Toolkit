@@ -61,6 +61,10 @@ summaryReady = safe_contract(@() action_complete(manifest, 'SUMMARY'));
 checks = repmat("1", n, 10);
 messages = strings(n,1);
 globalPass = true(1,10);
+% Every target directory lives under pipelineRoot, and the unzipped Coverage
+% report puts hundreds of companion assets in each one. Walking that tree
+% once per forbidden pattern per target dominated the check; walk it once.
+forbiddenPaths = forbidden_paths(pipelineRoot);
 
 globalPass(1) = safe_contract(@() ...
     manifest_contract(manifest) && unique_functions());
@@ -75,7 +79,8 @@ for i = 1:n
         lifecycle_contract(item, events, 'RUN')));
     checks(i,5) = bit(safe_contract(@() filter_contract(item, events)));
     if packageReady
-        checks(i,6) = bit(safe_contract(@() package_contract(item)));
+        checks(i,6) = bit(safe_contract(@() ...
+            package_contract(item, forbiddenPaths)));
         checks(i,7) = bit(safe_contract(@() metric_contract(item)));
     else
         checks(i,6:7) = "-";
@@ -89,12 +94,12 @@ if packageReady && (~isfile(field_text(manifest, 'TestManagerFile')) || ...
         ~isfile(field_text(manifest, 'TestManagerLauncher')) || ...
         ~signature_matches(field_text(manifest, 'TestManagerLauncher'), ...
         field_text(manifest, 'TestManagerLauncherSHA256')) || ...
-        forbidden_count(pipelineRoot) > 0)
+        ~isempty(forbiddenPaths))
     checks(:,6) = "0";
 end
 countsOK = true;
 try
-    counts = artifact_counts(pipelineRoot, manifest);
+    counts = artifact_counts(pipelineRoot, manifest, forbiddenPaths);
 catch
     counts = empty_artifact_counts();
     countsOK = false;
@@ -336,7 +341,7 @@ tf = status_ok(item, 'CVFGenerationStatus') && ...
         event_position(events, item.Order, 'RESULT_FILTER_ATTACH');
 end
 
-function tf = package_contract(item)
+function tf = package_contract(item, forbiddenPaths)
 [~, packagedStem] = fileparts(field_text(item, ...
     'PackagedStandaloneModel'));
 [~, cvfName, cvfExtension] = fileparts(field_text(item, 'PackagedCVF'));
@@ -368,7 +373,7 @@ tf = status_ok(item, 'PackageStatus') && ...
     strcmpi([reportName reportExtension], [artifactStem '.html']) && ...
     same_text(canonical(reportDirectory), ...
         canonical(field_text(item, 'TestReport'))) && ...
-    forbidden_count(item.OutputDirectory) == 0;
+    forbidden_under(forbiddenPaths, item.OutputDirectory) == 0;
 end
 
 function tf = metric_contract(item)
@@ -564,7 +569,7 @@ value = find(events.Order == double(order) & ...
 if isempty(value), value = Inf; end
 end
 
-function counts = artifact_counts(root, manifest)
+function counts = artifact_counts(root, manifest, forbiddenPaths)
 counts = struct( ...
     'Model', target_root_count(manifest, '*.slx'), ...
     'Input', target_root_count(manifest, '*.mat'), ...
@@ -573,7 +578,7 @@ counts = struct( ...
     'HTML', report_html_count(manifest), ...
     'Result', final_count(root, '*.mldatx') - ...
         double(isfile(field_text(manifest, 'TestManagerFile'))), ...
-    'Forbidden', forbidden_count(root));
+    'Forbidden', numel(forbiddenPaths));
 end
 
 function counts = empty_artifact_counts()
@@ -626,14 +631,35 @@ for i = 1:numel(items)
 end
 end
 
-function count = forbidden_count(root)
-if isempty(root) || ~isfolder(root), count = 0; return; end
-patterns = {'FilteredResults.mldatx','coverage-metrics.mat', ...
-    'TestSummary.xlsx','*.pdf','*_coverage.html'};
-count = 0;
-for i = 1:numel(patterns)
-    count = count + numel(dir(fullfile(root, '**', patterns{i})));
+function paths = forbidden_paths(root)
+%FORBIDDEN_PATHS Collect every forbidden artifact in one recursive listing.
+paths = strings(0,1);
+if isempty(root) || ~isfolder(root), return; end
+listing = dir(fullfile(root, '**', '*'));
+if isempty(listing), return; end
+names = string({listing.name}');
+folders = string({listing.folder}');
+named = ismember(lower(names), ...
+    ["filteredresults.mldatx","coverage-metrics.mat","testsummary.xlsx"]);
+suffixed = endsWith(names, ".pdf", 'IgnoreCase', true) | ...
+    endsWith(names, "_coverage.html", 'IgnoreCase', true);
+keep = named | suffixed;
+paths = folders(keep) + string(filesep) + names(keep);
 end
+
+function count = forbidden_under(paths, root)
+% A missing or unreadable directory stays 0 here, as the per-pattern walk
+% did. The root-level check still zeroes the bit for every target when the
+% pipeline holds any forbidden artifact.
+count = 0;
+root = char(string(root));
+if isempty(paths) || isempty(root), return; end
+try
+    prefix = lower(canonical_prefix(root));
+catch
+    return;
+end
+count = sum(startsWith(lower(paths), string(prefix)));
 end
 
 function info = summary_info(manifest, count, ready)

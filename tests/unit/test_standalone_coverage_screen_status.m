@@ -417,3 +417,14 @@ end
 function remove_fixture(path)
 if isfolder(path), rmdir(path, 's'); end
 end
+
+function testForbiddenScanWalksTheTreeOnce(testCase)
+% Five patterns times every target directory meant the unzipped Coverage
+% report assets were walked again and again.
+text = checker_source();
+verifyTrue(testCase, contains(text, 'forbiddenPaths = forbidden_paths(pipelineRoot)'));
+verifyTrue(testCase, contains(text, 'forbidden_under(forbiddenPaths, item.OutputDirectory)'));
+verifyTrue(testCase, contains(text, "'Forbidden', numel(forbiddenPaths)"));
+verifyFalse(testCase, contains(text, 'forbidden_count('));
+verifyEqual(testCase, numel(strfind(text, "dir(fullfile(root, '**', '*'))")), 1);
+end
