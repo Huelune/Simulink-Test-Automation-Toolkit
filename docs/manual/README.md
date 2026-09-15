@@ -15,6 +15,7 @@ MATLAB R2025b를 사용하는 동료를 위한 작업별 복사용 코드입니�
 | 원하는 단계부터 재시작 또는 결과만 재생성 | [재시작](restart.md) |
 | 다른 PC에서 배포 전 검증 | [R2025b 검증](runtime-verification.md) |
 | 기존 오류의 상세 메시지·stack 수집 | [Standalone 진단](standalone-coverage-runtime.md) |
+| Standalone export의 CUT 식별 실패 원인 가르기 | [CUT 식별 진단](standalone-export-cut-diagnosis.md) |
 
 일반 준비 workflow는 Harness·입력·Assessment·Test File을 변경하며 기본 기대값
 정책은 `APPLY`입니다. Standalone은 준비된 자산을 복사해서 실행하고 기대값을
