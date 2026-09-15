@@ -12,9 +12,44 @@
 - 필수 기능 기준: feat/per-cut-filtered-execution의 7f0825e
 - 필수 handoff 기준: 2b3ba09 이후
 - 필수 진단 기준: 현재 브랜치 최신 커밋의 st_check_actual_system 포함
-- MATLAB R2025b 검증: 미수행
-- 현재 PC: MATLAB 실행 파일과 실제 result 폴더 없음
+- MATLAB R2025b 검증: 2026-09-15에 실제 업무 모델(대상 26개)로 standalone
+  export → EXECUTE → PACKAGE → SUMMARY → checker 경로를 최초 통과했다. 범위는
+  아래 "2026-09-15 R2025b 실행 확인"에 한정하며 그 밖은 여전히 미검증이다.
+- 현재 PC(에이전트): MATLAB 실행 파일과 실제 result 폴더 없음. 실행 증거는
+  사용자 PC에서만 나온다.
 - 완료 표현: 정적 구현 완료까지만 허용하며 인증 완료나 PR 준비 완료로 표현하지 않는다.
+
+## 2026-09-15 R2025b 실행 확인
+
+실제 업무 모델에서 통과한 범위만 기록한다. 여기 없는 항목은 미검증으로 남는다.
+
+- 확인된 경로: `st_run_standalone_coverage_pipeline('Action','ALL')`
+  (`SaveTestResult=false`)로 EXECUTE → PACKAGE → SUMMARY, 이어서
+  `st_check_standalone_coverage`. 대상 26개.
+- 확인된 산출물: `FILES model=26 input=26 cvf=25 cvt=25 html=25 result=0
+  forbidden=0`, `SUMMARY rows=26 columns=11 status=OK`. 11열 CoverageSummary와
+  TC 이름 기반 `{TC}.cvf`/`{TC}.cvt`/`{TC}.html` 계약이 실제로 성립했다.
+- 라이브러리 링크: CUT이 링크 **내부**에 있는 경우
+  (`StaticLinkStatus='implicit'`, ReferenceBlock이 라이브러리 하위 블록)가 실재한다.
+  `find_system` 기본값은 링크 경계를 넘지 않아 원본 CUT의 포트가 0개로 보이고
+  export 사본은 실제 포트를 보고하므로 인터페이스 비교가 영원히 실패했다.
+  `identify_standalone_cut`/`interface_signature`에 FollowLinks/LookUnderMasks를
+  명시해 복구했고, 그 뒤 26개 중 25개가 정상 패키징됐다. 사용자 측정치:
+  기본 옵션 1개(자기 자신) vs 링크 추적 5개.
+- EXCEPT: 알려진 defect 모델 1개가 `ExecutionStatus=EXCEPT`로 끝났고 standalone
+  Harness와 Input은 보존됐다. 이것이 정상 기대 동작이다. checker는 EXCEPT를
+  몰라 26개 전부의 B1·B6을 0으로 만들었으므로 축소 계약으로 고쳤다.
+  B5(필터)·B7(metric)은 비해당, B10(cleanup)은 계속 강제한다.
+- 판정 정책: 모든 비트가 1이어도 EXCEPT 대상이 있으면 PASS가 아니라 PARTIAL이다.
+  커버리지 누락을 녹색 코드 뒤에 숨기지 않는다는 사용자 결정이다.
+- 성능 실측: `dependencies.toolboxDependencyAnalysis`가 manifest 단계를 지배해
+  사용자가 중단했다. RequiredProducts를 읽는 코드가 없어 배송 번들은 옵션으로,
+  pipeline/verification snapshot의 내부 번들은 무조건 끈다. checker는 금지 산출물
+  스캔을 단일 순회로 바꾼 뒤에도 226초이며 남은 비용은 SHA-256 재해시다.
+- 이 실행으로 검증되지 **않은** 것: 패키지 Test Manager launcher와 MLDATX 열기,
+  Coverage REPORT 화살표가 여는 `{TC}.html`, HTML의 CVF 표시 이름, 결과 재생성(v3),
+  model profile과 단계 재시작, `AnalyzeProducts=true`의 실제 소요시간,
+  경고 억제(`cfg.SuppressedWarnings`).
 
 ## 2026-09-15 profile / 단계 재시작 구현
 
