@@ -20,6 +20,12 @@ function info = st_export_test_bundle(varargin)
 %     ExecutionModelMode
 %                   'ORIGINAL' (default) or 'STANDALONE_HARNESS'. The
 %                   standalone mode is available only for REPRODUCIBLE.
+%     AnalyzeProducts
+%                   Record the required MathWorks products in the manifest
+%                   (default true). The analysis loads every dependency
+%                   model and can take longer than the rest of the export.
+%                   RequiredProducts is a README hint that no code reads
+%                   back, so false is safe when the bundle is urgent.
 
 %   The source model and Test File must be saved before export. Missing
 %   model dependencies stop the export instead of creating a partial
@@ -41,6 +47,11 @@ addParameter(p, 'Profile', 'REPRODUCIBLE', ...
     @(x) ischar(x) || isstring(x));
 addParameter(p, 'ExecutionModelMode', 'ORIGINAL', ...
     @(x) ischar(x) || isstring(x));
+% Toolbox analysis loads every dependency model and can outlast the rest of
+% the export. Nothing reads RequiredProducts back; it is a hint printed in
+% the bundle README, so it must be possible to opt out.
+addParameter(p, 'AnalyzeProducts', true, ...
+    @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 
 % Export operates on saved files and manages any temporary model loads in
@@ -65,6 +76,7 @@ profile = normalize_export_profile(p.Results.Profile);
 reproducible = strcmp(profile, 'REPRODUCIBLE');
 executionModelMode = normalize_execution_model_mode( ...
     p.Results.ExecutionModelMode);
+analyzeProducts = logical(p.Results.AnalyzeProducts);
 if ~reproducible && ~strcmp(executionModelMode, 'ORIGINAL')
     error('simtest:StandaloneHarnessRequiresReproducibleProfile', ...
         ['ExecutionModelMode=STANDALONE_HARNESS is supported only for ' ...
@@ -85,6 +97,7 @@ fprintf('Run         : %s\n', runId);
 fprintf('Profile     : %s\n', profile);
 fprintf('Model Mode  : %s\n', executionModelMode);
 fprintf('Archive     : %s\n', on_off_text(createArchive));
+fprintf('Products    : %s\n', on_off_text(analyzeProducts));
 fprintf('Start       : %s\n', console_timestamp_text());
 fprintf('============================================\n');
 
@@ -294,18 +307,29 @@ finish_step(currentStage, stageTimer);
 currentStage = 'Build Bundle Manifest';
 stageTimer = start_step(currentStage);
 resourceDirectory = fullfile(projectRoot, 'resources', 'export_bundle');
+productAnalysis = 'ANALYZED';
 if reproducible
     runnerOutput = fullfile(stagingDirectory, 'run_exported_tests.m');
     copyfile_checked(fullfile(resourceDirectory, 'run_exported_tests.m'), ...
         runnerOutput);
-    taskTimer = begin_task(cfg, 'Toolbox products', ...
-        'models=%d', numel(dependencyFiles));
-    products = discover_products(dependencyFiles);
-    end_task(cfg, 'Toolbox products', taskTimer, ...
-        'found=%d', numel(products));
+    products = repmat(struct('Name', '', 'Version', ''), 0, 1);
+    if analyzeProducts
+        taskTimer = begin_task(cfg, 'Toolbox products', ...
+            'models=%d', numel(dependencyFiles));
+        products = discover_products(dependencyFiles);
+        end_task(cfg, 'Toolbox products', taskTimer, ...
+            'found=%d', numel(products));
+    else
+        productAnalysis = 'SKIPPED';
+        fprintf('%-22s : SKIP   AnalyzeProducts=false\n', ...
+            'Toolbox products');
+        st_log(cfg, 'INFO', ...
+            'Toolbox product analysis skipped | AnalyzeProducts=false');
+    end
     readmeResource = 'README.bundle.ko.md';
 else
     products = repmat(struct('Name', '', 'Version', ''), 0, 1);
+    productAnalysis = 'NOT_APPLICABLE';
     readmeResource = 'README.assets.ko.md';
     fprintf('Toolbox dependency analysis: SKIP (asset profile)\n');
 end
@@ -344,6 +368,7 @@ manifest.Policy = struct( ...
     'SequentialStandaloneExecution', ...
         strcmp(executionModelMode, 'STANDALONE_HARNESS'), ...
     'DependencyScope', dependency_scope(executionModelMode), ...
+    'ProductAnalysis', productAnalysis, ...
     'ExactMATLABReleaseRequiredByDefault', logical(reproducible), ...
     'PreparationWorkflowIncluded', false, ...
     'ReferenceReportIncluded', logical(includeReferenceReport));

@@ -375,3 +375,20 @@ verifyTrue(testCase, contains(source, ...
 verifyTrue(testCase, contains(source, ...
     'inventory_files(stagingDirectory, ...'));
 end
+
+function testProductAnalysisIsOptional(testCase)
+% Toolbox analysis loads every dependency model and nothing reads
+% RequiredProducts back, so it must be possible to opt out.
+root = st_project_root();
+source = fileread(fullfile(root, 'src', 'exporting', ...
+    'st_export_test_bundle.m'));
+verifyTrue(testCase, contains(source, ...
+    "addParameter(p, 'AnalyzeProducts', true"));
+verifyTrue(testCase, contains(source, 'if analyzeProducts'));
+verifyTrue(testCase, contains(source, "productAnalysis = 'SKIPPED'"));
+verifyTrue(testCase, contains(source, "productAnalysis = 'ANALYZED'"));
+verifyTrue(testCase, contains(source, ...
+    "'ProductAnalysis', productAnalysis, ..."));
+verifyTrue(testCase, contains(source, ...
+    'Toolbox product analysis skipped | AnalyzeProducts=false'));
+end

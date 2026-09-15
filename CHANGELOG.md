@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `st_export_test_bundle('AnalyzeProducts', false)` to skip the
+  toolbox dependency analysis, which loads every dependency model and can
+  outlast the rest of the export. `RequiredProducts` is a bundle README
+  hint that no code reads back; the manifest policy records whether the
+  analysis ran.
 - Standalone Harness export now reports progress. Each target prints a
   start line, the elapsed time of its source-copy save, Harness export and
   standalone save, and a completion line; reused targets are named instead

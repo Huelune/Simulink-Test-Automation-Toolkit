@@ -10,6 +10,14 @@ st_setup
 info = st_export_test_bundle('ExecutionModelMode', 'STANDALONE_HARNESS');
 ```
 
+`Toolbox products` 단계에서 오래 멈춘다면 그 분석을 끄고 다시 실행하세요.
+manifest의 `RequiredProducts`는 번들 README용 안내일 뿐 어떤 코드도 읽지 않습니다.
+
+```matlab
+info = st_export_test_bundle('ExecutionModelMode', 'STANDALONE_HARNESS', ...
+    'AnalyzeProducts', false);
+```
+
 지금까지 쓰던 모델 선택(`runtime_target.mat`)을 그대로 씁니다. profile을 만들 필요
 없습니다. 대상 모델을 바꾸려면 `st_select_target_model`을 먼저 실행하세요.
 
