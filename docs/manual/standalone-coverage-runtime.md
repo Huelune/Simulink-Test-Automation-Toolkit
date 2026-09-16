@@ -241,8 +241,11 @@ launcher 없이 모든 CUT을 한 번에 여는 수동 절차는 아래와 같�
 `latest.json`을 따르는 `'LATEST'`도 쓸 수 있다.
 
 ```matlab
+%[m, ~] = st_load_standalone_pipeline_manifest( ...
+%   cfg.StandaloneCoverageRootDir, '<PipelineId>');
+
 [m, ~] = st_load_standalone_pipeline_manifest( ...
-    cfg.StandaloneCoverageRootDir, '<PipelineId>');
+    cfg.StandaloneCoverageRootDir, info.PipelineId);
 
 % 동일 모델명이 이미 열려 있으면 충돌 방지를 위해 먼저 닫습니다.
 for k = 1:numel(m.Targets)
