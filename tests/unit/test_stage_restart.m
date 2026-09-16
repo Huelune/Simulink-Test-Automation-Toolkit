@@ -1,0 +1,62 @@
+function tests = test_stage_restart
+tests = functiontests(localfunctions);
+end
+
+function setup(testCase)
+testCase.TestData.OriginalPath = path;
+fixtureDir = fullfile(st_project_root(),'tests','fixtures');
+addpath(fixtureDir);
+[root,cleanup] = st_isolated_toolkit();
+testCase.TestData.Root = root;
+testCase.TestData.Cleanup = cleanup;
+end
+
+function teardown(testCase)
+testCase.TestData.Cleanup = [];
+path(testCase.TestData.OriginalPath);
+end
+
+function testAllRestartBoundariesOverrideDirtyEarlierStages(testCase)
+stages = st_workflow_stages('FROM_HARNESS');
+for start = 1:numel(stages)
+    plan = table([1;2],'VariableNames',{'No'});
+    for k = 1:8
+        stage = char(stages(k));
+        plan.(['Run' stage]) = true(2,1);
+        plan.(['Action' stage]) = repmat("RUN",2,1);
+        plan.(['Reason' stage]) = repmat("dirty",2,1);
+    end
+    actual = st_restart_plan(plan,stages(start));
+    for k = 1:8
+        verifyEqual(testCase,actual.(['Run' char(stages(k))]),repmat(k>=start,2,1));
+    end
+end
+verifyError(testCase,@() st_workflow_stages('AFTER_HARNESS','HARNESS'),'simtest:RestartStageInvalid');
+verifyError(testCase,@() st_workflow_stages('STANDALONE','ASSESSMENT'),'simtest:RestartStageInvalid');
+end
+
+function testBindingsRequireAssociatedExactValues(testCase)
+params = {'TestSequenceScenario','Scenario_1';'SignalBuilderGroup','Scenario_2'};
+verifyTrue(testCase,st_iteration_binding_matches(params,{'TestSequenceScenario'},'Scenario_1'));
+verifyFalse(testCase,st_iteration_binding_matches(params,{'TestSequenceScenario'},'Scenario_2'));
+verifyFalse(testCase,st_iteration_binding_matches(params,{'TestSequenceScenario'},'Scenario'));
+verifyTrue(testCase,st_iteration_binding_matches(struct('Name','SignalBuilderGroup','Value','Scenario_2'), ...
+    {'SignalEditorScenario','SignalBuilderGroup'},'Scenario_2'));
+verifyFalse(testCase,st_iteration_binding_matches(struct('Name','Unknown','Value','Scenario_2'), ...
+    {'SignalBuilderGroup'},'Scenario_2'));
+end
+
+function testFailedCandidateDoesNotPublishLatest(testCase)
+root = fullfile(testCase.TestData.Root,'pipelines');
+first = struct('Version',3,'PipelineId','first','Actions',struct(),'PublishLatest',true);
+st_write_standalone_pipeline_manifest(root,first);
+before = st_file_signature(fullfile(root,'latest.json'));
+candidate = first; candidate.PipelineId = 'candidate'; candidate.PublishLatest = false;
+st_write_standalone_pipeline_manifest(root,candidate);
+verifyTrue(testCase,isfile(fullfile(root,'candidate','pipeline-manifest.json')));
+verifyEqual(testCase,st_file_signature(fullfile(root,'latest.json')).SHA256,before.SHA256);
+candidate.PublishLatest = true;
+st_write_standalone_pipeline_manifest(root,candidate);
+loaded = st_load_standalone_pipeline_manifest(root,'LATEST');
+verifyEqual(testCase,loaded.PipelineId,'candidate');
+end

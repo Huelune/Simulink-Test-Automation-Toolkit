@@ -11,9 +11,13 @@ addpath(fullfile(st_project_root(),'tests','fixtures'));
 [root,cleanup] = st_isolated_toolkit();
 testCase.TestData.Cleanup = cleanup;
 demo = st_create_example(fullfile(root,'demo'));
-st_save_model_profile('DEMO','ModelFile',demo.ModelFile, ...
-    'ManagementExcel',demo.ManagementExcel,'OutputRoot',demo.OutputRoot);
-testCase.TestData.Cfg = st_select_model_profile('DEMO');
+% st_config resolves the management workbook from the project root, so the
+% generated example has to sit where the default expects it.
+copyfile(demo.ManagementExcel,fullfile(root,'TestManagement.xlsx'));
+[~,demoModel] = fileparts(demo.ModelFile);
+st_save_runtime_target_fields(fullfile(root,'runtime_target.mat'), ...
+    struct('TopModel',demoModel,'ModelFile',demo.ModelFile));
+testCase.TestData.Cfg = st_config();
 st_run_from_harness('PreparationMode','FORCE','ExecuteTests',false);
 end
 

@@ -382,7 +382,6 @@ disp(code)
 
 | 상황 | 문서 |
 | --- | --- |
-| 모델을 여러 개 번갈아 쓴다 | [모델 profile](manual/model-profiles.md) |
 | 오래 걸리는 앞 단계를 보존한 채 중간부터 재시작한다 | [재시작](manual/restart.md) |
 | 실제 모델 없이 예제로 연습한다 | [익명 예제 생성](manual/example.md) |
 | 다른 PC에서 재실행할 번들을 만든다 | [내보내기 번들](export-bundle.md) |

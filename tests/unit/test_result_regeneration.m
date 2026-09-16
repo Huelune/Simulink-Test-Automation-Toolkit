@@ -7,12 +7,12 @@ testCase.TestData.OriginalPath = path;
 addpath(fullfile(st_project_root(),'tests','fixtures'));
 [root,cleanup] = st_isolated_toolkit();
 testCase.TestData.Cleanup = cleanup;
-for name = {'A.slx','A.xlsx'}
+for name = {'A.slx','TestManagement.xlsx'}
     st_atomic_save(fullfile(root,name{1}),struct('Fixture',1));
 end
-st_save_model_profile('A','ModelFile',fullfile(root,'A.slx'), ...
-    'ManagementExcel',fullfile(root,'A.xlsx'),'OutputRoot',fullfile(root,'out'));
-cfg = st_select_model_profile('A');
+st_save_runtime_target_fields(fullfile(root,'runtime_target.mat'), ...
+    struct('TopModel','A','ModelFile',fullfile(root,'A.slx')));
+cfg = st_config();
 m = fixture(cfg);
 testCase.TestData.Cfg = cfg;
 testCase.TestData.Manifest = m;

@@ -19,7 +19,6 @@
 - [x] `st_create_example`로 익명 모델, Dataset MAT, 예제 관리 Excel을 로컬 생성한다.
 - [x] 기본 예제는 FILE/MAT를 쓰고 SLDV GENERATE를 요구하지 않는다.
 - [x] `docs/manual/` 아래에 작업 중심의 한국어 복사용 runbook을 둔다.
-- [x] 결과·checkpoint 경로가 분리된 이름별 모델 profile과 CLI/목록 선택을 추가한다.
 - [x] 읽기 전용 readiness 검사와, 선택 단계부터 workflow 끝까지 실행하는 엄격한
       재시작을 추가한다.
 - [x] 해시 검증된 저장 증거에서 새 PipelineId로 PACKAGE/SUMMARY를 재생성한다.

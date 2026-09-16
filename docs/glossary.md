@@ -208,12 +208,6 @@ HARNESS → SLDV → HARNESS_CONFIG → SIGNAL_EDITOR → ASSESSMENT
 저장합니다. 다음 실행에서 입력이 그대로면 그 단계를 건너뛰고 재사용합니다.
 Harness 생성처럼 몇 분씩 걸리는 단계를 매번 다시 하지 않기 위한 장치입니다.
 
-### Model profile (모델 프로필)
-
-모델 하나마다 모델 파일·관리 Excel·Test File·결과 폴더 경로를 묶어 이름을 붙여
-저장해 두는 기능입니다. 모델을 여러 개 다룰 때 결과가 섞이지 않게 합니다. 동시에
-여러 모델을 실행하는 기능이 아니라, 한 번에 하나를 골라 쓰는 기능입니다.
-
 ## 7. 결과 판정 용어
 
 | 상태 | 의미 |
@@ -235,10 +229,9 @@ Harness 생성처럼 몇 분씩 걸리는 단계를 매번 다시 하지 않기 
 | --- | --- | --- |
 | `TestManagement.xlsx` | 무엇을 테스트할지 적는 관리 파일 | 실제 업무 파일은 제외 |
 | `runtime_target.mat` | 이 PC에서 고른 모델 정보 | 제외 |
-| `model_profiles.mat` | 이 PC에 등록한 모델 프로필 | 제외 |
 | `{TopModel}.mldatx` | Test Manager가 읽는 Test File | 제외 |
 | `result/` | 실행 결과 전부 | 제외 |
 | `result/state/workflow_state.mat` | 단계별 checkpoint | 제외 |
 
-`runtime_target.mat`과 `model_profiles.mat`은 PC마다 다른 로컬 설정입니다. 저장소를
-받아도 다른 사람의 모델 선택이 딸려 오지 않습니다.
+`runtime_target.mat`은 PC마다 다른 로컬 설정입니다. 저장소를 받아도 다른 사람의
+모델 선택이 딸려 오지 않습니다.

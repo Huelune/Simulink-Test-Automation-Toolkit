@@ -39,7 +39,7 @@ st_run_from_harness                % 이 명령은 st_config()를 새로 호출�
 | 기대값 갱신 | Excel 행 > `cfg.ExpectedUpdateMode` |
 | 커버리지 필터 선택 | Excel 행의 `CoverageFilter*` (전역 설정 없음) |
 | 기존 CVF 처리 | `cfg.CoverageFilterExistingPolicy` (행 설정 없음) |
-| 경로·결과 위치 | 모델 profile > `cfg` |
+| 경로·결과 위치 | `cfg` |
 
 ## 1. 가장 먼저 확인할 설정
 
@@ -417,8 +417,7 @@ ids = st_collect_warning_ids('LogFile', 'run.log');
 
 ## 13. 경로 설정 (보통 그대로 둡니다)
 
-다음 설정은 결과가 저장될 위치를 정합니다. 모델 profile을 쓰면 profile의
-`OutputRoot` 아래로 자동 재배치되므로 직접 고칠 일이 거의 없습니다.
+다음 설정은 결과가 저장될 위치를 정합니다. 보통 그대로 둡니다.
 
 | 설정 | 기본 위치 | 내용 |
 | --- | --- | --- |
@@ -451,6 +450,5 @@ ids = st_collect_warning_ids('LogFile', 'run.log');
 | 값 | 어디에 저장되는가 |
 | --- | --- |
 | 현재 선택한 모델 | `runtime_target.mat` (Git 제외) |
-| 이름 붙인 모델 설정 묶음 | `model_profiles.mat` (Git 제외) |
 
-선택은 `st_select_target_model` 또는 `st_select_model_profile`로 합니다.
+선택은 `st_select_target_model`로 합니다.

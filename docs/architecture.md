@@ -44,7 +44,7 @@ Simulink-Test-Automation-Toolkit/
 | 영역 | 책임 |
 | --- | --- |
 | `workflow` | 전체 및 기존 Harness workflow 진입점, 단계 계획, 재시작 |
-| `config`, `targets` | 프로젝트 설정, workbook 파싱, 모델/CUT 탐색과 검증, 모델 profile |
+| `config`, `targets` | 프로젝트 설정, workbook 파싱, 모델/CUT 탐색과 검증 |
 | `harness`, `sldv`, `signal_editor` | 비용이 큰 모델 준비와 시나리오 데이터 생성 |
 | `assessment`, `coverage`, `test_manager` | 검증 로직, Test Case별 커버리지 필터, Test Case·Iteration·정렬 관리 |
 | `execution` | 테스트 실행과 기대값 갱신 |

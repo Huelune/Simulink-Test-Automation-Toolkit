@@ -37,7 +37,6 @@ st_run_standalone_coverage_pipeline( ...
 | 상황 | 문서 |
 | --- | --- |
 | 실제 모델 없이 예제로 연습 | [익명 예제 생성](example.md) |
-| 모델을 여러 개 번갈아 사용 | [모델 profile](model-profiles.md) |
 | 오래 걸리는 앞 단계를 보존한 채 중간부터 재시작 | [재시작](restart.md) |
 | 이미 끝난 standalone 결과를 재실행 없이 다시 생성 | [재시작](restart.md) |
 | 배포 전 R2025b에서 확인 | [R2025b 배포 전 확인](runtime-verification.md) |

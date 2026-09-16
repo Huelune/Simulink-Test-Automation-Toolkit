@@ -14,14 +14,6 @@ if isfile(targetFile)
     merged = load(targetFile);
 end
 
-if isfield(merged, 'ActiveModelProfile') && ~isempty(merged.ActiveModelProfile) && ...
-        isfield(fields, 'ModelFile')
-    current = st_config();
-    if ~st_same_path(current.ModelFile, fields.ModelFile)
-        merged.ActiveModelProfile = '';
-        st_log(current, 'WARN', 'Different model selected; model profile deactivated');
-    end
-end
 names = fieldnames(fields);
 for i = 1:numel(names)
     merged.(names{i}) = fields.(names{i});

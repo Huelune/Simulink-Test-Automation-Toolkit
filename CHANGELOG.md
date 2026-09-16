@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Removed the named model profile feature. Target selection is back to the
+  single `runtime_target.mat` path that `st_select_target_model` writes, and
+  `cfg.ActiveModelProfile` is gone. A `model_profiles.mat` left on a machine
+  is now inert; a machine that had a profile active falls back to the
+  default result paths, so earlier results under the profile's OutputRoot
+  are not picked up automatically.
 - A D number now counts a branch rather than a block. An If block spends one
   on its if condition and one on every elseif, because Simulink Coverage
   counts them separately and a single pooled line could not be compared with

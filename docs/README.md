@@ -49,7 +49,6 @@ st_run_standalone_coverage_pipeline( ...
 | --- | --- |
 | 실행 없이 테스트 명세서 Excel 뽑기 | [테스트 명세서 추출](test-specification.md) |
 | 실제 모델 없이 예제로 연습 | [익명 예제 생성](manual/example.md) |
-| 모델을 여러 개 번갈아 사용 | [모델 profile](manual/model-profiles.md) |
 | 중간 단계부터 재시작, 결과 재생성 | [재시작](manual/restart.md) |
 | standalone pipeline의 경계와 결과 구조 | [Standalone Coverage 파이프라인](standalone-coverage-pipeline.md) |
 | 다른 PC에서 재실행할 번들 만들기 | [내보내기 번들](export-bundle.md) |

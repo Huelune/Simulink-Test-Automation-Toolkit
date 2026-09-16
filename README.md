@@ -199,7 +199,7 @@ result/
 | `st_setup.m` | 프로젝트 bootstrap |
 | `src/config/` | 전역 설정과 정책 정규화 |
 | `src/workflow/` | workflow 진입점과 증분 계획 |
-| `src/targets/` | Excel 로드, 모델 선택, CUT 경로 검증, 모델 profile |
+| `src/targets/` | Excel 로드, 모델 선택, CUT 경로 검증 |
 | `src/harness/`, `src/signal_editor/` | Harness와 입력 Scenario 구성 |
 | `src/sldv/`, `src/assessment/` | SLDV 준비와 Assessment 생성 |
 | `src/test_manager/`, `src/execution/` | Test Case 구성과 BATCH/PER_CUT 실행 |
@@ -221,7 +221,7 @@ result/
 | --- | --- | --- |
 | MATLAB 소스, 테스트, 문서 | 추적 | 제품과 검증 코드 |
 | 실제 `TestManagement.xlsx`, MAT, MLDATX, 모델 | 제외 | 모델 경로와 업무 데이터 포함 가능 |
-| `runtime_target.mat`, `model_profiles.mat` | 제외 | PC별 로컬 선택값 |
+| `runtime_target.mat` | 제외 | PC별 로컬 선택값 |
 | `result/`, `slprj/`, 코드 생성물 | 제외 | 실행마다 재생성되는 산출물 |
 | 승인 baseline / test artifact | 정책 확정 전 제외 | 보관 절차 미결정 |
 
@@ -247,7 +247,7 @@ R2025b 실기 결과가 없습니다. 실행하지 않은 검증을 통과로 �
 - 기대값 최초 실패 → 갱신 → 같은 CVF 재실행 → 최종 PASS
 - SLDV·일반 MAT `FILE`/`GENERATE`의 Scenario·Iteration과 `Tmax` timing
 - `QUICK → RUNTIME → CERTIFY` 전체 인증과 재실행 번들 반복 실행
-- 모델 profile과 단계 재시작, 결과 재생성(PACKAGE/SUMMARY)
+- 단계 재시작과 결과 재생성(PACKAGE/SUMMARY)
 
 R2025b 장비에서는 먼저 단위 테스트를 실행하십시오.
 

@@ -3,9 +3,9 @@
 > 실제 모델로 바로 시작하려면 [처음 시작하기](../getting-started.md)를 보십시오.
 > 이 문서는 **업무 모델을 건드리지 않고 흐름만 익히고 싶을 때** 씁니다.
 >
-> 예제는 임시 폴더에 만들어지고 기본 검색 경로 밖에 있으므로, 여기서만
-> [모델 profile](model-profiles.md)로 경로를 지정합니다. 실제 모델에는 profile이
-> 필요 없습니다.
+> 예제는 임시 폴더에 만들어지고 기본 검색 경로 밖에 있으므로, 대상 모델과 관리
+> Excel을 직접 지정해야 합니다. 관리 Excel은 저장소 루트의
+> `TestManagement.xlsx` 한 자리만 읽으므로 **기존 파일을 먼저 백업**하십시오.
 
 실제 업무 모델 없이 2개 CUT, Dataset MAT, 관리 Excel을 로컬에서 생성합니다.
 SLDV 분석은 필요하지 않으며 `FILE+MAT`를 사용합니다. 생성기는 테스트를 실행하지 않습니다.
@@ -17,12 +17,18 @@ SLDV 분석은 필요하지 않으며 `FILE+MAT`를 사용합니다. 생성기�
 st_setup
 exampleDir = fullfile(tempdir, ['st_demo_' char(datetime('now','Format','yyyyMMdd_HHmmss_SSS'))]);
 demo = st_create_example(exampleDir);
-st_save_model_profile('DEMO', ...
-    'ModelFile', demo.ModelFile, ...
-    'ManagementExcel', demo.ManagementExcel, ...
-    'OutputRoot', demo.OutputRoot, ...
-    'Overwrite', true);
-cfg = st_select_model_profile('DEMO');
+
+% 기존 관리 Excel이 있으면 먼저 백업하십시오.
+backup = fullfile(st_project_root(), 'TestManagement.backup.xlsx');
+if isfile(fullfile(st_project_root(),'TestManagement.xlsx'))
+    copyfile(fullfile(st_project_root(),'TestManagement.xlsx'), backup);
+end
+copyfile(demo.ManagementExcel, fullfile(st_project_root(),'TestManagement.xlsx'));
+
+[~, demoModel] = fileparts(demo.ModelFile);
+st_save_runtime_target_fields(fullfile(st_project_root(),'runtime_target.mat'), ...
+    struct('TopModel', demoModel, 'ModelFile', demo.ModelFile));
+cfg = st_config();
 disp(demo)
 ```
 
@@ -31,11 +37,10 @@ disp(demo)
 
 ## 2. 준비와 실행
 
-`DEMO` profile을 고른 뒤는 실제 모델과 똑같습니다.
+대상을 지정한 뒤는 실제 모델과 똑같습니다.
 
 ```matlab
 st_setup
-st_select_model_profile('DEMO');
 st_pre_validate_targets
 st_run_from_harness('PreparationMode','FORCE');
 ```
@@ -60,6 +65,8 @@ CVF로 유효 objective가 없어진 metric의 `0/0`, `N/A`는 오류가 아닙�
 ## 4. 실제 모델로 돌아가기
 
 ```matlab
-st_select_model_profile('');   % profile 해제
-st_select_target_model         % 실제 모델 선택
+% 백업해 둔 관리 Excel을 되돌린 뒤 실제 모델을 다시 고릅니다.
+copyfile(fullfile(st_project_root(),'TestManagement.backup.xlsx'), ...
+    fullfile(st_project_root(),'TestManagement.xlsx'));
+st_select_target_model
 ```

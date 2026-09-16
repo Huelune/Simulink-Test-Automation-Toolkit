@@ -54,9 +54,36 @@
   model profile과 단계 재시작, `AnalyzeProducts=true`의 실제 소요시간,
   경고 억제(`cfg.SuppressedWarnings`).
 
+## 2026-09-16 model profile 기능 제거
+
+- 사용자가 혼동을 이유로 제거를 지시했다. 되살리지 않는다.
+- 삭제: `st_save_model_profile`, `st_list_model_profiles`,
+  `st_select_model_profile`, `st_apply_model_profile`, `st_model_profile_store`,
+  `manual/model-profiles.md`. `st_config` 끝의 `st_apply_model_profile` 호출과
+  `cfg.ActiveModelProfile` 필드도 함께 없앴다.
+- 대상 선택은 `st_select_target_model`이 쓰는 `runtime_target.mat` 단일 경로로
+  돌아갔다. `st_set_standalone_coverage_root`의 profile 분기를 지웠고 이제
+  항상 `runtime_target.mat`에 override를 쓴다.
+  `st_save_runtime_target_fields`의 profile 비활성화 분기도 제거했다.
+- `model_profiles.mat`은 Git 제외 로컬 파일이라 저장소에는 없다. 이미 만들어
+  둔 PC에는 남지만 읽는 코드가 없으므로 무해하다. profile을 활성화해 둔 PC는
+  결과 경로가 `cfg` 기본값으로 되돌아가므로, 이전 profile의 `OutputRoot`에
+  있던 결과는 자동으로 따라오지 않는다.
+- `manual/example.md`가 profile에 의존하던 유일한 문서였다. 예제는 `tempdir`에
+  생성되는데 관리 Excel은 저장소 루트의 `TestManagement.xlsx` 한 자리만 읽으므로,
+  백업 후 복사하고 `st_save_runtime_target_fields`로 대상을 지정하도록 다시 썼다.
+  이 불편이 profile이 존재하던 이유였다. 되살리는 대신 다른 방법이 필요하면
+  `cfg.ManagementExcel` override를 `runtime_target.mat`에 추가하는 쪽을 검토한다.
+- `test_model_profiles_and_restart.m`에서 profile 검사 5개와 `save_profile`
+  helper를 지우고 나머지 재시작 검사만 `test_stage_restart.m`으로 옮겼다.
+  `test_result_regeneration.m`과 `test_stage_restart_runtime.m`은 profile 대신
+  `st_save_runtime_target_fields`로 대상을 지정한다.
+- MATLAB R2025b 실행 검증은 미수행이다.
+
 ## 2026-09-15 profile / 단계 재시작 구현
 
-- `st_save_model_profile`, `st_list_model_profiles`, `st_select_model_profile`:
+- (2026-09-16 제거됨. 아래 "model profile 기능 제거" 항목을 먼저 읽는다.)
+  `st_save_model_profile`, `st_list_model_profiles`, `st_select_model_profile`:
   로컬 `model_profiles.mat`, 활성 선택 `runtime_target.mat`. profile별 결과/상태 경로 분리.
   여러 모델 병렬 실행 기능이 아니며 기존 단일 모델 선택도 유지한다.
 - `st_create_example(destination)`: FILE/MAT 익명 model/Excel/input 로컬 생성만 수행.

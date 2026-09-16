@@ -64,9 +64,6 @@ st_run_standalone_coverage_pipeline( ...
 
 | 구분 | 명령 | 역할 |
 | --- | --- | --- |
-| 모델 profile | `st_save_model_profile` | 모델별 경로 묶음을 이름으로 저장 |
-| 모델 profile | `st_list_model_profiles` | 저장된 profile 목록 보기 |
-| 모델 profile | `st_select_model_profile` | profile 전환 |
 | 단계 재시작 | `st_check_readiness` | 선택 단계부터 실행 가능한 상태인지 검사 |
 | 단계 재시작 | `st_run_from_stage` | 선행 단계 검증 후 선택 단계부터 끝까지 실행 |
 | 내보내기 | `st_export_test_asset_bundle` | 선택 결과와 자산을 한 폴더로 |
@@ -94,47 +91,6 @@ cfg = st_select_target_model(true);  % 무조건 다시 고르기
 | 인자 | 기본값 | 역할 |
 | --- | --- | --- |
 | 첫 번째 (선택) | `false` | `true`면 기존 선택을 무시하고 다시 고릅니다 |
-
-### `st_save_model_profile` (선택 사항)
-
-> 모델을 하나만 쓴다면 필요 없습니다. `st_select_target_model`로 충분합니다.
-> 여러 모델을 번갈아 쓰면서 결과가 섞이지 않게 하고 싶을 때만 씁니다.
-
-모델 하나에 관련된 경로들을 이름으로 묶어 저장합니다. **저장만 하고 활성화하지
-않으며, 모델을 열지도 않습니다.**
-
-```matlab
-st_save_model_profile('MODEL_A', ...
-    'ModelFile',       'D:\models\MODEL_A\MODEL_A.slx', ...
-    'ManagementExcel', 'D:\models\MODEL_A\TestManagement.xlsx', ...
-    'OutputRoot',      'D:\results\MODEL_A');
-```
-
-| 옵션 | 기본값 | 역할 |
-| --- | --- | --- |
-| 첫 번째 인자 (필수) | — | profile 이름. 이 이름으로 전환합니다 |
-| `ModelFile` | — | Top Model 파일 경로. **이미 존재해야 합니다** |
-| `ManagementExcel` | — | 관리 Excel 경로. **이미 존재해야 합니다** |
-| `OutputRoot` | — | 이 모델의 결과가 저장될 루트. 다른 profile과 겹치면 거부합니다 |
-| `TestFile` | `OutputRoot` 아래 | Test File(`.mldatx`) 경로. 준비 단계가 새로 만들 수 있으므로 없어도 됩니다 |
-| `StandaloneCoverageRootDir` | `OutputRoot` 아래 | standalone 제출물 저장 위치 |
-| `ManagementSheet` | `'Targets'` | 관리 Excel의 시트 이름 |
-| `TestSuiteName` | `'New Test Suite 1'` | Test Case를 담을 Suite 이름 |
-| `Overwrite` | `false` | 같은 이름의 profile을 덮어쓸 때 `true` |
-
-### `st_list_model_profiles` / `st_select_model_profile`
-
-```matlab
-st_list_model_profiles();                    % 목록 보기
-cfg = st_select_model_profile('MODEL_A');    % 이름으로 전환
-cfg = st_select_model_profile();             % 목록에서 고르기 (취소하면 기존 유지)
-cfg = st_select_model_profile('');           % profile 해제, 기존 단일 모델 방식으로
-```
-
-profile을 고르면 결과·상태·export 경로가 모두 그 `OutputRoot` 아래로 바뀝니다.
-같은 이름의 다른 모델이 이미 로드돼 있으면 자동으로 닫지 않고 선택을 거부합니다.
-
-자세한 내용은 [모델 profile](manual/model-profiles.md)에 있습니다.
 
 ## 3. CUT 경로 준비
 
