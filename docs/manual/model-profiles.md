@@ -1,8 +1,21 @@
-# 모델별 profile 등록과 전환
+# 모델별 profile 등록과 전환 (선택 사항)
 
-profile은 모델·관리 Excel·Test File·일반 결과 root·Standalone root를 묶습니다.
-동시에 여러 모델을 실행하는 기능이 아니라, 하나씩 선택해 독립적으로 관리하는 기능입니다.
-모델마다 서로 겹치지 않는 결과 root와 Test File을 사용하십시오.
+> **모델을 하나만 쓴다면 필요 없습니다.** `st_select_target_model`로 고르는 기본
+> 방식이면 충분합니다. 이 문서는 **여러 모델을 번갈아 쓰면서 결과가 섞이지 않게
+> 하고 싶을 때만** 보십시오.
+
+profile은 모델·관리 Excel·Test File·일반 결과 root·Standalone root를 묶어 이름을
+붙인 것입니다. 동시에 여러 모델을 실행하는 기능이 아니라, 하나씩 선택해 독립적으로
+관리하는 기능입니다. 모델마다 서로 겹치지 않는 결과 root와 Test File을 사용하십시오.
+
+profile을 고르면 이후 명령은 평소와 똑같습니다.
+
+```matlab
+st_setup
+st_select_model_profile('MODEL_A');
+st_pre_validate_targets
+st_run_from_harness
+```
 
 ## 1. 한 번 등록
 

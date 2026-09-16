@@ -24,34 +24,55 @@ st_run_from_harness('ExecutionMode','PER_CUT', 'ReportMode','SUMMARY')
 
 ## 1. 명령 한눈에 보기
 
+### 평소 쓰는 명령
+
+```matlab
+st_setup
+st_pre_validate_targets
+st_run_from_harness
+
+st_run_standalone_coverage_pipeline( ...
+    'Action', 'ALL', 'ContinueOnFailure', true, 'FailOnNonPass', false);
+```
+
 | 구분 | 명령 | 역할 |
 | --- | --- | --- |
 | 초기화 | `st_setup` | MATLAB path와 `result/` 폴더 준비 |
 | 대상 선택 | `st_select_target_model` | Top Model 선택과 로컬 저장 |
-| 대상 선택 | `st_save_model_profile` | 모델별 경로 묶음을 이름으로 저장 |
-| 대상 선택 | `st_list_model_profiles` | 저장된 profile 목록 보기 |
-| 대상 선택 | `st_select_model_profile` | profile 전환 |
+| 사전 검증 | `st_pre_validate_targets` | Harness 생성 전 CUT 경로 검사 |
+| Workflow | `st_run_from_harness` | Harness 생성부터 준비·테스트까지 전체 실행 |
+| Workflow | `st_run_after_harness` | 기존 Harness 검증 후 SLDV부터 실행 |
+| Pipeline | `st_run_standalone_coverage_pipeline` | standalone 제출물 생성 |
+| 점검 | `st_check_standalone_coverage` | standalone 결과를 10비트 코드로 검사 |
+| 점검 | `st_check_actual_system` | 환경·실행·CVF를 18비트 코드로 검사 |
+
+### 필요할 때만 쓰는 명령
+
+| 구분 | 명령 | 역할 |
+| --- | --- | --- |
 | 경로 준비 | `st_export_subsystem_paths` | Subsystem 경로 전체를 Excel로 내보내기 |
 | 경로 준비 | `st_fill_temp_paths_from_indent` | Excel 들여쓰기로 빈 CUTPath 채우기 |
 | 경로 준비 | `st_find_target_paths` | 같은 이름 후보를 순위화해 선택 |
-| 사전 검증 | `st_pre_validate_targets` | Harness 생성 전 CUT 경로 검사 |
 | 사전 검증 | `st_validate_targets` | 기존 Harness와 CUT 연결 검사 |
-| 사전 검증 | `st_check_readiness` | 선택 단계부터 실행 가능한 상태인지 검사 |
-| Workflow | `st_run_from_harness` | Harness 생성부터 전체 실행 |
-| Workflow | `st_run_after_harness` | 기존 Harness 검증 후 SLDV부터 실행 |
-| Workflow | `st_run_from_stage` | 선행 단계 검증 후 선택 단계부터 끝까지 실행 |
-| 테스트 | `st_run_tests_per_cut` | 준비된 Test File을 CUT별로 실행 |
-| 테스트 | `st_run_generated_tests` | 필터 없는 Test File을 BATCH 실행 |
 | 명세서 | `st_export_test_specification` | 실행 없이 입력·verify를 Excel로 추출 |
-| Pipeline | `st_run_standalone_coverage_pipeline` | standalone 제출물 생성·재개 |
+| 점검 | `st_check_per_cut_cvf` | 최신 PER_CUT CVF를 6비트 코드로 검사 |
+| 정리 | `st_cleanup_results` | 생성 결과 미리보기 또는 삭제 |
+| 테스트 | `st_run_tests_per_cut` | 준비된 Test File을 CUT별로만 실행 |
+| 테스트 | `st_run_generated_tests` | 필터 없는 Test File을 BATCH 실행 |
+
+### 선택 기능
+
+| 구분 | 명령 | 역할 |
+| --- | --- | --- |
+| 모델 profile | `st_save_model_profile` | 모델별 경로 묶음을 이름으로 저장 |
+| 모델 profile | `st_list_model_profiles` | 저장된 profile 목록 보기 |
+| 모델 profile | `st_select_model_profile` | profile 전환 |
+| 단계 재시작 | `st_check_readiness` | 선택 단계부터 실행 가능한 상태인지 검사 |
+| 단계 재시작 | `st_run_from_stage` | 선행 단계 검증 후 선택 단계부터 끝까지 실행 |
 | 내보내기 | `st_export_test_asset_bundle` | 선택 결과와 자산을 한 폴더로 |
 | 내보내기 | `st_export_test_bundle` | 다른 PC에서 재실행할 전체 번들 |
-| 점검 | `st_check_standalone_coverage` | standalone 결과를 10비트 코드로 검사 |
-| 점검 | `st_check_per_cut_cvf` | 최신 PER_CUT CVF를 6비트 코드로 검사 |
-| 점검 | `st_check_actual_system` | 환경·실행·CVF를 18비트 코드로 검사 |
 | 검증 | `st_verify_all` | 환경·단위·fixture·실제 모델 종합 검증 |
 | 예제 | `st_create_example` | 익명 모델·입력·Excel 생성 |
-| 정리 | `st_cleanup_results` | 생성 결과 미리보기 또는 삭제 |
 
 ## 2. 초기화와 대상 선택
 
@@ -74,7 +95,10 @@ cfg = st_select_target_model(true);  % 무조건 다시 고르기
 | --- | --- | --- |
 | 첫 번째 (선택) | `false` | `true`면 기존 선택을 무시하고 다시 고릅니다 |
 
-### `st_save_model_profile`
+### `st_save_model_profile` (선택 사항)
+
+> 모델을 하나만 쓴다면 필요 없습니다. `st_select_target_model`로 충분합니다.
+> 여러 모델을 번갈아 쓰면서 결과가 섞이지 않게 하고 싶을 때만 씁니다.
 
 모델 하나에 관련된 경로들을 이름으로 묶어 저장합니다. **저장만 하고 활성화하지
 않으며, 모델을 열지도 않습니다.**
@@ -173,9 +197,10 @@ Harness 생성 전에 다음을 확인합니다. 결과는
 기존 Harness workflow 전에 CUT과 Harness의 연결을 확인합니다. 컴파일은 하지
 않습니다. 결과는 `result/reports/ValidationResult.ini`에 저장됩니다.
 
-### `st_check_readiness`
+### `st_check_readiness` (선택 사항)
 
-**선택한 단계부터 실행해도 되는 상태인지**를 읽기 전용으로 검사합니다.
+`st_run_from_stage`와 짝으로 쓰는 명령입니다. **선택한 단계부터 실행해도 되는
+상태인지**를 읽기 전용으로 검사합니다.
 
 ```matlab
 [ready, checks] = st_check_readiness( ...
@@ -252,7 +277,11 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');
 > `PreparationMode='FORCE'`는 증분 계산 때문에 **앞 단계까지 무효화할 수 있습니다.**
 > 앞 단계를 절대 다시 실행하지 않아야 하면 `st_run_from_stage`를 쓰십시오.
 
-### `st_run_from_stage`
+### `st_run_from_stage` (선택 사항)
+
+> 평소 재실행은 `st_run_from_harness('PreparationMode','FORCE','FromStage',...)`로
+> 충분합니다. 이 명령은 **오래 걸리는 앞 단계를 절대 다시 실행하면 안 될 때**와
+> standalone 결과를 재실행 없이 재생성할 때 씁니다.
 
 선행 단계를 검증한 뒤 **선택한 단계부터 해당 workflow 끝까지** 실행합니다. 앞 단계가
 유효하지 않으면 자동으로 고치지 않고 중단합니다.

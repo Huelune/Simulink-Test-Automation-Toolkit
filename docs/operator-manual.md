@@ -52,31 +52,33 @@ MATLAB은 같은 이름의 모델을 두 개 로드할 수 없습니다. 이 도
 `SldvDataFile`의 상대 경로는 MATLAB의 Current Folder가 아니라
 **`TestManagement.xlsx`가 있는 폴더**를 기준으로 해석합니다.
 
-## 3. 가장 짧은 실행 순서
-
-Harness가 없는 최초 실행:
+## 3. 기본 실행 순서
 
 ```matlab
 st_setup
-st_select_target_model
 st_pre_validate_targets
 st_run_from_harness
+
+st_run_standalone_coverage_pipeline( ...
+    'Action', 'ALL', ...
+    'ContinueOnFailure', true, ...
+    'FailOnNonPass', false);
 ```
 
-Harness가 이미 있는 실행:
+처음이거나 대상 모델을 바꿀 때만 `st_select_target_model`을 사이에 넣습니다.
+
+Harness가 이미 전부 있으면 생성 단계를 건너뜁니다.
 
 ```matlab
 st_setup
-st_select_target_model
 st_validate_targets
 st_run_after_harness
 ```
 
-기존 SLDV MAT로 Test Case까지만 만들고 실행하지 않기:
+기존 SLDV MAT로 Test Case까지만 만들고 실행하지 않으려면:
 
 1. Excel의 `SldvMode`를 `FILE`, `SldvDataFile`에 MAT 경로를 적습니다.
-2. `src/config/st_config.m`에서 `cfg.RunGeneratedTests = false`로 바꿉니다.
-3. `st_run_after_harness`를 실행합니다.
+2. `st_run_after_harness('ExecuteTests', false)`를 실행합니다.
 
 ## 4. Workflow 단계별 동작
 
@@ -209,25 +211,29 @@ result/state/workflow_state.json
 준비 단계가 전부 캐시되어도 `cfg.RunGeneratedTests=true`이면 테스트는 매번
 실행합니다.
 
-### 5.2 다시 실행하는 두 가지 방법
+### 5.2 다시 실행하기
 
-| 방법 | 동작 | 언제 |
-| --- | --- | --- |
-| `st_run_from_harness('PreparationMode','FORCE','FromStage','SLDV')` | 그 단계부터 다시. 증분 계산이 **앞 단계까지 무효화할 수 있습니다** | 캐시를 무시하고 빠르게 다시 돌릴 때 |
-| `st_run_from_stage('Workflow',...,'FromStage',...)` | 앞 단계를 읽기 전용 검증한 뒤 그 단계부터 끝까지. 앞 단계는 **절대 다시 실행하지 않습니다** | 오래 걸리는 앞 단계를 보존해야 할 때 |
-
-두 번째 방법은 `st_check_readiness`로 먼저 검사하는 것이 표준 절차입니다.
+평소에는 이것으로 충분합니다.
 
 ```matlab
-[ready, checks] = st_check_readiness('Workflow','FROM_HARNESS','FromStage','ASSESSMENT');
-disp(checks)
-assert(ready.Ready, 'checks를 확인하고 RecommendedFromStage를 쓰십시오.');
-info = st_run_from_stage('Workflow','FROM_HARNESS','FromStage','ASSESSMENT');
+st_run_from_harness('PreparationMode','FORCE');                      % 전부 다시
+st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');  % 그 단계부터
 ```
 
-`BLOCKED`이면 `checks.Message`와 `checks.RequiredFromStage`를 확인하십시오. 예를 들어
-입력 MAT이 바뀌었으면 `SLDV`부터, Assessment가 바뀌었으면 `ASSESSMENT`부터
-시작하라는 검사를 받습니다.
+| 무엇이 바뀌었나 | `FromStage` |
+| --- | --- |
+| 입력 MAT 또는 SLDV 설정 | `SLDV` |
+| Harness StopTime 등 설정 | `HARNESS_CONFIG` |
+| verify 대상 또는 Assessment 구성 | `ASSESSMENT` |
+| Coverage 필터 설정 | `COVERAGE_FILTER` |
+| Test Case 이름 또는 Iteration | `TEST_MANAGER` |
+
+> `FORCE`의 증분 계산은 **앞 단계까지 무효화할 수 있습니다.** 보통은 문제가 되지
+> 않지만, Harness 생성처럼 오래 걸리는 앞 단계를 절대 다시 실행하면 안 되는
+> 상황이라면 선택 기능인 `st_check_readiness` + `st_run_from_stage`를 쓰십시오.
+> 앞 단계를 읽기 전용으로 검증한 뒤, 유효하면 선택한 단계부터만 실행하고 유효하지
+> 않으면 자동으로 고치지 않고 중단합니다. 절차는 [재시작](manual/restart.md)에
+> 있습니다.
 
 ### 5.3 checkpoint만 지우기
 
@@ -412,28 +418,17 @@ blocking API 내부의 실제 진행률은 알 수 없으므로 **마지막 `STA
 Targets.SldvMode       = FILE
 Targets.SldvDataFile   = <Excel 기준 MAT 상대경로>
 Targets.DataFileFormat = SLDV
-cfg.RunGeneratedTests  = false
-cfg.OverwriteTestFile  = false
 ```
 
 ```matlab
 st_setup
-st_select_target_model
-st_run_after_harness
+st_run_after_harness('ExecuteTests', false);
 ```
 
 ### 준비 상태를 무시하고 SLDV부터 다시
 
 ```matlab
-st_run_after_harness('PreparationMode','FORCE','FromStage','SLDV');
-```
-
-### 앞 단계를 보존한 채 ASSESSMENT부터 다시
-
-```matlab
-[ready, checks] = st_check_readiness('Workflow','AFTER_HARNESS','FromStage','ASSESSMENT');
-disp(checks)
-st_run_from_stage('Workflow','AFTER_HARNESS','FromStage','ASSESSMENT');
+st_run_after_harness('PreparationMode','FORCE', 'FromStage','SLDV');
 ```
 
 ### checkpoint만 지우고 다시 판단
@@ -443,10 +438,30 @@ st_cleanup_results('Scope','STATE','Apply',true)
 st_run_after_harness
 ```
 
+### 제출물만 다시 만들기
+
+준비와 테스트 실행은 그대로 두고 standalone 제출물만 새로 만듭니다.
+
+```matlab
+st_run_standalone_coverage_pipeline( ...
+    'Action', 'ALL', 'ContinueOnFailure', true, 'FailOnNonPass', false);
+[code, summary, details] = st_check_standalone_coverage();
+```
+
+원본 Top Model과 열린 Harness를 먼저 저장하고 닫아야 합니다.
+
 ### 실행 후 빠른 점검
 
 ```matlab
 summary = st_check_actual_system();
+```
+
+### 앞 단계를 보존한 채 중간부터 (선택 기능)
+
+```matlab
+[ready, checks] = st_check_readiness('Workflow','AFTER_HARNESS','FromStage','ASSESSMENT');
+disp(checks)
+st_run_from_stage('Workflow','AFTER_HARNESS','FromStage','ASSESSMENT');
 ```
 
 ## 11. 안전 경계 요약

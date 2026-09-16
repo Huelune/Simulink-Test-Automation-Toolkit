@@ -32,19 +32,18 @@ TestManagement.xlsx
 | 영역 | 제공 기능 |
 | --- | --- |
 | 대상 관리 | Excel 행별 CUT, Harness, Test Case, SLDV, 기대값, CVF 정책 |
-| 여러 모델 관리 | 이름별 로컬 profile로 모델·Excel·Test File·결과 경로 분리 |
 | 준비 자동화 | 누락 Harness 생성, Signal Editor Scenario, Assessment, Iteration 구성 |
 | 증분 처리 | 대상·단계별 fingerprint와 checkpoint로 준비 결과 재사용 |
-| 명시적 재시작 | 선행 단계를 읽기 전용 검사한 뒤 선택 단계부터 끝까지 실행 |
 | 테스트 실행 | 전체 일괄 실행 또는 Excel 순서의 CUT별 독립 실행 |
 | 기대값 처리 | 실패 결과의 실제값을 Assessment 기대값에 반영 후 재실행 |
 | Coverage | Decision과 Block Execution 수집, CUT별 임시 CVF 적용·복원 |
+| 제출물 | standalone 모델·CVF·CVT·HTML과 11열 `CoverageSummary.xlsx` |
 | 보고서 | Excel, JSON manifest, MLDATX, HTML, 선택적 공식 PDF |
-| 검증 | `QUICK`/`RUNTIME`/`CERTIFY` 프로필과 Excel·JSON·JUnit 결과 |
 | 현장 점검 | 환경·실행·CVF 상태를 전달 가능한 고정 비트 코드로 요약 |
-| 내보내기 | 결과 자산 묶음, 반복 실행 번들, standalone Coverage 제출물 |
-| 테스트 명세서 | 실행 없이 시나리오별 입력 마지막 값과 verify를 Excel로 추출 |
-| 결과 재생성 | 저장 증거에서 테스트 재실행 없이 새 PipelineId로 제출물 재생성 |
+
+선택 기능으로 테스트 명세서 Excel 추출, 다른 PC용 재실행 번들, 여러 모델을 위한
+이름별 profile, 중간 단계 재시작과 결과 재생성, `QUICK`/`RUNTIME`/`CERTIFY` 종합
+검증이 있습니다.
 
 ## 요구 환경
 
@@ -65,17 +64,35 @@ MATLAB에서 저장소 루트를 Current Folder로 연 뒤 실행합니다.
 
 ```matlab
 st_setup
-st_select_target_model
 st_pre_validate_targets
 st_run_from_harness
+
+st_run_standalone_coverage_pipeline( ...
+    'Action', 'ALL', ...
+    'ContinueOnFailure', true, ...
+    'FailOnNonPass', false);
 ```
 
 | 명령 | 하는 일 |
 | --- | --- |
 | `st_setup` | `src/`와 진단 명령을 MATLAB path에 등록합니다. 세션마다 한 번 |
-| `st_select_target_model` | Top Model을 고르고 `runtime_target.mat`에 로컬 저장합니다 |
-| `st_pre_validate_targets` | Excel의 CUT 경로와 필수 설정을 실행 전에 확인합니다 |
-| `st_run_from_harness` | Harness 생성부터 테스트·보고서까지 전체를 실행합니다 |
+| `st_pre_validate_targets` | Excel의 CUT 경로를 실행 전에 확인합니다 |
+| `st_run_from_harness` | Harness·입력·verify·Test Case를 만들고 테스트를 실행합니다 |
+| `st_run_standalone_coverage_pipeline` | 그 결과를 독립 실행 가능한 제출물로 묶습니다 |
+
+처음이거나 대상 모델을 바꿀 때만 모델 선택을 사이에 넣습니다. 선택 결과는
+`runtime_target.mat`에 저장되어 이후 실행에서 재사용됩니다.
+
+```matlab
+st_select_target_model
+```
+
+제출물이 제대로 만들어졌는지는 읽기 전용 검사로 확인합니다. `1111111111`이면
+정상입니다.
+
+```matlab
+[code, summary, details] = st_check_standalone_coverage();
+```
 
 Harness가 이미 전부 있으면 생성 단계를 건너뛰는 진입점을 씁니다.
 
@@ -85,7 +102,7 @@ st_run_after_harness
 
 > **실행 전 주의:** 이 도구는 모델과 Test File을 실제로 수정합니다. 처음 돌리기
 > 전에 백업하고, 기본 기대값 정책이 `APPLY`(실패 시 기대값 자동 갱신)라는 점을
-> [처음 시작하기 6장](docs/getting-started.md#6-실행-전에-반드시-알아-둘-것)에서
+> [처음 시작하기 7장](docs/getting-started.md#7-기대값-자동-갱신apply-주의)에서
 > 확인하십시오.
 
 모델 이름과 파일 경로는 추적되는 `src/config/st_config.m`에 기록하지 않습니다.
@@ -161,8 +178,13 @@ result/
 | [수동 실행 안내](docs/manual/README.md) | 작업별로 복사해 쓸 코드가 필요할 때 |
 | [운영자 매뉴얼](docs/operator-manual.md) | 단계별 전제조건·부작용·복구 방법을 확인할 때 |
 | [문제 해결](docs/troubleshooting.md) | 오류가 났을 때 |
+
+선택 기능:
+
+| 문서 | 언제 보는가 |
+| --- | --- |
 | [테스트 명세서 추출](docs/test-specification.md) | 실행 없이 명세 Excel을 뽑을 때 |
-| [Standalone Coverage 파이프라인](docs/standalone-coverage-pipeline.md) | 제출용 standalone 결과를 만들 때 |
+| [Standalone Coverage 파이프라인](docs/standalone-coverage-pipeline.md) | 제출물의 경계와 결과 구조를 확인할 때 |
 | [내보내기 번들](docs/export-bundle.md) | 다른 PC에서 재실행할 번들을 만들 때 |
 | [Template Harness clone](docs/harness-template-clone.md) | 기존 Harness를 본떠 만들 때 |
 | [종합 검증](docs/verification.md) | 도구 자체의 상태를 인증할 때 |

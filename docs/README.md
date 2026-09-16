@@ -1,14 +1,26 @@
 # 문서 지도
 
-무엇을 하려는지에 따라 읽을 문서를 골라 주는 목차입니다.
+## 기본 사용법
 
-## 처음이라면
+평소 쓰는 명령은 네 개입니다.
+
+```matlab
+st_setup
+st_pre_validate_targets
+st_run_from_harness
+
+st_run_standalone_coverage_pipeline( ...
+    'Action', 'ALL', ...
+    'ContinueOnFailure', true, ...
+    'FailOnNonPass', false);
+```
 
 | 순서 | 문서 | 내용 |
 | --- | --- | --- |
-| 1 | [처음 시작하기](getting-started.md) | 설치부터 첫 실행까지. MATLAB을 모른다는 전제로 씁니다 |
+| 1 | [처음 시작하기](getting-started.md) | 설치부터 제출물까지 전체 흐름. MATLAB을 모른다는 전제로 씁니다 |
 | 2 | [용어집](glossary.md) | CUT, Harness, Assessment, CVF, SLDV가 각각 무엇인지 |
 | 3 | [관리 Excel 열 사전](workbook-reference.md) | Excel에 무엇을 적어야 하는지 |
+| 4 | [수동 실행 안내](manual/README.md) | 복사해서 바로 쓸 코드 |
 
 ## 파라미터를 찾을 때
 
@@ -22,28 +34,27 @@
 
 | 하고 싶은 것 | 문서 |
 | --- | --- |
-| 복사해서 바로 쓸 코드 | [수동 실행 안내](manual/README.md) |
+| 준비와 테스트 실행 | [준비 및 실행](manual/prepare.md) |
+| standalone 제출물 생성 | [Standalone 실행](manual/standalone-run.md) |
+| 제출물을 Test Manager에서 열기 | [결과 열기](manual/open-results.md) |
 | 단계별 동작과 주의사항 전체 | [운영자 매뉴얼](operator-manual.md) |
 | 오류가 났다 | [문제 해결](troubleshooting.md) |
-| 원하는 단계부터 다시 실행 | [재시작](manual/restart.md) |
-| 모델을 여러 개 다루기 | [모델 profile](manual/model-profiles.md) |
 
-## 결과물을 만들 때
+## 선택 기능
 
-| 만들려는 것 | 문서 |
+필요해질 때만 보면 됩니다.
+
+| 상황 | 문서 |
 | --- | --- |
-| 실행 없이 테스트 명세서 Excel | [테스트 명세서 추출](test-specification.md) |
-| standalone Harness 커버리지 제출물 | [Standalone Coverage 파이프라인](standalone-coverage-pipeline.md) · [Standalone 실행](manual/standalone-run.md) |
-| 다른 PC에서 재실행할 번들 | [내보내기 번들](export-bundle.md) |
-| 제출된 결과를 Test Manager에서 열기 | [결과 열기](manual/open-results.md) |
+| 실행 없이 테스트 명세서 Excel 뽑기 | [테스트 명세서 추출](test-specification.md) |
+| 실제 모델 없이 예제로 연습 | [익명 예제 생성](manual/example.md) |
+| 모델을 여러 개 번갈아 사용 | [모델 profile](manual/model-profiles.md) |
+| 중간 단계부터 재시작, 결과 재생성 | [재시작](manual/restart.md) |
+| standalone pipeline의 경계와 결과 구조 | [Standalone Coverage 파이프라인](standalone-coverage-pipeline.md) |
+| 다른 PC에서 재실행할 번들 만들기 | [내보내기 번들](export-bundle.md) |
 | 기존 Harness를 본떠 새 Harness 만들기 | [Template Harness clone](harness-template-clone.md) |
-
-## 검증할 때
-
-| 문서 | 내용 |
-| --- | --- |
-| [종합 검증](verification.md) | `st_verify_all`의 QUICK/RUNTIME/CERTIFY 실행 절차와 판정 기준 |
-| [R2025b 배포 전 확인](manual/runtime-verification.md) | 배포 전에 실기에서 돌려 볼 항목 |
+| 도구 자체를 인증하기 | [종합 검증](verification.md) |
+| 배포 전 R2025b에서 확인 | [R2025b 배포 전 확인](manual/runtime-verification.md) |
 
 ## 개발자용
 

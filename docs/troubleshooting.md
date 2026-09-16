@@ -29,22 +29,24 @@
 | Test Manager | `TestManagerResult.ini` |
 | Scenario 정렬 | `ScenarioAlignmentResult.ini` |
 
-## 2. 실행 전 점검 명령
+## 2. 읽기 전용 점검 명령
 
-실행하기 전에 막힐 곳을 미리 찾고 싶다면 다음 명령을 쓰십시오. 세 명령 모두
-**모델과 Test File을 저장하거나 변경하지 않습니다.**
+상태를 확인만 하고 싶을 때 쓰는 명령입니다. 세 명령 모두 **모델과 Test File을
+저장하거나 변경하지 않습니다.**
 
 ```matlab
 % 1. Excel에 적은 CUT 경로가 실제로 존재하는지
 st_pre_validate_targets
 
-% 2. 이 단계부터 실행해도 되는 상태인지
-[ready, checks] = st_check_readiness('Workflow','FROM_HARNESS','FromStage','HARNESS');
-disp(checks)
-
-% 3. 환경·실행 결과·필터 상태를 18비트 코드로
+% 2. 실행 후 환경·실행 결과·필터 상태를 18비트 코드로
 summary = st_check_actual_system();
+
+% 3. standalone 제출물이 제대로 만들어졌는지 10비트 코드로
+[code, summary, details] = st_check_standalone_coverage();
 ```
+
+중간 단계부터 실행할 때 앞 단계가 멀쩡한지 미리 보려면 선택 기능인
+`st_check_readiness`를 쓸 수 있습니다. [재시작](manual/restart.md)을 보십시오.
 
 ## 3. 준비 단계 오류
 

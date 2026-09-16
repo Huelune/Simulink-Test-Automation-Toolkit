@@ -116,6 +116,30 @@
   `st_create_example`)이 빠져 있어 `docs/execution-commands.md`와 어긋난다. 별도
   작업으로 남긴다.
 
+## 2026-09-16 문서 기본 경로 정정
+
+- 사용자가 실제로 쓰는 경로는 `st_setup` → `st_pre_validate_targets` →
+  `st_run_from_harness` → `st_run_standalone_coverage_pipeline('Action','ALL',
+  'ContinueOnFailure',true,'FailOnNonPass',false)`다. 첫 재구성이 model profile과
+  `st_check_readiness`/`st_run_from_stage`를 기본 경로처럼 서술해 실제 사용법과
+  달랐다.
+- `getting-started.md`, `manual/README.md`, `manual/prepare.md`,
+  `manual/standalone-run.md`, `operator-manual.md`, `README.md`,
+  `standalone-coverage-pipeline.md`, `execution-commands.md`, `docs/README.md`를
+  위 4개 명령 기준으로 다시 썼다. 재실행은 `st_run_from_harness(
+  'PreparationMode','FORCE','FromStage',...)`를 기본으로 안내한다.
+- profile, readiness, 단계 재시작, 내보내기 번들, 종합 검증은 **선택 기능**으로
+  명시 표기했다. `manual/model-profiles.md`와 `manual/restart.md` 제목에도
+  `(선택 사항)`을 붙였다.
+- `manual/open-results.md`는 `st_select_model_profile` 대신 `st_config()`를 쓴다.
+- profile이 코드 블록에 남은 곳은 `execution-commands.md`(명령 사전)와
+  `manual/example.md` 두 곳뿐이다. 예제는 `tempdir`에 생성되어
+  `cfg.ModelSearchRoot` 밖이라 `st_select_target_model`이 찾지 못하고, 예제 전용
+  관리 Excel 경로도 지정해야 하므로 profile이 실제로 필요하다. 그 이유를 문서에
+  적어 두었다.
+- 새 기본 경로를 문서에 넣을 때 `st_run_standalone_coverage_pipeline`이 profile
+  없이 `st_require_runtime_target`만으로 동작하는 것을 소스에서 확인했다.
+
 ## 변경 불가 핵심 결정
 
 CoverageFilterMode이 활성화된 CUT의 content rule은 CUT 자기 자신을 선택하면

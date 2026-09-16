@@ -8,8 +8,8 @@ Test Harness 항목에는 원본 Top Model/Harness 연결을 다시 지정하지
 
 ```matlab
 st_setup
-cfg = st_select_model_profile('MODEL_A');
-pipelineId = '여기에_PipelineId';
+cfg = st_config();
+pipelineId = '여기에_PipelineId';   % 생략하려면 'LATEST'
 m = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir,pipelineId);
 for k = 1:numel(m.Targets)
     folder = m.Targets(k).OutputDirectory;
@@ -35,7 +35,7 @@ PACKAGE 재생성이 가능한지는 서로 다른 조건입니다.
 
 ```matlab
 st_setup
-cfg = st_select_model_profile('MODEL_A');
+cfg = st_config();
 pipelineId = '여기에_PipelineId';
 m = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir,pipelineId);
 assert(isfile(m.TestManagerLauncher));
