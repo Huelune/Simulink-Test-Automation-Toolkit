@@ -143,9 +143,9 @@ BBB(1,2).CC: uint8(2)
 
 ## 6. `DecisionBlocks`
 
-CUT 바로 아래(`SearchDepth=1`)에서 **정적으로** 찾은 분기 후보 블록을, 블록마다 이름
-한 줄과 `D번호 [T/F]블록유형 (저장된 조건/선택 설정)` 한 줄로 표시합니다. Path,
-BlockType 순으로 정렬하고 중복을 제거하며 빈 목록은 빈 셀입니다.
+CUT 바로 아래(`SearchDepth=1`)에서 **정적으로** 찾은 분기 후보 블록을, 블록 이름 한
+줄과 그 아래 `D번호 [T/F]블록유형 (저장된 조건/선택 설정)` 줄로 표시합니다. Path,
+BlockType, 분기 순서로 정렬하고 중복을 제거하며 빈 목록은 빈 셀입니다.
 
 ### 두 가지 분기 그룹
 
@@ -155,7 +155,8 @@ BlockType 순으로 정렬하고 중복을 제거하며 빈 목록은 빈 셀입
 | **암시적 분기** | `Saturate`, `Abs`, `DeadZone`, `RateLimiter`, `Relay`, `Lookup_n-D`, `Interpolation_n-D`, `PreLookup`, `Integrator`, `DiscreteIntegrator`, `ForIterator`, `WhileIterator`, `Logic` | 조건식은 없지만 저장된 파라미터 때문에 Coverage objective가 생깁니다 |
 
 D번호는 두 그룹을 구분하지 않고 정렬 결과에 연속으로 붙습니다. 권위 있는 목록은
-`src/exporting/st_specification_decision_catalog.m` 한 곳입니다.
+`src/exporting/st_specification_decision_catalog.m` 한 곳입니다. 블록 하나가 D를 여럿
+차지할 수 있다는 점은 아래 "D번호는 블록이 아니라 분기 단위"를 참고하세요.
 
 ### 어디까지 뽑을지 고르기
 
@@ -188,16 +189,42 @@ D번호는 두 그룹을 구분하지 않고 정렬 결과에 연속으로 붙�
 ```text
 Dics Block 이름
 D1 [T/F]IF (u1 == 0)
+D2 [T/F]IF (elseif u2 > 1)
 Dics Block 이름2
-D2 [T/F]Switch (u2 >= 5)
+D3 [T/F]Switch (u2 >= 5)
 MinMax 블록
-D3 [T/F]MinMax (max; Inputs=3)
+D4 [T/F]MinMax (max; Inputs=3)
+Case 선택
+D5 [T/F]SwitchCase
 Sat 1
-D4 [T/F]Saturate (UpperLimit=1; LowerLimit=-1)
+D6 [T/F]Saturate (UpperLimit=1; LowerLimit=-1)
 ```
 
-위 네 줄에 대응하는 `DecisionBlockDetails`의 `Outcome`은 각각 `T/F`, `T/F`,
-`SELECT`, `LIMIT`입니다.
+위 여섯 줄에 대응하는 `DecisionBlockDetails`의 `Outcome`은 각각 `T/F`, `T/F`, `T/F`,
+`SELECT`, `CASE`, `LIMIT`입니다.
+
+### D번호는 블록이 아니라 분기 단위
+
+한 블록이 분기를 여럿 가지면 **이름은 한 번만 적고 그 아래에 D 줄이 분기 수만큼**
+붙습니다. `If`가 여기 해당합니다. `IfExpression`과 `ElseIfExpressions`의 조건마다 D를
+하나씩 쓰므로, elseif가 둘인 `If` 블록은 D를 셋 차지합니다. Simulink Coverage도 if와
+각 elseif를 따로 세기 때문에 이렇게 해야 개수가 맞습니다.
+
+`ElseIfExpressions`는 쉼표로 이어진 목록이지만 `min(u1, u2) > 0`처럼 조건식 안에 있는
+쉼표는 자르지 않습니다. 괄호 깊이를 보고 나눕니다.
+
+**암묵적 else는 목록에 넣지 않습니다.** else는 모든 조건이 거짓인 경로이지 그 자체로
+조건이 아니므로, `ShowElse` 설정과 관계없이 D를 받지 않습니다. 따라서 `If` 블록의 D
+개수는 그 블록에 적힌 조건 개수와 같습니다.
+
+### 조건식을 메인 시트에 쓰지 않는 블록
+
+`SwitchCase`는 메인 셀에 `D5 [T/F]SwitchCase`처럼 **블록 유형만** 적습니다. case 목록은
+한 줄에 담기에 길고 얻는 게 적기 때문입니다. `CaseConditions` 값은 그대로 읽어
+`DecisionBlockDetails`의 `Expression` 열에 남기므로 정보가 사라지지는 않습니다.
+
+어느 블록이 이렇게 동작하는지는 catalog의 `MainExpression` 열(`SHOW` 또는 `HIDE`)이
+정합니다. 현재 `HIDE`는 `SwitchCase` 하나뿐입니다.
 
 ### `Outcome` 토큰
 

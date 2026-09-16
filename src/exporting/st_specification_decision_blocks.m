@@ -45,7 +45,9 @@ if isempty(blockTypes)
         cutPath);
     return;
 end
-records = strings(0,7); % BlockType, Name, Path, Outcome, Expression, Status, Message
+% BlockType, Name, Path, Outcome, Expression, Status, Message, BranchOrder.
+% BranchOrder is a sort key only; it is not written to the JSON.
+records = strings(0,8);
 notes = strings(0,1);
 st_log(cfg, 'INFO', 'Specification decision block scan start | CUT=%s | SearchDepth=1 | Types=%d', ...
     cutPath, numel(blockTypes));
@@ -59,43 +61,57 @@ for k = 1:numel(blockTypes)
         paths = paths(:);
         paths = paths(strlength(paths) > 0);
         paths = unique(paths);
-        names = strings(numel(paths),1);
-        outcomes = strings(numel(paths),1);
-        expressions = strings(numel(paths),1);
-        statuses = repmat("OK", numel(paths), 1);
-        messages = strings(numel(paths),1);
+        typeRecords = strings(0,8);
         for n = 1:numel(paths)
+            name = "";
             try
                 name = string(nameReader(char(paths(n))));
                 if ~isscalar(name) || ismissing(name) || strlength(name) == 0
                     error('simtest:SpecificationDecisionBlockName', ...
                         'Block Name must be one nonempty value.');
                 end
-                names(n) = name;
             catch ME
+                name = "";
                 notes(end+1,1) = string(sprintf('%s Name: %s', paths(n), ME.message)); %#ok<AGROW>
                 st_log(cfg, 'WARN', 'Specification decision block name read failed | Path=%s | %s', ...
                     paths(n), ME.message);
             end
             try
-                [outcomes(n), expressions(n)] = ...
+                [outcome, expression] = ...
                     descriptorReader(char(paths(n)), char(blockType));
+                [outcome, expression] = normalize_branches( ...
+                    outcome, expression, blockType, paths(n));
+                status = repmat("OK", numel(expression), 1);
+                message = strings(numel(expression), 1);
             catch ME
-                outcomes(n) = outcomeDefaults(k);
-                expressions(n) = "조건식 읽기 실패";
-                statuses(n) = "WARN";
-                messages(n) = string(ME.message);
+                outcome = outcomeDefaults(k);
+                expression = "조건식 읽기 실패";
+                status = "WARN";
+                message = string(ME.message);
                 notes(end+1,1) = string(sprintf('%s Expression: %s', ...
                     paths(n), ME.message)); %#ok<AGROW>
                 st_log(cfg, 'WARN', ...
                     'Specification decision block expression read failed | Path=%s | BlockType=%s | Outcome=%s | %s', ...
                     paths(n), blockType, outcomeDefaults(k), ME.message);
             end
+            % Column 8 keeps the branches of one block in the order the
+            % descriptor produced them. unique and sortrows are lexicographic,
+            % so without it an elseif could be numbered before its if.
+            branches = numel(expression);
+            branchOrder = compose("%03d", (1:branches).');
+            typeRecords = [typeRecords; ...
+                repmat(blockType, branches, 1) repmat(name, branches, 1) ...
+                repmat(paths(n), branches, 1) outcome expression ...
+                status message branchOrder]; %#ok<AGROW>
+            if branches > 1
+                st_log(cfg, 'DEBUG', ...
+                    'Specification decision block branches expanded | Path=%s | BlockType=%s | Branches=%d', ...
+                    paths(n), blockType, branches);
+            end
         end
-        records = [records; repmat(blockType, numel(paths), 1) names paths ...
-            outcomes expressions statuses messages]; %#ok<AGROW>
-        st_log(cfg, 'DEBUG', 'Specification decision block type scan end | CUT=%s | BlockType=%s | Count=%d', ...
-            cutPath, blockType, numel(paths));
+        records = [records; typeRecords]; %#ok<AGROW>
+        st_log(cfg, 'DEBUG', 'Specification decision block type scan end | CUT=%s | BlockType=%s | Blocks=%d | Branches=%d', ...
+            cutPath, blockType, numel(paths), size(typeRecords,1));
     catch ME
         message = string(sprintf('%s: %s', blockType, ME.message));
         notes(end+1,1) = message; %#ok<AGROW>
@@ -108,7 +124,7 @@ if isempty(records)
     count = 0;
 else
     records = unique(records, 'rows');
-    records = sortrows(records, [3 1]);
+    records = sortrows(records, [3 1 8]);
     count = size(records,1);
     items = strings(count,1);
     for k = 1:count
@@ -129,4 +145,25 @@ end
 
 function name = read_name(path)
 name = get_param(path, 'Name');
+end
+
+function [outcome, expression] = normalize_branches(outcome, expression, blockType, path)
+% A descriptor may return one expression per branch. The outcome is the kind
+% of branch, so a scalar outcome applies to every branch of the block.
+outcome = string(outcome);
+outcome = outcome(:);
+expression = string(expression);
+expression = expression(:);
+if isempty(expression)
+    error('simtest:SpecificationDecisionExpression', ...
+        'Decision expression is empty: %s', path);
+end
+if isscalar(outcome) && numel(expression) > 1
+    outcome = repmat(outcome, numel(expression), 1);
+end
+if numel(outcome) ~= numel(expression)
+    error('simtest:SpecificationDecisionBranch', ...
+        'Decision branch count mismatch for %s (%s): %d outcome(s), %d expression(s).', ...
+        path, blockType, numel(outcome), numel(expression));
+end
 end

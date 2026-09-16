@@ -34,6 +34,13 @@ function catalog = st_specification_decision_catalog(scope)
 %                    IMPLICIT: creates coverage objectives without looking
 %                    like a decision. A model with no If or Switch block can
 %                    still report Decision coverage because of this group.
+% MainExpression     SHOW prints the saved condition in the main cell after
+%                    the block type. HIDE prints the type alone. Either way
+%                    DecisionBlockDetails keeps the full expression.
+%
+% A block type may also report more than one branch. The descriptor returns
+% one expression per branch and each branch gets its own D number, so an If
+% block with two elseif expressions occupies three of them.
 %
 % Nothing here is evaluated. Values are the saved dialog text only, so a
 % lookup table configured from a workspace variable shows the variable name.
@@ -122,8 +129,18 @@ Kind = [ ...
     "IMPLICIT"; "IMPLICIT"; ...
     "IMPLICIT"; "IMPLICIT"; "IMPLICIT"];
 
+% SHOW prints the expression after the block type in the main cell. HIDE
+% prints the block type alone, for a type whose saved condition is long and
+% carries little on one line. DecisionBlockDetails keeps it either way.
+MainExpression = [ ...
+    "SHOW"; "SHOW"; "SHOW"; "SHOW"; "HIDE"; ...
+    "SHOW"; "SHOW"; "SHOW"; "SHOW"; "SHOW"; ...
+    "SHOW"; "SHOW"; "SHOW"; ...
+    "SHOW"; "SHOW"; ...
+    "SHOW"; "SHOW"; "SHOW"];
+
 catalog = table(BlockType, Outcome, DisplayType, Formatter, ...
-    Parameters, OptionalParameters, FixedText, Kind);
+    Parameters, OptionalParameters, FixedText, Kind, MainExpression);
 
 switch scope
     case "EXPLICIT"

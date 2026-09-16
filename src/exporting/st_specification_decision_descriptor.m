@@ -29,11 +29,13 @@ outcome = string(catalog.Outcome(index));
 
 switch blockType
     case "If"
+        % One branch per condition, because Simulink Coverage counts the if
+        % and each elseif separately. The implicit else is not listed: it is
+        % the absence of every condition, not a condition of its own.
         expression = parameter_text(parameterReader, blockPath, 'IfExpression');
-        elseIf = parameter_text(parameterReader, blockPath, 'ElseIfExpressions');
-        if strlength(elseIf) > 0
-            expression = expression + "; elseif " + elseIf;
-        end
+        elseIf = split_conditions( ...
+            parameter_text(parameterReader, blockPath, 'ElseIfExpressions'));
+        expression = [expression; "elseif " + elseIf];
 
     case "Switch"
         criteria = parameter_text(parameterReader, blockPath, 'Criteria');
@@ -68,10 +70,40 @@ switch blockType
             parameterReader, blockPath, catalog(index,:));
 end
 
-if strlength(strtrim(expression)) == 0
+expression = string(expression);
+expression = expression(:);
+if isempty(expression) || any(strlength(strtrim(expression)) == 0)
     error('simtest:SpecificationDecisionExpression', ...
         'Decision expression is empty: %s', blockPath);
 end
+end
+
+function parts = split_conditions(text)
+% Split a comma separated condition list without cutting inside a call.
+% Simulink stores ElseIfExpressions as one string, and a condition may
+% contain its own commas, as in "min(u1, u2) > 0".
+parts = strings(0,1);
+text = char(strtrim(string(text)));
+if isempty(text)
+    return;
+end
+depth = 0;
+first = 1;
+for i = 1:numel(text)
+    switch text(i)
+        case {'(', '[', '{'}
+            depth = depth + 1;
+        case {')', ']', '}'}
+            depth = depth - 1;
+        case ','
+            if depth == 0
+                parts(end+1,1) = strtrim(string(text(first:i-1))); %#ok<AGROW>
+                first = i + 1;
+            end
+    end
+end
+parts(end+1,1) = strtrim(string(text(first:end)));
+parts = parts(strlength(parts) > 0);
 end
 
 function expression = generic_expression(reader, blockPath, row)

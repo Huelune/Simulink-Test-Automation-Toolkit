@@ -11,11 +11,11 @@ mainOutcome = "T/F";
 headers = {'TestSpecificationRow','TestCaseName','CUTPath','Decision', ...
     'Outcome','BlockType','Name','Expression','Path','JSON','ReadStatus','Message'};
 rows = strings(0, numel(headers));
-displayCatalog = table(strings(0,1), strings(0,1), ...
-    'VariableNames', {'BlockType','DisplayType'});
+displayCatalog = table(strings(0,1), strings(0,1), strings(0,1), ...
+    'VariableNames', {'BlockType','DisplayType','MainExpression'});
 try
     fullCatalog = st_specification_decision_catalog();
-    displayCatalog = fullCatalog(:, {'BlockType','DisplayType'});
+    displayCatalog = fullCatalog(:, {'BlockType','DisplayType','MainExpression'});
     log_message(cfg, 'DEBUG', ...
         'Specification decision block display catalog loaded | Types=%d', ...
         height(displayCatalog));
@@ -68,7 +68,10 @@ for row = 1:height(specification)
         continue;
     end
 
-    lines = strings(2 * numel(decoded),1);
+    % One block can contribute several branches, so the Name line is written
+    % once per block and the D lines below it follow branch order.
+    lines = strings(0,1);
+    previousPath = string(missing);
     for k = 1:numel(decoded)
         decision = "D" + string(k);
         itemJson = string(jsonencode(decoded(k)));
@@ -81,23 +84,33 @@ for row = 1:height(specification)
             readStatus = json_text(decoded(k), 'ExpressionStatus');
             message = json_optional_text(decoded(k), 'Message');
             displayName = regexprep(strtrim(name), '\s+', ' ');
-            [displayType, knownType] = display_type(blockType, displayCatalog);
+            [displayType, knownType, showExpression] = ...
+                display_type(blockType, displayCatalog);
             if ~knownType && ~any(unknownTypes == blockType)
                 unknownTypes(end+1,1) = blockType; %#ok<AGROW>
                 log_message(cfg, 'WARN', ...
                     'Specification decision block type not in catalog | Row=%d | Decision=%s | BlockType=%s', ...
                     row + 1, decision, blockType);
             end
-            lines(2*k-1) = displayName;
-            lines(2*k) = decision + " [" + mainOutcome + "]" + ...
-                displayType + " " + parenthesize(expression);
+            if ismissing(previousPath) || path ~= previousPath
+                lines(end+1,1) = displayName; %#ok<AGROW>
+            end
+            previousPath = path;
+            entry = decision + " [" + mainOutcome + "]" + displayType;
+            if showExpression
+                entry = entry + " " + parenthesize(expression);
+            end
+            lines(end+1,1) = entry; %#ok<AGROW>
             rows(end+1,:) = detail_row(row, testCaseName, cutPath, decision, ...
                 outcome, blockType, name, expression, path, itemJson, ...
                 readStatus, message); %#ok<AGROW>
             blockCount = blockCount + 1;
         catch ME
-            lines(2*k-1) = "<JSON 항목 파싱 실패>";
-            lines(2*k) = decision + " <JSON 항목 파싱 실패>";
+            % The path may be the field that failed, so the next item cannot
+            % assume it still belongs to the same block.
+            previousPath = string(missing);
+            lines(end+1,1) = "<JSON 항목 파싱 실패>"; %#ok<AGROW>
+            lines(end+1,1) = decision + " <JSON 항목 파싱 실패>"; %#ok<AGROW>
             rows(end+1,:) = detail_row(row, testCaseName, cutPath, decision, ...
                 "", "", "", "", "", itemJson, "FAIL", string(ME.message)); %#ok<AGROW>
             failureCount = failureCount + 1;
@@ -154,13 +167,16 @@ if ~isscalar(value) || ismissing(value)
 end
 end
 
-function [value, known] = display_type(blockType, displayCatalog)
-% An unknown type prints its own name, so re-formatting a workbook written
-% by an older catalog keeps working instead of failing the row.
+function [value, known, showExpression] = display_type(blockType, displayCatalog)
+% An unknown type prints its own name and its expression, so re-formatting a
+% workbook written by an older catalog keeps working instead of failing the
+% row or silently dropping what it said.
 index = find(string(displayCatalog.BlockType) == string(blockType), 1);
 known = ~isempty(index);
+showExpression = true;
 if known
     value = string(displayCatalog.DisplayType(index));
+    showExpression = string(displayCatalog.MainExpression(index)) ~= "HIDE";
 else
     value = string(blockType);
 end

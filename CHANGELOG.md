@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- A D number now counts a branch rather than a block. An If block spends one
+  on its if condition and one on every elseif, because Simulink Coverage
+  counts them separately and a single pooled line could not be compared with
+  the objective count. The block name is written once and the D lines follow
+  beneath it. The implicit else is not listed: it is the absence of every
+  condition rather than a condition of its own, so an If block takes exactly
+  as many D numbers as it has conditions. ElseIfExpressions is split on
+  commas at bracket depth zero, so a condition such as `min(u1, u2) > 0`
+  survives intact.
+- Switch Case now prints `D<n> [T/F]SwitchCase` with no condition in the main
+  cell, since the case list is long and says little on one line. The saved
+  CaseConditions stay in the Expression column of DecisionBlockDetails. Which
+  types behave this way is the new `MainExpression` column of the catalog,
+  and a type the catalog does not know still prints its expression so that
+  re-formatting an older workbook loses nothing.
+
 - Documented why Coverage filter rules show `n/a` in the name column: the
   rules address blocks by SID, which the viewer resolves against a loaded
   model. Opening the standalone model that sits beside the CVF fills the

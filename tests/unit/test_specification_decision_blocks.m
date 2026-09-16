@@ -37,7 +37,7 @@ function testSavedBlockParametersProduceStaticDescriptions(testCase)
 [outcome, expression] = st_specification_decision_descriptor( ...
     'IfPath', 'If', @fixture_parameter);
 verifyEqual(testCase, outcome, "T/F");
-verifyEqual(testCase, expression, "u1 == 0; elseif u2 > 1");
+verifyEqual(testCase, expression, ["u1 == 0"; "elseif u2 > 1"]);
 
 [outcome, expression] = st_specification_decision_descriptor( ...
     'SwitchPath', 'Switch', @fixture_parameter);
@@ -197,6 +197,7 @@ verifyTrue(testCase, all(strlength(string(catalog.Outcome)) > 0));
 verifyTrue(testCase, all(strlength(string(catalog.DisplayType)) > 0));
 verifyTrue(testCase, all(ismember(string(catalog.Formatter), ["CUSTOM","GENERIC"])));
 verifyTrue(testCase, all(ismember(string(catalog.Kind), ["EXPLICIT","IMPLICIT"])));
+verifyTrue(testCase, all(ismember(string(catalog.MainExpression), ["SHOW","HIDE"])));
 allowed = ["T/F","SELECT","CASE","LIMIT","BAND","RATE","ON/OFF", ...
     "SIGN","INTERVAL","LOOP","CONDITION"];
 verifyTrue(testCase, all(ismember(string(catalog.Outcome), allowed)));
@@ -505,4 +506,92 @@ end
 
 function paths = refusing_finder(~, varargin) %#ok<STOUT>
 error('fixture:NoScanAllowed', 'The scan must not run in this scope.');
+end
+
+function testIfBlockSplitsIntoOneBranchPerCondition(testCase)
+[outcome, expression] = st_specification_decision_descriptor( ...
+    'MultiIfPath', 'If', @fixture_branch_parameter);
+verifyEqual(testCase, outcome, "T/F");
+verifyEqual(testCase, expression, ...
+    ["u1 == 0"; "elseif u2 > 1"; "elseif u3 < 2"]);
+end
+
+function testIfWithoutElseIfStaysOneBranch(testCase)
+[outcome, expression] = st_specification_decision_descriptor( ...
+    'PlainIfPath', 'If', @fixture_branch_parameter);
+verifyEqual(testCase, outcome, "T/F");
+verifyEqual(testCase, expression, "u1 > 0");
+end
+
+function testElseIfCommasInsideCallsAreNotSplit(testCase)
+% "min(u1, u2) > 0" is one condition, not two.
+[~, expression] = st_specification_decision_descriptor( ...
+    'CommaIfPath', 'If', @fixture_branch_parameter);
+verifyEqual(testCase, expression, ...
+    ["min(u1, u2) > 0"; "elseif max(u3, u4) < 1"; "elseif u5 == 2"]);
+end
+
+function testIfBranchesKeepOrderAndGetConsecutiveNumbers(testCase)
+% unique and sortrows are lexicographic, so "elseif ..." sorts before
+% "u1 == 0". Without the branch order key the if would be numbered last.
+cfg = struct('VerboseLogging', false);
+[text, count, note] = st_specification_decision_blocks( ...
+    'Top/CUT', cfg, @single_if_finder, @(~) "Mode If", @branching_descriptor);
+decoded = jsondecode(char(text));
+verifyEqual(testCase, count, 3);
+verifyEqual(testCase, note, "");
+verifyEqual(testCase, string({decoded.Expression}).', ...
+    ["u1 == 0"; "elseif u2 > 1"; "elseif u3 < 2"]);
+verifyTrue(testCase, all(string({decoded.Path}) == "Top/CUT/Broken If"));
+verifyTrue(testCase, all(string({decoded.Name}) == "Mode If"));
+verifyTrue(testCase, all(string({decoded.Outcome}) == "T/F"));
+verifyTrue(testCase, all(string({decoded.ExpressionStatus}) == "OK"));
+end
+
+function testBranchCountMismatchDegradesToWarnWithoutDroppingTheBlock(testCase)
+cfg = struct('VerboseLogging', false);
+[text, count, note] = st_specification_decision_blocks( ...
+    'Top/CUT', cfg, @single_if_finder, @(~) "Bad If", @mismatched_descriptor);
+decoded = jsondecode(char(text));
+verifyEqual(testCase, count, 1);
+verifyEqual(testCase, string(decoded.Expression), "조건식 읽기 실패");
+verifyEqual(testCase, string(decoded.ExpressionStatus), "WARN");
+verifyEqual(testCase, string(decoded.Outcome), "T/F");
+verifyTrue(testCase, contains(note, "branch count mismatch"));
+end
+
+function testCatalogHidesOnlySwitchCaseExpressionInTheMainCell(testCase)
+catalog = st_specification_decision_catalog('ALL');
+hidden = string(catalog.BlockType(string(catalog.MainExpression) == "HIDE"));
+verifyEqual(testCase, hidden, "SwitchCase");
+end
+
+function [outcome, expression] = branching_descriptor(~, ~)
+outcome = "T/F";
+expression = ["u1 == 0"; "elseif u2 > 1"; "elseif u3 < 2"];
+end
+
+function [outcome, expression] = mismatched_descriptor(~, ~)
+outcome = ["T/F"; "T/F"];
+expression = ["a"; "b"; "c"];
+end
+
+function value = fixture_branch_parameter(path, parameter)
+key = string(path) + "|" + string(parameter);
+switch key
+    case "MultiIfPath|IfExpression"
+        value = 'u1 == 0';
+    case "MultiIfPath|ElseIfExpressions"
+        value = 'u2 > 1, u3 < 2';
+    case "PlainIfPath|IfExpression"
+        value = 'u1 > 0';
+    case "PlainIfPath|ElseIfExpressions"
+        value = '';
+    case "CommaIfPath|IfExpression"
+        value = 'min(u1, u2) > 0';
+    case "CommaIfPath|ElseIfExpressions"
+        value = 'max(u3, u4) < 1, u5 == 2';
+    otherwise
+        error('fixture:UnknownParameter', 'Unexpected parameter: %s', key);
+end
 end

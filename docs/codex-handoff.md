@@ -239,6 +239,8 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
     Relay/Lookup_n-D/Interpolation_n-D/PreLookup/Integrator/DiscreteIntegrator/
     ForIterator/WhileIterator/Logic이 있는 CUT의 명세서를 export하고, 블록 이름 다음
     줄의 D번호·저장 파라미터 표현과 DecisionBlockDetails의
+    (elseif가 있는 If는 조건 개수만큼 D를 차지하고 이름 줄은 한 번만 나오는지,
+    else는 목록에 없는지, SwitchCase는 조건식 없이 유형만 찍히는지 포함)
     Outcome/Expression/ReadStatus가 실제 블록 설정과 일치하는지 확인한다. 메인 시트가
     전부 `[T/F]`이고 세부 시트 `Outcome`만 종류별로 갈리는지 확인한다. 각 암시적
     블록의 `BlockType` 문자열과 파라미터 이름이 실제 `get_param` 결과와 일치하는지,
@@ -390,8 +392,9 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - 명세서의 `DecisionBlocks` 열은 CUT 아래 명시적 분기(If/MinMax/Switch/
   MultiPortSwitch/SwitchCase)와 암시적 분기(Saturate/Abs/DeadZone/RateLimiter/Relay/
   Lookup_n-D/Interpolation_n-D/PreLookup/Integrator/DiscreteIntegrator/ForIterator/
-  WhileIterator/Logic) 후보를 블록 이름과 `D번호 [T/F]블록유형 (저장된 조건/선택
-  설정)` 두 줄씩 기록한다. **메인 시트는 분기 종류와 무관하게 항상 `[T/F]`를 쓴다.**
+  WhileIterator/Logic) 후보를 블록 이름 한 줄과 그 아래 `D번호 [T/F]블록유형 (저장된
+  조건/선택 설정)` 줄로 기록한다. **메인 시트는 분기 종류와 무관하게 항상 `[T/F]`를
+  쓴다.**
   구체적인 Outcome(`SELECT`, `CASE`, `LIMIT`, `BAND`, `RATE`, `ON/OFF`, `SIGN`,
   `INTERVAL`, `LOOP`, `CONDITION`)은 BlockType, Name, Expression, 전체 경로, 개별 JSON
   객체, 읽기 상태와 함께 `DecisionBlockDetails` 시트에 블록별 행으로만 기록한다.
@@ -401,6 +404,26 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   자식 Enabled/Triggered Subsystem의 제어 포트 분기와 마스크 Subsystem으로 구현된
   Saturation Dynamic/Dead Zone Dynamic/Unit Delay Enabled/Unit Delay Resettable은
   `BlockType`이 `SubSystem`이므로 제외한다.
+- **D번호는 블록이 아니라 분기 단위다.** descriptor는 분기마다 expression을 하나씩
+  담은 문자열 배열을 돌려줄 수 있고, outcome이 스칼라면 모든 분기에 broadcast된다.
+  `If`가 이 경로를 쓴다(`IfExpression` 1개 + `ElseIfExpressions` N개). 암묵적 else는
+  조건이 아니라 모든 조건이 거짓인 경로이므로 `ShowElse`와 무관하게 넣지 않는다.
+  `ElseIfExpressions`는 괄호 깊이를 보고 쉼표로 나눈다. `min(u1, u2) > 0`의 내부 쉼표를
+  자르면 안 되기 때문이다.
+- 분기 순서 유지가 이 설계에서 가장 깨지기 쉬운 부분이다. `unique(...,'rows')`와
+  `sortrows`가 사전순이라 `"elseif u2 > 1"`이 `"u1 == 0"`보다 앞서고, 그대로 두면 if가
+  마지막 D를 받는다. 그래서 records에 8번째 열 BranchOrder(`%03d`)를 두고
+  `sortrows(records, [3 1 8])`로 정렬한다. BranchOrder는 정렬 키일 뿐 JSON에 쓰지 않으므로
+  JSON 스키마는 그대로다. 분기가 999개를 넘으면 이 정렬이 깨진다.
+- outcome과 expression의 개수가 안 맞으면 `simtest:SpecificationDecisionBranch`로 던지되,
+  이 검사는 descriptor 호출과 같은 try 안에 있어 해당 블록만 WARN 행으로 degrade하고
+  타입 스캔 전체를 중단하지 않는다.
+- catalog의 `MainExpression` 열(`SHOW`/`HIDE`)이 메인 셀에 조건식을 쓸지 정한다. 현재
+  `HIDE`는 `SwitchCase` 하나뿐이며, 조건값은 `DecisionBlockDetails`의 `Expression`에
+  그대로 남는다. catalog에 없는 타입은 `SHOW`로 취급한다. 과거 워크북을 다시 포맷할 때
+  그 블록이 말하던 내용을 조용히 지우지 않기 위해서다.
+- 같은 Path가 연속으로 나오면 포맷터가 이름 줄을 한 번만 찍는다. JSON 항목 파싱에
+  실패하면 Path를 신뢰할 수 없으므로 직전 Path 기억을 비운다.
 - 스캔 대상 BlockType, Outcome 토큰, 표시 별칭, 읽을 파라미터는 전부
   `src/exporting/st_specification_decision_catalog.m` 한 곳에 있다. 타입 추가는 catalog
   한 행이며, 표현식 조립이 불규칙한 타입만 `st_specification_decision_descriptor`의
