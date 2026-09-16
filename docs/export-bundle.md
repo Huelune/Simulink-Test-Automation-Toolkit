@@ -1,6 +1,16 @@
-# Reproducible test bundle export
+# 내보내기 번들
 
-## 테스트 자산 통합 관리 번들과의 구분
+테스트 결과와 자산을 다른 곳으로 전달하는 방법은 두 가지이며 목적이 다릅니다.
+
+| 명령 | 목적 | 다른 PC에서 재실행 |
+| --- | --- | --- |
+| `st_export_test_asset_bundle` | 선택한 결과와 자산을 **한 폴더에 모아 보관·검토** | 보장하지 않음 |
+| `st_export_test_bundle` | 다른 PC에서 **같은 시작 상태로 반복 실행** | 보장 (재현성 검사 수행) |
+
+standalone Coverage **제출물**을 만드는 것은 또 다른 기능이며
+[Standalone Coverage 파이프라인](standalone-coverage-pipeline.md)을 보십시오.
+
+## 1. 자산 관리 번들 — `st_export_test_asset_bundle`
 
 선택한 Test Manager 결과, standalone Harness, Harness 입력과 Coverage 결과를
 한 폴더에서 관리하려면 다음 명령을 사용합니다.
@@ -31,18 +41,15 @@ Signal Editor·SLDV 입력과 결과 보고서·Coverage를 복사합니다. 독
 않습니다. 전체 모델 dependency 분석, Toolbox 분석, 전체 파일 SHA-256과 ZIP
 생성을 기본적으로 생략합니다.
 
-`st_export_test_bundle`은 다른 컴퓨터에서의 재실행이 필요할 때 사용하는
-완전한 번들이며 아래의 재현성 검사를 모두 수행합니다.
+## 2. 재실행 번들 — `st_export_test_bundle`
 
-## 목적
+준비가 끝난 Simulink 테스트의 저장 상태와 결과를 다른 작업자에게 전달하는 독립
+명령입니다. 정상 workflow 진입점에 연결되어 있지 않습니다.
 
-`st_export_test_bundle`은 준비가 끝난 Simulink 테스트의 저장 상태와 결과를
-다른 작업자에게 전달하는 독립 명령입니다. 정상 workflow 진입점에는
-연결하지 않습니다. 시간이 오래 걸리는 Harness·SLDV·Test Case 준비 단계를
-다시 만들지 않고, 내보낸 저장 상태에서 Test File을 반복 실행하는 것이
-범위입니다.
+시간이 오래 걸리는 Harness·SLDV·Test Case 준비 단계를 다시 만들지 않고, 내보낸
+저장 상태에서 Test File을 **반복 실행**하는 것이 이 기능의 범위입니다.
 
-## 안전 경계
+### 안전 경계
 
 - 원본 모델과 Test File이 저장된 상태일 때만 내보냅니다.
 - 기본 `ExecutionModelMode=ORIGINAL`은 내부 Harness를 그대로 사용합니다.
@@ -62,7 +69,7 @@ standalone 모드의 `sltest.harness.export`는 격리된 일회용 모델 복�
 적용합니다. export 후 CUT 이름과 Inport/Outport 인터페이스를 원본과 비교하고
 검증된 경로만 manifest의 `StandaloneCUTPath`에 기록합니다.
 
-## 출력 구조
+### 출력 구조
 
 ```text
 result/exports/{timestamp}_{id}/
@@ -89,7 +96,7 @@ result/exports/{timestamp}_{id}/
 `reference-report/raw/*.mldatx`와 별도로 실행 가능한 Test File
 `template/{TopModel}.mldatx`를 반드시 포함합니다.
 
-## Manifest와 재실행
+### Manifest와 재실행
 
 manifest v2는 번들 ID, MATLAB 릴리스, `ExecutionModelMode`, `Policy.DependencyScope`, 대상별 standalone
 모델 경로와 CUT 경로, `CoverageBoundaryMode`, 상대 경로, 필요한 제품,
@@ -118,12 +125,20 @@ manifest v2는 번들 ID, MATLAB 릴리스, `ExecutionModelMode`, `Policy.Depend
 기대값 `APPLY` 정책도 작업 사본에서 기존 실행 함수가 동일하게 처리합니다.
 재실행은 준비 workflow를 실행하지 않습니다.
 
-## 재현성의 범위와 검증
+### 재현성의 범위와 검증
 
 기본값은 내보낸 MATLAB 릴리스와 정확히 같은 릴리스를 요구합니다. 설치 제품,
 라이선스, 운영체제, compiler, 환경 변수 또는 외부 데이터 서비스는 파일
 번들만으로 복제할 수 없습니다. `RequiredProducts`는 안내 정보이며 받는
 환경의 실제 설치·라이선스 확인이 필요합니다.
+
+> `RequiredProducts`를 만드는 Toolbox 분석(`AnalyzeProducts`)은 큰 모델에서 매우
+> 오래 걸립니다. manifest와 번들 README의 안내 문구를 만들 뿐 어떤 코드도 이
+> 목록을 읽지 않으므로, 오래 멈춘다면 꺼도 됩니다.
+>
+> ```matlab
+> info = st_export_test_bundle('AnalyzeProducts', false);
+> ```
 
 모델 dependency와 이 toolkit이 직접 관리하는 Signal Editor·SLDV 입력은
 자동 수집합니다. Test File에 사용자가 별도로 연결한 baseline 데이터,

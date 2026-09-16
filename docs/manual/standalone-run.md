@@ -1,7 +1,7 @@
 # Standalone 제출물 생성
 
 먼저 [일반 준비](prepare.md)를 끝내야 합니다. 원본 Top Model과 Test File을 저장하고
-열린 Harness와 Top Model을 직접 닫으세요. 아래 코드는 사용자 모델을 강제로 닫지 않습니다.
+열린 Harness와 Top Model을 직접 닫으십시오. 아래 코드는 사용자 모델을 강제로 닫지 않습니다.
 
 ```matlab
 st_setup
@@ -55,3 +55,5 @@ for k = 1:numel(m.Targets)
     fprintf('\n[%03d] %s\n%s: %s\n',k,m.Targets(k).TestCaseName,f.Identifier,f.Message);
 end
 ```
+
+오류 식별자별 대처는 [문제 해결](../troubleshooting.md)에 정리되어 있습니다.

@@ -1,9 +1,12 @@
 # R2025b 배포 전 확인
 
-현재 개발 PC에는 MATLAB이 없습니다. 이 문서는 **검증 계획**이며 통과 기록이 아닙니다.
-업무 모델 대신 폐기 가능한 예제·복사본으로 먼저 실행하세요. 새 MATLAB 세션에서 저장소를
-Current Folder로 선택합니다. 테스트는 자체 임시 checkout을 쓰지만 모델 callback 등의
-외부 부작용까지 격리하는 것은 아니므로 다른 작업과 동시에 실행하지 마세요.
+배포 전에 MATLAB R2025b 실기에서 확인할 항목을 모은 **검증 계획**입니다. 통과
+기록이 아닙니다.
+
+- 업무 모델 대신 폐기 가능한 예제나 복사본으로 먼저 실행하십시오.
+- 새 MATLAB 세션에서 저장소를 Current Folder로 선택하십시오.
+- 테스트는 자체 임시 checkout을 쓰지만 모델 callback 같은 외부 부작용까지 격리하지는
+  않습니다. **다른 작업과 동시에 실행하지 마십시오.**
 
 ## 자동 테스트
 
@@ -24,7 +27,7 @@ assert(all([results.Passed]), 'Some tests failed or were incomplete; preserve th
 
 새 테스트는 profile 전환/충돌, 선행 단계 고정, readiness 무저장, 입력 변경 시 SLDV 안내,
 유효 증거 재생성, 파일 훼손/구버전 증거 누락 차단, N/A/EXCEPT 보존,
-재생성 provenance·latest 보존을 검사합니다. 기존 전체 unit suite도 별도로 실행하세요.
+재생성 provenance·latest 보존을 검사합니다. 기존 전체 unit suite도 별도로 실행하십시오.
 
 ## 실제 사용 흐름
 
@@ -45,5 +48,5 @@ assert(all([results.Passed]), 'Some tests failed or were incomplete; preserve th
     후속 TC 실행을 확인. 필터 복원 실패와 일반 결함 예외를 구분해 기록.
 
 실패 시 재시도를 반복하기 전에 full stack, profile 이름, source/new PipelineId,
-pipeline manifest, execution log, readiness table을 보존하세요. 업무 경로가 포함된
+pipeline manifest, execution log, readiness table을 보존하십시오. 업무 경로가 포함된
 증거는 저장소에 커밋하지 말고 승인된 위치에 보관합니다.

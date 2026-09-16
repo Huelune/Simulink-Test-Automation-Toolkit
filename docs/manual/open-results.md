@@ -23,11 +23,11 @@ sltest.testmanager.view;
 Test Manager에서 각 TC의 Model 폴더 버튼 → 해당 대상 폴더의 `.slx` 선택 → Model 열기.
 Signal Editor 파일은 모델 옆의 Input MAT을 사용합니다. 동명 다른 모델이 로드돼 있으면
 사용자가 저장/닫기 후 다시 선택해야 합니다. CVF 경로도 옆의
-`UT_REQ_{TC_NAME}.cvf`인지 확인하세요.
+`UT_REQ_{TC_NAME}.cvf`인지 확인하십시오.
 경로 설정은 MATLAB 세션마다, 다른 PC에서도 필요합니다. `savepath`를 강제하지 않습니다.
 
 전체 결과 폴더를 다른 위치로 복사했다면 manifest의 예전 절대 경로를 그대로 쓰지 말고
-새 위치의 TC 폴더들을 Add to Path 한 뒤 `TestManager/*.mldatx`를 직접 여세요.
+새 위치의 TC 폴더들을 Add to Path 한 뒤 `TestManager/*.mldatx`를 직접 여십시오.
 모델·Input·CVF·CVT·HTML 부속 파일을 함께 보관합니다. `.work` 없이 제출 파일을 여는 것과
 PACKAGE 재생성이 가능한지는 서로 다른 조건입니다.
 

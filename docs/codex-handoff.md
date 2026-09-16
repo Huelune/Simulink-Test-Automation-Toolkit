@@ -82,7 +82,39 @@
   standalone 모델, 누락 standalone dependency의 fail-closed 경계를 검증해야 한다.
 - 원본 모델이 바뀐 뒤 과거 결과를 재생성하면 현재 소스 불변 검사 B9는 실패할 수 있다.
   원본/파생 이력을 삭제·이동하기 전 재생성 및 provenance 경로 의존성을 안내한다.
-- 사용자는 `docs/manual/README.md`부터 읽는다. 이 handoff는 사용자 설명을 대체하지 않는다.
+- 사용자는 `docs/getting-started.md`부터 읽는다. 이 handoff는 사용자 설명을 대체하지 않는다.
+
+## 2026-09-16 문서 재구성
+
+- 사용자 문서를 역할별로 재배치했다. 새 진입점은 `docs/getting-started.md`이고
+  `docs/README.md`가 문서 지도다. README.md는 800줄 레퍼런스에서 개요·첫 실행·문서
+  지도로 축소했다.
+- 파라미터의 단일 출처를 분리했다. Excel 열은 `docs/workbook-reference.md`,
+  `st_config` 설정은 `docs/config-reference.md`, 명령과 name-value 옵션은
+  `docs/execution-commands.md`다. 다른 문서는 값을 재설명하지 말고 이 셋을 링크한다.
+- 삭제한 문서와 이유:
+  - `docs/user-manual.md` → `docs/verification.md`에 병합. 두 문서가 profile·상태·
+    결과 구조·수동 증거를 중복 서술했고, 파일 이름이 "사용자 매뉴얼"로 읽혀
+    운영 문서와 혼동됐다.
+  - `docs/cross-machine-handoff.md` → 기준 브랜치를 `feat/per-cut-filtered-execution`
+    으로 적고 있어 현행과 어긋났다. 검증 순서는 `docs/verification.md`와
+    `docs/manual/runtime-verification.md`가, Git 정책은 README가 이미 담고 있다.
+  - `docs/manual/now.md` → 이미 고쳐진 1회성 버그 대응 메모였다.
+  - `docs/manual/standalone-coverage-runtime.md` → 최신 브랜치인지 `fileread`로
+    소스 문자열을 확인하던 assert가 낡았다.
+- `docs/operator-manual.md`와 `docs/user-manual.md` 끝에 동일하게 붙어 있던
+  Template Harness clone 단락을 제거하고 `docs/harness-template-clone.md` 한 곳으로
+  모았다. 그 문서의 PR 파일 변경 목록과 Import 전환 이력도 제거했다(CHANGELOG와
+  git 이력이 원본이다).
+- 문체는 한국어 합니다체로 통일했다. `architecture.md`와 `TODO.md`도 한국어로 옮겼다.
+- 새 문서: `docs/glossary.md`, `docs/getting-started.md`,
+  `docs/workbook-reference.md`, `docs/config-reference.md`,
+  `docs/troubleshooting.md`, `docs/README.md`.
+- 코드는 바꾸지 않았다. 다만 `src/exporting/st_specification_usage_table.m`의 `사용법`
+  탭에 profile/readiness/재시작 명령(`st_save_model_profile`,
+  `st_select_model_profile`, `st_check_readiness`, `st_run_from_stage`,
+  `st_create_example`)이 빠져 있어 `docs/execution-commands.md`와 어긋난다. 별도
+  작업으로 남긴다.
 
 ## 변경 불가 핵심 결정
 
@@ -477,7 +509,8 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   EXECUTE→PACKAGE→SUMMARY 모두 `Package=OK`, CUT별 TC 이름 `.html`/`.cvt` 생성과
   `st_check_standalone_coverage = 1111111111`을 확인해야 한다. PACKAGE 예외는
   `PackageFailure.Stack`에 최초 호출 파일·라인을 보존한다. 실행 명령은
-  `docs/manual/standalone-coverage-runtime.md`에 있다.
+  `docs/manual/standalone-run.md`에 있다. (구 `standalone-coverage-runtime.md`는
+  최신 브랜치를 확인하던 소스 문자열 assert가 낡아 2026-09-16 문서 정리에서 삭제했다.)
 - R2025b Test Manager CoverageSettings readback의 `MetricSettings='d'`는 Decision이
   Block Execution을 포함하는 legacy 표기이므로 정상이다. 이 값에 `e`가 없다는 이유로
   EXECUTE를 중단하면 안 된다. matched CUT에서 CVF가 모든 objective를 제외하면
@@ -489,8 +522,8 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   PACKAGE의 `st_package_standalone_coverage_artifacts:37`은 이미 실패한 EXECUTE
   lifecycle을 전달한 위치다. CVSAVE와 CVHTML은 모두 writable scratch 격리가 적용된
   상태이므로, 실패 CUT의 남은 CVT/report/ZIP/evidence 파일과 ExecutionLog event로
-  실제 실패 API를 먼저 구분해야 한다. 진단 명령은
-  `docs/manual/standalone-coverage-runtime.md` 3절에 있다.
+  실제 실패 API를 먼저 구분해야 한다. 진단 명령은 `docs/manual/standalone-run.md` 끝의 manifest 확인 블록과
+  `docs/troubleshooting.md` 6절에 있다.
 - 진단 결과 실패 CUT 모두 `CoverageResult.cvt`는 있고 Coverage report/ZIP은 없어
   `cvhtml` 실패로 확정됐다. 실패한 두 report.html 절대 경로는 262자, 통과 target은
   235·257·259자로 Windows legacy 260자 경계와 일치했다. 기존 격리는 MATLAB `pwd`만

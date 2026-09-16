@@ -2,7 +2,7 @@
 
 profile은 모델·관리 Excel·Test File·일반 결과 root·Standalone root를 묶습니다.
 동시에 여러 모델을 실행하는 기능이 아니라, 하나씩 선택해 독립적으로 관리하는 기능입니다.
-모델마다 서로 겹치지 않는 결과 root와 Test File을 사용하세요.
+모델마다 서로 겹치지 않는 결과 root와 Test File을 사용하십시오.
 
 ## 1. 한 번 등록
 
@@ -42,7 +42,7 @@ cfg = st_select_model_profile(); % 목록 선택; 취소 시 기존 선택 유�
 
 다른 모델도 1번 코드로 별도 이름과 경로를 등록한 뒤 선택합니다. A → B → A로
 돌아오면 A의 checkpoint·SLDV·결과 경로를 다시 사용합니다. 이름이 같은 다른 모델이
-로드돼 있으면 자동으로 닫지 않고 선택을 거부합니다. 전환 전 현재 작업을 저장하세요.
+로드돼 있으면 자동으로 닫지 않고 선택을 거부합니다. 전환 전 현재 작업을 저장하십시오.
 
 `model_profiles.mat`와 `runtime_target.mat`는 로컬 설정이며 Git에 포함하지 않습니다.
 다른 PC에서는 경로를 다시 등록합니다. 사용자 callback·base workspace·프로젝트

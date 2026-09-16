@@ -55,7 +55,7 @@ Test File, CVF와 캡처된 CVT·원본 HTML ZIP·metric 증거 및 해시입니
 
 ## SUMMARY만 새로 생성
 
-위 코드의 두 `FromStage` 값을 `SUMMARY`로 바꾸세요. 원본 PACKAGE가 끝났고 모든
+위 코드의 두 `FromStage` 값을 `SUMMARY`로 바꾸십시오. 원본 PACKAGE가 끝났고 모든
 최종 제출 파일이 저장 inventory와 일치해야 합니다. 기존 파일을 새 root로 복사하고
 manifest의 숫자에서 Excel만 재작성합니다. 모델 로드/저장, Result import, 테스트 실행은 없습니다.
 SUMMARY는 `.work`와 저장 Result를 사용하지 않습니다.
@@ -68,5 +68,5 @@ SUMMARY는 0회이며 Result를 다시 export하지 않습니다. 실행 횟수�
 역사적 결과 재생성이 성공해도 현재 소스 불변을 검사하는 B9는 실패할 수 있습니다.
 
 동일 PipelineId의 기존 `Action=PACKAGE/SUMMARY` 1회 제한은 그대로입니다.
-재생성도 원본과 동시에 실행하지 마세요. 제출 폴더만 이동해 사용은 가능하지만
-재생성과 provenance 검증을 계속하려면 원본/파생 결과의 기록된 경로를 보존하세요.
+재생성도 원본과 동시에 실행하지 마십시오. 제출 폴더만 이동해 사용은 가능하지만
+재생성과 provenance 검증을 계속하려면 원본/파생 결과의 기록된 경로를 보존하십시오.
