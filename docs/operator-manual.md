@@ -228,12 +228,18 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');  % 그 단�
 | Coverage 필터 설정 | `COVERAGE_FILTER` |
 | Test Case 이름 또는 Iteration | `TEST_MANAGER` |
 
-> `FORCE`의 증분 계산은 **앞 단계까지 무효화할 수 있습니다.** 보통은 문제가 되지
-> 않지만, Harness 생성처럼 오래 걸리는 앞 단계를 절대 다시 실행하면 안 되는
-> 상황이라면 선택 기능인 `st_check_readiness` + `st_run_from_stage`를 쓰십시오.
-> 앞 단계를 읽기 전용으로 검증한 뒤, 유효하면 선택한 단계부터만 실행하고 유효하지
-> 않으면 자동으로 고치지 않고 중단합니다. 절차는 [재시작](manual/restart.md)에
-> 있습니다.
+> **`FromStage`는 앞 단계를 "건너뛰라"는 뜻이 아닙니다.** `st_build_execution_plan`은
+> 지정 단계부터 `dirty`로 표시할 뿐이고, 그보다 앞 단계는 여전히 checkpoint와
+> fingerprint로 판정합니다. checkpoint가 없거나(단계 명령을 직접 부른 경우 등) 모델이
+> 바뀌었으면 앞 단계도 함께 실행됩니다.
+>
+> 앞 단계 재실행을 **확실히 막는** 것은 선택 기능인 `st_check_readiness` +
+> `st_run_from_stage`뿐입니다. 앞 단계를 읽기 전용으로 검증한 뒤 유효하면 그보다 앞을
+> `CACHED`로 못 박고, 유효하지 않으면 자동으로 고치지 않고 중단합니다. 절차는
+> [재시작](manual/restart.md)에 있습니다.
+
+단계를 하나씩 끊어서 실행하려면
+[단계별로 끊어서 실행하기](manual/step-by-step.md)를 보십시오.
 
 ### 5.3 checkpoint만 지우기
 

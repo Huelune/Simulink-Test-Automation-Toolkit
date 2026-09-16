@@ -35,6 +35,7 @@ st_run_standalone_coverage_pipeline( ...
 | 하고 싶은 것 | 문서 |
 | --- | --- |
 | 준비와 테스트 실행 | [준비 및 실행](manual/prepare.md) |
+| 단계별로 끊어서 실행하고 그 다음부터 이어가기 | [단계별로 끊어서 실행하기](manual/step-by-step.md) |
 | standalone 제출물 생성 | [Standalone 실행](manual/standalone-run.md) |
 | 제출물을 Test Manager에서 열기 | [결과 열기](manual/open-results.md) |
 | 단계별 동작과 주의사항 전체 | [운영자 매뉴얼](operator-manual.md) |

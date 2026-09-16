@@ -374,6 +374,7 @@ disp(code)
 | 오류가 났을 때 | [문제 해결](troubleshooting.md) |
 | 단계별로 실제 무슨 일이 일어나는지 | [운영자 매뉴얼](operator-manual.md) |
 | 복사해서 바로 쓸 코드 | [수동 실행 안내](manual/README.md) |
+| 단계별로 끊어서 실행하기 | [단계별 실행](manual/step-by-step.md) |
 | 제출물을 Test Manager에서 열기 | [결과 열기](manual/open-results.md) |
 | 실행 없이 테스트 명세서 Excel 뽑기 | [테스트 명세서 추출](test-specification.md) |
 

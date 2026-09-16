@@ -609,10 +609,18 @@ plan = st_cleanup_results('Scope','STATE','Apply',true);  % 실제 삭제
 | `st_show_assessment_scenario_output_order` | Scenario 입력과 출력 순서 표시 |
 | `st_collect_warning_ids` | 긴 실행이 내는 경고 식별자 수집 |
 
-## 14. 고급 단계 명령
+## 14. 단계별 실행 명령
 
-정상 운영은 workflow 진입점을 씁니다. 다음 명령은 **단계별 진단이나 부분 재현이
-필요할 때만** 직접 실행합니다. 앞 단계 산출물이 없으면 실패할 수 있습니다.
+정상 운영은 workflow 진입점을 씁니다. 다음 명령은 **단계를 끊어서 실행하거나
+부분 재현이 필요할 때** 직접 실행합니다. 앞 단계 산출물이 없으면 실패합니다.
+
+실행 순서와 각 단계의 확인 방법은
+[단계별로 끊어서 실행하기](manual/step-by-step.md)에 있습니다. 전부 인자 없이
+부르며 관리 Excel의 활성 행 전체를 대상으로 합니다.
+
+> 단계 명령을 직접 부르면 **checkpoint를 남기지 않습니다.** 이후
+> `st_run_from_harness`는 준비된 적 없는 것으로 판단해 SLDV 단계부터 다시
+> 실행합니다.
 
 | 명령 | 역할 | 결과 파일 |
 | --- | --- | --- |

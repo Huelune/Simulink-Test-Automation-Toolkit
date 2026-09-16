@@ -25,6 +25,7 @@ st_run_standalone_coverage_pipeline( ...
 | 하고 싶은 작업 | 문서 |
 | --- | --- |
 | Harness·입력·Test Case 준비와 테스트 실행 | [준비 및 실행](prepare.md) |
+| 단계별로 끊어서 실행하고 그 다음부터 이어가기 | [단계별로 끊어서 실행하기](step-by-step.md) |
 | Standalone 제출물 생성 | [Standalone 실행](standalone-run.md) |
 | 제출 MLDATX와 standalone 모델을 Test Manager에서 열기 | [결과 열기](open-results.md) |
 | 오류가 났을 때 | [문제 해결](../troubleshooting.md) |

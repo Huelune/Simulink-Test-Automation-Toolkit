@@ -74,9 +74,14 @@ checkpoint만 지우고 다시 판단하게 하려면:
 st_cleanup_results('Scope','STATE','Apply',true)
 ```
 
-> `PreparationMode='FORCE'`의 증분 계산은 **앞 단계까지 무효화할 수 있습니다.**
-> 오래 걸리는 앞 단계를 절대 다시 실행하지 않아야 하면 [재시작](restart.md)의
-> `st_run_from_stage`를 쓰십시오. 평소에는 위 방법으로 충분합니다.
+> **`FromStage`는 앞 단계를 "건너뛰라"는 뜻이 아닙니다.** 지정한 단계부터 강제로
+> 다시 하라는 뜻이고, 그보다 앞 단계는 여전히 fingerprint로 판정됩니다. checkpoint가
+> 없거나 모델이 바뀌었으면 앞 단계도 함께 실행됩니다. 평소에는 이것으로 충분하지만,
+> 앞 단계 재실행을 확실히 막아야 하면 [재시작](restart.md)의 `st_run_from_stage`를
+> 쓰십시오.
+
+단계를 하나씩 끊어서 실행하고 결과를 확인하며 진행하려면
+[단계별로 끊어서 실행하기](step-by-step.md)를 보십시오.
 
 ## 5. 실행 옵션
 

@@ -140,6 +140,30 @@
 - 새 기본 경로를 문서에 넣을 때 `st_run_standalone_coverage_pipeline`이 profile
   없이 `st_require_runtime_target`만으로 동작하는 것을 소스에서 확인했다.
 
+## 2026-09-16 단계별 실행 문서 추가
+
+- `docs/manual/step-by-step.md` 신설. Harness 생성 → 입력 설정 → Assessment 설정 →
+  Test Case 생성 → 실행/verify 수정을 단계 명령으로 끊어 실행하고, 그 지점부터
+  이어서 진행하는 세 가지 방법을 비교한다.
+- 코드를 읽어 확인한 사실 세 가지를 문서에 명시했다. 이전 문서 서술이 부정확했다.
+  1. `st_checkpoint_workflow_state`는 `st_run_workflow`에서만 호출된다. 단계 명령
+     (`st_create_harnesses` 등)을 직접 부르면 **checkpoint가 남지 않으므로**,
+     이후 `st_run_from_harness`는 `stateIndex`가 비어 `dirty(2:end)=true`가 되어
+     SLDV부터 다시 실행한다.
+  2. `st_build_execution_plan`에서 `FORCE`+`FromStage`는 `dirty(forceIndex:end)`를
+     세울 뿐이고 그 앞 단계는 여전히 fingerprint로 판정한다. 즉 **`FromStage`는 앞
+     단계를 건너뛰라는 뜻이 아니다.** 앞 단계를 실제로 차단하는 것은
+     `st_restart_plan`이 `s < index`를 `CACHED`로 못 박는 StrictRestart 경로,
+     곧 `st_run_from_stage`뿐이다. `prepare.md`와 `operator-manual.md`의 해당 주석을
+     이 사실대로 고쳤다.
+  3. `st_run_generated_tests`는 BATCH 경로라 활성 CVF가 있으면
+     `simtest:BatchExecutionWithCoverageFilter`로 실행 전에 중단한다. 단계별 실행의
+     6단계는 CVF 사용 여부로 `st_run_tests_per_cut`과 갈라 적었다.
+- 단계 명령은 모두 선택적 `stageSelection` 인자만 받으며 인자 없이 호출 가능하다.
+  CUT 하나만 고르는 인자는 없으므로 `Enabled` 열로 좁히라고 안내했다.
+- `execution-commands.md` 14장을 "고급 단계 명령"에서 "단계별 실행 명령"으로 바꾸고
+  checkpoint 미기록 경고와 새 문서 링크를 넣었다.
+
 ## 변경 불가 핵심 결정
 
 CoverageFilterMode이 활성화된 CUT의 content rule은 CUT 자기 자신을 선택하면

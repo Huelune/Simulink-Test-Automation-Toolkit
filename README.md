@@ -176,6 +176,7 @@ result/
 | [설정 사전](docs/config-reference.md) | 기본 동작을 바꾸고 싶을 때 |
 | [실행 명령 사전](docs/execution-commands.md) | 어떤 명령이 있고 어떤 옵션을 받는지 |
 | [수동 실행 안내](docs/manual/README.md) | 작업별로 복사해 쓸 코드가 필요할 때 |
+| [단계별로 끊어서 실행하기](docs/manual/step-by-step.md) | Harness·입력·Assessment·Test Case·실행을 나눠서 할 때 |
 | [운영자 매뉴얼](docs/operator-manual.md) | 단계별 전제조건·부작용·복구 방법을 확인할 때 |
 | [문제 해결](docs/troubleshooting.md) | 오류가 났을 때 |
 
