@@ -1,0 +1,24 @@
+{
+  "_schemaVersion": "1.0.0",
+
+  "st_run_tests_per_cut":
+  {
+    "inputs":
+    [
+      {"name":"TargetConfig", "kind":"namevalue", "type":["table"], "purpose":"실행할 대상 표. 비우면 Excel에서 로드"},
+      {"name":"TestFile", "kind":"namevalue", "purpose":"이미 로드한 Test File 객체"},
+      {"name":"TestCases", "kind":"namevalue", "purpose":"실행할 Test Case 객체 배열"},
+      {"name":"ContinueOnFailure", "kind":"namevalue", "type":["logical","scalar"], "purpose":"대상 실패 시 다음 대상 계속"},
+      {"name":"ReportMode", "kind":"namevalue", "type":["choices={'SUMMARY','FULL'}"], "purpose":"보고서 상세도"},
+      {"name":"FailOnNonPass", "kind":"namevalue", "type":["logical","scalar"], "purpose":"PASS가 아니면 오류로 종료"},
+      {"name":"ResultFilterMode", "kind":"namevalue", "type":["choices={'DURING_RUN','POST_RUN_REQUIRED'}"], "purpose":"CVF를 실행 중 적용할지 결과에 사후 등록할지"},
+      {"name":"RunRootDirectory", "kind":"namevalue", "type":["folder"], "purpose":"run 폴더를 만들 위치"},
+      {"name":"GenerateResultArtifacts", "kind":"namevalue", "type":["logical","scalar"], "purpose":"보고서와 결과 산출물 생성"},
+      {"name":"WriteRunSummaryExcel", "kind":"namevalue", "type":["logical","scalar"], "purpose":"run 요약 Excel 작성"},
+      {"name":"SaveTestResult", "kind":"namevalue", "type":["logical","scalar"], "purpose":"집계 Result를 파일로 저장"},
+      {"name":"ResultFile", "kind":"namevalue", "type":["file=*.mldatx"], "purpose":"SaveTestResult=true일 때 저장 경로"},
+      {"name":"CapturePackageEvidence", "kind":"namevalue", "type":["logical","scalar"], "purpose":"실행 모델이 열린 동안 CVT/HTML 증거 캡처"},
+      {"name":"LoadRuntimeModel", "kind":"namevalue", "type":["logical","scalar"], "purpose":"설정 확인을 위해 Top Model을 로드할지"}
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "_schemaVersion": "1.0.0",
+
+  "st_check_standalone_coverage":
+  {
+    "inputs":
+    [
+      {"name":"OutputRoot", "kind":"namevalue", "type":["folder"], "purpose":"결과 루트. 비우면 cfg 기본값"},
+      {"name":"PipelineId", "kind":"namevalue", "type":["char"], "purpose":"검사할 PipelineId 또는 LATEST"}
+    ]
+  },
+
+  "st_check_readiness":
+  {
+    "inputs":
+    [
+      {"name":"Workflow", "kind":"namevalue", "type":["choices={'STANDALONE','FROM_HARNESS','AFTER_HARNESS'}"], "purpose":"어떤 workflow 기준으로 검사할지"},
+      {"name":"FromStage", "kind":"namevalue", "type":["choices={'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR','ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT','EXECUTE','PACKAGE','SUMMARY'}"], "purpose":"어느 단계부터 실행할 예정인지"},
+      {"name":"SourcePipelineId", "kind":"namevalue", "type":["char"], "purpose":"PACKAGE/SUMMARY 재생성의 원본 PipelineId"}
+    ]
+  }
+}

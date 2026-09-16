@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `functionSignatures.json` for the commands people type, so MATLAB
+  tab-completes their option names and the allowed values (`Action`,
+  `FromStage`, `ExecutionModelMode` and so on). Completion is editor-only
+  and changes no behaviour; the files live beside the functions they
+  describe, which is the only place MATLAB looks.
 - Removed the named model profile feature. Target selection is back to the
   single `runtime_target.mat` path that `st_select_target_model` writes, and
   `cfg.ActiveModelProfile` is gone. A `model_profiles.mat` left on a machine

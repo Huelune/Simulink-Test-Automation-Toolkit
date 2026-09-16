@@ -92,6 +92,40 @@ cfg = st_select_target_model(true);  % 무조건 다시 고르기
 | --- | --- | --- |
 | 첫 번째 (선택) | `false` | `true`면 기존 선택을 무시하고 다시 고릅니다 |
 
+## 2-1. 옵션 이름 자동완성
+
+`st_setup`을 한 번 실행해 `src/`가 MATLAB path에 올라가면, 아래 명령의 옵션
+이름과 허용값이 **Tab 키로 자동완성**됩니다. 옵션 철자나 `'AUTO'`/`'FORCE'` 같은
+값을 외우지 않아도 됩니다.
+
+```matlab
+st_run_standalone_coverage_pipeline('Act        % Tab -> 'Action'
+st_run_standalone_coverage_pipeline('Action','  % Tab -> ALL EXECUTE PACKAGE SUMMARY
+```
+
+자동완성이 되는 명령은 다음과 같습니다.
+
+| 폴더 | 명령 |
+| --- | --- |
+| `src/workflow` | `st_run_from_harness`, `st_run_after_harness`, `st_run_from_stage` |
+| `src/pipeline` | `st_run_standalone_coverage_pipeline`, `st_load_standalone_pipeline_manifest`, `st_regenerate_standalone_results` |
+| `src/verification` | `st_check_standalone_coverage`, `st_check_readiness` |
+| `src/exporting` | `st_export_test_bundle` |
+| `src/execution` | `st_run_tests_per_cut` |
+
+정의는 각 폴더의 `functionSignatures.json`에 있습니다. MATLAB은 이 파일을
+**함수와 같은 폴더에서만** 찾으므로 명령을 추가할 때는 그 함수가 있는 폴더의
+파일에 넣습니다. 옵션을 바꾸면 이 파일도 함께 고쳐야 실제 동작과 어긋나지
+않습니다. 문법 검사는 아래로 합니다.
+
+```matlab
+validateFunctionSignaturesJSON(fullfile(st_project_root(), ...
+    'src','pipeline','functionSignatures.json'))
+```
+
+자동완성은 편의 기능일 뿐이며 실행 동작에는 영향을 주지 않습니다. 목록에 없는
+명령도 그대로 동작합니다.
+
 ## 3. CUT 경로 준비
 
 ### `st_export_subsystem_paths`

@@ -1,0 +1,38 @@
+{
+  "_schemaVersion": "1.0.0",
+
+  "st_run_standalone_coverage_pipeline":
+  {
+    "inputs":
+    [
+      {"name":"Action", "kind":"namevalue", "type":["choices={'ALL','EXECUTE','PACKAGE','SUMMARY'}"], "purpose":"어느 단계를 수행할지"},
+      {"name":"PipelineId", "kind":"namevalue", "type":["char"], "purpose":"재개할 PipelineId 또는 LATEST"},
+      {"name":"OutputRoot", "kind":"namevalue", "type":["folder"], "purpose":"결과 루트. 비우면 cfg 기본값"},
+      {"name":"SaveTestResult", "kind":"namevalue", "type":["logical","scalar"], "purpose":"true면 Result를 저장해 PACKAGE 재개 가능"},
+      {"name":"ContinueOnFailure", "kind":"namevalue", "type":["logical","scalar"], "purpose":"대상 실패 시 다음 대상 계속"},
+      {"name":"FailOnNonPass", "kind":"namevalue", "type":["logical","scalar"], "purpose":"PASS가 아니면 오류로 종료"},
+      {"name":"PreparationMode", "kind":"namevalue", "type":["choices={'AUTO','FORCE'}"], "purpose":"준비 단계 재사용 정책"},
+      {"name":"FromStage", "kind":"namevalue", "type":["choices={'EXECUTE','PACKAGE','SUMMARY'}"], "purpose":"이 단계부터 실행"},
+      {"name":"ReportMode", "kind":"namevalue", "type":["choices={'SUMMARY','FULL'}"], "purpose":"보고서 상세도"}
+    ]
+  },
+
+  "st_load_standalone_pipeline_manifest":
+  {
+    "inputs":
+    [
+      {"name":"outputRoot", "kind":"required", "type":["folder"], "purpose":"cfg.StandaloneCoverageRootDir"},
+      {"name":"pipelineId", "kind":"required", "type":["char"], "purpose":"PipelineId 또는 LATEST"}
+    ]
+  },
+
+  "st_regenerate_standalone_results":
+  {
+    "inputs":
+    [
+      {"name":"cfg", "kind":"required", "type":["struct"], "purpose":"st_config 또는 st_require_runtime_target 결과"},
+      {"name":"sourceId", "kind":"required", "type":["char"], "purpose":"재생성할 원본 PipelineId"},
+      {"name":"stage", "kind":"required", "type":["choices={'PACKAGE','SUMMARY'}"], "purpose":"다시 만들 단계"}
+    ]
+  }
+}

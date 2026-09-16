@@ -1,0 +1,17 @@
+{
+  "_schemaVersion": "1.0.0",
+
+  "st_export_test_bundle":
+  {
+    "inputs":
+    [
+      {"name":"Destination", "kind":"namevalue", "type":["folder"], "purpose":"번들을 만들 상위 폴더"},
+      {"name":"RunId", "kind":"namevalue", "type":["char"], "purpose":"참조 보고서로 쓸 run 폴더 이름 또는 LATEST"},
+      {"name":"CreateArchive", "kind":"namevalue", "type":["logical","scalar"], "purpose":"번들 폴더 옆에 ZIP 생성"},
+      {"name":"IncludeReferenceReport", "kind":"namevalue", "type":["logical","scalar"], "purpose":"기준 통합 보고서 포함"},
+      {"name":"Profile", "kind":"namevalue", "type":["choices={'REPRODUCIBLE','ASSET'}"], "purpose":"재현 번들 또는 자산 번들"},
+      {"name":"ExecutionModelMode", "kind":"namevalue", "type":["choices={'ORIGINAL','STANDALONE_HARNESS'}"], "purpose":"내부 Harness 사용 또는 독립 모델로 내보내기"},
+      {"name":"AnalyzeProducts", "kind":"namevalue", "type":["logical","scalar"], "purpose":"필요 툴박스 분석. 느리며 manifest 안내용"}
+    ]
+  }
+}
