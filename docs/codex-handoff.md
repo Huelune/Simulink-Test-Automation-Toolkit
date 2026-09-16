@@ -375,6 +375,23 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   `case`를 추가로 필요로 한다(`Formatter` 열이 그 구분을 명시한다). 파라미터가
   비활성이어도 행을 거르지 않고 상태를 표현식에 남긴다. breakpoint 등 값은 workspace
   에서 평가하지 않고 저장된 문자열 그대로 옮긴다.
+- 수집 범위는 `DecisionBlockScope`(`EXPLICIT` 기본 / `ALL` / `NONE`)로 고른다. 기본값은
+  `cfg.DecisionBlockScope`, 실행별 덮어쓰기는 `st_export_test_specification`의 동명
+  name-value다. 범위는 catalog의 `Kind` 열로 걸러진 **view**로 구현했고,
+  `st_specification_decision_catalog(scope)`가 그 view를 돌려준다. 따라서
+  `st_specification_decision_blocks`는 범위를 전혀 모르고 받은 catalog만 훑는다.
+  `st_collect_specification_target`이 좁혀진 catalogReader를 주입한다. 이를 위해
+  `st_specification_decision_blocks`의 네 주입 지점은 `[]`를 "기본값 사용"으로 받는다.
+- `st_specification_decision_catalog`의 scope 기본값은 `ALL`이다. 이미 쓰인 워크북을
+  다시 포맷하는 `st_format_specification_decision_blocks`는 현재 export 범위 밖의
+  타입도 표시 별칭을 찾을 수 있어야 하므로 전체 catalog를 봐야 한다. 이 기본값을
+  `EXPLICIT`으로 바꾸면 과거 워크북의 암시적 분기 행이 catalog 밖으로 밀려 WARN과 함께
+  BlockType passthrough로 표시된다.
+- catalog가 0행인 것은 `NONE` view이지 고장이 아니다. 스캔은 `find_system`을 한 번도
+  부르지 않고 `"[]"`를 돌려주며 INFO로 `Reason=NoBlockTypeInScope`를 남긴다. 실제 고장
+  (`catalogReader` 자체가 throw)만 `simtest:SpecificationDecisionCatalog`로 올린다.
+  Excel만 보면 `NONE`으로 비운 셀과 블록이 없는 셀이 구분되지 않으므로, 어느 범위로
+  뽑았는지는 export 시작 INFO 로그의 `DecisionBlockScope=` 항목에 남긴다.
 - 의도적으로 열어 둔 확장점 두 가지. (1) `outcome`이 `switch` 앞에서 배정되므로
   `Formatter="CUSTOM"` case가 읽은 값에 따라 Outcome을 덮어쓸 수 있다(메인 셀은
   `[T/F]` 고정이라 영향 없음). (2) `Delay` 블록과 Enabled/Triggered Subsystem 지원은

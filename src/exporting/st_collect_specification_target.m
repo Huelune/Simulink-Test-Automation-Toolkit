@@ -1,8 +1,9 @@
 function [rows, details, inputFiles, verifyCells, maxTimes, decisionBlockLists] = st_collect_specification_target( ...
-        target, cfg, suite, verifyMode)
+        target, cfg, suite, verifyMode, decisionScope)
 %ST_COLLECT_SPECIFICATION_TARGET Inspect a loaded Harness; never activate/edit.
 % Columns are assigned public Korean headers by the export entry point.
 if nargin < 4, verifyMode = 'STEP2'; end
+if nargin < 5 || isempty(decisionScope), decisionScope = 'EXPLICIT'; end
 rows = strings(0,13);
 details = strings(0,10);
 verifyCells = cell(0,1);
@@ -18,7 +19,11 @@ harnessStopTime = get_param(harness, 'StopTime');
 [~, maxTimeSource] = st_specification_max_time(target.SldvMode, harnessStopTime, NaN);
 st_log(cfg, 'INFO', 'Specification MaxTime source selected | Case=%s | Mode=%s | Source=%s | HarnessStopTime=%s', ...
     target.TestCaseName, target.SldvMode, maxTimeSource, string(harnessStopTime));
-[decisionBlockList, ~, decisionBlockNote] = st_specification_decision_blocks(base(9), cfg);
+% The scope reaches the scan as a narrowed catalog; the [] arguments leave
+% the finder, name reader and descriptor at their defaults.
+scopedCatalog = @() st_specification_decision_catalog(decisionScope);
+[decisionBlockList, ~, decisionBlockNote] = st_specification_decision_blocks( ...
+    base(9), cfg, [], [], [], scopedCatalog);
 assessment = st_find_assessment_block(harness);
 scenarios = string(sltest.testsequence.getAllScenarios(assessment));
 scenarios = scenarios(:);

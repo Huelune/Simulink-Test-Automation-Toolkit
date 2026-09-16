@@ -412,3 +412,97 @@ switch key
         error('fixture:UnknownParameter', 'Unexpected parameter: %s', key);
 end
 end
+
+function testCatalogScopeDefaultsToEveryKnownType(testCase)
+% A caller that formats an existing workbook must recognize a type the
+% current export scope would have skipped, so the default stays ALL.
+omitted = st_specification_decision_catalog();
+explicitAll = st_specification_decision_catalog('ALL');
+verifyEqual(testCase, omitted, explicitAll);
+verifyTrue(testCase, any(string(omitted.Kind) == "IMPLICIT"));
+end
+
+function testExplicitScopeKeepsOnlyDialogConditionBlocks(testCase)
+catalog = st_specification_decision_catalog('EXPLICIT');
+verifyEqual(testCase, string(catalog.BlockType), ...
+    ["If"; "Switch"; "MinMax"; "MultiPortSwitch"; "SwitchCase"]);
+verifyTrue(testCase, all(string(catalog.Kind) == "EXPLICIT"));
+end
+
+function testNoneScopeYieldsAnEmptyCatalogWithTheSameColumns(testCase)
+full = st_specification_decision_catalog('ALL');
+catalog = st_specification_decision_catalog('NONE');
+verifyEqual(testCase, height(catalog), 0);
+verifyEqual(testCase, catalog.Properties.VariableNames, ...
+    full.Properties.VariableNames);
+end
+
+function testCatalogScopeIsCaseInsensitiveAndRejectsUnknownValues(testCase)
+verifyEqual(testCase, st_specification_decision_catalog('explicit'), ...
+    st_specification_decision_catalog('EXPLICIT'));
+verifyEqual(testCase, st_specification_decision_catalog('  All  '), ...
+    st_specification_decision_catalog('ALL'));
+verifyError(testCase, @() st_specification_decision_catalog('SOME'), ...
+    'simtest:SpecificationDecisionScope');
+end
+
+function testExplicitScopeScansOnlyTheFiveDialogConditionTypes(testCase)
+requested = strings(0,1);
+cfg = struct('VerboseLogging', false);
+st_specification_decision_blocks('Top/CUT', cfg, @scope_finder, @(~) "unused", ...
+    [], @() st_specification_decision_catalog('EXPLICIT'));
+verifyEqual(testCase, requested, ...
+    ["If"; "Switch"; "MinMax"; "MultiPortSwitch"; "SwitchCase"]);
+verifyFalse(testCase, any(requested == "Saturate"));
+
+    function paths = scope_finder(~, varargin)
+        [depth, blockType] = search_options(varargin);
+        if depth ~= 1
+            error('fixture:SearchDepth', 'Expected SearchDepth=1.');
+        end
+        requested(end+1,1) = string(blockType);
+        paths = strings(0,1);
+    end
+end
+
+function testNoneScopeSkipsTheScanEntirely(testCase)
+% The finder errors on any call, so an empty result proves the scan was
+% skipped rather than run and filtered.
+cfg = struct('VerboseLogging', false);
+[text, count, note] = st_specification_decision_blocks( ...
+    'Top/CUT', cfg, @refusing_finder, @(~) "unused", ...
+    [], @() st_specification_decision_catalog('NONE'));
+verifyEqual(testCase, text, "[]");
+verifyEqual(testCase, count, 0);
+verifyEqual(testCase, note, "");
+verifyEmpty(testCase, jsondecode(char(text)));
+end
+
+function testEmptyCatalogReaderFallsBackToTheFullCatalog(testCase)
+% [] means "use the default", not "disable". The Relay outcome can only
+% come from the unscoped catalog.
+cfg = struct('VerboseLogging', false);
+[text, count, ~] = st_specification_decision_blocks( ...
+    'Top/CUT', cfg, @single_relay_finder, @(~) "Broken Relay", ...
+    @failing_descriptor, []);
+decoded = jsondecode(char(text));
+verifyEqual(testCase, count, 1);
+verifyEqual(testCase, string(decoded.BlockType), "Relay");
+verifyEqual(testCase, string(decoded.Outcome), "ON/OFF");
+end
+
+function testEverySeamAcceptsEmptyAsUseTheDefault(testCase)
+% st_collect_specification_target passes [] for the finder, name reader and
+% descriptor so the scope can reach the scan through catalogReader alone.
+source = fileread(fullfile(st_project_root(), 'src', 'exporting', ...
+    'st_specification_decision_blocks.m'));
+seams = ["finder", "nameReader", "descriptorReader", "catalogReader"];
+for k = 1:numel(seams)
+    pattern = ['nargin < \d+ \|\| isempty\(' char(seams(k)) '\)'];
+    verifyNotEmpty(testCase, regexp(source, pattern, 'once'), char(seams(k)));
+end
+end
+
+function paths = refusing_finder(~, varargin) %#ok<STOUT>
+error('fixture:NoScanAllowed', 'The scan must not run in this scope.');
+end

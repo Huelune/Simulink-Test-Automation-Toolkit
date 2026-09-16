@@ -71,6 +71,23 @@ Simulink Coverage objective가 생기는 **암시적 분기**(`Saturate`, `Abs`,
 구분하지 않고 정렬 결과에 연속으로 붙인다. 권위 있는 목록은
 `src/exporting/st_specification_decision_catalog.m` 한 곳이다.
 
+어느 그룹까지 뽑을지는 `DecisionBlockScope`로 고른다. 기본값은 `cfg.DecisionBlockScope`
+이며 `st_export_test_specification('DecisionBlockScope', ...)`로 실행마다 덮어쓴다.
+
+| 값 | 포함 대상 | 쓰는 때 |
+| --- | --- | --- |
+| `EXPLICIT` (기본) | 명시적 분기 5종 | 평소. 목록이 가장 짧다 |
+| `ALL` | 명시적 + 암시적 18종 | `If`/`Switch`가 없는데 Decision coverage가 나오는 이유를 찾을 때 |
+| `NONE` | 없음 (셀이 빈다) | 분기 목록이 필요 없고 export를 가볍게 하고 싶을 때 |
+
+`ALL`은 목록이 크게 길어진다. Lookup 테이블이 많은 CUT은 `DecisionBlocks` 셀이
+길이 한도를 넘어 `OverflowDetails` 참조로 대체될 수 있다. 그때도 구조화된 값은
+`DecisionBlockDetails`에 그대로 남는다. `NONE`은 셀이 비어 있는 것과 블록이 없는 것이
+Excel에서 구분되지 않으므로, 어느 범위로 뽑았는지는 실행 로그의
+`DecisionBlockScope=` 항목으로 확인한다.
+
+아래 설명은 `ALL`로 뽑은 경우를 기준으로 한다.
+
 메인 시트의 `DecisionBlocks` 셀은 **분기 종류와 무관하게 항상 `[T/F]`로 적는다.**
 구체적인 분기 종류는 `DecisionBlockDetails` 시트의 `Outcome` 열과 JSON에만 기록한다.
 메인 시트는 분기의 존재와 위치를, 세부 시트는 분기의 종류를 담당한다. 예를 들면

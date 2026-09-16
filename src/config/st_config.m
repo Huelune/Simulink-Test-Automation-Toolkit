@@ -436,6 +436,35 @@ cfg.OnlyEnabled = true;
 
 
 %% ============================================================
+% Test specification export
+%% ============================================================
+
+% How much of the DecisionBlocks inventory st_export_test_specification
+% writes. Override per run with
+% st_export_test_specification('DecisionBlockScope','ALL').
+%
+% 'EXPLICIT':
+%   Only blocks that carry a condition in their dialog, that is If, Switch,
+%   MinMax, Multiport Switch and Switch Case. The shortest list.
+%
+% 'ALL':
+%   Also the blocks that create Simulink Coverage objectives without
+%   carrying a condition: Saturate, Abs, Dead Zone, Rate Limiter, Relay,
+%   the lookup table family, the integrators, the iterators and Logical
+%   Operator. Use this to explain Decision coverage reported for a model
+%   that contains no If or Switch block at all. The column gets much
+%   longer, and a lookup table heavy CUT can push the cell into the
+%   OverflowDetails sheet.
+%
+% 'NONE':
+%   Leave the DecisionBlocks column empty and skip the scan.
+%
+% The scanned types for each level are defined in
+% src/exporting/st_specification_decision_catalog.m.
+cfg.DecisionBlockScope = 'EXPLICIT';
+
+
+%% ============================================================
 % Progress / diagnostic logging
 %% ============================================================
 

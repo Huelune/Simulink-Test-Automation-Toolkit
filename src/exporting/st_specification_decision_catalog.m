@@ -1,8 +1,17 @@
-function catalog = st_specification_decision_catalog()
+function catalog = st_specification_decision_catalog(scope)
 %ST_SPECIFICATION_DECISION_CATALOG Single source of decision block knowledge.
 % One row per Simulink BlockType that can create a branch in a saved model.
 % Adding a block type is one row here. Only a type whose expression needs
 % special assembly also needs a case in st_specification_decision_descriptor.
+%
+% SCOPE selects how much of the catalog to return. It is a view over the
+% same rows, so the table below always describes every type the toolkit
+% knows about.
+%   ALL       every row. The default, because a caller that formats an
+%             existing workbook must recognize a type the current export
+%             scope would have skipped.
+%   EXPLICIT  only the blocks that carry a condition in their dialog.
+%   NONE      no rows, which turns the DecisionBlocks inventory off.
 %
 % BlockType          get_param(block,'BlockType') value, used by find_system.
 % Outcome            Branch kind recorded in the DecisionBlockDetails Outcome
@@ -28,6 +37,18 @@ function catalog = st_specification_decision_catalog()
 %
 % Nothing here is evaluated. Values are the saved dialog text only, so a
 % lookup table configured from a workspace variable shows the variable name.
+if nargin < 1 || isempty(scope)
+    scope = "ALL";
+end
+scope = upper(strtrim(string(scope)));
+% "" is a 1x1 string, so isempty above does not catch a blank request.
+if isscalar(scope) && ~ismissing(scope) && strlength(scope) == 0
+    scope = "ALL";
+end
+if ~isscalar(scope) || ~ismember(scope, ["ALL","EXPLICIT","NONE"])
+    error('simtest:SpecificationDecisionScope', ...
+        'DecisionBlockScope must be ALL, EXPLICIT or NONE.');
+end
 
 BlockType = [ ...
     "If"; "Switch"; "MinMax"; "MultiPortSwitch"; "SwitchCase"; ...
@@ -103,4 +124,11 @@ Kind = [ ...
 
 catalog = table(BlockType, Outcome, DisplayType, Formatter, ...
     Parameters, OptionalParameters, FixedText, Kind);
+
+switch scope
+    case "EXPLICIT"
+        catalog = catalog(catalog.Kind == "EXPLICIT", :);
+    case "NONE"
+        catalog = catalog([], :);
+end
 end

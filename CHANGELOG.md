@@ -15,7 +15,7 @@
   80-character cap. Harness, standalone model and input MAT names are
   unchanged. Deliveries packaged before this change no longer satisfy the
   checker and must be produced again.
-- `DecisionBlocks` now inventories the block types that create Simulink
+- `DecisionBlocks` can now inventory the block types that create Simulink
   Coverage objectives without looking like a decision: Saturate, Abs,
   DeadZone, RateLimiter, Relay, Lookup_n-D, Interpolation_n-D, PreLookup,
   Integrator, DiscreteIntegrator, ForIterator, WhileIterator and Logic sit
@@ -25,6 +25,16 @@
   such as Saturation Dynamic and Unit Delay Enabled report BlockType SubSystem
   and stay out of a SearchDepth=1 BlockType scan, as do the control ports of a
   child Enabled or Triggered Subsystem.
+- How much of that inventory to write is selected by `DecisionBlockScope`:
+  `EXPLICIT` (the default) keeps the original five dialog-condition blocks,
+  `ALL` adds the implicit ones above, and `NONE` leaves the column empty and
+  skips the scan. `cfg.DecisionBlockScope` sets the project default and
+  `st_export_test_specification('DecisionBlockScope','ALL')` overrides one
+  run. The scope is a view over the catalog selected by its `Kind` column, so
+  the scan itself knows nothing about scopes and an empty catalog is the
+  `NONE` view rather than a fault. An empty cell reads the same in Excel
+  whether the scope was `NONE` or the CUT had no blocks, so the export start
+  log now records the scope it ran with.
 - The `DecisionBlocks` cell on the TestSpecification sheet now always prints
   `[T/F]`, and the specific branch kind moved to the `Outcome` column of
   DecisionBlockDetails. The main sheet says where the branches are, the detail

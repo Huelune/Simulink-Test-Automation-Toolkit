@@ -7,26 +7,24 @@ function [text, count, note] = st_specification_decision_blocks( ...
 % This is a static inventory, not the number of compiled coverage objectives.
 % The scanned block types and their outcome tokens come from
 % st_specification_decision_catalog, which is the only place either is defined.
-if nargin < 3
+% Each seam accepts [] so a caller can override one of them and leave the
+% rest at their defaults, which is how the export scope reaches the scan.
+if nargin < 3 || isempty(finder)
     finder = @find_system;
 end
-if nargin < 4
+if nargin < 4 || isempty(nameReader)
     nameReader = @read_name;
 end
-if nargin < 5
+if nargin < 5 || isempty(descriptorReader)
     descriptorReader = @st_specification_decision_descriptor;
 end
-if nargin < 6
+if nargin < 6 || isempty(catalogReader)
     catalogReader = @st_specification_decision_catalog;
 end
 try
     catalog = catalogReader();
     blockTypes = string(catalog.BlockType);
     outcomeDefaults = string(catalog.Outcome);
-    if isempty(blockTypes)
-        error('simtest:SpecificationDecisionCatalog', ...
-            'Decision block catalog has no block type.');
-    end
     st_log(cfg, 'DEBUG', ...
         'Specification decision catalog loaded | Types=%d | Explicit=%d | Implicit=%d', ...
         numel(blockTypes), sum(string(catalog.Kind) == "EXPLICIT"), ...
@@ -36,6 +34,16 @@ catch ME
         cutPath, ME.message);
     error('simtest:SpecificationDecisionCatalog', ...
         'Decision block catalog is unavailable: %s', ME.message);
+end
+% An empty catalog is the DecisionBlockScope=NONE view, not a fault.
+if isempty(blockTypes)
+    text = "[]";
+    count = 0;
+    note = "";
+    st_log(cfg, 'INFO', ...
+        'Specification decision block scan skipped | CUT=%s | Reason=NoBlockTypeInScope', ...
+        cutPath);
+    return;
 end
 records = strings(0,7); % BlockType, Name, Path, Outcome, Expression, Status, Message
 notes = strings(0,1);

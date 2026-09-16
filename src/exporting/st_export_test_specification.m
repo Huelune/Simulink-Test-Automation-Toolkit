@@ -13,17 +13,25 @@ function [specification, outputFile] = st_export_test_specification(varargin)
 %   DecisionBlocks shows each direct child decision block Name followed by
 %   a D-numbered saved-parameter condition. DecisionBlockDetails retains
 %   outcomes, expressions, types, paths, and JSON.
+%   DecisionBlockScope: 'EXPLICIT' (default) lists only the blocks that
+%   carry a condition in their dialog. 'ALL' adds the blocks that create
+%   coverage objectives without one, such as Saturate, Relay and the
+%   lookup table family. 'NONE' leaves the column empty. Omit it to use
+%   cfg.DecisionBlockScope.
 p = inputParser;
 addParameter(p, 'OutputFile', '', @(v) (ischar(v) && isrow(v)) || ...
     (isstring(v) && isscalar(v)) || isempty(v));
 addParameter(p, 'VerifyMode', 'STEP2', @(v) ...
     (ischar(v) && isrow(v)) || (isstring(v) && isscalar(v)));
+addParameter(p, 'DecisionBlockScope', '', @(v) (ischar(v) && isrow(v)) || ...
+    (isstring(v) && isscalar(v)) || isempty(v));
 parse(p, varargin{:});
 verifyMode = upper(strtrim(char(p.Results.VerifyMode)));
 if ~ismember(verifyMode, {'STEP2', 'ALL_STEPS_COLUMNS'})
     error('simtest:SpecificationVerifyMode', 'VerifyMode must be STEP2 or ALL_STEPS_COLUMNS.');
 end
 cfg = st_config();
+decisionScope = resolve_decision_scope(p.Results.DecisionBlockScope, cfg);
 outputFile = char(p.Results.OutputFile);
 if isempty(outputFile)
     outputFile = fullfile(cfg.ResultDir, ['test_specification_' ...
@@ -37,7 +45,9 @@ end
 if isfile(outputFile)
     error('simtest:SpecificationOutputExists', 'Output already exists: %s', outputFile);
 end
-st_log(cfg, 'INFO', 'Specification export start | VerifyMode=%s | Output=%s', verifyMode, outputFile);
+st_log(cfg, 'INFO', ...
+    'Specification export start | VerifyMode=%s | DecisionBlockScope=%s | Output=%s', ...
+    verifyMode, decisionScope, outputFile);
 timer = tic;
 initialModels = string(find_system('SearchDepth', 0, 'Type', 'block_diagram'));
 initialModels = initialModels(:);
@@ -123,7 +133,7 @@ try
                 track_source(get_param(harness, 'FileName'));
             end
             [targetRows, targetDetails, inputFiles, targetVerifyCells, targetMaxTimes, targetDecisionBlocks] = ...
-                st_collect_specification_target(target, cfg, suite, verifyMode);
+                st_collect_specification_target(target, cfg, suite, verifyMode, decisionScope);
             check_model(harness, '');
             for f = 1:numel(inputFiles), track_source(inputFiles(f)); end
             rows = [rows; targetRows]; %#ok<AGROW>
@@ -240,6 +250,26 @@ try
     close_system(model, 0);
 catch ME
     st_log(cfg, 'WARN', 'Specification model cleanup failed | Model=%s | %s', model, ME.message);
+end
+end
+
+function scope = resolve_decision_scope(requested, cfg)
+% An argument wins over cfg. A config written before this option exists has
+% no field, so fall back to the documented default instead of failing.
+scope = upper(strtrim(char(requested)));
+if isempty(scope)
+    if isstruct(cfg) && isfield(cfg, 'DecisionBlockScope')
+        scope = upper(strtrim(char(string(cfg.DecisionBlockScope))));
+    else
+        scope = 'EXPLICIT';
+    end
+end
+if isempty(scope)
+    scope = 'EXPLICIT';
+end
+if ~ismember(scope, {'EXPLICIT', 'ALL', 'NONE'})
+    error('simtest:SpecificationDecisionScope', ...
+        'DecisionBlockScope must be EXPLICIT, ALL or NONE.');
 end
 end
 
