@@ -107,21 +107,45 @@ for b = 1:numel(blocks)
     end
 end
 
-tf = ~isempty(matches);
+if ~isempty(matches)
 
-if verbose
+    tf = true;
 
-    if tf
+    if verbose
 
         for m = 1:numel(matches)
             report_match(matches(m), 'NAME', m, numel(matches));
         end
-
-    else
-        fprintf('[CUT-PROBE] NOT FOUND\n');
-        report_not_found(raw, modelName, blocks);
     end
+
+    return;
 end
+
+% Step 5: walk the query down the hierarchy, one level at a time, matching
+% each remaining piece against the child names Simulink reports. This is
+% what resolves a query that omitted the '//' escaping, and it also pins
+% down the exact level where a path stops matching.
+[handle, stoppedAt, stoppedRest] = resolve_by_children(raw, modelName);
+
+tf = handle ~= -1;
+
+if ~verbose
+    return;
+end
+
+if tf
+
+    report_match(handle, 'WALK', 1, 1);
+
+    fprintf(['[CUT-PROBE]   NOTE      : the query did not resolve as ' ...
+        'typed. Copy the CUTPath above into Excel.\n']);
+
+    return;
+end
+
+fprintf('[CUT-PROBE] NOT FOUND\n');
+report_walk_stop(stoppedAt, stoppedRest);
+report_not_found(raw, modelName, blocks);
 
 end
 
@@ -156,6 +180,151 @@ end
 end
 
 
+function [handle, stoppedAt, stoppedRest] = resolve_by_children(raw, modelName)
+%RESOLVE_BY_CHILDREN Descend the hierarchy using the names Simulink reports.
+%
+% The query text is consumed piece by piece, but the pieces come from the
+% actual child names rather than from splitting on '/'. A child whose own
+% name contains a slash therefore consumes that slash, which is how a query
+% written without the '//' escaping still lands on the right block.
+%
+% On failure, stoppedAt is the deepest block that did match and stoppedRest
+% is the part of the query that no child could account for.
+
+handle = -1;
+stoppedAt = modelName;
+stoppedRest = '';
+
+remaining = strtrim(char(raw));
+
+if isempty(remaining)
+    return;
+end
+
+prefix = [modelName '/'];
+
+if startsWith(remaining, prefix)
+    remaining = remaining(numel(prefix) + 1:end);
+elseif strcmp(remaining, modelName)
+    return;
+end
+
+current = modelName;
+maxDepth = 1000;
+
+for depth = 1:maxDepth
+
+    if isempty(remaining)
+        handle = block_handle(current);
+        return;
+    end
+
+    [childPaths, childNames] = child_blocks(current);
+
+    if isempty(childPaths)
+        stoppedAt = current;
+        stoppedRest = remaining;
+        return;
+    end
+
+    % Longest name first, so a child actually named 'A/B' is preferred over
+    % a sibling named 'A' that would swallow only the first piece.
+    [~, order] = sort(strlength(childNames), 'descend');
+
+    consumed = '';
+    nextPath = '';
+
+    for k = reshape(order, 1, [])
+
+        name = char(childNames(k));
+
+        if strcmp(remaining, name)
+            handle = block_handle(childPaths{k});
+            return;
+        end
+
+        if startsWith(remaining, [name '/'])
+            consumed = name;
+            nextPath = childPaths{k};
+            break;
+        end
+    end
+
+    if isempty(nextPath)
+        stoppedAt = current;
+        stoppedRest = remaining;
+        return;
+    end
+
+    current = nextPath;
+    remaining = remaining(numel(consumed) + 2:end);
+end
+
+stoppedAt = current;
+stoppedRest = remaining;
+
+end
+
+
+function [paths, names] = child_blocks(parentPath)
+
+paths = find_system(parentPath, ...
+    'SearchDepth', 1, ...
+    'LookUnderMasks', 'all', ...
+    'FollowLinks', 'off', ...
+    'Type', 'Block');
+
+paths = paths(~strcmp(paths, parentPath));
+names = strings(numel(paths), 1);
+
+for i = 1:numel(paths)
+    names(i) = string(get_param(paths{i}, 'Name'));
+end
+
+end
+
+
+function report_walk_stop(stoppedAt, stoppedRest)
+
+if isempty(stoppedRest)
+    return;
+end
+
+fprintf('[CUT-PROBE]   the path stops matching here:\n');
+fprintf('[CUT-PROBE]     resolved  : %s\n', stoppedAt);
+fprintf('[CUT-PROBE]     unmatched : %s\n', stoppedRest);
+
+[~, names] = child_blocks(stoppedAt);
+
+if isempty(names)
+    fprintf('[CUT-PROBE]     this block has no children.\n');
+    return;
+end
+
+names = sort(names);
+
+fprintf('[CUT-PROBE]     children of the resolved block (%d):\n', ...
+    numel(names));
+
+for i = 1:min(numel(names), 40)
+    fprintf('[CUT-PROBE]       %s\n', display_name(names(i)));
+end
+
+if numel(names) > 40
+    fprintf('[CUT-PROBE]       ... %d more omitted\n', numel(names) - 40);
+end
+
+end
+
+
+function text = display_name(name)
+% Make a line break visible so it is not mistaken for a plain space.
+
+text = replace(string(name), newline, '\n');
+
+end
+
+
 function report_not_found(raw, modelName, blocks)
 % Narrow down why the query did not resolve. Each section answers one
 % distinct cause, so a single run tells the caller which one applies.
@@ -173,11 +342,14 @@ shown = shown + report_candidates( ...
     'same name, different surrounding whitespace', blocks, ...
     strcmp(strtrim(names), strtrim(string(raw))) & ~strcmp(names, raw));
 
-% C. Name contains a newline. Simulink wraps long block labels and the
-%    stored name keeps the line break, which never survives an Excel cell.
+% C. Name matches once line breaks are treated as spaces. Simulink keeps
+%    the break inside the stored name, and it never survives an Excel cell.
+%    Only report blocks that actually match the query this way, otherwise
+%    every stock library block with a wrapped label shows up as noise.
 shown = shown + report_candidates( ...
-    'name contains a line break', blocks, ...
-    contains(names, newline));
+    'name matches only if line breaks are treated as spaces', blocks, ...
+    contains(names, newline) & ...
+    strcmpi(flatten_whitespace(names), flatten_whitespace(string(raw))));
 
 % D. Partial name match, so a typo or a truncated entry is visible.
 if strlength(string(raw)) > 0
@@ -284,6 +456,14 @@ for i = 1:numel(referenced)
     fprintf('[CUT-PROBE]     retry: st_probe_cut(''%s'', ''Model'', ''%s'')\n', ...
         raw, referenced(i));
 end
+
+end
+
+
+function value = flatten_whitespace(value)
+
+value = regexprep(string(value), '\s+', ' ');
+value = strtrim(value);
 
 end
 
