@@ -97,12 +97,12 @@ st_pre_validate_targets
 %% 4. 준비와 실행
 st_run_from_harness
 % Harness가 이미 전부 있으면: st_run_after_harness
-% 혼자 돌려야만 되는 Test Case가 있으면:
-%   st_run_from_harness('ExecutionMode','PER_CUT')
+% 전부 한 번에 돌리려면:
+%   st_run_from_harness('ExecutionMode','BATCH')
 
 %% 4-1. 결과 정리 (보고서가 필요할 때만)
-st_generate_test_report                 % BATCH로 돌렸을 때
-% PER_CUT으로 돌렸으면: st_collect_per_cut_results
+st_collect_per_cut_results              % 기본 PER_CUT으로 돌렸을 때
+% BATCH로 돌렸으면: st_generate_test_report
 
 %% 5. 명세서 Excel (필요할 때)
 [T, specFile] = st_export_test_specification();
@@ -279,19 +279,20 @@ Test Case까지만 만들고 멈춥니다. 실행은 Test Manager에서 직접 �
 #### 한꺼번에 돌릴까, 하나씩 돌릴까
 
 ```matlab
-st_run_from_harness                                  % BATCH (기본)
-st_run_from_harness('ExecutionMode','PER_CUT')       % 하나씩
+st_run_from_harness                                  % PER_CUT (기본), 하나씩
+st_run_from_harness('ExecutionMode','BATCH')         % 한꺼번에
 ```
 
-| | `BATCH` (기본) | `PER_CUT` |
+| | `PER_CUT` (기본) | `BATCH` |
 | --- | --- | --- |
-| 실행 | `run(tf)` 한 번에 전부 | Test Case마다 따로 |
-| 기대값 고친 뒤 재실행 | Test File **전체** | 그 Test Case만 |
-| 결과 정리 명령 | `st_generate_test_report` | `st_collect_per_cut_results` |
-| 결과물 | 통합 보고서 하나 | CUT별 폴더 |
+| 실행 | Test Case마다 따로 | `run(tf)` 한 번에 전부 |
+| 기대값 고친 뒤 재실행 | 그 Test Case만 | Test File **전체** |
+| 결과 정리 명령 | `st_collect_per_cut_results` | `st_generate_test_report` |
+| 결과물 | CUT별 폴더 | 통합 보고서 하나 |
 
-**`PER_CUT`은 혼자 돌려야만 되는 Test Case가 있을 때만 씁니다.** 커버리지 필터를
-쓰는지 여부는 이 선택과 아무 상관이 없습니다.
+**기본은 `PER_CUT`입니다.** Test Case가 서로 영향을 주지 않고, 결과가 CUT별로
+나뉘어 남습니다. 전부 한 번에 돌려 통합 보고서 하나로 끝내고 싶을 때 `BATCH`를
+씁니다. 커버리지 필터를 쓰는지 여부는 이 선택과 아무 상관이 없습니다.
 
 `PER_CUT`에만 있는 옵션이 셋 있습니다. 작동 시점이 다릅니다.
 
@@ -322,8 +323,8 @@ st_run_from_harness('ExecutionMode','PER_CUT', 'AutoCollect', true);
 다른 세션에서도 만들 수 있습니다.
 
 ```matlab
+st_collect_per_cut_results              % PER_CUT(기본)으로 돌렸을 때
 st_generate_test_report                 % BATCH로 돌렸을 때
-st_collect_per_cut_results              % PER_CUT으로 돌렸을 때
 
 cfg = st_config();
 winopen(cfg.LatestSummaryFile)

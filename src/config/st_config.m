@@ -286,14 +286,17 @@ cfg.RunGeneratedTests = true;
 
 % How the tests run. The caller decides; nothing in the workbook does.
 %
-% BATCH   : one run(tf) for every enabled Test Case. The default.
-% PER_CUT : run(tc) per Test Case, in Excel order, for Test Cases that only
-%           work when run alone. Also reruns only that Test Case after an
-%           expected-value update, instead of the whole Test File.
+% PER_CUT : run(tc) per Test Case, in Excel order. The default. Every Test
+%           Case runs alone, so one cannot disturb another, an
+%           expected-value update reruns only that Test Case, and each CUT
+%           gets its own result folder. The run saves one ResultSet per CUT
+%           and leaves the artifacts to cfg.PerCutResultCollection.
+% BATCH   : one run(tf) for every enabled Test Case. Faster, and it ends
+%           with a single integrated report.
 %
 % Coverage filters no longer affect this choice: they are applied when the
 % artifacts are built, not while the tests run.
-cfg.ExecutionMode = 'BATCH';
+cfg.ExecutionMode = 'PER_CUT';
 
 % Per-CUT execution continues after a Test Case/report failure only when
 % the transient coverage filter was restored and verified successfully.

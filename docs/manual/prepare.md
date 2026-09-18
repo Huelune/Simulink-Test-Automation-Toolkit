@@ -107,7 +107,8 @@ st_run_from_harness( ...
 
 | 옵션 | 기본값 | 역할 |
 | --- | --- | --- |
-| `ExecutionMode` | `BATCH` | 혼자 돌려야만 되는 Test Case가 있으면 `PER_CUT` |
+| `ExecutionMode` | `PER_CUT` | 전부 한 번에 돌리려면 `BATCH` |
+| `AutoCollect` | `false` | `true`면 `PER_CUT` 실행 뒤 결과 수집까지 이어서 합니다 |
 | `ExecuteTests` | `cfg.RunGeneratedTests` | `false`면 준비까지만 하고 실행하지 않습니다 |
 | `ContinueOnFailure` | `true` | 한 CUT이 실패해도 다음을 계속 처리합니다 |
 | `ReportMode` | `SUMMARY` | `FULL`은 PDF와 전체 Coverage HTML을 추가합니다 |

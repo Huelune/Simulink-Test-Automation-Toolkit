@@ -50,7 +50,7 @@ st_run_from_harness                % 이 명령은 st_config()를 새로 호출�
 | `ExpectedUpdateMode` | `'APPLY'` | 실패한 테스트의 기대값을 자동으로 덮어씁니다 |
 | `RunGeneratedTests` | `true` | 준비만 하고 멈출지, 테스트까지 돌릴지 정합니다 |
 | `OverwriteTestFile` | `false` | `true`면 기존 Test Case를 전부 새로 만듭니다 |
-| `ExecutionMode` | `'BATCH'` | BATCH와 PER_CUT 중 무엇으로 돌릴지 정합니다 |
+| `ExecutionMode` | `'PER_CUT'` | PER_CUT과 BATCH 중 무엇으로 돌릴지 정합니다 |
 
 ## 2. 테스트 실행
 
@@ -66,20 +66,26 @@ Test Manager 구성까지 끝낸 다음 실제로 테스트를 실행할지 정�
 Harness와 Test Case만 먼저 만들어 두고 실행은 사람이 Test Manager에서 확인하며
 하고 싶을 때 `false`로 둡니다.
 
-### `ExecutionMode` — 기본 `'BATCH'`
+### `ExecutionMode` — 기본 `'PER_CUT'`
 
 여러 Test Case를 한꺼번에 돌릴지, 하나씩 따로 돌릴지 정합니다.
 **부르는 쪽이 정하며, Excel은 이 선택에 관여하지 않습니다.**
 
-| | `'BATCH'` (기본) | `'PER_CUT'` |
+| | `'PER_CUT'` (기본) | `'BATCH'` |
 | --- | --- | --- |
-| 실행 | `run(tf)` 전체 한 번 | Test Case마다 `run(tc)` |
-| 기대값 갱신 후 재실행 | Test File **전체** | 그 Test Case만 |
-| 결과물 | 통합 보고서 하나 | CUT별 폴더 |
+| 실행 | Test Case마다 `run(tc)` | `run(tf)` 전체 한 번 |
+| 기대값 갱신 후 재실행 | 그 Test Case만 | Test File **전체** |
+| 결과물 | CUT별 폴더 | 통합 보고서 하나 |
+| 결과 정리 명령 | `st_collect_per_cut_results` | `st_generate_test_report` |
 
-`PER_CUT`은 **혼자 돌려야만 되는 Test Case**가 있을 때 씁니다. 기대값 갱신 후
-재실행 범위도 다릅니다 — `BATCH`는 Test File 전체를, `PER_CUT`은 해당 Test
-Case만 다시 돌립니다.
+기본을 `'PER_CUT'`으로 둡니다. 모든 Test Case가 혼자 돌면 한 Test Case가 다른
+Test Case에 영향을 주지 않고, 기대값을 고친 뒤에도 그 Test Case만 다시 돌며,
+결과가 CUT별로 나뉘어 남습니다. `'BATCH'`는 더 빠르고 통합 보고서 하나로
+끝내고 싶을 때 씁니다.
+
+`'PER_CUT'` 실행은 ResultSet만 저장하고 멈춥니다. 보고서는
+`st_collect_per_cut_results`가 만들며, 실행이 끝나자마자 이어서 하려면
+`PerCutAutoCollect` 또는 `AutoCollect`를 쓰십시오.
 
 커버리지 필터는 이 선택과 무관합니다. 필터는 결과물을 만들 때 적용되므로
 활성 CVF가 있는 대상도 `'BATCH'`로 돌 수 있습니다.
@@ -87,7 +93,7 @@ Case만 다시 돌립니다.
 한 번만 바꾸려면 명령에서 지정합니다.
 
 ```matlab
-st_run_after_harness('ExecutionMode', 'PER_CUT')
+st_run_after_harness('ExecutionMode', 'BATCH')
 ```
 
 > 예전 `'AUTO'`는 없어졌습니다. Excel의 CVF 설정을 보고 `PER_CUT`을 골랐는데,

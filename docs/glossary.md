@@ -169,13 +169,13 @@ CVF 규칙은 블록을 경로가 아니라 **SID**(모델 안에서 블록에 �
 
 | 모드 | 동작 | 언제 |
 | --- | --- | --- |
-| `BATCH` (기본) | Test File 전체를 한 번에 실행합니다 | 평소 |
-| `PER_CUT` | Test Case를 Excel 순서대로 하나씩 따로 실행합니다 | **혼자 돌려야만 되는 Test Case가 있을 때** |
+| `PER_CUT` (기본) | Test Case를 Excel 순서대로 하나씩 따로 실행합니다 | 평소. 서로 영향을 주지 않고 CUT별로 결과가 남습니다 |
+| `BATCH` | Test File 전체를 한 번에 실행합니다 | 더 빠르게, 통합 보고서 하나로 끝내고 싶을 때 |
 
 **어느 쪽으로 돌릴지는 부르는 쪽이 정합니다.** Excel은 관여하지 않습니다.
 
 ```matlab
-st_run_after_harness('ExecutionMode','PER_CUT')
+st_run_after_harness('ExecutionMode','BATCH')
 ```
 
 커버리지 필터는 이 선택과 무관합니다. 필터는 결과물을 만들 때 적용되므로 CVF를

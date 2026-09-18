@@ -284,8 +284,8 @@ MATLAB 세션 안에서만 살아 있어서, 나중에 보고서를 만들 수 �
 것입니다.
 
 ```matlab
-st_generate_test_report                 % 기본 BATCH로 돌렸을 때
-% 'ExecutionMode','PER_CUT'으로 돌렸으면: st_collect_per_cut_results
+st_collect_per_cut_results              % 기본 PER_CUT으로 돌렸을 때
+% 'ExecutionMode','BATCH'로 돌렸으면: st_generate_test_report
 
 cfg = st_config();
 winopen(cfg.LatestSummaryFile)

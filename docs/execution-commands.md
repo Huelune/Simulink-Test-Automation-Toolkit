@@ -250,7 +250,7 @@ struct 배열이고, `BATCH`에서는 단일 최종 ResultSet입니다.
 | --- | --- | --- |
 | `PreparationMode` | `cfg` 값 (`'AUTO'`) | `'AUTO'`는 캐시 재사용, `'FORCE'`는 `FromStage`부터 다시 실행 |
 | `FromStage` | `cfg` 값 (`'START'`) | `FORCE`가 시작할 준비 단계. `'EXECUTE'`는 준비를 전부 건너뛰고 실행만 합니다 |
-| `ExecutionMode` | `cfg` 값 (`'BATCH'`) | `'BATCH'` 또는 `'PER_CUT'` |
+| `ExecutionMode` | `cfg` 값 (`'PER_CUT'`) | `'PER_CUT'` 또는 `'BATCH'` |
 | `ExecuteTests` | `cfg.RunGeneratedTests` | `false`면 준비까지만 하고 실행하지 않습니다 |
 | `ContinueOnFailure` | `true` | `PER_CUT`에서 한 CUT이 실패해도 다음을 계속할지 |
 | `ReportMode` | `'SUMMARY'` | `'SUMMARY'` 또는 `'FULL'`(PDF와 전체 Coverage HTML 추가) |

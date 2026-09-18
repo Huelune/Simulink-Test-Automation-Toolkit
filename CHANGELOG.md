@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **기본 실행 방식이 `PER_CUT`이 되었습니다.** `cfg.ExecutionMode`의 기본값을
+  `'BATCH'`에서 `'PER_CUT'`으로 바꿉니다. 모든 Test Case가 혼자 돌면 한 Test
+  Case가 다른 Test Case에 영향을 주지 않고, 기대값을 고친 뒤에도 그 Test Case만
+  다시 돌며, 결과가 CUT별 폴더로 나뉘어 남습니다.
+  - `BATCH`는 그대로 있습니다. 더 빠르고 통합 보고서 하나로 끝내고 싶으면
+    `st_run_after_harness('ExecutionMode','BATCH')`처럼 지정하거나
+    `cfg.ExecutionMode`를 되돌리십시오.
+  - **결과 정리 명령이 바뀝니다.** 기본 실행의 뒤처리는 이제
+    `st_generate_test_report`가 아니라 `st_collect_per_cut_results`입니다.
+    실행이 끝나면 워크플로가 그 명령을 안내하며, 이어서 자동으로 하려면
+    `AutoCollect`를 쓰십시오.
+
 - **`PER_CUT` 실행 뒤 결과 수집까지 워크플로가 이어서 하도록 할 수 있습니다.**
   `cfg.PerCutAutoCollect`(기본 `false`)와 실행 옵션 `AutoCollect`를 추가했습니다.
   `true`면 실행이 끝난 뒤 워크플로가 `st_collect_per_cut_results`를 그대로

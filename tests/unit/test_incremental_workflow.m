@@ -13,7 +13,7 @@ verifyTrue(testCase, endsWith(string(cfg.WorkflowStateSummaryFile), ...
     fullfile('result', 'state', 'workflow_state.json')));
 verifyTrue(testCase, endsWith(string(cfg.CoverageFilterDir), ...
     fullfile('result', 'coverage_filters')));
-verifyEqual(testCase, cfg.ExecutionMode, 'BATCH');
+verifyEqual(testCase, cfg.ExecutionMode, 'PER_CUT');
 verifyTrue(testCase, cfg.PerCutContinueOnFailure);
 verifyEqual(testCase, cfg.PerCutReportMode, 'SUMMARY');
 verifyFalse(testCase, cfg.PerCutFailOnNonPass);
