@@ -130,17 +130,24 @@ Git에서 제외된 `runtime_target.mat`에만 저장되므로 저장소를 pull
 
 ## 실행 모드
 
-기본값은 `AUTO`이며, 보통 그대로 두면 됩니다.
+기본값은 `PER_CUT`이며, 보통 그대로 두면 됩니다.
 
 | 모드 | 동작 |
 | --- | --- |
-| `AUTO` | 활성 CVF가 하나라도 있으면 `PER_CUT`, 전부 없으면 `BATCH` |
+| `PER_CUT` (기본) | 모든 활성 Test Case를 Excel 순서로 개별 실행하고 결과도 CUT별로 저장 |
 | `BATCH` | 모든 활성 Test Case를 `run(tf)`로 한 번에 실행 |
-| `PER_CUT` | 모든 활성 CUT을 Excel 순서로 개별 실행하고 결과도 따로 저장 |
 
-커버리지 필터는 Test Case마다 달라야 하므로, 필터를 쓰는 순간 CUT별 격리 실행이
-필요합니다. `PER_CUT`은 CVF를 실행 직전에만 붙였다가 끝나면 원래 설정으로
-복원하며, 복원에 실패하면 다른 테스트가 오염되므로 전체 실행을 즉시 중단합니다.
+Test Case가 서로 영향을 주지 않고, 기대값을 고친 뒤에도 그 Test Case만 다시
+돌기 때문에 `PER_CUT`을 기본으로 둡니다. 전부 한 번에 돌려 통합 보고서 하나로
+끝내고 싶으면 `st_run_after_harness('ExecutionMode','BATCH')`로 지정합니다.
+
+커버리지 필터는 이 선택과 무관합니다. 실행은 커버리지를 **필터 없이** 수집하고,
+CVF는 결과물을 만들 때 결과 데이터에 붙습니다 — `PER_CUT`은
+`st_collect_per_cut_results`, `BATCH`는 `st_generate_test_report`가 합니다.
+
+> 예전 `AUTO`는 없어졌습니다. 활성 CVF가 있으면 `PER_CUT`을 골랐는데, 필터가
+> 결과물 단계로 옮겨가면서 근거가 사라졌습니다. 넘기면
+> `simtest:RemovedExecutionMode`로 막습니다.
 
 ## 결과가 저장되는 곳
 
