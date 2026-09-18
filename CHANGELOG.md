@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **명세서 추출의 정적 검사가 2026-09-08부터 계속 실패하고 있던 것을
+  고쳤습니다.** `testExporterHasNoSimulationOrSourceMutationCalls`는
+  `src/exporting`의 명세서 관련 파일에 시뮬레이션이나 원본 변경 호출이 없는지
+  소스 원문에서 찾습니다. 그런데 `사용법` 탭을 추가하면서
+  `st_specification_usage_table.m`에 대표 사용법 문자열
+  `"st_run_from_harness('ExecutionMode','PER_CUT')"`가 들어갔고, 금지 패턴
+  `\bst_run_\w*\s*\(`가 **주석과 문자열 안의 글자까지** 잡아 그때부터 이 검사가
+  통과하지 못했습니다.
+  - 이제 주석과 문자열 리터럴을 공백으로 지운 뒤 검사합니다
+    (`tests/fixtures/st_executable_source.m`). 실제 호출은 그대로 잡고, 문서로
+    적어 둔 명령 이름은 잡지 않습니다.
+  - 지운 자리를 공백으로 채우므로 줄과 열이 그대로 남고, 검사가 알려 주는 위치가
+    원본 파일과 어긋나지 않습니다.
+
 - **기본 실행 방식이 `PER_CUT`이 되었습니다.** `cfg.ExecutionMode`의 기본값을
   `'BATCH'`에서 `'PER_CUT'`으로 바꿉니다. 모든 Test Case가 혼자 돌면 한 Test
   Case가 다른 Test Case에 영향을 주지 않고, 기대값을 고친 뒤에도 그 Test Case만
