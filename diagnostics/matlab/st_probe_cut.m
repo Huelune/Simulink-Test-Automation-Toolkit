@@ -119,7 +119,7 @@ if verbose
 
     else
         fprintf('[CUT-PROBE] NOT FOUND\n');
-        report_slash_hint(blocks);
+        report_not_found(raw, modelName, blocks);
     end
 end
 
@@ -156,38 +156,144 @@ end
 end
 
 
-function report_slash_hint(blocks)
-% List blocks whose own name contains a slash, so the caller can see the
-% Simulink path notation the CUTPath column expects.
+function report_not_found(raw, modelName, blocks)
+% Narrow down why the query did not resolve. Each section answers one
+% distinct cause, so a single run tells the caller which one applies.
 
+names = block_names(blocks);
 shown = 0;
 
-for b = 1:numel(blocks)
+% A. Same name except for letter case.
+shown = shown + report_candidates( ...
+    'same name, different letter case', blocks, ...
+    strcmpi(names, raw) & ~strcmp(names, raw));
 
-    name = get_param(blocks{b}, 'Name');
+% B. Same name except for surrounding whitespace.
+shown = shown + report_candidates( ...
+    'same name, different surrounding whitespace', blocks, ...
+    strcmp(strtrim(names), strtrim(string(raw))) & ~strcmp(names, raw));
 
-    if ~contains(name, '/')
-        continue;
-    end
+% C. Name contains a newline. Simulink wraps long block labels and the
+%    stored name keeps the line break, which never survives an Excel cell.
+shown = shown + report_candidates( ...
+    'name contains a line break', blocks, ...
+    contains(names, newline));
 
-    if shown == 0
-        fprintf(['[CUT-PROBE]   hint: blocks whose name contains ' ...
-            '''/'' and the CUTPath they need:\n']);
-    end
+% D. Partial name match, so a typo or a truncated entry is visible.
+if strlength(string(raw)) > 0
 
-    shown = shown + 1;
-
-    if shown > 20
-        fprintf('[CUT-PROBE]     ... more omitted\n');
-        return;
-    end
-
-    fprintf('[CUT-PROBE]     CUTName "%s" -> CUTPath "%s"\n', ...
-        name, blocks{b});
+    shown = shown + report_candidates( ...
+        'name contains the query as a substring', blocks, ...
+        contains(names, raw, 'IgnoreCase', true) & ~strcmpi(names, raw));
 end
 
+% E. Blocks whose own name contains a slash, with the CUTPath they need.
+shown = shown + report_candidates( ...
+    'name contains ''/'' (needs ''//'' in CUTPath)', blocks, ...
+    contains(names, '/'));
+
 if shown == 0
-    fprintf('[CUT-PROBE]   hint: no block in this model has ''/'' in its name.\n');
+    fprintf(['[CUT-PROBE]   no block in this model resembles the query, ' ...
+        'and no block name contains ''/''.\n']);
+end
+
+% F. Scope limits. The search above matches the toolkit: it does not follow
+%    library links and does not descend into referenced models.
+report_scope_limits(raw, modelName, blocks);
+
+end
+
+
+function count = report_candidates(label, blocks, mask)
+
+hits = find(mask);
+count = numel(hits);
+
+if isempty(hits)
+    return;
+end
+
+fprintf('[CUT-PROBE]   %s:\n', label);
+
+for i = 1:min(numel(hits), 20)
+
+    b = hits(i);
+
+    fprintf('[CUT-PROBE]     CUTName "%s" -> CUTPath "%s"\n', ...
+        get_param(blocks{b}, 'Name'), blocks{b});
+end
+
+if numel(hits) > 20
+    fprintf('[CUT-PROBE]     ... %d more omitted\n', numel(hits) - 20);
+end
+
+end
+
+
+function report_scope_limits(raw, modelName, blocks)
+
+% Library links: the toolkit searches with FollowLinks off, so a CUT that
+% only exists inside a linked block is invisible to it.
+try
+
+    linked = find_system(modelName, ...
+        'LookUnderMasks', 'all', ...
+        'FollowLinks', 'on', ...
+        'Type', 'Block');
+
+    names = block_names(linked);
+    hits = find(strcmp(names, raw));
+
+    if ~isempty(hits) && numel(linked) > numel(blocks)
+
+        fprintf(['[CUT-PROBE]   found only when following library ' ...
+            'links (FollowLinks on):\n']);
+
+        for i = 1:min(numel(hits), 20)
+            fprintf('[CUT-PROBE]     %s\n', linked{hits(i)});
+        end
+    end
+
+catch ME
+    fprintf('[CUT-PROBE]   library-link search failed: %s\n', ME.message);
+end
+
+% Referenced models are separate block diagrams. find_system on this model
+% never enters them, so the CUT must be probed against that model instead.
+references = find_system(modelName, ...
+    'LookUnderMasks', 'all', ...
+    'FollowLinks', 'off', ...
+    'BlockType', 'ModelReference');
+
+if isempty(references)
+    return;
+end
+
+fprintf(['[CUT-PROBE]   this model references other models, which are ' ...
+    'outside the search above.\n']);
+
+referenced = strings(0, 1);
+
+for i = 1:numel(references)
+    referenced(end+1, 1) = string(get_param(references{i}, 'ModelName')); %#ok<AGROW>
+end
+
+referenced = unique(referenced);
+
+for i = 1:numel(referenced)
+    fprintf('[CUT-PROBE]     retry: st_probe_cut(''%s'', ''Model'', ''%s'')\n', ...
+        raw, referenced(i));
+end
+
+end
+
+
+function names = block_names(blocks)
+
+names = strings(numel(blocks), 1);
+
+for b = 1:numel(blocks)
+    names(b) = string(get_param(blocks{b}, 'Name'));
 end
 
 end
