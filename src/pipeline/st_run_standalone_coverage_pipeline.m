@@ -229,7 +229,7 @@ try
             'StandaloneCoverageResults.mldatx');
     end
     [execution, runtimeContext] = invoke_bundle_runner( ...
-        bundle.BundleDirectory, options, saveTestResult, resultPath);
+        bundle.BundleDirectory, options, saveTestResult, resultPath, cfg);
     assert_pipeline_source_unloaded(cfg, 'after bundle runner');
     manifest.ExecutionDirectory = execution.ExecutionDirectory;
     manifest.Workspace = execution.Workspace;
@@ -285,7 +285,7 @@ end
 end
 
 function [execution, runtimeContext] = invoke_bundle_runner( ...
-        bundleDirectory, options, saveTestResult, resultPath)
+        bundleDirectory, options, saveTestResult, resultPath, cfg)
 previousDirectory = pwd;
 previousPath = path;
 cleanup = onCleanup(@() restore_runner_environment( ...
@@ -299,7 +299,8 @@ clear run_exported_tests;
     'ResultFilterMode', 'POST_RUN_REQUIRED', ...
     'CapturePackageEvidence', true, ...
     'SaveTestResult', saveTestResult, ...
-    'ResultFile', resultPath);
+    'ResultFile', resultPath, ...
+    'BuildCacheFolder', cfg.StandaloneBuildCacheDir);
 clear run_exported_tests;
 clear cleanup;
 if ~strcmp(pwd, previousDirectory) || ~strcmp(path, previousPath)

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **standalone pipeline의 Simulink 빌드가 Windows 260자 제한에 걸리지 않게 했습니다.**
+  번들 실행기는 `executions\<id>\workspace`로 `cd`한 뒤 Test Case를 돌리는데,
+  Simulink는 `slprj`를 그 자리에 만듭니다. 짧은 출력 루트를 써도 workspace가
+  150자에 가깝고 Stateflow 빌드는 그 밑에 `slprj\_sfprj\<Harness>\...`를 더
+  만들어, `빌드 파일 이름이 ... 260자를 초과` 오류로 시뮬레이션이 실패했습니다.
+  빌드가 실패한 Test Case는 커버리지가 없어 `ResultCoverageDataMissing`으로
+  이어져 원인이 가려졌습니다.
+  - 실행기가 `Simulink.fileGenControl`로 `CacheFolder`/`CodeGenFolder`를 실행마다
+    짧은 폴더로 돌리고, 끝나면 원래 설정으로 되돌리고 폴더를 지웁니다.
+  - 기본 위치는 `tempdir\stt_build\<id>`입니다. `cfg.StandaloneBuildCacheDir`(기본
+    `''`)에 짧은 경로를 주면 그 아래에 만듭니다. `run_exported_tests`에는
+    `BuildCacheFolder` 옵션으로 넘어갑니다.
+
 - **`PER_CUT` 결과 수집이 CVF를 찾지 못하고 실패하던 문제를 고쳤습니다.**
   `st_collect_per_cut_results`는 CVF 경로를 char로 넘기는데, 커버리지 필터
   적용 함수가 `string(value(:))`로 읽고 있었습니다. char은 글자 하나가 한

@@ -477,6 +477,15 @@ if isfile(cfg.RuntimeTargetFile)
     end
 end
 
+% Where the standalone pipeline's bundle runner lets Simulink build. The
+% execution workspace is already ~150 characters deep, and Stateflow
+% simulation targets nest slprj/_sfprj/<Harness>/... below pwd, so building
+% there fails on Windows before any coverage is recorded. Empty (default)
+% builds under tempdir; set a short path such as 'D:\stt_build' to keep the
+% build on a specific drive. Each execution gets its own subfolder and
+% removes it when the run ends.
+cfg.StandaloneBuildCacheDir = '';
+
 % Standalone verification runs and latest pointers are stored separately
 % from normal workflow reports. QUICK inspections never write elsewhere.
 cfg.VerificationRootDir = ...

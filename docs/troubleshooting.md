@@ -245,7 +245,14 @@ Harness와 Input이 만들어지기 **전에** 실패한 경우에는 보존을 
 ### 경로가 너무 길다는 오류
 
 standalone pipeline은 폴더를 여러 겹 만들기 때문에 저장소가 깊은 경로에 있으면
-Windows의 260자 제한에 걸립니다.
+Windows의 260자 제한에 걸립니다. 두 가지 모양으로 나타납니다.
+
+- `MATLAB:cd:DirectoryNameTooLong` — 출력 루트 자체가 깊습니다.
+- `빌드 파일 이름이 Windows에서 제한하는 260자를 초과하기 때문에 빌드에
+  실패했습니다` — 시뮬레이션 빌드(`slprj\_sfprj\...`)가 길어진 경우입니다.
+  빌드가 실패하면 그 Test Case는 커버리지를 남기지 못하므로, 실행 로그에는
+  `ResultCoverageDataMissing: ResultSet contains no model coverage objects`로
+  이어져 보입니다. Test Manager에서 해당 결과를 열면 빌드 오류가 보입니다.
 
 **대처:**
 
@@ -254,6 +261,10 @@ st_set_standalone_coverage_root('D:\st_out')
 ```
 
 짧은 경로를 지정하면 `runtime_target.mat`에 로컬로 저장됩니다.
+
+빌드 산출물은 기본적으로 workspace가 아니라 `tempdir` 아래 짧은 폴더에 만들어지므로
+두 번째 오류는 보통 나지 않습니다. 그래도 나면 `cfg.StandaloneBuildCacheDir`에
+`'D:\stt_build'`처럼 짧은 경로를 지정하십시오([설정 참조](config-reference.md)).
 
 ## 7. 명세서 추출 오류
 

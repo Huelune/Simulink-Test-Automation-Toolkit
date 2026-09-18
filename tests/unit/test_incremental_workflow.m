@@ -19,6 +19,7 @@ verifyEqual(testCase, cfg.PerCutReportMode, 'SUMMARY');
 verifyFalse(testCase, cfg.PerCutFailOnNonPass);
 verifyTrue(testCase, endsWith(string(cfg.StandaloneCoverageRootDir), ...
     fullfile('result', 'standalone_coverage')));
+verifyEqual(testCase, cfg.StandaloneBuildCacheDir, '');
 end
 
 function testWorkflowOptionOverrides(testCase)

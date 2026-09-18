@@ -532,6 +532,7 @@ cfg.ReportMatchCoverageObjects = true;
 | `CoverageFilterDir` | `result/coverage_filters/` | 자동 생성 CVF |
 | `ExportRootDir` | `result/exports/` | 내보내기 번들 |
 | `StandaloneCoverageRootDir` | `result/standalone_coverage/` | standalone 제출물 |
+| `StandaloneBuildCacheDir` | `''` (임시 폴더) | standalone 실행 중 Simulink 빌드(`slprj`) 위치 |
 | `VerificationRootDir` | `result/verification/` | 종합 검증 결과 |
 | `LatestReportPointer` | `result/latest.json` | 최신 BATCH 실행 위치 |
 | `LatestRunRecordPointer` | `result/run_record_latest.json` | 최신 실행 기록 위치 |
@@ -544,6 +545,11 @@ cfg.ReportMatchCoverageObjects = true;
 > 저장소가 깊은 경로에 있으면 Windows의 260자 제한에 걸릴 수 있습니다. 이때는
 > `st_set_standalone_coverage_root`로 짧은 경로(예: 다른 드라이브 루트)를 지정하십시오.
 > 이 값은 `runtime_target.mat`에 로컬로 저장되며 Git에 올라가지 않습니다.
+>
+> Simulink 빌드 산출물(`slprj`)은 실행 workspace가 아니라 `StandaloneBuildCacheDir`
+> 아래(비우면 `tempdir`)에 만듭니다. workspace 경로는 짧은 루트를 써도 150자에
+> 가깝고, Stateflow 빌드는 그 밑에 `slprj\_sfprj\<Harness>\...`를 더 만들어
+> 260자를 넘기기 때문입니다. 실행마다 하위 폴더를 하나 만들고 끝나면 지웁니다.
 
 ## 14. 모델 선택 관련 (코드에 적지 않는 값)
 

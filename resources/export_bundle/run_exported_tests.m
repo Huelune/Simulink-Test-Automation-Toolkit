@@ -26,6 +26,8 @@ addParameter(p, 'ResultFile', '', ...
     @(x) ischar(x) || isstring(x));
 addParameter(p, 'CapturePackageEvidence', false, ...
     @(x) islogical(x) && isscalar(x));
+addParameter(p, 'BuildCacheFolder', '', ...
+    @(x) ischar(x) || (isstring(x) && isscalar(x)));
 parse(p, varargin{:});
 runtimeContext = struct('Results', [], 'TestFile', [], 'Targets', table(), ...
     'RunnerEnvironmentCleanupStatus', 'NOT_RUN');
@@ -93,6 +95,8 @@ rewrite_sldv_manifest(bundleRoot, workRoot, manifest);
 cfg = st_require_runtime_target( ...
     'LoadModel', ~strcmp(executionModelMode, 'STANDALONE_HARNESS'));
 testFilePath = cfg.TestFile;
+[buildCacheFolder, buildCacheCleanup] = enter_build_cache( ...
+    p.Results.BuildCacheFolder, executionId, cfg); %#ok<NASGU>
 st_log(cfg, 'INFO', ...
     'Exported bundle execution start | Bundle=%s | ModelMode=%s', ...
     char(manifest.BundleId), executionModelMode);
@@ -162,6 +166,7 @@ info = struct( ...
     'ExecutionId', executionId, ...
     'ExecutionDirectory', executionRoot, ...
     'Workspace', workRoot, ...
+    'BuildCacheFolder', buildCacheFolder, ...
     'ExecutionModelMode', executionModelMode, ...
     'TestFile', testFilePath, ...
     'Preparation', table2struct(preparation), ...
@@ -446,6 +451,60 @@ end
 function restore_environment(previousDirectory, previousPath)
 cd(previousDirectory);
 path(previousPath);
+end
+
+function [folder, cleanup] = enter_build_cache(requested, executionId, cfg)
+%ENTER_BUILD_CACHE Send Simulink build files to a short folder.
+% Simulink builds slprj/ in pwd, and pwd here is the execution workspace
+% under <root>/<pipeline>/.work/<bundle>/executions/<execution>/workspace.
+% Stateflow simulation targets add slprj/_sfprj/<Harness>/_self/sfun/...
+% below that, which pushes Windows past its 260-character path limit and
+% fails the build before any coverage is recorded. CacheFolder and
+% CodeGenFolder point at a short per-execution folder for the duration of
+% this run and are restored afterwards.
+base = strtrim(char(string(requested)));
+if isempty(base)
+    base = fullfile(tempdir, 'stt_build');
+end
+folder = fullfile(base, build_cache_token(executionId));
+[created, message] = mkdir(folder);
+if ~created
+    error('simtest:BundleBuildCacheUnavailable', ...
+        'Cannot create the Simulink build cache folder %s: %s', ...
+        folder, message);
+end
+previous = Simulink.fileGenControl('getConfig');
+Simulink.fileGenControl('set', ...
+    'CacheFolder', folder, 'CodeGenFolder', folder);
+cleanup = onCleanup(@() leave_build_cache(previous, folder, cfg));
+st_log(cfg, 'INFO', ...
+    'Simulink build cache redirected | Folder=%s | Length=%d', ...
+    folder, strlength(folder));
+end
+
+function leave_build_cache(previous, folder, cfg)
+try
+    Simulink.fileGenControl('set', 'config', previous);
+catch ME
+    st_log(cfg, 'WARN', ...
+        'Simulink build cache restore failed | %s: %s', ...
+        ME.identifier, ME.message);
+end
+try
+    if isfolder(folder), rmdir(folder, 's'); end
+catch ME
+    st_log(cfg, 'WARN', ...
+        'Simulink build cache removal failed | %s | %s: %s', ...
+        folder, ME.identifier, ME.message);
+end
+end
+
+function token = build_cache_token(executionId)
+% The trailing UUID segment of the execution id is short and unique enough
+% for a scratch folder that only has to avoid a concurrent run on the same
+% machine.
+parts = strsplit(char(string(executionId)), '_');
+token = parts{end};
 end
 
 function close_harness_quietly(owner, harness)
