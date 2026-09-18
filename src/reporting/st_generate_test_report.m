@@ -59,10 +59,15 @@ end
 
 step('Collecting coverage');
 try
+    % Two passes over every target, each one calling into the Simulink
+    % Coverage API. With a large workbook this is minutes, not seconds, so
+    % report progress instead of going silent.
     initialCoverage = st_collect_coverage_summary( ...
-        runContext.InitialResult, targetConfig, 'INITIAL');
+        runContext.InitialResult, targetConfig, 'INITIAL', ...
+        'ProgressFcn', coverage_progress(cfg, 'INITIAL'));
     finalCoverage = st_collect_coverage_summary( ...
-        runContext.FinalResult, targetConfig, 'FINAL');
+        runContext.FinalResult, targetConfig, 'FINAL', ...
+        'ProgressFcn', coverage_progress(cfg, 'FINAL'));
     coverage = [initialCoverage; finalCoverage];
     extractionFailures = sum(coverage.Status == "EXTRACTION_FAILED");
     if extractionFailures > 0
@@ -311,6 +316,23 @@ manifest = struct( ...
     'CoverageThresholdPolicy', 'REPORT_ONLY', ...
     'Artifacts', table2struct(artifacts));
 end
+
+function fcn = coverage_progress(cfg, label)
+%COVERAGE_PROGRESS Throttled progress for the two coverage passes.
+fcn = @(phase, current, total) log_progress(cfg, label, phase, current, total);
+end
+
+
+function log_progress(cfg, label, phase, current, total)
+if total <= 0, return; end
+interval = max(1, ceil(total / 20));
+if current ~= 1 && current ~= total && mod(current, interval) ~= 0
+    return;
+end
+st_log(cfg, 'INFO', 'Report step | Coverage %s | %s | %d/%d', ...
+    label, char(string(phase)), current, total);
+end
+
 
 function artifacts = load_models_for_coverage(artifacts, targetConfig, cfg)
 %LOAD_MODELS_FOR_COVERAGE Coverage data needs the models it points at.
