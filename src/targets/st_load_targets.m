@@ -244,6 +244,11 @@ CoverageBoundaryMode = CoverageBoundaryMode(keep);
 PreparationMode = PreparationMode(keep);
 PreparationFromStage = PreparationFromStage(keep);
 
+% A '/' inside the CUT name must be doubled in the path. Do it here, where
+% both columns are available, so every consumer downstream receives the
+% Simulink notation without needing the name.
+CUTPath = st_escape_cut_name_in_path(CUTPath, CUTName);
+
 DataFileFormat = st_resolve_data_file_formats(SldvMode, DataFileFormat);
 MatVariableName(~(SldvMode == "FILE" & DataFileFormat == "MAT")) = "";
 

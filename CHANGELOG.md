@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+- A CUT whose block name contains `/` is now reachable from the workbook.
+  Simulink writes such a name doubled in a block path, so the block actually
+  named `OBC_..._AC/DC_Check` lives at `.../OBC_..._AC//DC_Check`. A CUTPath
+  cell typed or pasted from the block name carries a single slash, which
+  resolves against nothing and takes the whole row down before any stage runs.
+  - `st_load_targets` now escapes the trailing name while loading, where the
+    CUTName and CUTPath columns are both in hand. CUTName states exactly where
+    the leaf name begins, so only that trailing occurrence is rewritten and
+    every separator above it is left alone. A path that is already escaped, a
+    name without a slash, or a path that does not end with the name are all
+    returned untouched, and the result is still validated against Simulink by
+    `st_normalize_cut_path`.
+  - `st_find_target_paths` applies the same rewrite to the existing cell, so a
+    row written without the escaping is reused instead of being reassigned.
+  - A slash inside a *parent* name is still out of scope: no column states
+    where those names begin or end. Use `st_export_subsystem_paths`, which
+    takes its paths straight from `find_system` and is escaped throughout.
+- Added `st_probe_cut`, a read-only diagnostic that answers whether one CUT
+  exists. It delegates resolution to Simulink rather than splitting paths on
+  `/`: `getSimulinkBlockHandle` for the query as typed, then a comparison
+  against the raw `get_param(block,'Name')`, then a walk that consumes the
+  query using the child names Simulink reports. On failure it names the level
+  where the path stopped matching and lists that block's children, and it
+  separates the remaining causes — letter case, surrounding whitespace, a line
+  break inside a name, a library link that only `FollowLinks','on'` reaches,
+  and referenced models that are outside the search.
+
 - A Test Case whose Iterations only partly succeed now still gets its expected
   values updated. A Test Case owns one Iteration per Test Sequence scenario, and
   the verify-timing validation that runs before the update used to abort the
