@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **`PER_CUT` 결과 수집이 CVF를 찾지 못하고 실패하던 문제를 고쳤습니다.**
+  `st_collect_per_cut_results`는 CVF 경로를 char로 넘기는데, 커버리지 필터
+  적용 함수가 `string(value(:))`로 읽고 있었습니다. char은 글자 하나가 한
+  요소가 되어 `Coverage filter cannot be resolved for result data: D`처럼
+  첫 글자만 이름으로 잡혔습니다. char은 `cellstr`을 거치도록 바꿔 경로 하나가
+  요소 하나로 남습니다. `st_apply_result_coverage_filters`와
+  `st_apply_test_case_coverage_filters` 둘 다 해당됩니다.
+
 - **통합 보고서의 커버리지 객체 매칭을 선택할 수 있습니다.**
   `cfg.ReportMatchCoverageObjects`(기본 `false`)를 추가했습니다. `true`면
   `st_generate_test_report`가 CUT마다 그 CUT에 속한 커버리지 객체만 골라

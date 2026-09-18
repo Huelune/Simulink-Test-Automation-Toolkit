@@ -43,7 +43,7 @@ manualFilters = cell(n, 1);
 fileCoverage = [];
 fileOriginalFilters = strings(0, 1);
 
-filterFiles = string(p.Results.FilterFiles(:));
+filterFiles = filter_string_column(p.Results.FilterFiles);
 if isempty(filterFiles)
     filterFiles = strings(n, 1);
 elseif numel(filterFiles) ~= n
@@ -374,13 +374,23 @@ end
 
 
 function values = normalize_filter_values(value)
-if iscell(value)
-    values = string(value(:));
-else
-    values = string(value(:));
-end
-values(ismissing(values)) = "";
+values = filter_string_column(value);
 values = values(strlength(values) > 0);
+end
+
+
+function values = filter_string_column(values)
+%FILTER_STRING_COLUMN Read one filter list without splitting a char path.
+% string(charRow(:)) turns a char path into one string per character, so a
+% caller that passes char would lose the path. Route char through cellstr
+% so one path stays one element.
+if ischar(values)
+    values = string(cellstr(values));
+else
+    values = string(values);
+end
+values = values(:);
+values(ismissing(values)) = "";
 end
 
 

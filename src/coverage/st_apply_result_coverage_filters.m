@@ -54,9 +54,7 @@ try
     for i = 1:numel(coverageObjects)
         cvd = coverageObjects{i};
         cvd.filter = propertyValue;
-        returned = string(cvd.filter);
-        returned = returned(:);
-        returned(ismissing(returned)) = "";
+        returned = filter_string_column(cvd.filter);
         returned = returned(strlength(returned) > 0);
         actual = normalize_filter_values(returned);
         st_log(cfg, 'TRACE', ...
@@ -113,9 +111,22 @@ catch ME
 end
 end
 
+function values = filter_string_column(values)
+%FILTER_STRING_COLUMN Read one filter list without splitting a char path.
+% string(charRow(:)) turns a char path into one string per character, so a
+% caller that passes char would lose the path. Route char through cellstr
+% so one path stays one element.
+if ischar(values)
+    values = string(cellstr(values));
+else
+    values = string(values);
+end
+values = values(:);
+values(ismissing(values)) = "";
+end
+
 function files = normalize_filter_values(values)
-files = string(values(:));
-files(ismissing(files)) = "";
+files = filter_string_column(values);
 files = files(strlength(files) > 0);
 for i = 1:numel(files)
     [resolved, found] = existing_filter_path(char(files(i)), true);
@@ -124,8 +135,7 @@ end
 end
 
 function files = resolve_filter_files(values)
-files = string(values(:));
-files(ismissing(files)) = "";
+files = filter_string_column(values);
 files = unique(files(strlength(files) > 0), 'stable');
 for i = 1:numel(files)
     candidate = char(files(i));
