@@ -62,14 +62,6 @@ switch stage
         end
         evidence.Steps = steps;
         evidence.Definition = definitions;
-    case 'COVERAGE_FILTER'
-        inputs = st_stage_inputs(row,cfg);
-        evidence = struct('Policy',inputs.COVERAGE_FILTER);
-        if ~strcmpi(cfg.ExecutionMode,'PER_CUT') && st_coverage_filter_active(row)
-            file = st_coverage_filter_file(row,cfg);
-            if ~isfile(file), error('simtest:ReadinessCVFMissing','Prepared CVF is missing.'); end
-            evidence.Filter = st_file_signature(file);
-        end
     case {'TEST_MANAGER','ALIGNMENT'}
         if ~isfile(cfg.TestFile), error('simtest:ReadinessTestFileMissing','Test File is missing.'); end
         [tf, opened] = get_test_file(cfg.TestFile);

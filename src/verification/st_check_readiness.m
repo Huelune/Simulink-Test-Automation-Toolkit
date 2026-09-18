@@ -65,7 +65,7 @@ try
         [state,~] = st_load_workflow_state(cfg);
         allStages = st_workflow_stages('FROM_HARNESS');
         limit = find(allStages == string(from),1)-1;
-        if strcmp(workflow,'STANDALONE'), limit = 8; end
+        if strcmp(workflow,'STANDALONE'), limit = numel(allStages)-1; end
         for i = 1:height(T)
             row = T(i,:);
             owner = st_normalize_cut_path(row.CUTPath,cfg.TopModel);

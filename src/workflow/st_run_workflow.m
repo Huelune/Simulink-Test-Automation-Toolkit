@@ -25,8 +25,8 @@ executionMode = st_resolve_execution_mode( ...
     requestedExecutionMode, T);
 executeTests = option_or_default(options.ExecuteTests, ...
     cfg.RunGeneratedTests);
-% Pass the resolved policy into fingerprint/artifact planning. AUTO itself
-% is not sufficient to decide whether a shared CVF should exist.
+% Pass the resolved policy into fingerprint planning. AUTO itself is not
+% sufficient to decide how the Test File binds its coverage filters.
 cfg.ExecutionMode = executionMode;
 [plan, state, context] = ...
     st_build_execution_plan(T, cfg, workflowKind, options);
@@ -112,17 +112,18 @@ elseif ~options.StrictRestart
     failedCloneRows = cloneRows & strcmpi(string(validationResult.Status),'FAIL');
 end
 
+% Coverage filters are not prepared here. Whoever executes generates them:
+% BATCH in st_run_generated_tests, PER_CUT in st_run_tests_per_cut, and the
+% standalone pipeline inside its exported bundle.
 stageNames = {'SLDV','HARNESS_CONFIG','SIGNAL_EDITOR', ...
-    'ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT'};
+    'ASSESSMENT','TEST_MANAGER','ALIGNMENT'};
 stageLabels = {'Prepare SLDV Data','Configure Harnesses', ...
     'Configure Signal Editor','Configure Test Assessment', ...
-    'Prepare Coverage Filters','Create Test Manager', ...
-    'Validate Scenario Alignment'};
+    'Create Test Manager','Validate Scenario Alignment'};
 stageFunctions = { ...
     @st_prepare_sldv_targets, @st_configure_harnesses, ...
     @st_configure_signal_editors, @st_configure_assessments, ...
-    @st_prepare_coverage_filters, @st_create_test_manager, ...
-    @st_validate_scenario_alignment};
+    @st_create_test_manager, @st_validate_scenario_alignment};
 
 % Clone preparation already completed these stages inside its recovery boundary.
 if runHarness
@@ -151,9 +152,6 @@ for s = 1:numel(stageNames)
     end
     fn = stageFunctions{s};
     if strcmp(executionMode, 'PER_CUT') && ...
-            strcmp(stage, 'COVERAGE_FILTER')
-        fn = @st_defer_coverage_filters_to_per_cut;
-    elseif strcmp(executionMode, 'PER_CUT') && ...
             strcmp(stage, 'TEST_MANAGER')
         fn = @(value) st_create_test_manager( ...
             value, 'DeferCoverageFilters', true);
@@ -290,7 +288,7 @@ end
 
 function print_plan(plan)
 stages = {'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR', ...
-    'ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT'};
+    'ASSESSMENT','TEST_MANAGER','ALIGNMENT'};
 for s = 1:numel(stages)
     runCount = sum(plan.(sprintf('Run%s', stages{s})));
     fprintf('%-16s RUN=%d CACHED=%d\n', stages{s}, ...

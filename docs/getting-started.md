@@ -246,7 +246,6 @@ SLDV             입력 데이터 준비 (OFF/FILE/GENERATE 전부 포함)
 HARNESS_CONFIG   StopTime 등 Harness 설정
 SIGNAL_EDITOR    입력 Scenario 생성과 연결
 ASSESSMENT       verify 문장 구성
-COVERAGE_FILTER  CVF 준비
 TEST_MANAGER     Test File, Test Case, Iteration 구성
 ALIGNMENT        Scenario와 Iteration 정렬 검사
 EXECUTE          테스트 실행, 기대값 갱신, 보고서

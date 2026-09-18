@@ -148,8 +148,8 @@ st_run_after_harness    % Harness가 전부 있을 때
 
 | 명령 | 실행하는 단계 |
 | --- | --- |
-| `st_run_from_harness` | **HARNESS** → SLDV → HARNESS_CONFIG → SIGNAL_EDITOR → ASSESSMENT → COVERAGE_FILTER → TEST_MANAGER → ALIGNMENT → EXECUTE |
-| `st_run_after_harness` | SLDV → HARNESS_CONFIG → SIGNAL_EDITOR → ASSESSMENT → COVERAGE_FILTER → TEST_MANAGER → ALIGNMENT → EXECUTE |
+| `st_run_from_harness` | **HARNESS** → SLDV → HARNESS_CONFIG → SIGNAL_EDITOR → ASSESSMENT → TEST_MANAGER → ALIGNMENT → EXECUTE |
+| `st_run_after_harness` | SLDV → HARNESS_CONFIG → SIGNAL_EDITOR → ASSESSMENT → TEST_MANAGER → ALIGNMENT → EXECUTE |
 
 각 단계가 하는 일:
 
@@ -160,7 +160,6 @@ st_run_after_harness    % Harness가 전부 있을 때
 | `HARNESS_CONFIG` | StopTime 등 Harness 설정 |
 | `SIGNAL_EDITOR` | 입력 Scenario를 만들어 Harness에 연결 |
 | `ASSESSMENT` | `verify` 문장 구성 |
-| `COVERAGE_FILTER` | CVF 준비 |
 | `TEST_MANAGER` | Test File, Test Case, Iteration 구성 |
 | `ALIGNMENT` | Scenario 수와 Iteration 수가 맞는지 검사 |
 | `EXECUTE` | 테스트 실행, 기대값 갱신, 보고서 |
@@ -195,7 +194,7 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');  % 그 단�
 | 입력 MAT 또는 SLDV 설정 | `SLDV` |
 | Harness StopTime 등 설정 | `HARNESS_CONFIG` |
 | verify 대상 또는 Assessment 구성 | `ASSESSMENT` |
-| Coverage 필터 설정 | `COVERAGE_FILTER` |
+| Coverage 필터 설정 | `TEST_MANAGER` |
 | Test Case 이름 또는 Iteration | `TEST_MANAGER` |
 
 > `FromStage`는 앞 단계를 **건너뛰라는 뜻이 아닙니다.** 지정한 단계부터 강제로

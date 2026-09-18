@@ -2,7 +2,7 @@ function [stages, index] = st_workflow_stages(workflow, fromStage)
 %ST_WORKFLOW_STAGES Single stage vocabulary for inspection and restart.
 workflow = upper(char(string(workflow)));
 stages = ["HARNESS","SLDV","HARNESS_CONFIG","SIGNAL_EDITOR", ...
-    "ASSESSMENT","COVERAGE_FILTER","TEST_MANAGER","ALIGNMENT","EXECUTE"];
+    "ASSESSMENT","TEST_MANAGER","ALIGNMENT","EXECUTE"];
 switch workflow
     case {'FROM_HARNESS','FULL'}
     case 'AFTER_HARNESS'

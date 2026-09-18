@@ -29,9 +29,11 @@ verifyEqual(testCase, options.PreparationMode, 'FORCE');
 verifyEqual(testCase, options.FromStage, 'ASSESSMENT');
 end
 
-function testCoverageFilterStageOverride(testCase)
-options = st_parse_workflow_options('FromStage', 'coverage_filter');
-verifyEqual(testCase, options.FromStage, 'COVERAGE_FILTER');
+function testRemovedCoverageFilterStageIsRejected(testCase)
+% Coverage filters lost their preparation stage; a restart aimed at it has
+% to say where to go instead of silently starting somewhere else.
+verifyError(testCase, @() st_parse_workflow_options( ...
+    'FromStage', 'coverage_filter'), 'simtest:RemovedPreparationStage');
 end
 
 function testPerCutWorkflowOptionOverrides(testCase)
@@ -69,7 +71,7 @@ end
 function testForcePlanPropagatesDownstream(testCase)
 plan = table((1:2).', 'VariableNames', {'No'});
 stages = {'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR', ...
-    'ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT'};
+    'ASSESSMENT','TEST_MANAGER','ALIGNMENT'};
 for i = 1:numel(stages)
     plan.(['Run' stages{i}]) = false(2,1);
     plan.(['Action' stages{i}]) = repmat("CACHED", 2, 1);
@@ -80,7 +82,6 @@ plan = st_force_plan_downstream( ...
     plan, [false; true], 'ASSESSMENT', 'test force');
 verifyFalse(testCase, plan.RunSIGNAL_EDITOR(2));
 verifyTrue(testCase, plan.RunASSESSMENT(2));
-verifyTrue(testCase, plan.RunCOVERAGE_FILTER(2));
 verifyTrue(testCase, plan.RunTEST_MANAGER(2));
 verifyTrue(testCase, plan.RunALIGNMENT(2));
 verifyEqual(testCase, plan.ReasonASSESSMENT(2), "test force");

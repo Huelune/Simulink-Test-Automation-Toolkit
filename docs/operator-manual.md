@@ -91,7 +91,6 @@ CUT 사전 검증
 → HARNESS_CONFIG   StopTime 등 Harness 설정
 → SIGNAL_EDITOR    Scenario MAT 생성과 연결
 → ASSESSMENT       verify 문장 구성
-→ COVERAGE_FILTER  CVF 준비
 → TEST_MANAGER     Test File, Test Case, Iteration 구성
 → ALIGNMENT        Scenario와 Iteration 정렬 검사
 → EXECUTE          테스트 실행, 기대값 갱신, 보고서
@@ -225,7 +224,7 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');  % 그 단�
 | 입력 MAT 또는 SLDV 설정 | `SLDV` |
 | Harness StopTime 등 설정 | `HARNESS_CONFIG` |
 | verify 대상 또는 Assessment 구성 | `ASSESSMENT` |
-| Coverage 필터 설정 | `COVERAGE_FILTER` |
+| Coverage 필터 설정 | `TEST_MANAGER` |
 | Test Case 이름 또는 Iteration | `TEST_MANAGER` |
 
 > **`FromStage`는 앞 단계를 "건너뛰라"는 뜻이 아닙니다.** `st_build_execution_plan`은

@@ -56,6 +56,7 @@ st_run_standalone_coverage_pipeline( ...
 | 사전 검증 | `st_validate_targets` | 기존 Harness와 CUT 연결 검사 |
 | 명세서 | `st_export_test_specification` | 실행 없이 입력·verify를 Excel로 추출 |
 | 점검 | `st_check_per_cut_cvf` | 최신 PER_CUT CVF를 6비트 코드로 검사 |
+| Coverage | `st_prepare_coverage_filters` | 공유 CVF를 지금 만들어 내용 확인 (실행이 알아서 다시 만듭니다) |
 | 정리 | `st_cleanup_results` | 생성 결과 미리보기 또는 삭제 |
 | 테스트 | `st_run_tests_per_cut` | 준비된 Test File을 CUT별로만 실행 |
 | 테스트 | `st_run_generated_tests` | 필터 없는 Test File을 BATCH 실행 |
@@ -208,7 +209,7 @@ disp(checks)
 
 | `Workflow` | 선택 가능한 `FromStage` |
 | --- | --- |
-| `FROM_HARNESS` | `HARNESS`, `SLDV`, `HARNESS_CONFIG`, `SIGNAL_EDITOR`, `ASSESSMENT`, `COVERAGE_FILTER`, `TEST_MANAGER`, `ALIGNMENT`, `EXECUTE` |
+| `FROM_HARNESS` | `HARNESS`, `SLDV`, `HARNESS_CONFIG`, `SIGNAL_EDITOR`, `ASSESSMENT`, `TEST_MANAGER`, `ALIGNMENT`, `EXECUTE` |
 | `AFTER_HARNESS` | 위 목록에서 `HARNESS` 제외 |
 | `STANDALONE` | `EXECUTE`, `PACKAGE`, `SUMMARY` |
 
@@ -619,7 +620,6 @@ plan = st_cleanup_results('Scope','STATE','Apply',true);  % 실제 삭제
 | `st_configure_harnesses` | Harness StopTime 등 설정 | `HarnessConfigResult.ini` |
 | `st_configure_signal_editors` | Signal Editor MAT와 Scenario 구성 | `SignalEditorResult.ini` |
 | `st_configure_assessments` | Assessment Scenario와 verify 구성 | `AssessmentResult.ini` |
-| `st_prepare_coverage_filters` | 공유 방식 Coverage Filter 준비 | — |
 | `st_create_test_manager` | Test File, Test Case, Iteration 구성 | `TestManagerResult.ini` |
 | `st_validate_scenario_alignment` | Scenario와 Iteration 정렬 검사 | `ScenarioAlignmentResult.ini` |
 

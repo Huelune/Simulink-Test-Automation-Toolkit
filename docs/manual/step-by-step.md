@@ -26,7 +26,6 @@
 | 2b | Harness 설정 | `st_configure_harnesses` | StopTime 등 | `HarnessConfigResult.ini` |
 | 2c | 입력 연결 | `st_configure_signal_editors` | Signal Editor MAT와 Scenario | `SignalEditorResult.ini` |
 | 3 | Assessment 설정 | `st_configure_assessments` | `verify` 문장 | `AssessmentResult.ini` |
-| 4 | Coverage 필터 | `st_prepare_coverage_filters` | `.cvf` | — |
 | 5a | Test Case 생성 | `st_create_test_manager` | Test File, Test Case, Iteration | `TestManagerResult.ini` |
 | 5b | 정렬 검사 | `st_validate_scenario_alignment` | (확인만) | `ScenarioAlignmentResult.ini` |
 | 6 | 실행 + verify 수정 | `st_run_tests_per_cut` 또는 `st_run_generated_tests` | 결과와 보고서 | `result/per_cut_runs/` 또는 `result/runs/` |
@@ -153,19 +152,19 @@ Harness 안의 Test Assessment 블록에 `verify` 문장을 만듭니다.
 **정상인데 verify가 비어 있는 경우:** `cfg.VerifyHarnessOutportsOnly=true`(기본)이고
 쓸 수 있는 Harness 출력이 하나도 없으면 빈 Action으로 구성됩니다. 오류가 아닙니다.
 
-### 4단계 — Coverage 필터 (쓸 때만)
+### Coverage 필터는 단계가 아닙니다
+
+CVF는 **실행하는 쪽이 만듭니다.** `BATCH`는 `st_run_generated_tests`가 실행
+직전에, `PER_CUT`은 `st_run_tests_per_cut`이 CUT 폴더 안에서, standalone은
+내보낸 번들 안에서 만듭니다. 그래서 준비 단계에서 미리 만들 것이 없습니다.
+
+내용을 미리 눈으로 확인하고 싶을 때만 직접 부릅니다. 실행이 어차피 다시
+만들기 때문에 결과는 참고용입니다.
 
 ```matlab
 R = st_prepare_coverage_filters();
 disp(R)
 ```
-
-Excel에 `CoverageFilterMode` 또는 `CoverageBoundaryMode`를 켠 행이 있을 때만
-필요합니다. 둘 다 `OFF`면 건너뛰십시오.
-
-> `PER_CUT` 실행에서는 CVF를 **실행 직전에** 만들어 임시로 붙였다가 복원합니다.
-> 그래서 이 단계를 미리 돌리지 않아도 정상입니다. standalone 제출물을 만들려면
-> Excel 설정만 갖춰져 있으면 됩니다.
 
 ### 5단계 — Test Case 생성
 
@@ -345,7 +344,7 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','TEST_MANAGER');
 
 ```text
 HARNESS, SLDV, HARNESS_CONFIG, SIGNAL_EDITOR, ASSESSMENT,
-COVERAGE_FILTER, TEST_MANAGER, ALIGNMENT
+TEST_MANAGER, ALIGNMENT
 ```
 
 ### 방법 C — 앞 단계를 절대 다시 돌리지 않기

@@ -6,7 +6,7 @@
     "inputs":
     [
       {"name":"PreparationMode", "kind":"namevalue", "type":["choices={'AUTO','FORCE'}"], "purpose":"준비 단계 재사용 정책"},
-      {"name":"FromStage", "kind":"namevalue", "type":["choices={'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR','ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT','EXECUTE'}"], "purpose":"이 단계부터 실행"},
+      {"name":"FromStage", "kind":"namevalue", "type":["choices={'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR','ASSESSMENT','TEST_MANAGER','ALIGNMENT','EXECUTE'}"], "purpose":"이 단계부터 실행"},
       {"name":"ExecutionMode", "kind":"namevalue", "type":["choices={'AUTO','BATCH','PER_CUT'}"], "purpose":"일괄 실행 또는 CUT별 격리 실행"},
       {"name":"ContinueOnFailure", "kind":"namevalue", "type":["logical","scalar"], "purpose":"대상 실패 시 다음 대상 계속"},
       {"name":"ReportMode", "kind":"namevalue", "type":["choices={'SUMMARY','FULL'}"], "purpose":"보고서 상세도"},
@@ -20,7 +20,7 @@
     "inputs":
     [
       {"name":"PreparationMode", "kind":"namevalue", "type":["choices={'AUTO','FORCE'}"], "purpose":"준비 단계 재사용 정책"},
-      {"name":"FromStage", "kind":"namevalue", "type":["choices={'SLDV','HARNESS_CONFIG','SIGNAL_EDITOR','ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT','EXECUTE'}"], "purpose":"이 단계부터 실행. HARNESS는 생성하지 않음"},
+      {"name":"FromStage", "kind":"namevalue", "type":["choices={'SLDV','HARNESS_CONFIG','SIGNAL_EDITOR','ASSESSMENT','TEST_MANAGER','ALIGNMENT','EXECUTE'}"], "purpose":"이 단계부터 실행. HARNESS는 생성하지 않음"},
       {"name":"ExecutionMode", "kind":"namevalue", "type":["choices={'AUTO','BATCH','PER_CUT'}"], "purpose":"일괄 실행 또는 CUT별 격리 실행"},
       {"name":"ContinueOnFailure", "kind":"namevalue", "type":["logical","scalar"], "purpose":"대상 실패 시 다음 대상 계속"},
       {"name":"ReportMode", "kind":"namevalue", "type":["choices={'SUMMARY','FULL'}"], "purpose":"보고서 상세도"},
@@ -34,7 +34,7 @@
     "inputs":
     [
       {"name":"Workflow", "kind":"namevalue", "type":["choices={'FROM_HARNESS','AFTER_HARNESS','STANDALONE'}"], "purpose":"어떤 workflow의 단계 목록을 쓸지"},
-      {"name":"FromStage", "kind":"namevalue", "type":["choices={'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR','ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT','EXECUTE','PACKAGE','SUMMARY'}"], "purpose":"이 단계부터 끝까지 실행"},
+      {"name":"FromStage", "kind":"namevalue", "type":["choices={'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR','ASSESSMENT','TEST_MANAGER','ALIGNMENT','EXECUTE','PACKAGE','SUMMARY'}"], "purpose":"이 단계부터 끝까지 실행"},
       {"name":"SourcePipelineId", "kind":"namevalue", "type":["char"], "purpose":"PACKAGE/SUMMARY 재생성의 원본 PipelineId"}
     ]
   }

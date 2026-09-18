@@ -15,7 +15,7 @@
     "inputs":
     [
       {"name":"Workflow", "kind":"namevalue", "type":["choices={'STANDALONE','FROM_HARNESS','AFTER_HARNESS'}"], "purpose":"어떤 workflow 기준으로 검사할지"},
-      {"name":"FromStage", "kind":"namevalue", "type":["choices={'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR','ASSESSMENT','COVERAGE_FILTER','TEST_MANAGER','ALIGNMENT','EXECUTE','PACKAGE','SUMMARY'}"], "purpose":"어느 단계부터 실행할 예정인지"},
+      {"name":"FromStage", "kind":"namevalue", "type":["choices={'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR','ASSESSMENT','TEST_MANAGER','ALIGNMENT','EXECUTE','PACKAGE','SUMMARY'}"], "purpose":"어느 단계부터 실행할 예정인지"},
       {"name":"SourcePipelineId", "kind":"namevalue", "type":["char"], "purpose":"PACKAGE/SUMMARY 재생성의 원본 PipelineId"}
     ]
   }

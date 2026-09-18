@@ -36,12 +36,23 @@ st_run_after_harness
 
 ```text
 HARNESS → SLDV → HARNESS_CONFIG → SIGNAL_EDITOR → ASSESSMENT
-→ COVERAGE_FILTER → TEST_MANAGER → ALIGNMENT → EXECUTE
+→ TEST_MANAGER → ALIGNMENT → EXECUTE
 ```
 
 `AFTER_HARNESS`는 `HARNESS`를 생성하지 않습니다. `SLDV`라는 단계 이름에는 `OFF`와
-`FILE` 대상의 입력 준비도 포함됩니다. `PER_CUT`의 CVF 생성은 대상 실행 직전으로
-미루는 것이 정상입니다.
+`FILE` 대상의 입력 준비도 포함됩니다.
+
+**Coverage Filter는 준비 단계가 아닙니다.** CVF는 실행하는 쪽이 만듭니다.
+
+| 실행 방식 | CVF를 만드는 곳 |
+| --- | --- |
+| `BATCH` | `st_run_generated_tests`가 실행 직전에 |
+| `PER_CUT` | `st_run_tests_per_cut`이 CUT 폴더 안에서 대상마다 |
+| Standalone | 내보낸 번들 안에서. 물려받은 CVF는 `REPLACE` 정책으로 버립니다 |
+
+필터 설정(`CoverageFilterMode` 등)은 `PERSIST`일 때 Test File에 기록되므로
+`TEST_MANAGER` 지문에 들어갑니다. 설정을 바꿨으면 `TEST_MANAGER`부터 다시
+돌리십시오.
 
 ## 4. 다시 실행할 때
 
@@ -65,7 +76,7 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');
 | 입력 MAT 또는 SLDV 설정 | `SLDV` |
 | Harness StopTime 등 설정 | `HARNESS_CONFIG` |
 | verify 대상 또는 Assessment 구성 | `ASSESSMENT` |
-| Coverage 필터 설정 | `COVERAGE_FILTER` |
+| Coverage 필터 설정 | `TEST_MANAGER` |
 | Test Case 이름 또는 Iteration | `TEST_MANAGER` |
 
 checkpoint만 지우고 다시 판단하게 하려면:

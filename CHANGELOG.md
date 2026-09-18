@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- `COVERAGE_FILTER`는 더 이상 준비 단계가 아닙니다. 커버리지 필터는 실행하는
+  쪽이 만듭니다. `BATCH`는 `st_run_generated_tests`가 실행 직전에, `PER_CUT`은
+  `st_run_tests_per_cut`이 CUT 폴더 안에서, standalone 파이프라인은 내보낸 번들
+  안에서 생성합니다. 준비 단계가 만들던 공유 CVF는 어느 경로에서도 쓰이지
+  않았습니다. `BATCH`는 실행 직전에 계획을 무시하고 전 행을 다시 만들었고,
+  `PER_CUT` 단계는 파일을 하나도 만들지 않는 기록용이었으며, standalone은
+  `CoverageFilterExistingPolicy=REPLACE`를 강제해 물려받은 CVF를 의도적으로
+  버립니다.
+  - 단계 어휘, 실행 계획, 재시작 경계, readiness 검사에서 단계를 제거했습니다.
+    기록 전용이던 `st_defer_coverage_filters_to_per_cut`은 삭제했습니다.
+  - 필터 설정은 `PERSIST`일 때 Test File에 기록되므로 `TEST_MANAGER` 지문에
+    넣었습니다. Rationale만 바꿔도 Test File이 다시 만들어집니다. 지문 구성이
+    바뀌었으므로 이 변경 이후 첫 실행에서 `TEST_MANAGER`와 `ALIGNMENT`가 한 번
+    다시 돕니다.
+  - `FromStage='COVERAGE_FILTER'`와 Excel의 `PreparationFromStage=COVERAGE_FILTER`는
+    `simtest:RemovedPreparationStage`로 거절하고 `TEST_MANAGER`를 안내합니다.
+    조용히 다른 단계에서 시작하지 않기 위해서입니다.
+  - `st_prepare_coverage_filters`는 필터 내용을 미리 보는 단독 명령으로 남습니다.
 - A workflow whose Test Manager stage is fully cached no longer fails right
   after the stage reports DONE. When no row needs the stage,
   `st_create_test_manager` returns before any Test File is opened and builds

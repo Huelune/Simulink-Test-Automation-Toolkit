@@ -263,20 +263,20 @@ end
 end
 
 
-function testPerCutWorkflowDefersSharedFilterGeneration(testCase)
+function testPreparationNeverGeneratesSharedFilters(testCase)
+% Coverage filters belong to whoever executes. The preparation workflow has
+% no stage for them, so it must not reach the shared generator at all.
 root = st_project_root();
 workflow = fileread(fullfile(root, 'src', 'workflow', ...
     'st_run_workflow.m'));
-deferred = fileread(fullfile(root, 'src', 'coverage', ...
-    'st_defer_coverage_filters_to_per_cut.m'));
-verifyNotEmpty(testCase, regexp(workflow, ...
-    'st_defer_coverage_filters_to_per_cut', 'once'));
+verifyEmpty(testCase, regexp(workflow, ...
+    'st_prepare_coverage_filters', 'once'));
+verifyEmpty(testCase, regexp(workflow, 'COVERAGE_FILTER', 'once'));
 verifyNotEmpty(testCase, regexp(workflow, ...
     '''DeferCoverageFilters'', true', 'once'));
-verifyEmpty(testCase, regexp(deferred, ...
-    'st_generate_coverage_filter_file', 'once'));
-verifyNotEmpty(testCase, regexp(deferred, ...
-    'Deferred to execution-local PER_CUT', 'once'));
+
+stages = st_workflow_stages('FROM_HARNESS');
+verifyFalse(testCase, any(stages == "COVERAGE_FILTER"));
 end
 
 

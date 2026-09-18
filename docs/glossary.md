@@ -197,7 +197,7 @@ Harness를 Top Model에서 완전히 떼어내 혼자 열리는 `.slx` 모델로
 
 ```text
 HARNESS → SLDV → HARNESS_CONFIG → SIGNAL_EDITOR → ASSESSMENT
-→ COVERAGE_FILTER → TEST_MANAGER → ALIGNMENT → EXECUTE
+→ TEST_MANAGER → ALIGNMENT → EXECUTE
 ```
 
 `SLDV`라는 이름의 단계에는 `OFF`와 `FILE` 대상의 입력 준비도 포함됩니다.
