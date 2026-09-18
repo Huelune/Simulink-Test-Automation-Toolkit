@@ -154,12 +154,14 @@ Harness 안의 Test Assessment 블록에 `verify` 문장을 만듭니다.
 
 ### Coverage 필터는 단계가 아닙니다
 
-CVF는 **실행하는 쪽이 만듭니다.** `BATCH`는 `st_run_generated_tests`가 실행
-직전에, `PER_CUT`은 `st_run_tests_per_cut`이 CUT 폴더 안에서, standalone은
-내보낸 번들 안에서 만듭니다. 그래서 준비 단계에서 미리 만들 것이 없습니다.
+CVF는 **결과물을 만드는 쪽이 만듭니다.** 기본 `PER_CUT`은
+`st_collect_per_cut_results`가, `BATCH`는 `st_generate_test_report`가 만들어
+결과 커버리지 데이터에 붙입니다. standalone 번들만 실행 안에서 만듭니다 —
+실행 모델이 일회용이라 나중에 다시 열 수 없기 때문입니다. 그래서 준비 단계에서
+미리 만들 것이 없습니다.
 
-내용을 미리 눈으로 확인하고 싶을 때만 직접 부릅니다. 실행이 어차피 다시
-만들기 때문에 결과는 참고용입니다.
+내용을 미리 눈으로 확인하고 싶을 때만 직접 부릅니다. 결과물을 만들 때 어차피
+다시 만들기 때문에 결과는 참고용입니다.
 
 ```matlab
 R = st_prepare_coverage_filters();

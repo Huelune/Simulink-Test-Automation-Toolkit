@@ -42,13 +42,14 @@ HARNESS → SLDV → HARNESS_CONFIG → SIGNAL_EDITOR → ASSESSMENT
 `AFTER_HARNESS`는 `HARNESS`를 생성하지 않습니다. `SLDV`라는 단계 이름에는 `OFF`와
 `FILE` 대상의 입력 준비도 포함됩니다.
 
-**Coverage Filter는 준비 단계가 아닙니다.** CVF는 실행하는 쪽이 만듭니다.
+**Coverage Filter는 준비 단계가 아닙니다.** CVF는 **결과물을 만드는 쪽이**
+만듭니다. 실행은 커버리지를 필터 없이 수집합니다.
 
 | 실행 방식 | CVF를 만드는 곳 |
 | --- | --- |
-| `BATCH` | `st_run_generated_tests`가 실행 직전에 |
-| `PER_CUT` | `st_run_tests_per_cut`이 CUT 폴더 안에서 대상마다 |
-| Standalone | 내보낸 번들 안에서. 물려받은 CVF는 `REPLACE` 정책으로 버립니다 |
+| `PER_CUT` (기본) | `st_collect_per_cut_results`가 결과를 정리할 때, CUT 폴더의 `filter/`에 |
+| `BATCH` | `st_generate_test_report`가 보고서를 만들 때, `result/coverage_filters/`에 |
+| Standalone | 내보낸 번들의 실행 안에서. 일회용 실행 모델이라 나중에 다시 열 수 없기 때문입니다. 물려받은 CVF는 `REPLACE` 정책으로 버립니다 |
 
 필터 설정(`CoverageFilterMode` 등)은 준비 단계와 무관합니다. 바꿔도 Harness나
 Test File을 다시 만들지 않으며, 다음 결과물 생성에만 반영됩니다.
