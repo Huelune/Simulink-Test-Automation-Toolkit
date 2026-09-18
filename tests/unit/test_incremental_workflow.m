@@ -14,7 +14,7 @@ verifyTrue(testCase, endsWith(string(cfg.WorkflowStateSummaryFile), ...
 verifyEqual(testCase, cfg.CoverageFilterApplicationMode, 'RUNTIME');
 verifyTrue(testCase, endsWith(string(cfg.CoverageFilterDir), ...
     fullfile('result', 'coverage_filters')));
-verifyEqual(testCase, cfg.ExecutionMode, 'AUTO');
+verifyEqual(testCase, cfg.ExecutionMode, 'BATCH');
 verifyTrue(testCase, cfg.PerCutContinueOnFailure);
 verifyEqual(testCase, cfg.PerCutReportMode, 'SUMMARY');
 verifyFalse(testCase, cfg.PerCutFailOnNonPass);

@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- 실행 방식은 이제 **부르는 쪽이 정합니다.** Excel은 관여하지 않습니다.
+  `cfg.ExecutionMode` 기본값이 `'AUTO'`에서 **`'BATCH'`**로 바뀌었고, 한 번만
+  달리 돌리려면 명령에서 지정합니다.
+
+  ```matlab
+  st_run_after_harness('ExecutionMode', 'PER_CUT')
+  ```
+
+  - `'AUTO'`를 제거했습니다. 활성 CVF를 가진 대상이 하나라도 있으면 `PER_CUT`을
+    고르는 규칙이었는데, 커버리지 필터가 결과물 생성 단계로 옮겨가면서 근거가
+    사라졌습니다. 전달하면 `simtest:RemovedExecutionMode`로 대체 값을
+    안내합니다. 조용히 `BATCH`로 바꾸면 기존 프로젝트의 실행 방식이 말없이
+    달라지기 때문입니다.
+  - `PER_CUT`은 **혼자 돌려야만 되는 Test Case**를 위해 씁니다. 남은 차이는 실행
+    단위와, 기대값 갱신 후 재실행 범위입니다. `BATCH`는 Test File 전체를,
+    `PER_CUT`은 해당 Test Case만 다시 돌립니다.
+  - `CoverageFilterMode`/`CoverageBoundaryMode`는 실행 방식과 무관해졌습니다.
 - BATCH 실행에서도 커버리지 필터를 걷어냈습니다. 이제 CVF는 어느 실행 경로에서도
   만들어지지 않습니다. 실행은 커버리지를 필터 없이 수집하고,
   `st_generate_test_report`가 CVF를 만들어 결과에 붙인 다음 보고서를 만듭니다.

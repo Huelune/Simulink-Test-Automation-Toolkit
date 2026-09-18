@@ -50,7 +50,7 @@ st_run_from_harness                % 이 명령은 st_config()를 새로 호출�
 | `ExpectedUpdateMode` | `'APPLY'` | 실패한 테스트의 기대값을 자동으로 덮어씁니다 |
 | `RunGeneratedTests` | `true` | 준비만 하고 멈출지, 테스트까지 돌릴지 정합니다 |
 | `OverwriteTestFile` | `false` | `true`면 기존 Test Case를 전부 새로 만듭니다 |
-| `ExecutionMode` | `'AUTO'` | BATCH와 PER_CUT 중 무엇으로 돌릴지 정합니다 |
+| `ExecutionMode` | `'BATCH'` | BATCH와 PER_CUT 중 무엇으로 돌릴지 정합니다 |
 
 ## 2. 테스트 실행
 
@@ -66,18 +66,33 @@ Test Manager 구성까지 끝낸 다음 실제로 테스트를 실행할지 정�
 Harness와 Test Case만 먼저 만들어 두고 실행은 사람이 Test Manager에서 확인하며
 하고 싶을 때 `false`로 둡니다.
 
-### `ExecutionMode` — 기본 `'AUTO'`
+### `ExecutionMode` — 기본 `'BATCH'`
 
 여러 Test Case를 한꺼번에 돌릴지, 하나씩 따로 돌릴지 정합니다.
+**부르는 쪽이 정하며, Excel은 이 선택에 관여하지 않습니다.**
 
-| 값 | 동작 |
-| --- | --- |
-| `'AUTO'` | 활성 CVF가 하나라도 있으면 `PER_CUT`, 전부 없으면 `BATCH` |
-| `'BATCH'` | Test File 전체를 `run(tf)` 한 번으로 실행합니다. 활성 CVF가 있으면 실행 전에 오류 |
-| `'PER_CUT'` | CVF가 없는 행까지 포함해 모든 활성 CUT을 Excel 순서로 하나씩 실행합니다 |
+| | `'BATCH'` (기본) | `'PER_CUT'` |
+| --- | --- | --- |
+| 실행 | `run(tf)` 전체 한 번 | Test Case마다 `run(tc)` |
+| 기대값 갱신 후 재실행 | Test File **전체** | 그 Test Case만 |
+| 결과물 | 통합 보고서 하나 | CUT별 폴더 |
 
-커버리지 필터는 Test Case마다 달라야 하므로 한꺼번에 돌리면 섞입니다. 그래서
-필터를 쓰는 순간 `PER_CUT`이 필요합니다. **보통 `AUTO`를 그대로 두면 됩니다.**
+`PER_CUT`은 **혼자 돌려야만 되는 Test Case**가 있을 때 씁니다. 기대값 갱신 후
+재실행 범위도 다릅니다 — `BATCH`는 Test File 전체를, `PER_CUT`은 해당 Test
+Case만 다시 돌립니다.
+
+커버리지 필터는 이 선택과 무관합니다. 필터는 결과물을 만들 때 적용되므로
+활성 CVF가 있는 대상도 `'BATCH'`로 돌 수 있습니다.
+
+한 번만 바꾸려면 명령에서 지정합니다.
+
+```matlab
+st_run_after_harness('ExecutionMode', 'PER_CUT')
+```
+
+> 예전 `'AUTO'`는 없어졌습니다. Excel의 CVF 설정을 보고 `PER_CUT`을 골랐는데,
+> 필터가 결과물 단계로 옮겨가면서 근거가 사라졌습니다. 전달하면
+> `simtest:RemovedExecutionMode` 오류로 대체 값을 안내합니다.
 CUT별 결과 폴더를 항상 따로 받고 싶을 때만 `PER_CUT`으로 고정하십시오.
 
 ### `PerCutContinueOnFailure` — 기본 `true`
@@ -427,23 +442,6 @@ ids = st_collect_warning_ids('LogFile', 'run.log');
 
 단계별 INI 결과 보고서를 `result/reports/`에 쓸지 정합니다. `false`로 하면 결과
 파일을 만들지 않습니다.
-
-### `ExecutionMode` — 기본 `'AUTO'`
-
-`AUTO`는 활성 CVF를 가진 대상이 있으면 `PER_CUT`, 아니면 `BATCH`를 고릅니다.
-
-이건 **선호이지 제약이 아닙니다.** 커버리지 필터는 결과물 생성 단계의 일이므로
-실행 방식을 강제하지 않습니다. CVF가 있는 대상도 `'BATCH'`로 돌 수 있습니다.
-
-두 방식의 실질적인 차이는 이것입니다.
-
-| | `BATCH` | `PER_CUT` |
-| --- | --- | --- |
-| 실행 | `run(tf)` 전체 한 번 | Test Case마다 따로 |
-| 기대값 갱신 후 재실행 | Test File **전체** | 그 Test Case만 |
-| 결과물 | 통합 보고서 하나 | CUT별 폴더 |
-
-혼자 돌려야만 되는 Test Case가 있으면 `PER_CUT`을 쓰십시오.
 
 ### `PerCutResultCollection` — 기본 `'DEFERRED'`
 

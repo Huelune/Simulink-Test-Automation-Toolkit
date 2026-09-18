@@ -239,8 +239,8 @@ manifest의 `OriginalNames`에 남습니다.
 ## 6. 커버리지 필터
 
 두 열은 **독립적**입니다. 하나는 CUT 안쪽을, 다른 하나는 CUT 바깥쪽을 다룹니다.
-둘 다 꺼 두면 CVF를 만들지 않고, 하나라도 켜면 `ExecutionMode=AUTO`가 `PER_CUT`을
-선택합니다.
+둘 다 꺼 두면 CVF를 만들지 않습니다. 이 열들은 **실행 방식과 무관합니다** —
+필터는 결과물을 만들 때 적용되고, `BATCH`/`PER_CUT` 선택은 명령에서 합니다.
 
 ### `CoverageFilterMode`
 

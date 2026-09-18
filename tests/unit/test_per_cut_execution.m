@@ -4,24 +4,33 @@ tests = functiontests(localfunctions);
 end
 
 
-function testAutoKeepsLegacyBatchWhenAllFiltersAreOff(testCase)
-T = filter_table(["OFF"; "OFF"]);
-verifyEqual(testCase, st_resolve_execution_mode('AUTO', T), 'BATCH');
-verifyEqual(testCase, st_resolve_execution_mode('PER_CUT', T), 'PER_CUT');
+function testTheWorkbookNoLongerDecidesHowTestsRun(testCase)
+% Whether a target carries a coverage filter says nothing about how it has
+% to run, now that filters are applied when the artifacts are built.
+filtered = filter_table(["OFF"; "ALL_CONTENT"]);
+plain = filter_table(["OFF"; "OFF"]);
+for T = {filtered, plain}
+    verifyEqual(testCase, st_resolve_execution_mode('BATCH', T{1}), 'BATCH');
+    verifyEqual(testCase, st_resolve_execution_mode('PER_CUT', T{1}), ...
+        'PER_CUT');
+end
 end
 
 
-function testAutoSelectsPerCutForEveryRowWhenOneFilterIsActive(testCase)
-T = filter_table(["OFF"; "SUBSYSTEM"; "OFF"]);
-verifyEqual(testCase, st_resolve_execution_mode('AUTO', T), 'PER_CUT');
+function testEmptyModeFallsBackToBatch(testCase)
+verifyEqual(testCase, st_resolve_execution_mode('', table()), 'BATCH');
 end
 
 
-function testBatchAcceptsAnActiveFilter(testCase)
-% The refusal was about filtering a model while it runs. Nothing filters
-% during a run any more, so a CVF no longer dictates the execution mode.
-T = filter_table(["OFF"; "ALL_CONTENT"]);
-verifyEqual(testCase, st_resolve_execution_mode('BATCH', T), 'BATCH');
+function testAutoIsRejectedWithItsReplacement(testCase)
+% AUTO read the workbook to choose. Silently turning it into BATCH would
+% change how an existing project runs without saying so.
+verifyError(testCase, ...
+    @() st_resolve_execution_mode('AUTO', filter_table(["OFF"; "OFF"])), ...
+    'simtest:RemovedExecutionMode');
+verifyError(testCase, ...
+    @() st_parse_workflow_options('ExecutionMode', 'auto'), ...
+    'simtest:RemovedExecutionMode');
 end
 
 
@@ -329,9 +338,8 @@ CoverageBoundaryMode = repmat("OFF", numel(CoverageFilterMode), 1);
 T = table(CoverageFilterMode, CoverageBoundaryMode);
 end
 
-function testAutoSelectsPerCutForBoundaryOnly(testCase)
+function testBoundaryOnlyFilterDoesNotForcePerCut(testCase)
 T = filter_table(["OFF"; "OFF"]);
 T.CoverageBoundaryMode(2) = "CUT_ONLY";
-verifyEqual(testCase, st_resolve_execution_mode('AUTO', T), 'PER_CUT');
 verifyEqual(testCase, st_resolve_execution_mode('BATCH', T), 'BATCH');
 end

@@ -284,10 +284,16 @@ cfg.OverwriteHarness = false;
 % false : Stop after Test Manager creation.
 cfg.RunGeneratedTests = true;
 
-% AUTO: use PER_CUT when any enabled target has an active CVF, otherwise
-% keep the legacy BATCH run(tf) path. BATCH rejects active CVFs. PER_CUT
-% always executes each enabled Test Case independently in Excel order.
-cfg.ExecutionMode = 'AUTO';
+% How the tests run. The caller decides; nothing in the workbook does.
+%
+% BATCH   : one run(tf) for every enabled Test Case. The default.
+% PER_CUT : run(tc) per Test Case, in Excel order, for Test Cases that only
+%           work when run alone. Also reruns only that Test Case after an
+%           expected-value update, instead of the whole Test File.
+%
+% Coverage filters no longer affect this choice: they are applied when the
+% artifacts are built, not while the tests run.
+cfg.ExecutionMode = 'BATCH';
 
 % Per-CUT execution continues after a Test Case/report failure only when
 % the transient coverage filter was restored and verified successfully.

@@ -290,9 +290,9 @@ Harness나 standalone 모델에서 CUT과 이름·인터페이스가 일치하�
 외부 최상위 Subsystem에는 `SubsystemAllContent`, 나머지 최상위 블록에는
 `BlockInstance` EXCLUDE 규칙을 표준 사유로 추가합니다.
 
-따라서 `CoverageFilterMode=OFF` + `CoverageBoundaryMode=CUT_ONLY`도 CVF를 만들며
-`ExecutionMode=AUTO`가 `PER_CUT`을 선택합니다. 둘 다 `OFF`이고 직속 하위 Subsystem이
-없으면 규칙 0개짜리 CVF가 만들어집니다. **오류가 아닙니다.**
+따라서 `CoverageFilterMode=OFF` + `CoverageBoundaryMode=CUT_ONLY`도 CVF를 만듭니다.
+둘 다 `OFF`이고 직속 하위 Subsystem이 없으면 규칙 0개짜리 CVF가 만들어집니다.
+**오류가 아닙니다.** CVF는 실행 방식을 바꾸지 않습니다.
 
 CVF는 저장 직후 다시 열어 규칙 수와 action을 검증합니다. 제대로 열리지 않으면 그
 CUT을 `FAIL`로 기록합니다.

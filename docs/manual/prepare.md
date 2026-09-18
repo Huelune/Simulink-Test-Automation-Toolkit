@@ -108,7 +108,7 @@ st_run_from_harness( ...
 
 | 옵션 | 기본값 | 역할 |
 | --- | --- | --- |
-| `ExecutionMode` | `AUTO` | 활성 CVF가 있으면 `PER_CUT`, 없으면 `BATCH`. 보통 그대로 둡니다 |
+| `ExecutionMode` | `BATCH` | 혼자 돌려야만 되는 Test Case가 있으면 `PER_CUT` |
 | `ExecuteTests` | `cfg.RunGeneratedTests` | `false`면 준비까지만 하고 실행하지 않습니다 |
 | `ContinueOnFailure` | `true` | 한 CUT이 실패해도 다음을 계속 처리합니다 |
 | `ReportMode` | `SUMMARY` | `FULL`은 PDF와 전체 Coverage HTML을 추가합니다 |
