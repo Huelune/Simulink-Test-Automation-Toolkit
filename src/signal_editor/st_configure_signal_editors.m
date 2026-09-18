@@ -327,7 +327,6 @@ for i = 1:n
                     i, ...
                     n, ...
                     matPath, ...
-                    dataFileFormat, ...
                     profile.EffectiveDataFile);
 
             ignoreUnexpectedSldvInputs = false;
@@ -614,10 +613,12 @@ end
 function templateMatPath = sldv_template_source_mat_path(currentMatPath)
 %SLDV_TEMPLATE_SOURCE_MAT_PATH Recover the stable pre-SLDV input template.
 %
-% A previous failed SLDV run can leave the block pointing at *_sldv.mat.
-% That output intentionally contains only UT_REQ scenarios, so it must not
-% be used as the next run's InputScenario template. Prefer its original
-% sibling whenever it exists; otherwise retain the current path.
+% Scenarios are written in place now, but a project prepared before that
+% change can still have its block pointing at *_sldv.mat. That output holds
+% only UT_REQ scenarios, so it must not be used as the next run's
+% InputScenario template. Prefer its original sibling whenever it exists;
+% otherwise retain the current path. Recreating the Harness drops the old
+% name and the block starts pointing at the plain Harness input again.
 
 currentMatPath = char(currentMatPath);
 [parentDir, baseName, extension] = fileparts(currentMatPath);
@@ -688,64 +689,37 @@ function targetMatPath = prepare_file_signal_editor_file( ...
         targetIndex, ...
         targetCount, ...
         sourceMatPath, ...
-        dataFileFormat, ...
         protectedInputPath)
 %PREPARE_FILE_SIGNAL_EDITOR_FILE
 % Select the MAT file that will become the Signal Editor block Filename.
 %
-% The actual content is written into a sibling temporary MAT file and only
-% replaces this target after round-trip Dataset validation succeeds.
+% The scenarios are written in place, into the file the Harness already
+% points at, so no second MAT appears beside it. The content still goes to
+% a sibling temporary file first and replaces the target only after the
+% round-trip Dataset validation succeeds.
 %
-% On later runs, a file already ending in the format suffix is reused.
-% The selected input file itself is never replaced.
+% The one file that is never written is the data file named in the
+% workbook. Overwriting that would destroy the user's own source, so a
+% target that resolves to it falls back to a '_prepared' sibling.
 
 sourceMatPath = ...
     char( ...
         java.io.File( ...
             char(sourceMatPath)).getCanonicalPath());
 
-[sourceDir, sourceBase, sourceExt] = ...
-    fileparts(sourceMatPath);
-
-if isempty(sourceExt)
-    sourceExt = '.mat';
-end
-
-suffix = ['_' lower(char(dataFileFormat))];
-
-preparedSuffix = '_prepared';
-hasFormatSuffix = length(sourceBase) >= length(suffix) && ...
-    strcmpi(sourceBase(end-length(suffix)+1:end), suffix);
-hasPreparedSuffix = length(sourceBase) >= length(preparedSuffix) && ...
-    strcmpi(sourceBase(end-length(preparedSuffix)+1:end), preparedSuffix);
-
-if (hasFormatSuffix || hasPreparedSuffix) && ...
-        ~same_file(sourceMatPath, protectedInputPath)
-
-    targetMatPath = ...
-        sourceMatPath;
-
-    st_log(cfg, 'TRACE', ...
-        '[SignalEditor %d/%d] reusing FILE Signal Editor MAT=%s', ...
-        targetIndex, targetCount, targetMatPath);
-
-    return;
-end
-
-targetMatPath = ...
-    fullfile( ...
-        sourceDir, ...
-        [sourceBase suffix sourceExt]);
-
-targetMatPath = ...
-    char( ...
-        java.io.File( ...
-            targetMatPath).getCanonicalPath());
+targetMatPath = sourceMatPath;
 
 if same_file(targetMatPath, protectedInputPath)
     [targetDir, targetBase, targetExt] = fileparts(targetMatPath);
+    if isempty(targetExt)
+        targetExt = '.mat';
+    end
     targetMatPath = char(java.io.File(fullfile(targetDir, ...
         [targetBase '_prepared' targetExt])).getCanonicalPath());
+    st_log(cfg, 'DEBUG', ...
+        ['[SignalEditor %d/%d] workbook data file is the Harness input; ' ...
+         'writing scenarios to a sibling instead | target=%s'], ...
+        targetIndex, targetCount, targetMatPath);
 end
 
 st_log(cfg, 'DEBUG', ...

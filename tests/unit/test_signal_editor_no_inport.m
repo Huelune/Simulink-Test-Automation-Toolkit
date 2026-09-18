@@ -60,3 +60,20 @@ verifyTrue(testCase, contains(source, ...
 verifyTrue(testCase, contains(source, ...
     'simtest:SignalEditorBlockAmbiguous'));
 end
+
+function testScenariosAreWrittenInPlaceWithoutFormatSuffix(testCase)
+% FILE mode used to leave a second MAT named after the data format beside
+% the Harness input. The Harness input is written in place now, so no
+% *_sldv.mat or *_mat.mat appears next to it.
+source = fileread(fullfile(st_project_root(), 'src', 'signal_editor', ...
+    'st_configure_signal_editors.m'));
+verifyFalse(testCase, contains(source, "suffix = ['_' lower(char(dataFileFormat))]"));
+verifyFalse(testCase, contains(source, 'hasFormatSuffix'));
+verifyTrue(testCase, contains(source, 'targetMatPath = sourceMatPath;'));
+
+% The workbook data file stays protected: writing scenarios into the user's
+% own source would destroy it.
+verifyTrue(testCase, contains(source, ...
+    'if same_file(targetMatPath, protectedInputPath)'));
+verifyTrue(testCase, contains(source, "[targetBase '_prepared' targetExt]"));
+end

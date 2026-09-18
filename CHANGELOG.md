@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- FILE mode no longer writes its Signal Editor scenarios to a sibling MAT
+  named after the data format. The scenarios go into the Harness input the
+  block already points at, so no `*_sldv.mat` or `*_mat.mat` appears beside
+  it. The workbook's own data file is still never written; a target that
+  resolves to it falls back to a `_prepared` sibling. A Harness prepared
+  before this change keeps pointing at its old `*_sldv.mat` until the
+  Harness is recreated.
 - A CUT whose block name contains `/` is now reachable from the workbook.
   Simulink writes such a name doubled in a block path, so the block actually
   named `OBC_..._AC/DC_Check` lives at `.../OBC_..._AC//DC_Check`. A CUTPath
