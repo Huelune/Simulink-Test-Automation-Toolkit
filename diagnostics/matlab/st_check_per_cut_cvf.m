@@ -266,10 +266,17 @@ generationStatus = upper(field_text( ...
     manifest, {'FilterGenerationStatus'}, ''));
 applyStatus = upper(field_text(manifest, {'FilterApplyStatus'}, ''));
 restoreStatus = upper(field_text(manifest, {'FilterRestoreStatus'}, ''));
+% Apply and restore describe filtering a model while it runs. A run that
+% leaves its coverage filters to st_collect_per_cut_results never touches
+% the model, so NOT_REQUIRED is the correct state there, not a failure.
+appliedDuringRun = strcmp(applyStatus, 'OK') && strcmp(restoreStatus, 'OK');
+deferredToCollect = strcmp(applyStatus, 'NOT_REQUIRED') && ...
+    strcmp(restoreStatus, 'NOT_REQUIRED');
 bits(2) = strcmp(generationStatus, 'OK') && ...
-    strcmp(applyStatus, 'OK') && strcmp(restoreStatus, 'OK');
+    (appliedDuringRun || deferredToCollect);
 if ~bits(2)
-    failures(end+1,1) = "B2 lifecycle status is not OK/OK/OK"; %#ok<AGROW>
+    failures(end+1,1) = ...
+        "B2 lifecycle status is not OK/OK/OK nor OK/NOT_REQUIRED/NOT_REQUIRED"; %#ok<AGROW>
 end
 
 savedRules = [];

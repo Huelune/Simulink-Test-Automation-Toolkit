@@ -67,7 +67,8 @@ st_run_standalone_coverage_pipeline( ...
 | --- | --- | --- |
 | 단계 재시작 | `st_check_readiness` | 선택 단계부터 실행 가능한 상태인지 검사 |
 | 단계 재시작 | `st_run_from_stage` | 선행 단계 검증 후 선택 단계부터 끝까지 실행 |
-| 결과 정리 | `st_generate_test_report` | 저장된 실행 기록에서 통합 보고서 생성 |
+| 결과 정리 | `st_generate_test_report` | 저장된 실행 기록에서 통합 보고서 생성 (BATCH) |
+| 결과 정리 | `st_collect_per_cut_results` | 저장된 CUT별 ResultSet에서 CVF와 보고서 생성 (PER_CUT) |
 | 내보내기 | `st_export_test_asset_bundle` | 선택 결과와 자산을 한 폴더로 |
 | 내보내기 | `st_export_test_bundle` | 다른 PC에서 재실행할 전체 번들 |
 | 검증 | `st_verify_all` | 환경·단위·fixture·실제 모델 종합 검증 |
@@ -420,6 +421,28 @@ reportInfo = st_generate_test_report('RunRecord', 'LATEST');
 > 기록이 없으면 `simtest:RunRecordPointerMissing`이 납니다. 실행을 먼저 하십시오.
 > `PER_CUT` 실행은 자체 보고서를 `result/per_cut_runs/`에 직접 쓰므로 이 명령을
 > 쓰지 않습니다.
+
+### `st_collect_per_cut_results`
+
+`PER_CUT` 실행이 저장한 CUT별 ResultSet에서 커버리지 필터와 보고서를 만듭니다.
+
+`PER_CUT`은 혼자 돌려야만 되는 Test Case를 위해 있습니다. CVF는 실행에 필요한
+것이 아니라 산출물의 커버리지 데이터를 다듬는 것이므로, 실행은 필터 없이 하고
+ResultSet만 저장합니다.
+
+```matlab
+info = st_collect_per_cut_results;
+info = st_collect_per_cut_results('RunId', 'LATEST', 'ReportMode', 'FULL');
+```
+
+| 옵션 | 기본값 | 역할 |
+| --- | --- | --- |
+| `RunId` | `'LATEST'` | 저장된 PER_CUT run의 id |
+| `ReportMode` | run의 기록값 | `'SUMMARY'` 또는 `'FULL'` |
+
+각 CUT 폴더의 `filter/`에 CVF를 만들고, 저장된 결과에 부착한 뒤 `initial/`과
+`final/`에 보고서를 씁니다. 이미 실행 중에 산출물을 만든 run(standalone 번들)은
+저장된 ResultSet이 없으므로 `SKIP`으로 보고합니다.
 
 ### `st_export_test_asset_bundle`
 

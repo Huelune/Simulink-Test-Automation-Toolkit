@@ -226,7 +226,11 @@ workflowResult = table(Stage, RunCount, CachedCount, FailCount);
 st_write_result('WorkflowResult', workflowResult);
 
 if executeTests && any(~failedCloneRows) && strcmp(executionMode, 'PER_CUT')
-    % st_run_tests_per_cut writes its report before each filter is restored.
+    if strcmpi(cfg.PerCutResultCollection, 'DEFERRED')
+        fprintf(['\nPER_CUT saved one ResultSet per CUT.\n' ...
+            'Build the coverage filters and reports with:\n' ...
+            '  st_collect_per_cut_results\n']);
+    end
 elseif executeTests && any(~failedCloneRows)
     % A ResultSet only exists inside this Test Manager session. Save it
     % before deciding whether to report, so collecting the results stays

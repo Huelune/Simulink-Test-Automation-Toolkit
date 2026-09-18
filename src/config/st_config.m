@@ -297,6 +297,14 @@ cfg.PerCutReportMode = 'SUMMARY';
 % recorded in the manifest, and skipped by default so later CUTs can run.
 cfg.PerCutFailOnNonPass = false;
 
+% PER_CUT exists so a Test Case that only works alone can run alone. The
+% coverage filter is not part of running: it shapes the coverage data of the
+% artifacts built from a run. DEFERRED runs each Test Case unfiltered, saves
+% its ResultSet, and leaves the CVF and the reports to
+% st_collect_per_cut_results. INLINE restores the old behaviour of doing all
+% of it inside the run.
+cfg.PerCutResultCollection = 'DEFERRED';
+
 
 %% ============================================================
 % Incremental preparation

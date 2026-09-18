@@ -428,6 +428,22 @@ ids = st_collect_warning_ids('LogFile', 'run.log');
 단계별 INI 결과 보고서를 `result/reports/`에 쓸지 정합니다. `false`로 하면 결과
 파일을 만들지 않습니다.
 
+### `PerCutResultCollection` — 기본 `'DEFERRED'`
+
+`PER_CUT` 실행이 커버리지 필터와 CUT별 보고서까지 만들지 정합니다.
+
+`PER_CUT`은 **혼자 돌려야만 되는 Test Case**를 위해 있습니다. 커버리지 필터는
+실행에 필요한 것이 아니라 실행 결과로 만드는 산출물의 커버리지 데이터를 다듬는
+것이므로, 기본값 `'DEFERRED'`는 실행을 필터 없이 하고 각 CUT의 ResultSet만
+저장합니다. CVF 생성과 부착, 보고서는 다음 명령이 합니다.
+
+```matlab
+st_collect_per_cut_results
+```
+
+`'INLINE'`은 예전처럼 실행 안에서 전부 처리합니다. standalone 번들은 실행 모델이
+일회용이라 나중에 다시 열 수 없으므로 항상 `'INLINE'`으로 동작합니다.
+
 ### `GenerateTestReport` — 기본 `false`
 
 테스트 실행 **직후에** 통합 보고서까지 만들지 정합니다. 기본은 만들지 않습니다.

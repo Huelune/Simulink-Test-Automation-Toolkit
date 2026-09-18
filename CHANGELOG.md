@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- `PER_CUT` 실행에서 커버리지 필터 처리를 결과물 생성 단계로 옮겼습니다.
+  `PER_CUT`은 혼자 돌려야만 되는 Test Case를 위해 있는 것이고, CVF는 실행에
+  필요한 것이 아니라 실행 결과로 만드는 산출물의 커버리지 데이터를 다듬는
+  것입니다. 그래서 실행은 각 Test Case를 필터 없이 돌리고 ResultSet만 저장한 뒤
+  끝납니다.
+  - 새 명령 `st_collect_per_cut_results`가 저장된 ResultSet에서 CVF를 만들고
+    부착한 다음 CUT별 보고서를 씁니다. 각 CUT 폴더의 `filter/`, `initial/`,
+    `final/` 구조는 그대로입니다.
+  - 새 설정 `cfg.PerCutResultCollection` (기본 `'DEFERRED'`). `'INLINE'`은
+    예전처럼 실행 안에서 전부 처리합니다.
+  - standalone 번들은 항상 `'INLINE'`입니다. 번들의 실행 모델은 일회용이라
+    나중에 다시 열어서 CVF를 붙이거나 커버리지를 렌더링할 수 없습니다. 즉
+    standalone은 EXECUTE가 곧 결과물 생성 단계입니다.
+  - 실행 중 모델에 필터를 걸었다가 복원하는 절차가 기본 경로에서 사라지므로,
+    `st_check_per_cut_cvf`의 B2 비트는 `OK/NOT_REQUIRED/NOT_REQUIRED`도
+    정상으로 봅니다. 적용과 복원은 살아 있는 모델을 필터링할 때의 개념이고,
+    이연된 실행은 둘 다 하지 않습니다.
 - 테스트를 실행하는 것과 결과를 정리하는 것을 분리했습니다. `st_run_from_harness`와
   `st_run_after_harness`는 준비 → 실행 → 기대값 갱신 → 재실행까지 하고 끝납니다.
   그다음은 두 갈래입니다. Harness를 독립 모델로 내보내 제출물을 만드는

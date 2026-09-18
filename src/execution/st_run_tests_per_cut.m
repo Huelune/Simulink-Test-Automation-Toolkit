@@ -26,6 +26,13 @@ addParameter(p, 'RunRootDirectory', '', ...
     @(x) ischar(x) || isstring(x));
 addParameter(p, 'GenerateResultArtifacts', true, ...
     @(x) islogical(x) && isscalar(x));
+% PER_CUT exists to run Test Cases in isolation. Coverage filters belong to
+% the artifacts built from a run, not to the run itself, so the default
+% leaves both to st_collect_per_cut_results. The standalone bundle runner
+% asks for INLINE because its execution models are disposable: nothing
+% could reopen them later to render coverage.
+addParameter(p, 'ResultCollection', '', ...
+    @(x) isempty(x) || (ischar(x) || isstring(x)));
 addParameter(p, 'WriteRunSummaryExcel', true, ...
     @(x) islogical(x) && isscalar(x));
 addParameter(p, 'SaveTestResult', false, ...
@@ -52,12 +59,30 @@ saveTestResult = logical(p.Results.SaveTestResult);
 resultFile = strtrim(char(string(p.Results.ResultFile)));
 capturePackageEvidence = logical(p.Results.CapturePackageEvidence);
 loadRuntimeModel = logical(p.Results.LoadRuntimeModel);
+resultCollection = upper(strtrim(char(string(p.Results.ResultCollection))));
+% Reject a bad mode before loading anything, so the caller is told what is
+% wrong instead of watching a model open first.
+require_result_collection(resultCollection, true);
 if saveTestResult && isempty(resultFile)
     error('simtest:PerCutResultFileRequired', ...
         'ResultFile is required when SaveTestResult=true.');
 end
 
 cfg = st_require_runtime_target('LoadModel', loadRuntimeModel);
+if isempty(resultCollection)
+    resultCollection = upper(strtrim(char(string( ...
+        cfg.PerCutResultCollection))));
+    require_result_collection(resultCollection, false);
+end
+deferResults = strcmp(resultCollection, 'DEFERRED');
+if deferResults
+    % Nothing may filter what the run collects. The collect step attaches
+    % the CVF to the saved coverage data instead. The recorded mode has to
+    % say so, otherwise the manifest claims a filtering that never ran.
+    applyManagedFiltersDuringRun = false;
+    generateResultArtifacts = false;
+    resultFilterMode = 'DEFERRED';
+end
 existingFilterPolicy = st_coverage_filter_existing_policy( ...
     cfg.CoverageFilterExistingPolicy);
 if ~strcmp(st_coverage_filter_application_mode( ...
@@ -262,7 +287,7 @@ for i = 1:n
         VerifyTimingStatus(i) = validate_verify_timing( ...
             initialResult, 'initial', row, cfg, i, n, ...
             char(TestCaseName(i)), logPath);
-        if ~applyManagedFiltersDuringRun && ...
+        if ~deferResults && ~applyManagedFiltersDuringRun && ...
                 st_coverage_filter_active(row)
             FilterGenerationStatus(i) = "STARTED";
             [filterFile, generationStatus, ruleCount, filterHash] = ...
@@ -336,7 +361,7 @@ for i = 1:n
                 VerifyTimingStatus(i), ...
                 validate_verify_timing(finalResult, 'final', row, cfg, ...
                     i, n, char(TestCaseName(i)), logPath)));
-            if ~applyManagedFiltersDuringRun && ...
+            if ~deferResults && ~applyManagedFiltersDuringRun && ...
                     st_coverage_filter_active(row)
                 ResultFilterStatus(i) = "STARTED";
                 attachInfo = st_apply_result_coverage_filters( ...
@@ -426,6 +451,25 @@ for i = 1:n
                 error('simtest:PerCutFinalReportFailed', ...
                     'Final report is incomplete: %s', finalInfo.Summary);
             end
+        end
+        elseif deferResults
+        % Save what the run produced and stop. st_collect_per_cut_results
+        % generates the CVF, attaches it to this coverage data and builds
+        % the reports.
+        append_event(logPath, i, 'EXPORT_DEFERRED_START', targetDirectory);
+        initialSaved = export_deferred_result( ...
+            initialResult, initialDirectory);
+        artifacts = append_artifacts(artifacts, No(i), "INITIAL", ...
+            deferred_artifact_row(initialSaved));
+        if RerunPerformed(i)
+            finalSaved = export_deferred_result(finalResult, finalDirectory);
+            artifacts = append_artifacts(artifacts, No(i), "FINAL", ...
+                deferred_artifact_row(finalSaved));
+        end
+        append_event(logPath, i, 'EXPORT_DEFERRED_DONE', targetDirectory);
+        if st_coverage_filter_active(row)
+            FilterGenerationStatus(i) = "DEFERRED";
+            ResultFilterStatus(i) = "DEFERRED";
         end
         end
 
@@ -756,6 +800,25 @@ if isempty(combined)
 else
     combined = [combined; added];
 end
+end
+
+
+function path = export_deferred_result(resultObj, folder)
+%EXPORT_DEFERRED_RESULT Save one ResultSet for the collect step to read.
+if ~isfolder(folder), mkdir(folder); end
+path = fullfile(folder, 'Results.mldatx');
+sltest.testmanager.exportResults(resultObj, path);
+if ~isfile(path)
+    error('simtest:PerCutDeferredResultMissing', ...
+        'Deferred ResultSet export did not create %s.', path);
+end
+end
+
+
+function T = deferred_artifact_row(path)
+T = table("MLDATX", string(path), "OK", ...
+    "Saved for st_collect_per_cut_results", ...
+    'VariableNames', {'Type','Path','Status','Message'});
 end
 
 
@@ -1173,6 +1236,16 @@ if ispc
     tf = strcmpi(left, right);
 else
     tf = strcmp(left, right);
+end
+end
+
+function require_result_collection(value, allowEmpty)
+if allowEmpty && isempty(value)
+    return;
+end
+if ~ismember(value, {'INLINE','DEFERRED'})
+    error('simtest:InvalidPerCutResultCollection', ...
+        'ResultCollection must be INLINE or DEFERRED. Actual=%s', value);
 end
 end
 
