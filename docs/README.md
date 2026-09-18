@@ -50,6 +50,7 @@ st_run_standalone_coverage_pipeline( ...
 
 | 상황 | 문서 |
 | --- | --- |
+| 도구 없이 GUI로 직접 하는 절차를 팀에 교육하기 | [수동 작업 매뉴얼 PPT](training/README.md) |
 | 실행 없이 테스트 명세서 Excel 뽑기 | [테스트 명세서 추출](test-specification.md) |
 | 실제 모델 없이 예제로 연습 | [익명 예제 생성](manual/example.md) |
 | 중간 단계부터 재시작, 결과 재생성 | [재시작](manual/restart.md) |
