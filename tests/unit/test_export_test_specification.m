@@ -272,7 +272,8 @@ originalPath = path;
 restorePath = onCleanup(@() path(originalPath)); %#ok<NASGU>
 addpath(fullfile(st_project_root(), 'tests', 'fixtures'));
 files = [dir(fullfile(folder, 'st_*specification*.m')); ...
-    dir(fullfile(folder, 'st_specification_*.m'))];
+    dir(fullfile(folder, 'st_specification_*.m')); ...
+    dir(fullfile(folder, 'st_*workbook*.m'))];
 for i = 1:numel(files)
     % A forbidden name spelled inside a comment or a documentation string
     % is not a call, so scan the executable text only.
