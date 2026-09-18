@@ -13,6 +13,11 @@ function reportInfo = st_generate_test_report(varargin)
 
 cfg = st_require_runtime_target();
 [runContext, workflowResult, workflowPlan] = resolve_inputs(cfg, varargin{:});
+% Every step below reads a ResultSet that may have come from a file, which is
+% much slower than the live objects this used to run on. Announce each step so
+% a slow one is distinguishable from a hang.
+step = @(text) st_log(cfg, 'INFO', 'Report step | %s', text);
+step('Loading targets');
 targetConfig = st_load_targets(cfg.OnlyEnabled);
 runInfo = st_report_run_context(runContext);
 
@@ -28,9 +33,14 @@ artifacts = empty_artifact_table();
 targets = empty_target_table();
 iterations = empty_iteration_table();
 coverage = empty_coverage_table();
+step('Loading the models the coverage data refers to');
+artifacts = load_models_for_coverage(artifacts, targetConfig, cfg);
+
+step('Generating and attaching coverage filters');
 [coverageFilters, artifacts] = resolve_coverage_filters( ...
     artifacts, runContext, targetConfig, cfg);
 
+step('Collecting the test result hierarchy');
 try
     [initialTargets, initialIterations] = ...
         st_collect_test_result_summary( ...
@@ -47,6 +57,7 @@ catch ME
         'FAIL', ME.message);
 end
 
+step('Collecting coverage');
 try
     initialCoverage = st_collect_coverage_summary( ...
         runContext.InitialResult, targetConfig, 'INITIAL');
@@ -67,6 +78,7 @@ catch ME
         'FAIL', ME.message);
 end
 
+step('Exporting the raw ResultSets');
 initialRaw = fullfile(rawDirectory, 'InitialResults.mldatx');
 artifacts = export_result_artifact(artifacts, ...
     runContext.InitialResult, initialRaw);
@@ -74,6 +86,7 @@ finalRaw = fullfile(rawDirectory, 'FinalResults.mldatx');
 artifacts = export_result_artifact(artifacts, ...
     runContext.FinalResult, finalRaw);
 
+step('Writing the official PDF reports');
 initialPdf = fullfile(officialDirectory, 'InitialTestResults.pdf');
 artifacts = official_report_artifact(artifacts, ...
     runContext.InitialResult, initialPdf, 'Initial Test Results');
@@ -81,9 +94,11 @@ finalPdf = fullfile(officialDirectory, 'FinalTestResults.pdf');
 artifacts = official_report_artifact(artifacts, ...
     runContext.FinalResult, finalPdf, 'Final Test Results');
 
+step('Rendering the coverage HTML');
 artifacts = coverage_html_artifacts(artifacts, ...
     runContext.FinalResult, coverageDirectory);
 
+step('Writing the summary workbook');
 summaryPath = fullfile(runDirectory, 'TestSummary.xlsx');
 try
     write_summary_workbook(summaryPath, targets, iterations, coverage, ...
@@ -297,6 +312,56 @@ manifest = struct( ...
     'Artifacts', table2struct(artifacts));
 end
 
+function artifacts = load_models_for_coverage(artifacts, targetConfig, cfg)
+%LOAD_MODELS_FOR_COVERAGE Coverage data needs the models it points at.
+%
+% A ResultSet read back from a file carries block paths, not handles. On the
+% first coverage read Simulink Coverage rebuilds that handle map through
+% cvi.TopModelCov.updateModelHandles, and with the models unloaded the walk
+% does not finish in any useful time. It used to be free because the session
+% that ran the tests still had everything open. Loading them first turns the
+% walk back into a lookup.
+
+loaded = strings(0,1);
+failures = strings(0,1);
+try
+    if ~bdIsLoaded(cfg.TopModel)
+        load_system(cfg.ModelFile);
+        loaded(end+1,1) = string(cfg.TopModel);
+    end
+catch ME
+    failures(end+1,1) = string(cfg.TopModel) + ": " + string(ME.message);
+end
+
+for i = 1:height(targetConfig)
+    row = targetConfig(i,:);
+    harness = char(string(row.HarnessName));
+    if isempty(harness) || bdIsLoaded(harness)
+        continue;
+    end
+    try
+        owner = st_normalize_cut_path(row.CUTPath, cfg.TopModel);
+        sltest.harness.load(owner, harness);
+        loaded(end+1,1) = string(harness); %#ok<AGROW>
+    catch ME
+        % A Harness that cannot be opened only costs this CUT its coverage
+        % rows, so report it and keep going.
+        failures(end+1,1) = string(harness) + ": " + string(ME.message); %#ok<AGROW>
+    end
+end
+
+st_log(cfg, 'INFO', ...
+    'Report step | Models loaded for coverage | loaded=%d | failed=%d', ...
+    numel(loaded), numel(failures));
+if isempty(failures)
+    artifacts = record_artifact(artifacts, 'MODEL_LOAD', '', 'OK', ...
+        sprintf('%d model(s) loaded for coverage access', numel(loaded)));
+else
+    artifacts = record_artifact(artifacts, 'MODEL_LOAD', '', 'FAIL', ...
+        char(strjoin(failures, ' | ')));
+end
+end
+
 function [T, artifacts] = resolve_coverage_filters( ...
         artifacts, runContext, targetConfig, cfg)
 %RESOLVE_COVERAGE_FILTERS Generate the CVFs and register them on the results.
@@ -314,6 +379,7 @@ if ~any(active)
     return;
 end
 try
+    st_log(cfg, 'INFO', 'Report step | Generating coverage filter files');
     T = st_prepare_coverage_filters();
     failed = T(T.Status == "FAIL", :);
     if height(failed) > 0
@@ -334,6 +400,9 @@ try
         resultSets{end+1} = runContext.FinalResult;
     end
     for k = 1:numel(resultSets)
+        st_log(cfg, 'INFO', ...
+            'Report step | Attaching coverage filters to ResultSet %d/%d', ...
+            k, numel(resultSets));
         attachInfo = st_apply_result_coverage_filters( ...
             resultSets{k}, cellstr(files), cfg, 'RequireCoverage', true);
         if ~strcmp(attachInfo.Status, 'OK')
