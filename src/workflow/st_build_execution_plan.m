@@ -67,16 +67,11 @@ for i = 1:n
     end
 
     if testFileChanged
-        dirty(7:8) = true;
-        reasons(7:8) = "Test File artifact changed";
-    end
-
-    perCutCoverage = isfield(cfg, 'ExecutionMode') && ...
-        strcmpi(char(string(cfg.ExecutionMode)), 'PER_CUT');
-    if ~perCutCoverage && st_coverage_filter_active(T(i,:)) && ...
-            ~isfile(st_coverage_filter_file(T(i,:), cfg))
-        dirty(6) = true;
-        reasons(6) = "Coverage filter artifact is missing";
+        % Look the stages up by name. A positional literal here silently
+        % pointed at the wrong stage the moment the stage list changed.
+        testFileStages = stages == "TEST_MANAGER" | stages == "ALIGNMENT";
+        dirty(testFileStages) = true;
+        reasons(testFileStages) = "Test File artifact changed";
     end
 
     if ~isfile(cfg.SldvManifestFile)

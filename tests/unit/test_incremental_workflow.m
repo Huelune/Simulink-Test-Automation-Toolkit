@@ -113,3 +113,19 @@ verifyEqual(testCase, one, two);
 verifyNotEqual(testCase, one, three);
 verifyEqual(testCase, strlength(string(one)), 64);
 end
+
+function testStageIndicesFollowTheStageList(testCase)
+% The plan builder used to mark stages by position. Those literals were
+% written for an eight-stage list and pointed at the wrong stages as soon as
+% COVERAGE_FILTER was removed: a changed Test File stopped invalidating
+% TEST_MANAGER and started writing past the end of the dirty vector.
+source = fileread(fullfile(st_project_root(), 'src', 'workflow', ...
+    'st_build_execution_plan.m'));
+
+% dirty(1) is HARNESS and dirty(2:end) is "everything after it"; both hold
+% whatever the list contains. A numeric range like dirty(7:8) does not.
+verifyEmpty(testCase, regexp(source, 'dirty\(\d+:\d+\)', 'once'));
+verifyEmpty(testCase, regexp(source, 'reasons\(\d+:\d+\)', 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'stages == "TEST_MANAGER" \| stages == "ALIGNMENT"', 'once'));
+end
