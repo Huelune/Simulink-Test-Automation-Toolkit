@@ -67,6 +67,7 @@ st_run_standalone_coverage_pipeline( ...
 | --- | --- | --- |
 | 단계 재시작 | `st_check_readiness` | 선택 단계부터 실행 가능한 상태인지 검사 |
 | 단계 재시작 | `st_run_from_stage` | 선행 단계 검증 후 선택 단계부터 끝까지 실행 |
+| 결과 정리 | `st_generate_test_report` | 저장된 실행 기록에서 통합 보고서 생성 |
 | 내보내기 | `st_export_test_asset_bundle` | 선택 결과와 자산을 한 폴더로 |
 | 내보내기 | `st_export_test_bundle` | 다른 PC에서 재실행할 전체 번들 |
 | 검증 | `st_verify_all` | 환경·단위·fixture·실제 모델 종합 검증 |
@@ -390,7 +391,35 @@ Action의 역할:
 자세한 내용은 [Standalone Coverage 파이프라인](standalone-coverage-pipeline.md)에
 있습니다.
 
-## 9. 내보내기
+## 9. 결과 정리와 내보내기
+
+실행이 끝나면 두 갈래로 나뉩니다.
+
+| 갈래 | 명령 | 하는 일 |
+| --- | --- | --- |
+| Harness를 내보내지 않고 결과만 정리 | `st_generate_test_report` → `st_export_test_asset_bundle` | 저장된 실행 기록에서 통합 보고서를 만들고, 필요한 자산을 한 폴더에 모읍니다 |
+| Standalone 제출물 | `st_run_standalone_coverage_pipeline` | Harness를 독립 모델로 내보내 번들 안에서 다시 실행하고 제출물을 만듭니다 |
+
+### `st_generate_test_report`
+
+테스트 실행이 남긴 기록에서 통합 보고서를 만듭니다. Test Manager의 ResultSet은
+그 실행을 한 MATLAB 세션 안에서만 살아 있으므로, 실행이 `result/run_records/`에
+ResultSet과 표를 저장해 둡니다. 이 명령은 그것을 다시 읽습니다.
+
+```matlab
+reportInfo = st_generate_test_report('RunRecord', 'LATEST');
+```
+
+| 옵션 | 기본값 | 역할 |
+| --- | --- | --- |
+| `RunRecord` | — | `'LATEST'` 또는 저장된 기록 id |
+
+만들어진 `result/runs/{RunId}`와 `result/latest.json`은 곧바로
+`st_export_test_asset_bundle`의 입력이 됩니다.
+
+> 기록이 없으면 `simtest:RunRecordPointerMissing`이 납니다. 실행을 먼저 하십시오.
+> `PER_CUT` 실행은 자체 보고서를 `result/per_cut_runs/`에 직접 쓰므로 이 명령을
+> 쓰지 않습니다.
 
 ### `st_export_test_asset_bundle`
 
@@ -571,7 +600,7 @@ plan = st_cleanup_results('Scope','STATE','Apply',true);  % 실제 삭제
 | `REPORTS` | `result/reports` |
 | `SLDV` | `result/sldv` (지우면 SLDV 준비를 다시 해야 합니다) |
 | `STATE` | `result/state` (다음 `AUTO`에서 준비 단계를 다시 평가합니다) |
-| `RUNS` | `result/runs`, `latest.json`, `TestSummary.xlsx` |
+| `RUNS` | `result/runs`, `latest.json`, `TestSummary.xlsx`, `result/run_records`, `run_record_latest.json` |
 | `PER_CUT_RUNS` | `result/per_cut_runs`, `per_cut_latest.json` |
 | `EXPORTS` | `result/exports` |
 | `VERIFICATION` | `result/verification` |
@@ -623,5 +652,6 @@ plan = st_cleanup_results('Scope','STATE','Apply',true);  % 실제 삭제
 | `st_create_test_manager` | Test File, Test Case, Iteration 구성 | `TestManagerResult.ini` |
 | `st_validate_scenario_alignment` | Scenario와 Iteration 정렬 검사 | `ScenarioAlignmentResult.ini` |
 
-`st_run_workflow`, 보고서 작성 함수, 세부 변환 함수는 공개 명령을 지원하는 내부
-구현이므로 직접 실행 목록에서 제외합니다.
+`st_run_workflow`와 세부 변환 함수는 공개 명령을 지원하는 내부 구현이므로 직접
+실행 목록에서 제외합니다. `st_generate_test_report`는 실행과 결과 정리가 갈라지는
+지점이라 [9절](#9-결과-정리와-내보내기)에 공개 명령으로 두었습니다.

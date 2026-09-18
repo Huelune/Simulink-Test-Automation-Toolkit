@@ -375,7 +375,20 @@ cfg.CoverageFilterExistingPolicy = 'REPLACE';
 cfg.CoverageFilterDir = ...
     fullfile(rootDir, 'result', 'coverage_filters');
 
-cfg.GenerateTestReport = true;
+% Running the tests and collecting the results are separate steps. The run
+% saves a record of itself either way, so the integrated report can be built
+% afterwards with st_generate_test_report('RunRecord','LATEST'). Set this to
+% true to have the workflow build it immediately instead.
+cfg.GenerateTestReport = false;
+
+% One saved run per directory: the INITIAL/FINAL ResultSets plus the tables
+% the report needs. A ResultSet only exists inside a Test Manager session,
+% so without this the report could never be produced later.
+cfg.RunRecordRootDir = ...
+    fullfile(rootDir, 'result', 'run_records');
+cfg.LatestRunRecordPointer = ...
+    fullfile(rootDir, 'result', 'run_record_latest.json');
+
 cfg.TestRunRootDir = ...
     fullfile(rootDir, 'result', 'runs');
 cfg.LatestReportPointer = ...

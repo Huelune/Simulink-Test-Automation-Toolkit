@@ -285,8 +285,16 @@ else
     label = 'integrated';
 end
 if ~isfile(pointer)
+    % Collecting the results is a separate step, so a saved run with no
+    % report yet is an ordinary state rather than a missing artifact.
+    message = ['No latest ' label ' report'];
+    if isfile(cfg.LatestRunRecordPointer)
+        message = [message ...
+            '; a run record is saved. Collect it with ' ...
+            'st_generate_test_report(''RunRecord'', ''LATEST'')'];
+    end
     checks = st_verification_check('LATEST_REPORT', 'REPORTING', ...
-        profile, target, false, 'WARN', ['No latest ' label ' report']);
+        profile, target, false, 'WARN', message);
     return;
 end
 try

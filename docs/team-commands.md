@@ -210,15 +210,20 @@ st_run_from_harness('ExecuteTests', false);
 Test Case까지만 만들고 멈춥니다. 실행은 Test Manager에서 직접 하거나 나중에 다시
 이 명령을 부르면 됩니다.
 
-#### 결과 보기
+#### 결과 정리하고 보기
+
+BATCH 실행은 결과 기록만 남기고 끝납니다. 보고서는 원할 때 만듭니다.
 
 ```matlab
+st_generate_test_report('RunRecord', 'LATEST');
+
 cfg = st_config();
 winopen(cfg.LatestSummaryFile)
 ```
 
 실행별 상세 결과는 `result/runs/`(BATCH) 또는 `result/per_cut_runs/`(PER_CUT)
-아래에 있습니다.
+아래에 있습니다. `PER_CUT`은 실행 중에 자체 보고서를 쓰므로 위 명령이 필요하지
+않습니다.
 
 ### `st_export_test_specification`
 

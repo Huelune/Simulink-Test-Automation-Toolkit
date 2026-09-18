@@ -428,9 +428,19 @@ ids = st_collect_warning_ids('LogFile', 'run.log');
 단계별 INI 결과 보고서를 `result/reports/`에 쓸지 정합니다. `false`로 하면 결과
 파일을 만들지 않습니다.
 
-### `GenerateTestReport` — 기본 `true`
+### `GenerateTestReport` — 기본 `false`
 
-테스트 실행 후 통합 보고서를 만들지 정합니다.
+테스트 실행 **직후에** 통합 보고서까지 만들지 정합니다. 기본은 만들지 않습니다.
+
+실행과 결과 정리는 별개의 단계이기 때문입니다. 실행이 끝나면 어느 쪽이든
+`result/run_records/`에 실행 기록이 남고, 나중에 원할 때 보고서를 만듭니다.
+
+```matlab
+st_generate_test_report('RunRecord', 'LATEST')
+```
+
+`true`로 두면 예전처럼 실행이 끝나자마자 보고서까지 만듭니다. 실행 기록은
+그래도 남습니다.
 
 ## 13. 경로 설정 (보통 그대로 둡니다)
 
@@ -442,6 +452,7 @@ ids = st_collect_warning_ids('LogFile', 'run.log');
 | `ResultReportDir` | `result/reports/` | 단계별 INI 결과 |
 | `SldvDir` | `result/sldv/` | SLDV 생성 데이터와 manifest |
 | `WorkflowStateFile` | `result/state/workflow_state.mat` | 증분 준비 checkpoint |
+| `RunRecordRootDir` | `result/run_records/` | 저장된 실행 기록 (ResultSet 포함) |
 | `TestRunRootDir` | `result/runs/` | BATCH 실행 보고서 |
 | `PerCutRunRootDir` | `result/per_cut_runs/` | PER_CUT 실행 보고서 |
 | `CoverageFilterDir` | `result/coverage_filters/` | 자동 생성 CVF |
@@ -449,6 +460,7 @@ ids = st_collect_warning_ids('LogFile', 'run.log');
 | `StandaloneCoverageRootDir` | `result/standalone_coverage/` | standalone 제출물 |
 | `VerificationRootDir` | `result/verification/` | 종합 검증 결과 |
 | `LatestReportPointer` | `result/latest.json` | 최신 BATCH 실행 위치 |
+| `LatestRunRecordPointer` | `result/run_record_latest.json` | 최신 실행 기록 위치 |
 | `PerCutLatestPointer` | `result/per_cut_latest.json` | 최신 PER_CUT 실행 위치 |
 
 `CoverageFilterDir` 밖에 있는 `.cvf` 파일은 사람이 만든 수동 필터로 간주하며 이

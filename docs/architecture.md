@@ -96,6 +96,10 @@ major 릴리스까지 호환 wrapper로 남겨야 합니다.
 ### 결과와 보고서
 
 - 보고서는 재현 가능한 출력이며 다음 실행의 입력이 아닙니다.
+- 테스트를 실행하는 것과 결과를 정리하는 것은 별개의 단계입니다. 실행은
+  `result/run_records` 아래에 ResultSet과 표를 저장하고 끝나며, 보고서는 그
+  기록에서 나중에 만듭니다. ResultSet은 그것을 만든 Test Manager 세션 안에서만
+  살아 있으므로, 이 기록이 없으면 보고서는 실행한 세션에서만 만들 수 있습니다.
 - 각 테스트 실행은 `result/runs` 아래에 불변 디렉터리 하나를 소유합니다. 초기·최종
   ResultSet은 서로 구분되며, `result/latest.json`과 최신 workbook은 교체 가능한
   pointer입니다.

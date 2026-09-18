@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- 테스트를 실행하는 것과 결과를 정리하는 것을 분리했습니다. `st_run_from_harness`와
+  `st_run_after_harness`는 준비 → 실행 → 기대값 갱신 → 재실행까지 하고 끝납니다.
+  그다음은 두 갈래입니다. Harness를 독립 모델로 내보내 제출물을 만드는
+  `st_run_standalone_coverage_pipeline`, 또는 Harness를 내보내지 않고 결과만
+  정리하는 `st_generate_test_report` → `st_export_test_asset_bundle`입니다.
+  - Test Manager의 ResultSet은 그것을 만든 세션 안에서만 살아 있어서, 통합
+    보고서는 테스트를 실행한 그 세션만 만들 수 있었습니다. 이제 실행이
+    `result/run_records/{id}/`에 INITIAL/FINAL ResultSet과 표를 저장합니다.
+    재실행이 없었으면 두 라벨이 같은 ResultSet을 가리키므로 파일 하나만 남깁니다.
+  - `st_generate_test_report('RunRecord','LATEST')`가 저장된 기록에서 보고서를
+    만듭니다. 인자 없이 불러도 같습니다. 기존 3인자 형태는 workflow가 쓰는 live
+    경로로 남습니다.
+  - `cfg.GenerateTestReport` 기본값이 `true`에서 **`false`로 바뀌었습니다.** 실행
+    기록은 이 값과 무관하게 항상 저장하므로, 예전처럼 실행 직후 보고서가 필요하면
+    `true`로 두면 됩니다.
+  - 보고서가 아직 없을 때 `st_export_test_asset_bundle`과 `st_export_test_bundle`의
+    오류 메시지가 무엇을 먼저 실행해야 하는지 알려 줍니다. `st_verify_all`의
+    LATEST_REPORT 검사는 실행 기록이 있으면 그 사실을 함께 보고합니다.
+  - `PER_CUT` 실행은 그대로입니다. 실행 중에 `result/per_cut_runs/`에 자체 보고서를
+    쓰므로 이 경로를 쓰지 않습니다.
 - `COVERAGE_FILTER`는 더 이상 준비 단계가 아닙니다. 커버리지 필터는 실행하는
   쪽이 만듭니다. `BATCH`는 `st_run_generated_tests`가 실행 직전에, `PER_CUT`은
   `st_run_tests_per_cut`이 CUT 폴더 안에서, standalone 파이프라인은 내보낸 번들

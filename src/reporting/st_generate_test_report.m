@@ -1,8 +1,18 @@
-function reportInfo = ...
-    st_generate_test_report(runContext, workflowResult, workflowPlan)
+function reportInfo = st_generate_test_report(varargin)
 %ST_GENERATE_TEST_REPORT Create one local bundle for a complete test run.
+%
+% st_generate_test_report
+% st_generate_test_report('RunRecord', 'LATEST')
+% st_generate_test_report('RunRecord', recordId)
+% st_generate_test_report(runContext, workflowResult, workflowPlan)
+%
+% The RunRecord form rebuilds the report from a saved run, so collecting
+% results is a step of its own rather than something only the session that
+% ran the tests can do. The three-argument form is the live path used by
+% the workflow itself.
 
 cfg = st_require_runtime_target();
+[runContext, workflowResult, workflowPlan] = resolve_inputs(cfg, varargin{:});
 targetConfig = st_load_targets(cfg.OnlyEnabled);
 runInfo = st_report_run_context(runContext);
 
@@ -130,6 +140,26 @@ if reportInfo.FailedArtifactCount > 0
         ['Integrated report completed with %d failed artifact(s). ' ...
          'See %s.'], reportInfo.FailedArtifactCount, manifestPath);
 end
+end
+
+function [runContext, workflowResult, workflowPlan] = ...
+    resolve_inputs(cfg, varargin)
+if isempty(varargin)
+    % The public form: collect the results of the last finished run.
+    varargin = {'RunRecord', 'LATEST'};
+end
+if numel(varargin) == 2 && (ischar(varargin{1}) || isstring(varargin{1})) && ...
+        strcmpi(char(string(varargin{1})), 'RunRecord')
+    [runContext, workflowResult, workflowPlan] = ...
+        st_load_run_record(varargin{2}, cfg);
+    return;
+end
+if numel(varargin) ~= 3
+    error('simtest:InvalidReportInputs', ...
+        ['Call st_generate_test_report(''RunRecord'', id) or ' ...
+         'st_generate_test_report(runContext, workflowResult, plan).']);
+end
+[runContext, workflowResult, workflowPlan] = varargin{:};
 end
 
 function artifacts = export_result_artifact(artifacts, resultObj, path)

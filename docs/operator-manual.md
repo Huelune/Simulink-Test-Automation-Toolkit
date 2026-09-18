@@ -342,6 +342,28 @@ summary = st_check_actual_system();            % 환경+실행+CVF 18비트
 
 ## 8. 결과 구조
 
+### 8.0 실행 기록과 결과 정리
+
+실행과 결과 정리는 별개의 단계입니다. 실행이 끝나면 아래가 남습니다.
+
+```text
+result/run_records/{record-id}/
+├── initial.mldatx     # INITIAL ResultSet
+├── final.mldatx       # 재실행이 있었을 때만 별도 파일
+└── run_record.mat     # 기대값 갱신·커버리지 필터·workflow 표
+result/run_record_latest.json
+```
+
+Test Manager의 ResultSet은 그 실행을 한 MATLAB 세션 안에서만 살아 있습니다.
+이 기록이 있어야 나중에, 또는 다른 세션에서 보고서를 만들 수 있습니다.
+
+```matlab
+st_generate_test_report('RunRecord', 'LATEST')
+```
+
+이 명령이 아래 8.1의 통합 보고서를 만듭니다. `cfg.GenerateTestReport = true`로
+두면 실행 직후 자동으로 만들어집니다 (기본은 `false`).
+
 ### 8.1 BATCH 통합 보고서
 
 ```text
