@@ -4,6 +4,7 @@ function info = st_collect_per_cut_results(varargin)
 % st_collect_per_cut_results
 % st_collect_per_cut_results('RunId', 'LATEST')
 % st_collect_per_cut_results('RunId', runId, 'ReportMode', 'FULL')
+% st_collect_per_cut_results('OnlyPassed', true)
 %
 % PER_CUT runs a Test Case alone because some Test Cases only work alone.
 % The coverage filter is not part of that: it shapes the coverage data of
@@ -13,13 +14,21 @@ function info = st_collect_per_cut_results(varargin)
 %
 % A run that already built its artifacts inline (the standalone bundle) has
 % nothing to collect and is reported as such.
+%
+% OnlyPassed skips every target whose FinalOutcome is not PASSED. A CUT that
+% failed is going to be fixed and run again, and the artifacts of the failed
+% run would only be replaced, so building them is wasted time. The default
+% collects everything, because a failure report is evidence in its own
+% right when nobody intends to rerun.
 
 p = inputParser;
 p.FunctionName = mfilename;
 addParameter(p, 'RunId', 'LATEST', @(x) ischar(x) || isstring(x));
 addParameter(p, 'ReportMode', '', ...
     @(x) isempty(x) || ismember(upper(string(x)), ["SUMMARY","FULL"]));
+addParameter(p, 'OnlyPassed', false, @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
+onlyPassed = logical(p.Results.OnlyPassed);
 
 cfg = st_require_runtime_target();
 [runId, runDirectory, manifest] = resolve_run(cfg, p.Results.RunId);
@@ -32,13 +41,17 @@ targets = struct2table(manifest.Targets, 'AsArray', true);
 config = st_load_targets(cfg.OnlyEnabled);
 
 st_log(cfg, 'INFO', ...
-    'PER_CUT collect start | RunId=%s | Targets=%d | ReportMode=%s', ...
-    runId, height(targets), reportMode);
+    ['PER_CUT collect start | RunId=%s | Targets=%d | ReportMode=%s | ' ...
+     'OnlyPassed=%s'], ...
+    runId, height(targets), reportMode, string(onlyPassed));
 
 fprintf('\n============================================\n');
 fprintf('Collect PER_CUT Results\n');
 fprintf('Run       : %s\n', runId);
 fprintf('Directory : %s\n', runDirectory);
+if onlyPassed
+    fprintf('Scope     : targets with FinalOutcome=PASSED\n');
+end
 fprintf('============================================\n');
 
 % The standalone pipeline refuses to run while the Top Model is loaded, so
@@ -54,6 +67,17 @@ totalTimer = tic;
 
 for i = 1:height(targets)
     testCaseName = string(targets.TestCaseName(i));
+    % Decided from the manifest alone, before the workbook lookup: a target
+    % that produces nothing does not need its workbook row.
+    outcome = target_outcome(targets, i);
+    if onlyPassed && outcome ~= "PASSED"
+        Collected(i) = "SKIP";
+        Message(i) = "FinalOutcome=" + outcome + ...
+            "; not collected because OnlyPassed=true";
+        fprintf('[%d/%d] %s | SKIP (FinalOutcome=%s)\n', ...
+            i, height(targets), testCaseName, outcome);
+        continue;
+    end
     row = config(string(config.TestCaseName) == testCaseName, :);
     if height(row) ~= 1
         error('simtest:CollectTargetMissing', ...
@@ -104,6 +128,7 @@ info = struct( ...
     'RunId', runId, ...
     'RunDirectory', runDirectory, ...
     'ReportMode', reportMode, ...
+    'OnlyPassed', onlyPassed, ...
     'Result', result, ...
     'CollectedCount', sum(Collected == "OK"), ...
     'SkippedCount', sum(Collected == "SKIP"));
@@ -151,6 +176,19 @@ reportInfo = st_export_result_set_report( ...
 if ~strcmp(reportInfo.Status, 'OK')
     error('simtest:CollectReportIncomplete', ...
         '%s report is incomplete: %s', label, reportInfo.Summary);
+end
+end
+
+
+function outcome = target_outcome(targets, i)
+%TARGET_OUTCOME The Test Manager verdict the run recorded for one target.
+outcome = "UNKNOWN";
+if ~ismember('FinalOutcome', targets.Properties.VariableNames)
+    return;
+end
+value = upper(strtrim(string(targets.FinalOutcome(i))));
+if strlength(value) > 0
+    outcome = value;
 end
 end
 

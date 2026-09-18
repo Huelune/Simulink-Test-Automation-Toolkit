@@ -448,16 +448,36 @@ ResultSet만 저장합니다.
 ```matlab
 info = st_collect_per_cut_results;
 info = st_collect_per_cut_results('RunId', 'LATEST', 'ReportMode', 'FULL');
+info = st_collect_per_cut_results('OnlyPassed', true);
 ```
 
 | 옵션 | 기본값 | 역할 |
 | --- | --- | --- |
 | `RunId` | `'LATEST'` | 저장된 PER_CUT run의 id |
 | `ReportMode` | run의 기록값 | `'SUMMARY'` 또는 `'FULL'` |
+| `OnlyPassed` | `false` | `true`면 `FinalOutcome`이 `PASSED`인 CUT만 정리하고 나머지는 `SKIP`으로 기록합니다 |
 
 각 CUT 폴더의 `filter/`에 CVF를 만들고, 저장된 결과에 부착한 뒤 `initial/`과
 `final/`에 보고서를 씁니다. 이미 실행 중에 산출물을 만든 run(standalone 번들)은
 저장된 ResultSet이 없으므로 `SKIP`으로 보고합니다.
+
+전체를 한 번 돌린 뒤 실패한 CUT만 고쳐서 다시 돌릴 계획이면 첫 수집은
+`'OnlyPassed', true`로 하십시오. 실패한 CUT의 산출물은 재실행 결과로 대체되므로
+만들어도 버려집니다. 실패 원인은 `logs/execution.log`, run 요약 Excel, Test
+Manager에서 연 `Results.mldatx`로 볼 수 있어 수집 결과물이 필요하지 않습니다.
+건너뛸지는 run manifest의 `FinalOutcome`만 보고 정하므로, 건너뛴 CUT은 관리
+Excel에 활성 행이 없어도 됩니다.
+
+수집은 정리할 CUT을 현재 활성 Excel 행과 대조합니다. 통과한 CUT의 `Enabled`를
+내리기 **전에** 첫 수집을 끝내십시오. 재실행한 run은 그 상태에서 다시 수집합니다.
+
+```matlab
+st_run_tests_per_cut;                              % 전체 실행
+st_collect_per_cut_results('OnlyPassed', true);    % 통과한 CUT만 정리
+% 실패 원인을 고치고, 실패한 CUT만 Enabled로 남긴다
+st_run_tests_per_cut;                              % 실패분만 재실행
+st_collect_per_cut_results;                        % 새 run 정리
+```
 
 ### `st_export_test_asset_bundle`
 

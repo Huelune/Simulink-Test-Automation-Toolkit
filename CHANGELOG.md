@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **`st_collect_per_cut_results`에 `OnlyPassed` 옵션을 추가했습니다.** `true`면
+  `FinalOutcome`이 `PASSED`인 CUT만 정리하고 나머지는 `SKIP`으로 기록합니다.
+  전체를 돌린 뒤 실패한 CUT만 고쳐 다시 돌리는 흐름에서, 재실행으로 대체될
+  실패 run의 CVF와 보고서를 만드는 시간을 없앱니다. 기본값 `false`는 지금처럼
+  전부 정리합니다. 판단은 run manifest만 보고 하므로 건너뛴 CUT은 관리 Excel에
+  활성 행이 없어도 됩니다.
+
 - **`PER_CUT` 결과 수집이 CVF를 찾지 못하고 실패하던 문제를 고쳤습니다.**
   `st_collect_per_cut_results`는 CVF 경로를 char로 넘기는데, 커버리지 필터
   적용 함수가 `string(value(:))`로 읽고 있었습니다. char은 글자 하나가 한

@@ -105,3 +105,24 @@ verifyNotEmpty(testCase, regexp(deferredBranch, ...
 verifyEqual(testCase, ...
     numel(regexp(source, 'st_collect_per_cut_results\(\)')), 1);
 end
+
+function testOnlyPassedIsOffByDefault(testCase)
+% A failure report is evidence when nobody intends to rerun, so collecting
+% everything stays the default; skipping is the operator's explicit choice.
+source = fileread(fullfile(st_project_root(), 'src', 'execution', ...
+    'st_collect_per_cut_results.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "addParameter\(p, 'OnlyPassed', false,", 'once'));
+end
+
+function testOnlyPassedDecidesBeforeTheWorkbookLookup(testCase)
+% A skipped target produces nothing, so it must not need its workbook row.
+% The outcome check therefore sits ahead of the CollectTargetMissing lookup.
+source = fileread(fullfile(st_project_root(), 'src', 'execution', ...
+    'st_collect_per_cut_results.m'));
+skipAt = regexp(source, 'if onlyPassed && outcome ~= "PASSED"', 'once');
+lookupAt = regexp(source, 'simtest:CollectTargetMissing', 'once');
+verifyNotEmpty(testCase, skipAt);
+verifyNotEmpty(testCase, lookupAt);
+verifyLessThan(testCase, skipAt, lookupAt);
+end
