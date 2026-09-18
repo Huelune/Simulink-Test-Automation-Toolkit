@@ -63,6 +63,10 @@ for i = 1:height(targets)
     end
 
     fprintf('[%d/%d] %s\n', i, height(targets), testCaseName);
+    % A ResultSet read back from a file carries block paths, not handles.
+    % Simulink Coverage rebuilds that map on first access, and with the
+    % models unloaded the walk does not finish in any useful time.
+    load_models_for_coverage(row, cfg);
     filterPath = "";
     ruleCount = 0;
     if st_coverage_filter_active(row)
@@ -140,6 +144,20 @@ if ~strcmp(reportInfo.Status, 'OK')
     error('simtest:CollectReportIncomplete', ...
         '%s report is incomplete: %s', label, reportInfo.Summary);
 end
+end
+
+
+function load_models_for_coverage(row, cfg)
+%LOAD_MODELS_FOR_COVERAGE Open what the saved coverage data points at.
+if ~bdIsLoaded(cfg.TopModel)
+    load_system(cfg.ModelFile);
+end
+harness = char(string(row.HarnessName));
+if isempty(harness) || bdIsLoaded(harness)
+    return;
+end
+owner = st_normalize_cut_path(row.CUTPath, cfg.TopModel);
+sltest.harness.load(owner, harness);
 end
 
 
