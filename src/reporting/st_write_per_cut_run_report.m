@@ -15,8 +15,13 @@ if writeExcel
 end
 manifestPath = fullfile(runDirectory, 'manifest.json');
 
+partialCount = count_partial_targets(targets);
 if any(targets.Status == "FAIL")
     overallStatus = "FAIL";
+elseif partialCount > 0
+    % Some scenarios of a CUT produced no usable verify timing or could not
+    % have their expected values updated. That is not a plain warning.
+    overallStatus = "PARTIAL";
 elseif any(targets.Status == "WARN")
     overallStatus = "PASS_WITH_WARNINGS";
 else
@@ -38,6 +43,7 @@ try
             'Completed At',completedAt; ...
             'Target Count',height(targets); ...
             'Failed CUTs',sum(targets.Status == "FAIL"); ...
+            'Partial CUTs',partialCount; ...
             'Warnings',sum(targets.Status == "WARN")};
         writecell(overview, summaryPath, 'Sheet', 'Overview');
         writetable(targets, summaryPath, 'Sheet', 'Targets');
@@ -76,6 +82,7 @@ manifest = struct( ...
     'ExcelWritten', writeExcel, ...
     'TargetCount', height(targets), ...
     'FailedTargetCount', sum(targets.Status == "FAIL"), ...
+    'PartialTargetCount', partialCount, ...
     'Targets', table2struct(targets), ...
     'Artifacts', table2struct(artifacts));
 write_json_atomic(manifestPath, manifest);
@@ -99,7 +106,23 @@ info = struct( ...
     'ExcelWritten', writeExcel, ...
     'Status', char(overallStatus), ...
     'TargetCount', height(targets), ...
-    'FailedTargetCount', sum(targets.Status == "FAIL"));
+    'FailedTargetCount', sum(targets.Status == "FAIL"), ...
+    'PartialTargetCount', partialCount);
+end
+
+
+function total = count_partial_targets(targets)
+%COUNT_PARTIAL_TARGETS Count CUTs whose scenarios only partly succeeded.
+
+total = 0;
+names = targets.Properties.VariableNames;
+for column = ["VerifyTimingStatus", "ExpectedUpdateStatus"]
+    if ~ismember(char(column), names)
+        continue;
+    end
+    values = upper(string(targets.(char(column))));
+    total = total + sum(values == "PARTIAL" | values == "FAIL");
+end
 end
 
 

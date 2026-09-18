@@ -191,6 +191,35 @@
 - `execution-commands.md` 14장을 "고급 단계 명령"에서 "단계별 실행 명령"으로 바꾸고
   checkpoint 미기록 경고와 새 문서 링크를 넣었다.
 
+## 2026-09-18 Iteration 부분 실패 시 기대값 갱신
+
+사용자 보고: 한 Test Case의 Iteration 3개 중 2개가 오류로 끝나고 1개만 정상
+실행됐는데, 정상 Iteration의 verify 기대값이 갱신되지 않았다.
+
+- 원인은 갱신 단계가 아니라 그 앞의 게이트였다. `st_run_generated_tests`와
+  `st_run_tests_per_cut`은 `st_validate_sldv_verify_results`의 행 중 **하나라도**
+  FAIL이면 `error`로 중단했다. 오류로 죽은 Iteration은 verify 결과가 0건이라 항상
+  FAIL이므로, 정상 Iteration의 갱신 단계에 도달하지 못했다.
+- `st_update_expected_from_results` 자체는 이미 시나리오당 한 행을 독립 처리하고
+  각 행을 try/catch로 격리한다. 구조 변경은 필요 없었다.
+- 사용자 결정 4건(2026-09-18):
+  1. verify timing 부분 실패는 경고 후 계속, 평가 대상 전부 실패일 때만 중단.
+  2. 갱신 대상은 `Outcome == Failed`만 유지. Incomplete는 확장하지 않는다.
+     중간에 죽은 시뮬레이션의 sample은 신뢰할 수 없다는 근거다.
+  3. 갱신 결과에 FAIL이 섞이면 BATCH·PER_CUT 모두 계속 진행하고 `PARTIAL` 판정.
+     기존에는 PER_CUT만 `error`였다.
+  4. config 플래그 없이 기본 동작으로 변경.
+- 신규 helper 3개: `st_verify_timing_gate`, `st_expected_update_gate`,
+  `st_combine_run_status`. 판정은 `NOT_RUN/SKIP < OK < PARTIAL < FAIL` 순이며
+  `PARTIAL`은 절대 `OK`로 접히지 않는다.
+- PER_CUT target 행에 `VerifyTimingStatus`·`ExpectedUpdateStatus` 열을 추가했고
+  run manifest에 `PartialTargetCount`와 `Status='PARTIAL'`이 생긴다. 행 `Status`
+  값 집합은 그대로 두었다. standalone pipeline이 `EXCEPT` 외 모든 값을 `FAIL`로
+  접기 때문에 새 행 상태를 넣으면 EXECUTE 판정이 뒤집힌다.
+- 미검증: 이 PC에 MATLAB이 없어 정적 구현까지만 완료했다. R2025b에서 실제로
+  Iteration 3개 중 2개가 오류인 Test Case를 만들어, 정상 Iteration의 verify RHS가
+  갱신되고 판정이 `PARTIAL`로 나오는지 확인해야 한다.
+
 ## 변경 불가 핵심 결정
 
 CoverageFilterMode이 활성화된 CUT의 content rule은 CUT 자기 자신을 선택하면

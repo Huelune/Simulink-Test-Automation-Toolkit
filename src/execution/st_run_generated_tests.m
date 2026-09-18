@@ -11,9 +11,15 @@ function [resultObj, updateResult, runContext] = st_run_generated_tests()
 %   4. verify(... == RHS)의 RHS 자동 갱신
 %   5. cfg.RerunAfterExpectedUpdate == true이고 갱신값이 있으면 재실행
 %
+% 한 Test Case의 Iteration 중 일부만 실패해도 나머지 정상 Iteration의
+% expected value는 갱신합니다. verify timing 검증이나 갱신이 일부 시나리오에서만
+% 실패하면 실행을 중단하지 않고 runContext.Status를 PARTIAL로 남깁니다.
+% 평가된 시나리오가 모두 verify timing에 실패한 경우에만 중단합니다.
+%
 % 첫 번째 출력 resultObj는 최종 실행 결과입니다.
 % 재실행하지 않으면 최초 실행 결과를 반환합니다.
-% 세 번째 출력은 보고서 생성용 최초/최종 ResultSet을 모두 보존합니다.
+% 세 번째 출력은 보고서 생성용 최초/최종 ResultSet을 모두 보존하고,
+% Status / VerifyTimingStatus / ExpectedUpdateStatus 판정을 포함합니다.
 
 cfg = st_require_runtime_target();
 
@@ -39,6 +45,12 @@ runContext = struct( ...
     'FinalResult', [], ...
     'RerunPerformed', false, ...
     'ExpectedUpdateResult', table(), ...
+    'ExpectedUpdateStatus', 'NOT_RUN', ...
+    'VerifyTimingResult', table(), ...
+    'VerifyTimingStatus', 'NOT_RUN', ...
+    'FinalVerifyTimingResult', table(), ...
+    'FinalVerifyTimingStatus', 'NOT_RUN', ...
+    'Status', 'NOT_RUN', ...
     'CoverageFilterResult', table(), ...
     'CoverageFilterApplyResult', table(), ...
     'CoverageFilterRestoreResult', table(), ...
@@ -167,10 +179,23 @@ st_log(cfg, 'DEBUG', ...
 fprintf('Selected Test Case 실행 완료\n');
 
 verifyTimingResult = st_validate_sldv_verify_results(resultObj);
-if ~isempty(verifyTimingResult) && any(verifyTimingResult.Status == 'FAIL')
-    failed = verifyTimingResult(verifyTimingResult.Status == 'FAIL', :);
-    error('SLDV verify timing validation failed: %s', ...
-        char(strjoin(failed.Message, ' | ')));
+verifyGate = st_verify_timing_gate(verifyTimingResult, cfg, 'initial');
+runContext.VerifyTimingResult = verifyTimingResult;
+runContext.VerifyTimingStatus = verifyGate.Status;
+if verifyGate.Abort
+    error('SLDV verify timing validation failed: %s', verifyGate.Message);
+end
+if strcmp(verifyGate.Status, 'PARTIAL')
+    % Scenarios that errored out cannot produce verify timing, but the
+    % scenarios that ran must still reach the expected-value update.
+    warning('simtest:VerifyTimingPartial', ...
+        ['SLDV verify timing failed for %d of %d scenario(s). ' ...
+         'Continuing with the %d passing scenario(s): %s'], ...
+        verifyGate.FailCount, verifyGate.EvaluatedCount, ...
+        verifyGate.OkCount, verifyGate.Message);
+    fprintf(['\n[PARTIAL] verify timing 실패 시나리오 %d/%d. ' ...
+        '정상 시나리오 %d개로 계속 진행합니다.\n'], ...
+        verifyGate.FailCount, verifyGate.EvaluatedCount, verifyGate.OkCount);
 end
 
 
@@ -180,9 +205,14 @@ end
 
 if ~autoUpdateExpected
 
+    runContext.Status = st_combine_run_status( ...
+        runContext.VerifyTimingStatus);
+
+    report_run_judgment(cfg, runContext);
+
     st_log(cfg, 'INFO', ...
-        'Run Generated Tests complete | elapsed=%.3f sec', ...
-        toc(totalTimer));
+        'Run Generated Tests complete | Status=%s | elapsed=%.3f sec', ...
+        runContext.Status, toc(totalTimer));
 
     runContext.CompletedAt = char(datetime('now', ...
         'Format', 'yyyy-MM-dd HH:mm:ss.SSS'));
@@ -218,27 +248,23 @@ st_log(cfg, 'DEBUG', ...
     toc(updateTimer));
 
 
-if isempty(updateResult)
-
-    updatedTotal = 0;
-
-else
-
-    updatedTotal = ...
-        sum(updateResult.UpdatedCount);
-end
+updateGate = st_expected_update_gate(updateResult, cfg, 'initial');
+runContext.ExpectedUpdateStatus = updateGate.Status;
+updatedTotal = updateGate.UpdatedCount;
 
 
 fprintf('\nExpected value updated lines : %d\n', ...
     updatedTotal);
 
 
-if ~isempty(updateResult) && ...
-        any(strcmp(updateResult.Status, 'FAIL'))
+if ismember(updateGate.Status, {'PARTIAL', 'FAIL'})
 
-    warning( ...
-        ['Expected value 자동 갱신에 실패한 Test Case가 있습니다. ' ...
-         'ExpectedUpdateResult를 확인하세요.']);
+    % Per-scenario failures never discard the scenarios that were updated.
+    % The run keeps going and the judgment below reports PARTIAL.
+    warning('simtest:ExpectedUpdatePartial', ...
+        ['Expected value 자동 갱신 실패 시나리오 %d/%d. ' ...
+         'ExpectedUpdateResult를 확인하세요: %s'], ...
+        updateGate.FailCount, updateGate.EvaluatedCount, updateGate.Message);
 end
 
 
@@ -269,11 +295,21 @@ if updatedTotal > 0 && ...
         'rerun run(tf) returned | elapsed=%.3f sec', ...
         toc(rerunTimer));
 
-    verifyTimingResult = st_validate_sldv_verify_results(resultObj);
-    if ~isempty(verifyTimingResult) && any(verifyTimingResult.Status == 'FAIL')
-        failed = verifyTimingResult(verifyTimingResult.Status == 'FAIL', :);
+    finalVerifyTimingResult = st_validate_sldv_verify_results(resultObj);
+    finalVerifyGate = st_verify_timing_gate( ...
+        finalVerifyTimingResult, cfg, 'final');
+    runContext.FinalVerifyTimingResult = finalVerifyTimingResult;
+    runContext.FinalVerifyTimingStatus = finalVerifyGate.Status;
+    if finalVerifyGate.Abort
         error('SLDV verify timing validation failed after rerun: %s', ...
-            char(strjoin(failed.Message, ' | ')));
+            finalVerifyGate.Message);
+    end
+    if strcmp(finalVerifyGate.Status, 'PARTIAL')
+        warning('simtest:VerifyTimingPartial', ...
+            ['SLDV verify timing failed for %d of %d scenario(s) after ' ...
+             'the rerun: %s'], ...
+            finalVerifyGate.FailCount, finalVerifyGate.EvaluatedCount, ...
+            finalVerifyGate.Message);
     end
 
     fprintf('재실행 완료\n');
@@ -288,9 +324,16 @@ else
     fprintf('Expected value 갱신 후 재실행을 건너뜁니다.\n');
 end
 
+runContext.Status = st_combine_run_status( ...
+    runContext.VerifyTimingStatus, ...
+    runContext.FinalVerifyTimingStatus, ...
+    runContext.ExpectedUpdateStatus);
+
+report_run_judgment(cfg, runContext);
+
 st_log(cfg, 'INFO', ...
-    'Run Generated Tests complete | elapsed=%.3f sec', ...
-    toc(totalTimer));
+    'Run Generated Tests complete | Status=%s | elapsed=%.3f sec', ...
+    runContext.Status, toc(totalTimer));
 
 runContext.FinalResult = resultObj;
 runContext.CompletedAt = char(datetime('now', ...
@@ -308,6 +351,37 @@ catch runME
     rethrow(runME);
 end
 
+end
+
+
+%% ============================================================
+% 최종 판정
+%% ============================================================
+
+function report_run_judgment(cfg, runContext)
+%REPORT_RUN_JUDGMENT Print and log the run judgment without hiding PARTIAL.
+
+fprintf('\n');
+fprintf('============================================\n');
+fprintf('Run Judgment : %s\n', runContext.Status);
+fprintf('Verify timing (initial) : %s\n', runContext.VerifyTimingStatus);
+fprintf('Verify timing (final)   : %s\n', runContext.FinalVerifyTimingStatus);
+fprintf('Expected update         : %s\n', runContext.ExpectedUpdateStatus);
+fprintf('============================================\n');
+
+if strcmp(runContext.Status, 'PARTIAL')
+    level = 'WARN';
+elseif strcmp(runContext.Status, 'FAIL')
+    level = 'ERROR';
+else
+    level = 'INFO';
+end
+
+st_log(cfg, level, ...
+    ['Run judgment | Status=%s | VerifyTiming=%s | FinalVerifyTiming=%s | ' ...
+     'ExpectedUpdate=%s'], ...
+    runContext.Status, runContext.VerifyTimingStatus, ...
+    runContext.FinalVerifyTimingStatus, runContext.ExpectedUpdateStatus);
 end
 
 

@@ -28,6 +28,11 @@ function R = st_update_expected_from_results(resultObj, targetConfig)
 % 처리 대상:
 %   Test Iteration Outcome == Failed 인 경우만
 %
+% 한 Test Case가 여러 Scenario Iteration을 가지면 Iteration마다 한 행을 만들고
+% 각 행을 독립적으로 처리합니다. 일부 Iteration이 오류로 끝나도 나머지 정상
+% Iteration의 expected value 갱신은 그대로 수행하며, 실패한 행만 Status=FAIL로
+% 남깁니다.
+%
 % 지원 expected value:
 %   real numeric scalar
 %   logical scalar
@@ -188,13 +193,21 @@ for i = 1:n
 
         if outcomeValue ~= 3
 
+            % Only a Failed Iteration carries a trustworthy logged output at
+            % the sample point. An Incomplete Iteration died mid-simulation,
+            % so its sample would write a wrong expected value. It is skipped
+            % with the observed Outcome recorded, never silently.
             Status(i) = ...
                 'SKIP';
 
             Message(i) = ...
-                'Iteration is not Failed';
+                sprintf( ...
+                    ['SKIP_OUTCOME_NOT_FAILED | Outcome=%s; ' ...
+                     'expected update applies to Failed Iterations only'], ...
+                    char(IterationOutcome(i)));
 
-            fprintf('  -> SKIP : Iteration is not Failed\n');
+            fprintf('  -> SKIP : SKIP_OUTCOME_NOT_FAILED (Outcome=%s)\n', ...
+                char(IterationOutcome(i)));
 
             ElapsedSec(i) = ...
                 toc(timerValue);
@@ -202,9 +215,12 @@ for i = 1:n
             Timestamp(i) = ...
                 current_timestamp();
 
-            st_log(cfg, 'DEBUG', ...
-                '[ExpectedUpdate %d/%d] skipped | elapsed=%.3f sec', ...
-                i, n, ElapsedSec(i));
+            st_log(cfg, 'INFO', ...
+                ['[ExpectedUpdate %d/%d] skipped | TestCase=%s | ' ...
+                 'Scenario=%s | Reason=SKIP_OUTCOME_NOT_FAILED | ' ...
+                 'Outcome=%s | elapsed=%.3f sec'], ...
+                i, n, testCaseName, scenarioName, ...
+                char(IterationOutcome(i)), ElapsedSec(i));
 
             continue;
         end

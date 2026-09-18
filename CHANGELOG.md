@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- A Test Case whose Iterations only partly succeed now still gets its expected
+  values updated. A Test Case owns one Iteration per Test Sequence scenario, and
+  the verify-timing validation that runs before the update used to abort the
+  whole run as soon as a single scenario failed. An Iteration that died with an
+  error records no verify result, so two broken Iterations out of three stopped
+  the third — the one that ran correctly and needed its `verify(... == RHS)`
+  rewritten — from ever being reached. Behaviour change, no new option:
+  - Verify timing aborts only when every evaluated scenario failed. A mixed
+    outcome warns and continues, so the healthy scenarios reach the update.
+  - The expected-value update no longer raises
+    `simtest:PerCutExpectedUpdateFailed` when one scenario could not be
+    updated. The scenarios that were updated are kept and rerun. BATCH and
+    PER_CUT now react identically; previously one errored and the other warned.
+  - A partial run is judged `PARTIAL`, never a pass. BATCH reports it in
+    `runContext.Status` alongside `VerifyTimingStatus` and
+    `ExpectedUpdateStatus`; PER_CUT adds `VerifyTimingStatus` and
+    `ExpectedUpdateStatus` columns per target, a `PartialTargetCount` in
+    `manifest.json`, and a `PARTIAL` run status.
+  - An Iteration whose Outcome is not `Failed` is still skipped, because a
+    simulation that died mid-run has no trustworthy sample to copy. The reason
+    is now recorded as `SKIP_OUTCOME_NOT_FAILED` with the observed Outcome
+    instead of the bare `Iteration is not Failed`.
 - Added `functionSignatures.json` for the commands people type, so MATLAB
   tab-completes their option names and the allowed values (`Action`,
   `FromStage`, `ExecutionModelMode` and so on). Completion is editor-only

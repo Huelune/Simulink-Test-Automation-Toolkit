@@ -152,6 +152,23 @@ CVF를 유지한 채 그 Test Case만 재실행하고 필터를 복원합니다.
 기대값을 읽어 올 시뮬레이션 시각[초]입니다. `VerifyAtSampleTimeOnly=true`일 때
 step1에서 step2로 넘어가는 시각이기도 합니다.
 
+### Iteration 일부만 실패했을 때
+
+한 Test Case는 Test Sequence Scenario마다 Iteration을 하나씩 가집니다. Iteration
+3개 중 2개가 오류로 끝나고 1개만 정상 실행된 경우에도, 정상 Iteration의 기대값은
+그대로 갱신합니다. 설정 항목은 없으며 항상 이렇게 동작합니다.
+
+| 상황 | 동작 |
+| --- | --- |
+| 평가 대상 시나리오 일부만 verify timing 실패 | 경고 후 계속 진행, 판정 `PARTIAL` |
+| 평가 대상 시나리오 전부 verify timing 실패 | 기존과 같이 실행 중단 |
+| 기대값 갱신이 일부 시나리오에서만 실패 | 성공한 갱신을 유지하고 계속 진행, 판정 `PARTIAL` |
+| Iteration Outcome이 `Failed`가 아님 | 갱신하지 않고 `SKIP_OUTCOME_NOT_FAILED`로 기록 |
+
+`PARTIAL`은 통과가 아닙니다. BATCH는 `runContext.Status`, PER_CUT은
+`manifest.json`의 `Status`와 `PartialTargetCount`, 그리고 Targets 시트의
+`VerifyTimingStatus` / `ExpectedUpdateStatus` 열에서 확인합니다.
+
 ## 4. Test Manager와 Harness
 
 ### `OverwriteTestFile` — 기본 `false`
