@@ -9,6 +9,20 @@
   resolves to it falls back to a `_prepared` sibling. A Harness prepared
   before this change keeps pointing at its old `*_sldv.mat` until the
   Harness is recreated.
+- A scenario name is now derived so that it stays a valid MATLAB identifier.
+  The name becomes a Test Sequence and Signal Editor identifier, but the CUT
+  name it is built from is free text, and it broke that contract two ways at
+  once: a character an identifier cannot hold, such as the `/` in a block
+  named `..._AC/DC_Check`, and a length past `namelengthmax`. A 62-character
+  CUT name already produces 73 characters with the prefix and index, so
+  replacing the character alone never got under the limit.
+  - A name that already fits is returned byte for byte as before, so every
+    scenario, Harness and Test File built so far keeps its identifier.
+  - Otherwise every character outside `[A-Za-z0-9_]` becomes `_`, and if the
+    result is still too long the stem is cut to fit with a six-digit digest
+    appended. The digest is taken from the original CUT name, so two CUTs
+    that shorten to the same stem keep distinct scenarios, and the result is
+    stable across sessions so a rerun still matches what the Harness holds.
 - A CUT whose block name contains `/` is now reachable from the workbook.
   Simulink writes such a name doubled in a block path, so the block actually
   named `OBC_..._AC/DC_Check` lives at `.../OBC_..._AC//DC_Check`. A CUTPath
