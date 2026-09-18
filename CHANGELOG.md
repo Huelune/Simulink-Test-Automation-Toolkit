@@ -2,6 +2,53 @@
 
 ## Unreleased
 
+- **고객 제출용 최종 문서를 명령 하나로 뽑습니다.** `st_export_final_document()`가
+  고객 양식 시트 2장과 진단 시트 3장을 담은 Excel 하나를 만듭니다. 지금까지
+  명세서 Excel, 결과 정리 산출물, `CoverageSummary.xlsx`를 열어 손으로 옮겨
+  적던 일입니다.
+
+  ```matlab
+  [T, file] = st_export_final_document();
+  ```
+
+  - `TestCase` 시트는 14열입니다. `Test Case ID`(시나리오명과 TestCaseName 두
+    줄), `Pre Condition`(`MaxTime`), `Description`(분기 블록), `Test Steps.Action`,
+    `Test Steps.Expected result`, `출력값`, `판정 결과`, `테스트 자료`, 그리고
+    고객 양식의 빈 칸 6개입니다.
+  - `Coverage` 시트는 CUT마다 한 줄이며 분자와 분모를 **각각 한 칸씩 숫자로**
+    씁니다. `%` 열은 숫자를 박아 넣지 않고 **Excel 수식**(`=B2/C2`)에 표시형식
+    `0.00%`를 줍니다. 계산된 값도 함께 저장하므로 LibreOffice처럼 열 때
+    재계산하지 않는 프로그램에서도 바로 보입니다. 분모가 없거나 `0`이면 `N/A`로
+    두고 수식을 넣지 않습니다.
+  - `TestResults` 시트는 `TestCase`와 행이 1:1로 맞고 `확인 필요`, `확인 사유`,
+    `확인 위치`를 줍니다. 고객 양식에 비고 열이 없어 진단을 여기에 모읍니다.
+
+  **결과 정리를 먼저 해야 판정이 채워집니다.** `cfg.GenerateTestReport`가
+  `false`, `cfg.PerCutResultCollection`이 `DEFERRED`이므로 실행만 하면 판정이
+  파일에 없습니다. PER_CUT 뒤에는 `st_collect_per_cut_results`를, BATCH 뒤에는
+  `st_generate_test_report`를 부르십시오. 안 부르면 판정이 빈 칸이고
+  `TestResults` 시트에 `NOT_COLLECTED` 또는 `NOT_REPORTED` 안내가 남습니다.
+  오류로 막지는 않으며, 막으려면 `RequireTestResults`를 켜십시오.
+
+  - **이미 만든 명세서 xlsx를 읽지 않습니다.** `st_export_test_specification`과
+    같은 방식으로 저장된 모델에서 다시 추출합니다. 판정과 커버리지만 기존 결과
+    파일에서 읽습니다.
+  - **실패한 verify의 내용은 뽑지 않습니다.** 어느 행을 봐야 하는지와 어느
+    `.mldatx`를 Test Manager에서 열어야 하는지만 적습니다. `.mldatx`를 열지
+    않으므로 추출이 빠르고 Simulink Test 세션에 기대지 않습니다.
+  - **판정과 커버리지는 서로 다른 실행에서 옵니다.** 커버리지만 standalone
+    pipeline 산출물을 씁니다. standalone은 SUT를 독립 모델로 바꾸고 기대값
+    갱신을 강제로 끄므로 PASS/FAIL이 일반 실행과 다를 수 있습니다. 두 실행의
+    식별자를 `Metadata` 시트에 **둘 다** 적습니다.
+  - `result/TestSummary.xlsx` 복사본은 읽지 않습니다. 그 파일은 BATCH에서만
+    갱신되어 PER_CUT 뒤에 읽으면 예전 BATCH 값이 나옵니다. 항상 실행 디렉터리
+    안의 원본을 읽고 어느 실행이었는지 `Metadata`에 남깁니다.
+  - 읽기 전용입니다. 시뮬레이션, 테스트 실행, SLDV 생성, 기대값 갱신을 하지
+    않습니다. 미저장이거나 실행 중인 모델은 명세서 추출과 똑같이 거절합니다.
+  - 옵션: `OutputFile`, `TestCaseIdMode`, `DecisionBlockScope`, `CoverageSource`,
+    `CoveragePipelineId`, `ResultRun`, `RequireTestResults`, `RequireCoverage`,
+    `IncludeUsageSheet`. 기본값은 `cfg.FinalDocument*` 다섯 개입니다.
+
 - **명세서 추출의 정적 검사가 2026-09-08부터 계속 실패하고 있던 것을
   고쳤습니다.** `testExporterHasNoSimulationOrSourceMutationCalls`는
   `src/exporting`의 명세서 관련 파일에 시뮬레이션이나 원본 변경 호출이 없는지

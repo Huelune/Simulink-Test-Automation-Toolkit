@@ -74,17 +74,17 @@ end
 
 function apply_sheets(package, columnWidths, wrappedOffset, percentIndex, formulas, cfg)
 byFile = sheet_formula_map(package, formulas);
+byName = containers.Map('KeyType', 'char', 'ValueType', 'char');
+if isa(columnWidths, 'containers.Map')
+    byName = worksheet_names(package);
+end
 files = dir(fullfile(package, 'xl', 'worksheets', 'sheet*.xml'));
 for n = 1:numel(files)
-    sheetNumber = sscanf(files(n).name, 'sheet%d.xml');
     file = fullfile(files(n).folder, files(n).name);
     sheet = xmlread(file);
     shift_cell_styles(sheet, wrappedOffset);
     clear_row_heights(sheet);
-    widths = [];
-    if iscell(columnWidths) && sheetNumber <= numel(columnWidths)
-        widths = columnWidths{sheetNumber};
-    end
+    widths = widths_for(columnWidths, byName, files(n).name);
     if ~isempty(widths)
         rebuild_columns(sheet, widths);
     end
@@ -94,6 +94,34 @@ for n = 1:numel(files)
         inject_formulas(sheet, byFile(files(n).name), percentIndex, file, cfg);
     end
     xmlwrite(file, sheet);
+end
+end
+
+
+function widths = widths_for(columnWidths, byName, fileName)
+% A cell array is indexed by the sheetN.xml number, which assumes the write
+% order. A map is keyed by sheet name and does not.
+widths = [];
+if isa(columnWidths, 'containers.Map')
+    if ~isKey(byName, fileName), return; end
+    name = byName(fileName);
+    if isKey(columnWidths, name), widths = columnWidths(name); end
+    return;
+end
+if ~iscell(columnWidths), return; end
+number = sscanf(fileName, 'sheet%d.xml');
+if ~isempty(number) && number <= numel(columnWidths)
+    widths = columnWidths{number};
+end
+end
+
+
+function byName = worksheet_names(package)
+byName = containers.Map('KeyType', 'char', 'ValueType', 'char');
+located = sheet_files(package);
+names = keys(located);
+for i = 1:numel(names)
+    byName(located(names{i})) = names{i};
 end
 end
 

@@ -503,6 +503,73 @@ cfg.DecisionBlockScope = 'EXPLICIT';
 
 
 %% ============================================================
+% Final document export
+%% ============================================================
+
+% st_export_final_document collects the customer submission workbook. It
+% reads the specification rows from the saved model again and takes only
+% the verdicts and the coverage from earlier result files. Override any of
+% these per run, for example
+% st_export_final_document('ResultRun','BATCH').
+
+% How the Test Case ID cell is written.
+%
+% 'COMBINED':
+%   Two lines in one cell: the Test Sequence scenario name, then the Test
+%   Case name. The cell is wrapped, so both lines show.
+%
+% 'SCENARIO':
+%   The scenario name only.
+cfg.FinalDocumentTestCaseIdMode = 'COMBINED';
+
+% Which executed run the per-iteration verdicts are read from.
+%
+% 'AUTO':
+%   Compare result/latest.json and result/per_cut_latest.json and read
+%   whichever was updated last. The chosen run is written to the Metadata
+%   sheet.
+%
+% 'BATCH':
+%   The run that st_generate_test_report last reported.
+%
+% 'PER_CUT':
+%   The run that st_collect_per_cut_results last collected.
+%
+% A run directory path is also accepted. BATCH and PER_CUT fail when that
+% history is missing, because an explicit choice must not silently fall
+% back to the other mode.
+%
+% result/TestSummary.xlsx is never read. That copy is refreshed by BATCH
+% only, so after a PER_CUT run it holds the previous BATCH numbers.
+cfg.FinalDocumentResultRun = 'AUTO';
+
+% Where the coverage sheet gets its numbers.
+%
+% 'STANDALONE':
+%   CoverageSummary.xlsx of the latest standalone pipeline run. This is a
+%   separate execution from the one the verdicts come from: it swaps in
+%   standalone models and forces expected-value updates off, so its
+%   pass/fail can differ. Only its coverage is used, and both run
+%   identities are recorded in the Metadata sheet.
+%
+% 'TEST_RUN':
+%   The Coverage sheet of the resolved run, FINAL rows.
+%
+% 'NONE':
+%   Leave every coverage value as N/A.
+cfg.FinalDocumentCoverageSource = 'STANDALONE';
+
+% true:
+%   Append the internal command list as a 사용법 sheet. Off by default
+%   because a list of st_* commands does not belong in a customer file.
+cfg.FinalDocumentIncludeUsageSheet = false;
+
+% What an unavailable value is written as. The standalone pipeline already
+% writes N/A, so both files read the same.
+cfg.FinalDocumentNAText = 'N/A';
+
+
+%% ============================================================
 % Progress / diagnostic logging
 %% ============================================================
 
