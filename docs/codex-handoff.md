@@ -220,6 +220,23 @@
   Iteration 3개 중 2개가 오류인 Test Case를 만들어, 정상 Iteration의 verify RHS가
   갱신되고 판정이 `PARTIAL`로 나오는지 확인해야 한다.
 
+## 2026-09-18 내부 표준 명령 문서
+
+- 사용자 확인: 내부 인원이 실제로 쓰는 명령은 8개뿐이다. `st_setup`,
+  `st_select_target_model`, `st_pre_validate_targets`, `st_run_from_harness`,
+  `st_run_after_harness`, `st_export_test_specification`,
+  `st_run_standalone_coverage_pipeline`, `st_check_standalone_coverage`.
+- `docs/team-commands.md`를 신설해 이 8개만 담았다. 다른 문서를 열지 않아도 되도록
+  자주 막히는 지점과 주의사항까지 자체 포함한다.
+- 내부에서 부르는 축약 이름과 실제 함수 이름이 다르다는 점을 첫 장에 매핑표로
+  넣었다. `st_select_model`→`st_select_target_model`,
+  `st_pre_validate`→`st_pre_validate_targets`,
+  `st_export_spec`→`st_export_test_specification`,
+  `st_check_standalone`→`st_check_standalone_coverage`. 이 축약 이름의 별칭 함수는
+  저장소에 없다(확인함).
+- README, `docs/README.md`, `docs/manual/README.md`, `getting-started.md`에서
+  이 문서를 가장 먼저 가리키도록 했다.
+
 ## 변경 불가 핵심 결정
 
 CoverageFilterMode이 활성화된 CUT의 content rule은 CUT 자기 자신을 선택하면
