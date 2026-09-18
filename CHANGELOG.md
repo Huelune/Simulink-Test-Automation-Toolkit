@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- **BATCH 실행이 매번 터지던 것을 고쳤습니다.** CVF를 보고서 단계로 옮기면서
+  `coverageFilterSession`을 만드는 줄이 사라졌는데, 그것을 쓰는 `Restore()` 호출
+  세 곳이 `st_run_generated_tests`에 남아 있었습니다. 정상 경로가 그중 하나를 반드시
+  지나므로 **모든 BATCH 실행이 `Undefined function or variable
+  'coverageFilterSession'`으로 끝났고**, 기본 실행 방식이 BATCH이므로 기본
+  워크플로 전체가 막혀 있었습니다.
+  - 오류 처리 경로도 같은 변수를 건드려 원래 오류를 가리고 있었습니다.
+  - 실행 중에는 필터를 붙이지 않으므로 되돌릴 것도 없습니다. 세 호출과, 그 복원만을
+    위해 있던 `try/catch`, 그리고 아무도 쓰지 않게 된 `CoverageFilterApplyResult`·
+    `CoverageFilterRestoreResult` 필드를 함께 걷어냈습니다.
+  - 실행이 끝까지 가지 못해 `st_save_run_record`에 닿지 못했으므로, **실행 기록도
+    저장되지 않고 있었습니다.**
+  - 이 회귀를 잡았어야 할 `testExecutionKeepsSingleTestFileRun`은 오히려 제거된
+    심볼이 남아 있기를 요구하고 있어 같이 실패했습니다. 같은 변경에서 추가된
+    `testBatchRunnerNeitherFiltersNorRejectsFilters`와 정반대였습니다. 새 계약에
+    맞춰 고쳤습니다.
+
 - `st_run_from_harness`/`st_run_after_harness`가 **`FromStage='EXECUTE'`를
   지원합니다.** 준비는 이미 끝났고 테스트만 다시 돌리면 될 때, 단계 지문을 따지지
   않고 준비 단계를 하나도 실행하지 않습니다. 오래 걸리는 `ASSESSMENT`나 `SLDV`를

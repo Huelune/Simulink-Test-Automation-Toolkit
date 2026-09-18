@@ -129,16 +129,17 @@ end
 
 
 function testExecutionKeepsSingleTestFileRun(testCase)
+% BATCH still executes the whole Test File in one run(tf). It no longer
+% applies or restores a coverage filter around that run, so nothing may be
+% left holding a filter session; testBatchRunnerNeitherFiltersNorRejectsFilters
+% in test_per_cut_execution owns that contract.
 root = st_project_root();
 source = fileread(fullfile(root, 'src', 'execution', ...
     'st_run_generated_tests.m'));
 
 verifyGreaterThanOrEqual(testCase, ...
     numel(regexp(source, 'run\(tf\)', 'match')), 1);
-verifyNotEmpty(testCase, regexp(source, ...
-    'st_apply_test_case_coverage_filters', 'once'));
-verifyNotEmpty(testCase, regexp(source, ...
-    'coverageFilterSession\.Restore\(\)', 'once'));
+verifyEmpty(testCase, regexp(source, 'coverageFilterSession', 'once'));
 end
 
 
