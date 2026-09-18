@@ -115,3 +115,19 @@ descriptors = table(string(Root(:)), string(OwnerModel(:)), ...
     'VariableNames', ...
     {'Root','OwnerModel','OwnerBlock','AnalyzedModel'});
 end
+
+function testCoverageIsNotWalkedTwiceWithoutARerun(testCase)
+% Collecting coverage is the slowest part of the report: one call per target
+% into the Simulink Coverage API, twice over. Without a rerun both labels
+% name the same ResultSet, so the second walk produces the same rows with a
+% different label and is pure waste.
+source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
+    'st_generate_test_report.m'));
+
+verifyNotEmpty(testCase, regexp(source, ...
+    'if logical\(runContext\.RerunPerformed\)', 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'finalCoverage = initialCoverage;', 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'finalCoverage\.Run\(:\) = "FINAL";', 'once'));
+end
