@@ -428,6 +428,23 @@ ids = st_collect_warning_ids('LogFile', 'run.log');
 단계별 INI 결과 보고서를 `result/reports/`에 쓸지 정합니다. `false`로 하면 결과
 파일을 만들지 않습니다.
 
+### `ExecutionMode` — 기본 `'AUTO'`
+
+`AUTO`는 활성 CVF를 가진 대상이 있으면 `PER_CUT`, 아니면 `BATCH`를 고릅니다.
+
+이건 **선호이지 제약이 아닙니다.** 커버리지 필터는 결과물 생성 단계의 일이므로
+실행 방식을 강제하지 않습니다. CVF가 있는 대상도 `'BATCH'`로 돌 수 있습니다.
+
+두 방식의 실질적인 차이는 이것입니다.
+
+| | `BATCH` | `PER_CUT` |
+| --- | --- | --- |
+| 실행 | `run(tf)` 전체 한 번 | Test Case마다 따로 |
+| 기대값 갱신 후 재실행 | Test File **전체** | 그 Test Case만 |
+| 결과물 | 통합 보고서 하나 | CUT별 폴더 |
+
+혼자 돌려야만 되는 Test Case가 있으면 `PER_CUT`을 쓰십시오.
+
 ### `PerCutResultCollection` — 기본 `'DEFERRED'`
 
 `PER_CUT` 실행이 커버리지 필터와 CUT별 보고서까지 만들지 정합니다.

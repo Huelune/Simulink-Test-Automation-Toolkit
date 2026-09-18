@@ -27,12 +27,6 @@ targetConfig = ...
     st_load_targets( ...
         cfg.OnlyEnabled);
 
-if any(st_coverage_filter_active(targetConfig))
-    error('simtest:BatchExecutionWithCoverageFilter', ...
-        ['st_run_generated_tests uses the BATCH run(tf) path and cannot ' ...
-         'run active CVFs. Use st_run_tests_per_cut or ExecutionMode=AUTO.']);
-end
-
 expectedUpdateTargetCount = ...
     sum(targetConfig.ExpectedUpdateMode == "APPLY");
 
@@ -133,20 +127,10 @@ end
 runScopeCleanup = ...
     st_apply_run_test_case_scope(tf, runTestCases); %#ok<NASGU>
 
-filterPreparationResult = st_prepare_coverage_filters();
-if any(filterPreparationResult.Status == "FAIL")
-    failed = filterPreparationResult( ...
-        filterPreparationResult.Status == "FAIL", :);
-    error('simtest:CoverageFilterPreparationFailed', ...
-        'Coverage filter preparation failed: %s', ...
-        char(strjoin(failed.Message, ' | ')));
-end
-
-[coverageFilterCleanup, coverageFilterApplyResult, coverageFilterSession] = ...
-    st_apply_test_case_coverage_filters( ...
-        tf, runTestCases, targetConfig, cfg); %#ok<NASGU>
-runContext.CoverageFilterResult = filterPreparationResult;
-runContext.CoverageFilterApplyResult = coverageFilterApplyResult;
+% A coverage filter shapes the coverage data of the artifacts built from a
+% run, not the run itself. Nothing is generated or applied here; the run
+% collects coverage unfiltered and st_generate_test_report attaches the CVF
+% to the saved results.
 
 try
 

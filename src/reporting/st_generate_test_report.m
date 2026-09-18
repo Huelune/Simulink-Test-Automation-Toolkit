@@ -28,7 +28,8 @@ artifacts = empty_artifact_table();
 targets = empty_target_table();
 iterations = empty_iteration_table();
 coverage = empty_coverage_table();
-coverageFilters = coverage_filter_report_table(runContext);
+[coverageFilters, artifacts] = resolve_coverage_filters( ...
+    artifacts, runContext, targetConfig, cfg);
 
 try
     [initialTargets, initialIterations] = ...
@@ -295,6 +296,59 @@ manifest = struct( ...
         cfg.CoverageFilterApplicationMode, ...
     'CoverageThresholdPolicy', 'REPORT_ONLY', ...
     'Artifacts', table2struct(artifacts));
+end
+
+function [T, artifacts] = resolve_coverage_filters( ...
+        artifacts, runContext, targetConfig, cfg)
+%RESOLVE_COVERAGE_FILTERS Generate the CVFs and register them on the results.
+%
+% The run collects coverage unfiltered: a filter shapes the coverage data of
+% the artifacts, not the execution. So the CVFs are generated here and
+% attached to the ResultSets this report is built from.
+T = coverage_filter_report_table(runContext);
+if width(T) > 2
+    % A run that still filtered itself already reported its rows.
+    return;
+end
+active = st_coverage_filter_active(targetConfig);
+if ~any(active)
+    return;
+end
+try
+    T = st_prepare_coverage_filters();
+    failed = T(T.Status == "FAIL", :);
+    if height(failed) > 0
+        error('simtest:CoverageFilterPreparationFailed', ...
+            'Coverage filter preparation failed: %s', ...
+            char(strjoin(failed.Message, ' | ')));
+    end
+    files = T.FilterFile(strlength(T.FilterFile) > 0);
+    if isempty(files)
+        artifacts = record_artifact(artifacts, 'COVERAGE_FILTER', '', ...
+            'OK', 'No coverage filter file to attach');
+        return;
+    end
+    % Without a rerun both labels name the same ResultSet. Attaching twice
+    % would register the same filter set on it twice.
+    resultSets = {runContext.InitialResult};
+    if logical(runContext.RerunPerformed)
+        resultSets{end+1} = runContext.FinalResult;
+    end
+    for k = 1:numel(resultSets)
+        attachInfo = st_apply_result_coverage_filters( ...
+            resultSets{k}, cellstr(files), cfg, 'RequireCoverage', true);
+        if ~strcmp(attachInfo.Status, 'OK')
+            error('simtest:ReportCoverageFilterFailed', '%s', ...
+                attachInfo.Message);
+        end
+    end
+    artifacts = record_artifact(artifacts, 'COVERAGE_FILTER', ...
+        char(cfg.CoverageFilterDir), 'OK', ...
+        sprintf('%d coverage filter file(s) attached', numel(files)));
+catch ME
+    artifacts = record_artifact(artifacts, 'COVERAGE_FILTER', ...
+        char(cfg.CoverageFilterDir), 'FAIL', ME.message);
+end
 end
 
 function T = coverage_filter_report_table(runContext)

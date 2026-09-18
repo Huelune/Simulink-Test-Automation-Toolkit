@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- BATCH 실행에서도 커버리지 필터를 걷어냈습니다. 이제 CVF는 어느 실행 경로에서도
+  만들어지지 않습니다. 실행은 커버리지를 필터 없이 수집하고,
+  `st_generate_test_report`가 CVF를 만들어 결과에 붙인 다음 보고서를 만듭니다.
+  - `st_run_generated_tests`가 실행 직전에 부르던 `st_prepare_coverage_filters`와
+    `st_apply_test_case_coverage_filters` 호출을 제거했습니다.
+  - `simtest:BatchExecutionWithCoverageFilter`가 사라졌습니다. 활성 CVF를 가진
+    대상을 BATCH로 돌리는 것을 막던 규칙인데, 실행 중에 모델을 필터링해야 했기
+    때문에 있던 제약입니다. 이제 그런 일이 없으므로 막을 이유가 없습니다.
+  - `AUTO`는 여전히 활성 CVF가 있으면 `PER_CUT`을 고릅니다. 다만 이건 **선호이지
+    제약이 아닙니다.** 같은 대상을 `'BATCH'`로도 돌릴 수 있습니다.
+  - 두 방식의 남은 차이는 실행 단위와 재실행 단위입니다. BATCH는 기대값 갱신 후
+    Test File 전체를 재실행하고, PER_CUT은 해당 Test Case만 재실행합니다.
 - `PER_CUT` 실행에서 커버리지 필터 처리를 결과물 생성 단계로 옮겼습니다.
   `PER_CUT`은 혼자 돌려야만 되는 Test Case를 위해 있는 것이고, CVF는 실행에
   필요한 것이 아니라 실행 결과로 만드는 산출물의 커버리지 데이터를 다듬는

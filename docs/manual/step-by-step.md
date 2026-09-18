@@ -215,13 +215,14 @@ sltest.testmanager.view
     'ReportMode', 'SUMMARY', ...
     'FailOnNonPass', false);
 
-% CVF가 전혀 없는 경우
+% Test File 전체를 한 번에
 [resultObj, updateResult, runContext] = st_run_generated_tests();
 ```
 
-> `st_run_generated_tests`는 BATCH 경로라서 **활성 CVF가 있으면 실행 전에
-> `BatchExecutionWithCoverageFilter` 오류를 냅니다.** 그때는
-> `st_run_tests_per_cut`을 쓰십시오.
+> BATCH도 커버리지를 **필터 없이** 수집합니다. CVF는
+> `st_generate_test_report`가 만들어 결과에 붙입니다. 그래서 활성 CVF가 있는
+> 대상도 BATCH로 돌 수 있습니다. 다만 BATCH는 기대값 갱신 후 **Test File
+> 전체**를 재실행하므로, 대상이 많으면 `st_run_tests_per_cut`이 낫습니다.
 
 #### 이 단계에서 일어나는 일
 

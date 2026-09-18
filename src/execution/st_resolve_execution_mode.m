@@ -11,6 +11,10 @@ if ~isscalar(requestedMode) || ...
         'ExecutionMode must be AUTO, BATCH, or PER_CUT.');
 end
 
+% Coverage filters are applied when the artifacts are built, so they no
+% longer decide how the tests run. AUTO still prefers PER_CUT for a target
+% that carries one, because that target is usually also the one that has to
+% run alone, but BATCH is now a legitimate choice for it.
 hasActiveFilter = any(st_coverage_filter_active(targetConfig));
 if requestedMode == "AUTO"
     if hasActiveFilter
@@ -18,10 +22,6 @@ if requestedMode == "AUTO"
     else
         mode = 'BATCH';
     end
-elseif requestedMode == "BATCH" && hasActiveFilter
-    error('simtest:BatchExecutionWithCoverageFilter', ...
-        ['BATCH execution is allowed only when every enabled target has ' ...
-         'both coverage filter modes OFF. Use AUTO or PER_CUT.']);
 else
     mode = char(requestedMode);
 end

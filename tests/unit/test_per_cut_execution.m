@@ -17,10 +17,11 @@ verifyEqual(testCase, st_resolve_execution_mode('AUTO', T), 'PER_CUT');
 end
 
 
-function testBatchRejectsAnyActiveFilter(testCase)
+function testBatchAcceptsAnActiveFilter(testCase)
+% The refusal was about filtering a model while it runs. Nothing filters
+% during a run any more, so a CVF no longer dictates the execution mode.
 T = filter_table(["OFF"; "ALL_CONTENT"]);
-verifyError(testCase, @() st_resolve_execution_mode('BATCH', T), ...
-    'simtest:BatchExecutionWithCoverageFilter');
+verifyEqual(testCase, st_resolve_execution_mode('BATCH', T), 'BATCH');
 end
 
 
@@ -280,13 +281,32 @@ verifyFalse(testCase, any(stages == "COVERAGE_FILTER"));
 end
 
 
-function testLegacyRunnerRemainsBatchOnly(testCase)
+function testBatchRunnerNeitherFiltersNorRejectsFilters(testCase)
+% BATCH collects coverage unfiltered like every other run. Its old refusal
+% to touch a target that carries a CVF was about filtering during the run,
+% which no longer happens anywhere.
 root = st_project_root();
 source = fileread(fullfile(root, 'src', 'execution', ...
     'st_run_generated_tests.m'));
 verifyNotEmpty(testCase, regexp(source, 'run\(tf\)', 'once'));
-verifyNotEmpty(testCase, regexp(source, ...
+verifyEmpty(testCase, regexp(source, ...
     'BatchExecutionWithCoverageFilter', 'once'));
+verifyEmpty(testCase, regexp(source, ...
+    'st_prepare_coverage_filters', 'once'));
+verifyEmpty(testCase, regexp(source, ...
+    'st_apply_test_case_coverage_filters', 'once'));
+
+resolver = fileread(fullfile(root, 'src', 'execution', ...
+    'st_resolve_execution_mode.m'));
+verifyEmpty(testCase, regexp(resolver, ...
+    'BatchExecutionWithCoverageFilter', 'once'));
+
+report = fileread(fullfile(root, 'src', 'reporting', ...
+    'st_generate_test_report.m'));
+verifyNotEmpty(testCase, regexp(report, ...
+    'st_prepare_coverage_filters', 'once'));
+verifyNotEmpty(testCase, regexp(report, ...
+    'st_apply_result_coverage_filters', 'once'));
 end
 
 
@@ -313,6 +333,5 @@ function testAutoSelectsPerCutForBoundaryOnly(testCase)
 T = filter_table(["OFF"; "OFF"]);
 T.CoverageBoundaryMode(2) = "CUT_ONLY";
 verifyEqual(testCase, st_resolve_execution_mode('AUTO', T), 'PER_CUT');
-verifyError(testCase, @() st_resolve_execution_mode('BATCH', T), ...
-    'simtest:BatchExecutionWithCoverageFilter');
+verifyEqual(testCase, st_resolve_execution_mode('BATCH', T), 'BATCH');
 end
