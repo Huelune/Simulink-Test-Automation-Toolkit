@@ -34,7 +34,12 @@ targets = empty_target_table();
 iterations = empty_iteration_table();
 coverage = empty_coverage_table();
 step('Loading the models the coverage data refers to');
-artifacts = load_models_for_coverage(artifacts, targetConfig, cfg);
+[artifacts, openedModels] = load_models_for_coverage( ...
+    artifacts, targetConfig, cfg);
+% The standalone pipeline refuses to run while the Top Model is loaded,
+% because its bundle opens a copy under the same name. Leaving these open
+% would make a report block the next command.
+modelCleanup = onCleanup(@() close_opened_models(openedModels, cfg)); %#ok<NASGU>
 
 step('Generating and attaching coverage filters');
 [coverageFilters, artifacts] = resolve_coverage_filters( ...
@@ -345,7 +350,32 @@ st_log(cfg, 'INFO', 'Report step | Coverage %s | %s | %d/%d', ...
 end
 
 
-function artifacts = load_models_for_coverage(artifacts, targetConfig, cfg)
+function close_opened_models(openedModels, cfg)
+%CLOSE_OPENED_MODELS Leave the session as this report found it.
+%
+% Only what this function opened is closed, and always without saving: a
+% report must never write a model back.
+for i = 1:numel(openedModels)
+    name = char(openedModels(i));
+    try
+        if bdIsLoaded(name)
+            close_system(name, 0);
+        end
+    catch ME
+        st_log(cfg, 'WARN', ...
+            'Report step | Could not close %s | %s', name, ME.message);
+    end
+end
+if ~isempty(openedModels)
+    st_log(cfg, 'INFO', ...
+        'Report step | Closed %d model(s) this report opened', ...
+        numel(openedModels));
+end
+end
+
+
+function [artifacts, loaded] = load_models_for_coverage( ...
+        artifacts, targetConfig, cfg)
 %LOAD_MODELS_FOR_COVERAGE Coverage data needs the models it points at.
 %
 % A ResultSet read back from a file carries block paths, not handles. On the
@@ -386,6 +416,9 @@ end
 st_log(cfg, 'INFO', ...
     'Report step | Models loaded for coverage | loaded=%d | failed=%d', ...
     numel(loaded), numel(failures));
+% Close the harnesses before their owner, so closing one never pushes a
+% Harness copy back into the CUT.
+loaded = flipud(loaded(:));
 if isempty(failures)
     artifacts = record_artifact(artifacts, 'MODEL_LOAD', '', 'OK', ...
         sprintf('%d model(s) loaded for coverage access', numel(loaded)));

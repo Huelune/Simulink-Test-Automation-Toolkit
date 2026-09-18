@@ -41,6 +41,13 @@ fprintf('Run       : %s\n', runId);
 fprintf('Directory : %s\n', runDirectory);
 fprintf('============================================\n');
 
+% The standalone pipeline refuses to run while the Top Model is loaded, so
+% leave the session as this command found it.
+% A handle container, because onCleanup captures its arguments by value and
+% the list only fills as the loop runs.
+openedModels = containers.Map();
+openedModels('names') = strings(0,1);
+modelCleanup = onCleanup(@() close_opened_models(openedModels, cfg)); %#ok<NASGU>
 Collected = strings(height(targets),1);
 Message = strings(height(targets),1);
 totalTimer = tic;
@@ -66,7 +73,8 @@ for i = 1:height(targets)
     % A ResultSet read back from a file carries block paths, not handles.
     % Simulink Coverage rebuilds that map on first access, and with the
     % models unloaded the walk does not finish in any useful time.
-    load_models_for_coverage(row, cfg);
+    openedModels('names') = [openedModels('names'); ...
+        load_models_for_coverage(row, cfg)];
     filterPath = "";
     ruleCount = 0;
     if st_coverage_filter_active(row)
@@ -147,10 +155,12 @@ end
 end
 
 
-function load_models_for_coverage(row, cfg)
+function opened = load_models_for_coverage(row, cfg)
 %LOAD_MODELS_FOR_COVERAGE Open what the saved coverage data points at.
+opened = strings(0,1);
 if ~bdIsLoaded(cfg.TopModel)
     load_system(cfg.ModelFile);
+    opened(end+1,1) = string(cfg.TopModel);
 end
 harness = char(string(row.HarnessName));
 if isempty(harness) || bdIsLoaded(harness)
@@ -158,6 +168,26 @@ if isempty(harness) || bdIsLoaded(harness)
 end
 owner = st_normalize_cut_path(row.CUTPath, cfg.TopModel);
 sltest.harness.load(owner, harness);
+opened(end+1,1) = string(harness);
+end
+
+
+function close_opened_models(openedModels, cfg)
+%CLOSE_OPENED_MODELS Leave the session as this command found it.
+%
+% Harnesses close before their owner, and always without saving: collecting
+% results must never write a model back.
+names = openedModels('names');
+for i = numel(names):-1:1
+    name = char(names(i));
+    try
+        if bdIsLoaded(name)
+            close_system(name, 0);
+        end
+    catch ME
+        st_log(cfg, 'WARN', 'Could not close %s | %s', name, ME.message);
+    end
+end
 end
 
 

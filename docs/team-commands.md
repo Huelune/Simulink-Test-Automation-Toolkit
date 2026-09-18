@@ -76,8 +76,11 @@ st_run_standalone_coverage_pipeline      제출물 생성
 st_check_standalone_coverage             제출물 검사 → 1111111111 PASS
 ```
 
-`st_generate_test_report`와 standalone은 **둘 다 할 필요가 없습니다.** 필요한
-쪽만 부르십시오.
+`st_generate_test_report`와 standalone은 **형제 갈래입니다.** 순서 관계가 아니고,
+필요한 쪽만 부르면 됩니다. standalone은 통합 보고서를 읽지 않습니다.
+
+> 둘 다 하실 거면 **보고서를 먼저** 하십시오. standalone은 Top Model이 닫혀
+> 있어야 시작합니다.
 
 ## 2. 복사용 전체 코드
 
