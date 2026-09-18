@@ -24,7 +24,15 @@
 │   (BATCH)                 │ │   coverage_pipeline           │
 │ st_collect_per_cut_results│ │ st_check_standalone_coverage  │
 │   (PER_CUT)               │ │                               │
-└───────────────────────────┘ └───────────────────────────────┘
+└─────────────┬─────────────┘ └───────────────┬───────────────┘
+              └───────────────┬───────────────┘
+                              ▼
+              ┌───────────────────────────────┐
+              │ 3. 고객 제출용 최종 문서       │
+              │    두 갈래의 결과를 한 파일로  │
+              │                               │
+              │ st_export_final_document      │
+              └───────────────────────────────┘
 ```
 
 **커버리지 필터(CVF)는 2단계에서만 만들어집니다.** 1단계는 커버리지를 필터 없이
@@ -47,6 +55,7 @@
 | `st_collect` | **`st_collect_per_cut_results`** |
 | `st_run_standalone_coverage_pipeline` | `st_run_standalone_coverage_pipeline` |
 | `st_check_standalone` | **`st_check_standalone_coverage`** |
+| `st_export_final` | **`st_export_final_document`** |
 
 ## 1. 전체 흐름
 
@@ -74,6 +83,8 @@ st_export_test_specification             명세서 Excel이 필요할 때
 st_run_standalone_coverage_pipeline      제출물 생성
     │
 st_check_standalone_coverage             제출물 검사 → 1111111111 PASS
+    │
+st_export_final_document                 고객 제출용 최종 문서
 ```
 
 `st_generate_test_report`와 standalone은 **형제 갈래입니다.** 순서 관계가 아니고,
@@ -119,6 +130,10 @@ info = st_run_standalone_coverage_pipeline( ...
 disp(code)
 disp(summary)
 disp(details)
+
+%% 8. 고객 제출용 최종 문서 — 4-1 결과 정리를 먼저 해야 판정이 채워집니다
+[T, finalFile] = st_export_final_document();
+disp(finalFile)
 ```
 
 ## 3. 명령별 설명
@@ -471,6 +486,52 @@ File·CVF를 저장하거나 바꾸지 않습니다.
 | B9 | 원본 model/Test File/Harness/Input/Excel 불변 |
 | B10 | filter 복원, model/path 정리, CUT 폴더 격리 |
 
+### `st_export_final_document`
+
+```matlab
+[T, finalFile] = st_export_final_document();
+disp(finalFile)
+```
+
+고객에게 제출할 문서를 만듭니다. 명세서 Excel, 결과 정리 산출물,
+`CoverageSummary.xlsx` 세 곳에 흩어진 내용을 한 파일로 모읍니다. 테스트를 돌리지
+않으며 모델을 바꾸지 않습니다.
+
+#### 실행 전 조건
+
+**결과 정리(4-1)를 먼저 해야 판정이 채워집니다.** 실행만 하면 iteration별
+판정이 파일에 남지 않습니다. PER_CUT으로 돌렸으면 `st_collect_per_cut_results`,
+BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
+`st_run_from_harness('AutoCollect', true)`로 한 번에 하는 것이 가장 쉽습니다.
+
+커버리지 시트까지 채우려면 standalone 제출물(6)도 먼저 만들어야 합니다.
+
+정리를 건너뛰어도 오류로 막지는 않습니다. 판정이 빈 칸이 되고 `TestResults`
+시트에 어느 명령을 부르라는 안내가 적힙니다.
+
+#### 만들어지는 것
+
+`result/final_document_<시각>.xlsx` 한 개입니다.
+
+| 시트 | 내용 |
+| --- | --- |
+| `TestCase` | 고객 양식 14열 |
+| `Coverage` | CUT별 커버리지. `%`는 진짜 Excel 수식입니다 |
+| `TestResults` | 행별 판정과 `확인 필요`·`확인 사유`·`확인 위치` |
+| `OverflowDetails` | 셀 한도를 넘은 텍스트 |
+| `Metadata` | 판정과 커버리지가 각각 어느 실행에서 왔는지 |
+
+#### 제출 전에 볼 것
+
+- `TestResults` 시트에서 **`확인 필요`가 `Y`인 행**만 확인하십시오. 실패한 행은
+  `확인 위치`의 `.mldatx`를 Test Manager에서 열면 됩니다.
+- `Metadata`의 `ResultRunId`가 방금 돌린 실행과 같은지 보십시오.
+- 판정과 커버리지는 **서로 다른 실행**에서 옵니다. 커버리지만 standalone
+  산출물을 쓰며, standalone은 독립 모델로 돌기 때문에 PASS/FAIL이 다를 수
+  있습니다. 그래서 판정은 일반 실행에서 가져옵니다.
+
+자세한 열 구성과 옵션은 [최종 문서 추출](final-document.md)에 있습니다.
+
 ## 4. 상황별로 무엇을 부를까
 
 | 상황 | 명령 |
@@ -489,6 +550,7 @@ File·CVF를 저장하거나 바꾸지 않습니다.
 | 명세서 Excel이 필요하다 | `st_export_test_specification` |
 | 제출물을 만든다 | Top Model 닫고 → `st_run_standalone_coverage_pipeline('Action','ALL',...)` |
 | 제출물이 맞는지 본다 | `st_check_standalone_coverage` |
+| 고객에게 낼 문서를 만든다 | 결과 정리 후 → `st_export_final_document` |
 
 ## 5. 자주 막히는 곳
 
@@ -535,4 +597,5 @@ File·CVF를 저장하거나 바꾸지 않습니다.
 | 단계를 끊어서 실행 | [단계별로 끊어서 실행하기](manual/step-by-step.md) |
 | 제출물을 Test Manager에서 열기 | [결과 열기](manual/open-results.md) |
 | 명세서 Excel의 열 구성 | [테스트 명세서 추출](test-specification.md) |
+| 최종 문서의 열 구성과 판정 출처 | [최종 문서 추출](final-document.md) |
 | 전체 문서 목록 | [문서 지도](README.md) |

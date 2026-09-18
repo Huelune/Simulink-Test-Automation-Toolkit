@@ -72,6 +72,7 @@ st_run_standalone_coverage_pipeline( ...
 | 내보내기 | `st_export_test_asset_bundle` | 선택 결과와 자산을 한 폴더로 |
 | 내보내기 | `st_export_test_bundle` | 다른 PC에서 재실행할 전체 번들 |
 | 검증 | `st_verify_all` | 환경·단위·fixture·실제 모델 종합 검증 |
+| 문서 | `st_export_final_document` | 고객 제출용 최종 문서 Excel 생성 |
 | 예제 | `st_create_example` | 익명 모델·입력·Excel 생성 |
 
 ## 2. 초기화와 대상 선택
@@ -113,7 +114,7 @@ st_run_standalone_coverage_pipeline('Action','  % Tab -> ALL EXECUTE PACKAGE SUM
 | `src/workflow` | `st_run_from_harness`, `st_run_after_harness`, `st_run_from_stage` |
 | `src/pipeline` | `st_run_standalone_coverage_pipeline`, `st_load_standalone_pipeline_manifest`, `st_regenerate_standalone_results` |
 | `src/verification` | `st_check_standalone_coverage`, `st_check_readiness` |
-| `src/exporting` | `st_export_test_bundle` |
+| `src/exporting` | `st_export_test_bundle`, `st_export_test_specification`, `st_export_final_document` |
 | `src/execution` | `st_run_tests_per_cut` |
 
 정의는 각 폴더의 `functionSignatures.json`에 있습니다. MATLAB은 이 파일을
@@ -342,7 +343,7 @@ Test Case 판정이 `FAILED`/`UNTESTED`/`INCOMPLETE`여도 실행 자체가 끝�
 Coverage Filter가 없는 Test File을 BATCH로 실행합니다. 보통 workflow 진입점이
 내부적으로 호출하므로 직접 쓸 일은 드뭅니다.
 
-## 7. 테스트 명세서 추출
+## 7. 명세서와 최종 문서 추출
 
 ### `st_export_test_specification`
 
@@ -370,6 +371,47 @@ Excel로 뽑습니다.
 모델을 읽기 위해 로드하지만 시뮬레이션·테스트 실행·SLDV 생성·기대값 갱신은 하지
 않습니다. 자세한 열 구성과 판정 규칙은
 [테스트 명세서 추출](test-specification.md)에 있습니다.
+
+### `st_export_final_document`
+
+고객에게 제출할 문서를 만듭니다. 명세서 Excel을 파싱하지 않고 저장된 모델에서
+행을 다시 추출한 뒤, 판정과 커버리지만 기존 결과 파일에서 읽습니다.
+
+```matlab
+[T, outputFile] = st_export_final_document();
+```
+
+**결과 정리를 먼저 해야 판정이 채워집니다.** `cfg.GenerateTestReport`가 `false`,
+`cfg.PerCutResultCollection`이 `DEFERRED`이므로 실행만 하면 iteration별 판정이
+파일에 없습니다. PER_CUT 뒤에는 `st_collect_per_cut_results`, BATCH 뒤에는
+`st_generate_test_report`를 부르십시오.
+
+| 옵션 | 기본값 | 역할 |
+| --- | --- | --- |
+| `OutputFile` | `result/final_document_<timestamp>.xlsx` | 저장할 파일 경로. **이미 있으면 덮어쓰지 않고 실패합니다** |
+| `TestCaseIdMode` | `cfg.FinalDocumentTestCaseIdMode` (`'COMBINED'`) | `'COMBINED'`은 시나리오명과 테스트 케이스명을 한 셀에 두 줄로, `'SCENARIO'`는 시나리오명만 |
+| `DecisionBlockScope` | `cfg.DecisionBlockScope` (`'EXPLICIT'`) | `Description` 열에 담을 분기 블록 범위 |
+| `CoverageSource` | `cfg.FinalDocumentCoverageSource` (`'STANDALONE'`) | `'STANDALONE'`은 pipeline 산출물, `'TEST_RUN'`은 실행의 Coverage 시트, `'NONE'`은 수집 안 함 |
+| `CoveragePipelineId` | `'LATEST'` | 읽을 standalone pipeline 실행 |
+| `ResultRun` | `cfg.FinalDocumentResultRun` (`'AUTO'`) | 판정을 읽을 실행. `'AUTO'`/`'BATCH'`/`'PER_CUT'` 또는 실행 디렉터리 경로 |
+| `RequireTestResults` | `false` | 판정을 못 찾으면 빈 칸 대신 중단 |
+| `RequireCoverage` | `false` | 커버리지를 못 찾으면 `N/A` 대신 중단 |
+| `IncludeUsageSheet` | `cfg.FinalDocumentIncludeUsageSheet` (`false`) | 내부 명령 목록 시트를 덧붙임 |
+
+```matlab
+% 실행 방식을 직접 지정 (그 이력이 없으면 중단합니다)
+[T, file] = st_export_final_document('ResultRun','BATCH');
+
+% 커버리지 없이 판정만
+[T, file] = st_export_final_document('CoverageSource','NONE');
+
+% 판정이 비면 만들지 않기
+[T, file] = st_export_final_document('RequireTestResults', true);
+```
+
+모델을 읽기 위해 로드하지만 시뮬레이션·테스트 실행·SLDV 생성·기대값 갱신은 하지
+않으며 `.mldatx`도 열지 않습니다. 자세한 열 구성과 판정 출처는
+[최종 문서 추출](final-document.md)에 있습니다.
 
 ## 8. Standalone Coverage 파이프라인
 

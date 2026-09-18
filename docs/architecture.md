@@ -49,7 +49,7 @@ Simulink-Test-Automation-Toolkit/
 | `assessment`, `coverage`, `test_manager` | 검증 로직, Test Case별 커버리지 필터, Test Case·Iteration·정렬 관리 |
 | `execution` | 테스트 실행과 기대값 갱신 |
 | `pipeline` | standalone Coverage 파이프라인과 결과 재생성 |
-| `exporting` | 불변 template 번들, dependency와 입력 수집, 테스트 명세서 |
+| `exporting` | 불변 template 번들, dependency와 입력 수집, 테스트 명세서, 최종 문서 |
 | `verification` | QUICK/RUNTIME/CERTIFY 조율, 상태 집계, 수동 증거, Excel/JSON/JUnit writer, readiness 검사 |
 | `maintenance` | 알려진 생성물의 dry-run 우선 정리 |
 | `reporting`, `shared`, `scenarios` | 도메인을 가로지르는 결과·경로·lifecycle·명명 helper |

@@ -358,7 +358,7 @@ workflow에서 `SLDV`로 해석됩니다.
 따지지 않고 모든 준비 단계를 `CACHED`로 두고 테스트만 실행하므로, 이 값일 때는
 `RunGeneratedTests=false`여도 테스트가 실행됩니다.
 
-## 9. 테스트 명세서 추출
+## 9. 명세서와 최종 문서 추출
 
 ### `DecisionBlockScope` — 기본 `'EXPLICIT'`
 
@@ -375,6 +375,61 @@ workflow에서 `SLDV`로 해석됩니다.
 
 실행마다 덮어쓰려면 `st_export_test_specification('DecisionBlockScope','ALL')`을
 쓰십시오. 어느 범위로 뽑았는지는 실행 로그의 `DecisionBlockScope=` 항목에 남습니다.
+
+### `FinalDocumentTestCaseIdMode` — 기본 `'COMBINED'`
+
+`st_export_final_document`가 `Test Case ID` 셀을 어떻게 쓸지 정합니다.
+
+| 값 | 결과 |
+| --- | --- |
+| `'COMBINED'` (기본) | 한 셀에 두 줄. 1줄은 Test Sequence 시나리오명, 2줄은 테스트 케이스명 |
+| `'SCENARIO'` | 시나리오명 한 줄만 |
+
+셀이 자동 줄바꿈되어 있으므로 두 줄이 그대로 보입니다. 새 이름을 조립하지 않고
+있는 이름을 옮기기만 하므로 길이 절단이나 이름 충돌이 생기지 않습니다.
+
+### `FinalDocumentResultRun` — 기본 `'AUTO'`
+
+`판정 결과` 열을 어느 실행에서 읽을지 정합니다.
+
+| 값 | 읽는 곳 |
+| --- | --- |
+| `'AUTO'` (기본) | `result/latest.json`과 `result/per_cut_latest.json`의 `UpdatedAt`을 비교해 더 최근 실행 |
+| `'BATCH'` | `st_generate_test_report`가 마지막으로 만든 실행 |
+| `'PER_CUT'` | `st_collect_per_cut_results`가 마지막으로 정리한 실행 |
+| 실행 디렉터리 경로 | 그 디렉터리 |
+
+`'BATCH'`와 `'PER_CUT'`은 그 이력이 없으면 **중단합니다.** 명시한 선택이 조용히
+다른 쪽으로 넘어가면 안 되기 때문입니다.
+
+`result/TestSummary.xlsx` 복사본은 어느 값에서도 읽지 않습니다. 그 파일은
+BATCH에서만 갱신되므로 PER_CUT 뒤에 읽으면 예전 BATCH 값이 나옵니다. 항상 실행
+디렉터리 안의 원본을 읽고, 어느 실행이었는지 `Metadata` 시트에 남깁니다.
+
+### `FinalDocumentCoverageSource` — 기본 `'STANDALONE'`
+
+`Coverage` 시트의 숫자를 어디서 읽을지 정합니다.
+
+| 값 | 읽는 곳 |
+| --- | --- |
+| `'STANDALONE'` (기본) | 최신 standalone pipeline의 `CoverageSummary.xlsx` |
+| `'TEST_RUN'` | 판정을 읽은 그 실행의 `Coverage` 시트, `FINAL` 행 |
+| `'NONE'` | 읽지 않음. 값이 전부 `N/A` |
+
+`'STANDALONE'`은 **판정과 다른 실행**입니다. standalone은 SUT를 독립 모델로
+바꾸고 기대값 갱신을 강제로 끄므로 PASS/FAIL이 일반 실행과 다를 수 있습니다.
+그래서 커버리지만 가져오고 판정은 일반 실행에서 읽으며, 두 실행의 식별자를
+`Metadata` 시트에 둘 다 적습니다.
+
+### `FinalDocumentIncludeUsageSheet` — 기본 `false`
+
+`true`면 내부 `st_*` 명령 목록을 `사용법` 시트로 맨 뒤에 붙입니다. 고객
+제출물에는 맞지 않아 기본이 꺼져 있습니다.
+
+### `FinalDocumentNAText` — 기본 `'N/A'`
+
+값을 알 수 없는 칸에 적을 글자입니다. standalone pipeline이 이미 `N/A`를 쓰므로
+두 파일이 같은 글자를 씁니다. 명세서의 한글 `해당 없음`도 이 글자로 바뀝니다.
 
 ## 10. 로그와 진단
 
