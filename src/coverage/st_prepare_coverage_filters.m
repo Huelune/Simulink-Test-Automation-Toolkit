@@ -5,8 +5,8 @@ function R = st_prepare_coverage_filters(stageSelection)
 
 cfg = st_require_runtime_target();
 T = st_load_targets(cfg.OnlyEnabled);
-applicationMode = ...
-    st_coverage_filter_application_mode(cfg.CoverageFilterApplicationMode);
+% Generated filters are always transient; see st_apply_test_case_coverage_filters.
+applicationMode = 'RUNTIME';
 
 if nargin < 1
     stageSelection = [];

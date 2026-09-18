@@ -50,9 +50,8 @@ HARNESS → SLDV → HARNESS_CONFIG → SIGNAL_EDITOR → ASSESSMENT
 | `PER_CUT` | `st_run_tests_per_cut`이 CUT 폴더 안에서 대상마다 |
 | Standalone | 내보낸 번들 안에서. 물려받은 CVF는 `REPLACE` 정책으로 버립니다 |
 
-필터 설정(`CoverageFilterMode` 등)은 `PERSIST`일 때 Test File에 기록되므로
-`TEST_MANAGER` 지문에 들어갑니다. 설정을 바꿨으면 `TEST_MANAGER`부터 다시
-돌리십시오.
+필터 설정(`CoverageFilterMode` 등)은 준비 단계와 무관합니다. 바꿔도 Harness나
+Test File을 다시 만들지 않으며, 다음 결과물 생성에만 반영됩니다.
 
 ## 4. 다시 실행할 때
 

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- 준비 단계에서 커버리지 필터 처리를 완전히 걷어내고 `PERSIST` 모드를 제거했습니다.
+  이제 Excel의 커버리지 열 네 개는 **결과물 생성 단계에서만** 쓰입니다.
+  - `st_create_test_manager`가 Test File을 저장한 뒤 필터를 붙였다 복원하던 블록을
+    삭제했습니다. `RUNTIME`에서는 붙였다 바로 푸는 헛수고였고, `PERSIST`에서는
+    CVF를 만들어 Test File에 박아 넣었습니다. `'DeferCoverageFilters'` 파라미터도
+    함께 없앴습니다. 이제 PER_CUT만 예외로 둘 이유가 없습니다.
+  - `cfg.CoverageFilterApplicationMode`와 `st_coverage_filter_application_mode`를
+    제거했습니다. `PERSIST`는 필터를 Test File에 남겨 실행이 필터를 걸고 돌게
+    하므로, "실행은 커버리지를 필터 없이 수집한다"와 정면으로 어긋납니다. 적용은
+    언제나 임시입니다.
+  - 커버리지 열이 `TEST_MANAGER` 지문에서 빠졌습니다. 준비 단계가 더 이상 그
+    값을 읽지 않으므로, 필터 설정을 바꿔도 Harness나 Test File을 다시 만들지
+    않습니다. 다음 결과물 생성에만 반영됩니다.
+  - `st_verify_all`의 `CURRENT.COVERAGE_CONFIG` 검사에서 적용 모드 항목을
+    뺐습니다.
 - 실행 방식은 이제 **부르는 쪽이 정합니다.** Excel은 관여하지 않습니다.
   `cfg.ExecutionMode` 기본값이 `'AUTO'`에서 **`'BATCH'`**로 바뀌었고, 한 번만
   달리 돌리려면 명령에서 지정합니다.

@@ -315,8 +315,6 @@ CVF 생성
 - 다른 Test Case의 `Enabled` 상태는 바꾸지 않습니다.
 - 기존 수동 필터는 실행 후 복원하며, `CoverageFilterExistingPolicy='MERGE'`일 때만
   새 CVF와 함께 적용합니다.
-- `PER_CUT`은 항상 임시 필터를 쓰므로 `CoverageFilterApplicationMode='PERSIST'`를
-  거부합니다.
 - 결과 산출물은 임시 필터를 원복한 뒤 만듭니다. 보존 전후로 `cvdata`의
   ID·루트·CVF 참조가 달라지면 그 CUT을 실패로 기록합니다.
 

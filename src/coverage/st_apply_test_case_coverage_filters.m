@@ -2,10 +2,11 @@ function [cleanupObj, R, session] = ...
     st_apply_test_case_coverage_filters(tf, testCases, targetConfig, cfg, varargin)
 %ST_APPLY_TEST_CASE_COVERAGE_FILTERS Apply managed CVFs through the API.
 %
-% RUNTIME returns an onCleanup plus a session.Restore function. Call
-% session.Restore explicitly whenever restoration failure must be handled as
-% a structured execution failure. The onCleanup is only a last-resort guard.
-% PERSIST saves the configured per-Test-Case filters and returns [].
+% Application is always transient: it returns an onCleanup plus a
+% session.Restore function. Call session.Restore explicitly whenever
+% restoration failure must be handled as a structured execution failure. The
+% onCleanup is only a last-resort guard. Nothing is written to the MLDATX
+% file, because a filter belongs to the artifacts built from a run.
 % ExistingFilterPolicy=REPLACE temporarily suppresses inherited filters;
 % MERGE preserves the legacy behavior of combining them with managed CVFs.
 
@@ -18,18 +19,14 @@ addParameter(p, 'ApplyManagedFiltersDuringRun', true, ...
     @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 
-applicationMode = ...
-    st_coverage_filter_application_mode(cfg.CoverageFilterApplicationMode);
+% Every application is transient. Nothing keeps a generated filter in the
+% MLDATX file any more: the filter belongs to the artifacts built from a
+% run, and those attach it to the result data instead.
+applicationMode = 'RUNTIME';
 existingFilterPolicy = st_coverage_filter_existing_policy( ...
     p.Results.ExistingFilterPolicy);
 applyManagedFiltersDuringRun = logical( ...
     p.Results.ApplyManagedFiltersDuringRun);
-if strcmp(existingFilterPolicy, 'REPLACE') && ...
-        ~strcmp(applicationMode, 'RUNTIME')
-    error('simtest:CoverageFilterReplacementRequiresRuntime', ...
-        ['ExistingFilterPolicy=REPLACE is transient and requires ' ...
-         'CoverageFilterApplicationMode=RUNTIME.']);
-end
 
 if isempty(testCases)
     error('simtest:CoverageFilterNoTestCases', ...
@@ -207,13 +204,6 @@ try
             managed_application_text(applyManagedFiltersDuringRun));
     end
 
-    if strcmp(applicationMode, 'PERSIST')
-        st_log(cfg, 'DEBUG', ...
-            'Persistent coverage filter saveToFile start');
-        saveToFile(tf);
-        st_log(cfg, 'DEBUG', ...
-            'Persistent coverage filter saveToFile done');
-    end
 catch ME
     st_log(cfg, 'ERROR', ...
         'Test Case coverage filter apply failed | %s: %s', ...

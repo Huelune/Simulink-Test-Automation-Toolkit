@@ -369,13 +369,6 @@ cfg.CoverageStructuralLevel = 'Decision';
 cfg.CoverageMetricSettings = 'dwe';
 cfg.CoverageIncludeReferencedModels = false;
 
-% RUNTIME:
-%   Apply each generated filter only for its execution scope. PER_CUT keeps
-%   it through result export, then restores and verifies the original Test
-%   File, Test Suite, and Test Case filter settings before the next CUT.
-% PERSIST:
-%   Keep the generated per-Test-Case filter settings in the MLDATX file.
-cfg.CoverageFilterApplicationMode = 'RUNTIME';
 
 % PER_CUT existing-filter policy:
 %   REPLACE: temporarily clear Test File, Suite, and Test Case CVFs and

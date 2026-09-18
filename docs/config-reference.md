@@ -316,18 +316,6 @@ Harness 입력 인터페이스 검증은 어느 쪽이든 그대로 수행합니
 기본값은 `'Decision'`과 `'dwe'`입니다. Decision 커버리지를 설정하면 Block Execution이
 함께 수집됩니다. 특별한 이유가 없으면 바꾸지 마십시오.
 
-### `CoverageFilterApplicationMode` — 기본 `'RUNTIME'`
-
-만들어진 CVF를 어떻게 붙일지 정합니다.
-
-| 값 | 동작 |
-| --- | --- |
-| `'RUNTIME'` (기본) | 실행 직전에 붙였다가 끝나면 원래 설정으로 복원합니다. Test File에 남기지 않습니다 |
-| `'PERSIST'` | Test Case별 필터 설정을 `.mldatx`에 저장합니다 |
-
-두 모드 모두 Test File **수준**에는 자동 필터를 기록하지 않습니다. `PER_CUT`은 항상
-임시 적용이 필요하므로 `'PERSIST'`를 거부합니다.
-
 ### `CoverageFilterExistingPolicy` — 기본 `'REPLACE'`
 
 사람이 직접 걸어 둔 기존 필터를 어떻게 다룰지 정합니다.

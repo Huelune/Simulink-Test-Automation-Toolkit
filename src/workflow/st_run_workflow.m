@@ -151,11 +151,6 @@ for s = 1:numel(stageNames)
         continue;
     end
     fn = stageFunctions{s};
-    if strcmp(executionMode, 'PER_CUT') && ...
-            strcmp(stage, 'TEST_MANAGER')
-        fn = @(value) st_create_test_manager( ...
-            value, 'DeferCoverageFilters', true);
-    end
     state = st_record_restart_stage(state,plan,stage,cfg,'RUNNING');
     try
         stageResults{s} = execute_timed_step( ...

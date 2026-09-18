@@ -37,7 +37,8 @@ function R = st_create_test_manager(stageSelection, varargin)
 %
 % Coverage:
 %   RecordCoverage = true at Test File level and Test Case level.
-%   PERSIST mode attaches managed filters at Test Case level only.
+%   No coverage filter is generated or attached here. Filters belong to the
+%   artifacts built from a run.
 
 cfg = ...
     st_require_runtime_target();
@@ -50,10 +51,7 @@ if nargin < 1
     stageSelection = [];
 end
 p = inputParser;
-addParameter(p, 'DeferCoverageFilters', false, ...
-    @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
-deferCoverageFilters = logical(p.Results.DeferCoverageFilters);
 selection = st_normalize_stage_selection(T, stageSelection);
 
 if ~any(selection.Run)
@@ -664,36 +662,9 @@ saveToFile( ...
 st_log(cfg, 'DEBUG', ...
     'Test Manager saveToFile done');
 
-if ~any(Status == "FAIL") && ~deferCoverageFilters
-    coverageApplicationMode = st_coverage_filter_application_mode( ...
-        cfg.CoverageFilterApplicationMode);
-    st_log(cfg, 'INFO', ...
-        ['Test Manager per-Test-Case coverage filter synchronization ' ...
-         'start | mode=%s'], coverageApplicationMode);
-    if strcmp(coverageApplicationMode, 'PERSIST')
-        persistentPreparationResult = st_prepare_coverage_filters();
-        if any(persistentPreparationResult.Status == "FAIL")
-            failed = persistentPreparationResult( ...
-                persistentPreparationResult.Status == "FAIL", :);
-            error('simtest:CoverageFilterPreparationFailed', ...
-                'Coverage filter preparation failed: %s', ...
-                char(strjoin(failed.Message, ' | ')));
-        end
-    end
-    [configuredTestCases, ~] = st_get_run_test_cases(tf);
-    [configurationCleanup, configuredFilterResult, filterSession] = ...
-        st_apply_test_case_coverage_filters( ...
-            tf, configuredTestCases, T, cfg);
-    if strcmp(coverageApplicationMode, 'RUNTIME')
-        filterSession.Restore();
-        clear configurationCleanup;
-    end
-    st_log(cfg, 'INFO', ...
-        ['Test Manager per-Test-Case coverage filter synchronization ' ...
-         'complete | mode=%s | cases=%d | warnings=%d'], ...
-        coverageApplicationMode, height(configuredFilterResult), ...
-        sum(configuredFilterResult.Status == "WARN"));
-end
+% Coverage filters are not part of preparing the Test File. They are
+% generated and registered when the artifacts are built, so nothing here
+% touches them.
 
 
 %% ============================================================
