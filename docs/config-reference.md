@@ -490,6 +490,32 @@ st_generate_test_report('RunRecord', 'LATEST')
 `true`로 두면 예전처럼 실행이 끝나자마자 보고서까지 만듭니다. 실행 기록은
 그래도 남습니다.
 
+### `ReportMatchCoverageObjects` — 기본 `false`
+
+통합 보고서가 CUT마다 **그 CUT의 커버리지 객체만** 골라 쓸지 정합니다.
+`st_generate_test_report`에만 적용됩니다.
+
+기본값 `false`는 CUT 행을 ResultSet 안의 모든 커버리지 객체로 만듭니다. 그래서
+CUT 행에 다른 CUT의 객체가 섞이고, `decisioninfo`/`executioninfo`가 CUT 수 ×
+객체 수만큼 호출됩니다. 관리 Excel이 커지면 이 단계가 보고서에서 가장 오래
+걸립니다.
+
+`true`로 두면 `st_match_coverage_descriptors`가 CUT에 속한 객체만 고릅니다.
+이식용 결과 내보내기(`st_export_result_set_report`)와 CUT별 최종 지표가 이미
+쓰고 있는 규칙과 같습니다. 훨씬 빠릅니다.
+
+**다만 걸리는 시간만 바뀌는 것이 아니라 세는 대상이 바뀝니다.** 켜면 CUT 행에서
+다른 CUT의 객체가 빠지므로 커버리지 수치가 달라질 수 있습니다. 바로 채택하지
+마시고 기존 `TestSummary.xlsx`를 기준선으로 두고 한 번 비교해 보십시오.
+
+```matlab
+% src/config/st_config.m
+cfg.ReportMatchCoverageObjects = true;
+```
+
+켜고 만든 보고서는 실행 로그에 `Coverage | matched to each CUT`가 남으므로,
+나중에 어느 규칙으로 만든 보고서인지 구분할 수 있습니다.
+
 ## 13. 경로 설정 (보통 그대로 둡니다)
 
 다음 설정은 결과가 저장될 위치를 정합니다. 보통 그대로 둡니다.

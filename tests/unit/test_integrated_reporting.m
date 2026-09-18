@@ -110,6 +110,44 @@ verifyFalse(testCase, cfg.CoverageIncludeReferencedModels);
 verifyFalse(testCase, cfg.GenerateTestReport);
 end
 
+function testCoverageMatchingIsOffByDefault(testCase)
+% Turning matching on drops the coverage objects a CUT row currently
+% carries from other CUTs, so the reported numbers move. A default must
+% not change what an existing report counts.
+cfg = st_config();
+verifyFalse(testCase, cfg.ReportMatchCoverageObjects);
+end
+
+function testReportPassesTheMatchingChoiceToBothWalks(testCase)
+% INITIAL and FINAL have to be collected under the same rule; one matched
+% walk next to one unmatched walk would put incomparable numbers in one
+% report.
+source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
+    'st_generate_test_report.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'matchCoverageObjects = logical\(cfg\.ReportMatchCoverageObjects\);', ...
+    'once'));
+verifyEqual(testCase, numel(regexp(source, ...
+    "'MatchCoverageObjects', matchCoverageObjects")), 2);
+end
+
+function testOtherCoverageReadersAlwaysMatch(testCase)
+% The option exists for the integrated report alone. The portable result
+% export and the PER_CUT metrics are per-CUT artifacts by construction, so
+% an unmatched walk there would be wrong, not merely slow.
+root = st_project_root();
+for name = ["st_export_result_set_report", ...
+        "st_collect_final_cut_coverage_metrics"]
+    source = fileread(fullfile(root, 'src', 'reporting', name + ".m"));
+    verifyNotEmpty(testCase, regexp(source, ...
+        "'MatchCoverageObjects', true", 'once'), ...
+        name + " must keep matching unconditionally");
+    verifyEmpty(testCase, regexp(source, 'ReportMatchCoverageObjects', ...
+        'once'), ...
+        name + " must not read the report-only option");
+end
+end
+
 function descriptors = coverage_descriptors( ...
         Root, OwnerModel, OwnerBlock, AnalyzedModel)
 descriptors = table(string(Root(:)), string(OwnerModel(:)), ...

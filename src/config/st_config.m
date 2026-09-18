@@ -387,6 +387,26 @@ cfg.CoverageStructuralLevel = 'Decision';
 cfg.CoverageMetricSettings = 'dwe';
 cfg.CoverageIncludeReferencedModels = false;
 
+% Integrated report: build each CUT's coverage rows only from the coverage
+% objects whose metadata identifies that CUT.
+%
+% false (default):
+%   Every CUT row is built from every coverage object in the ResultSet.
+%   decisioninfo/executioninfo then walk a cross-product, and that walk is
+%   the slowest part of st_generate_test_report on a large workbook.
+%
+% true:
+%   st_match_coverage_descriptors selects the objects that belong to the
+%   CUT - the rule st_export_result_set_report and the PER_CUT metrics
+%   already use. Much faster, and a CUT row stops carrying other CUTs'
+%   objects, so the reported numbers can move.
+%
+% Changing this changes what the report counts, not just how long it takes.
+% Compare one report against an existing TestSummary.xlsx before adopting
+% it. Only st_generate_test_report reads this; the other coverage readers
+% match unconditionally.
+cfg.ReportMatchCoverageObjects = false;
+
 
 % PER_CUT existing-filter policy:
 %   REPLACE: temporarily clear Test File, Suite, and Test Case CVFs and

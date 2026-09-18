@@ -66,13 +66,25 @@ step('Collecting coverage');
 try
     % Two passes over every target, each one calling into the Simulink
     % Coverage API. With a large workbook this is minutes, not seconds, so
-    % report progress instead of going silent.
+    % report progress instead of going silent. Matching narrows each pass
+    % to the CUT's own coverage objects and changes what is counted, so it
+    % is the caller's choice rather than this function's.
+    matchCoverageObjects = logical(cfg.ReportMatchCoverageObjects);
+    if matchCoverageObjects
+        % Non-default, and it moves the numbers. Say so in the log the
+        % report is read next to.
+        st_log(cfg, 'INFO', ...
+            ['Report step | Coverage | matched to each CUT ' ...
+             '(cfg.ReportMatchCoverageObjects = true)']);
+    end
     initialCoverage = st_collect_coverage_summary( ...
         runContext.InitialResult, targetConfig, 'INITIAL', ...
+        'MatchCoverageObjects', matchCoverageObjects, ...
         'ProgressFcn', coverage_progress(cfg, 'INITIAL'));
     if logical(runContext.RerunPerformed)
         finalCoverage = st_collect_coverage_summary( ...
             runContext.FinalResult, targetConfig, 'FINAL', ...
+            'MatchCoverageObjects', matchCoverageObjects, ...
             'ProgressFcn', coverage_progress(cfg, 'FINAL'));
     else
         % Without a rerun both labels name the same ResultSet. Walking every

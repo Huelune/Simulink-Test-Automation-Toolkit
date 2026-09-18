@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **통합 보고서의 커버리지 객체 매칭을 선택할 수 있습니다.**
+  `cfg.ReportMatchCoverageObjects`(기본 `false`)를 추가했습니다. `true`면
+  `st_generate_test_report`가 CUT마다 그 CUT에 속한 커버리지 객체만 골라
+  집계합니다. 이식용 결과 내보내기와 CUT별 최종 지표가 이미 쓰던 규칙입니다.
+  - 기본값 `false`는 지금까지와 같이 CUT 행을 ResultSet의 모든 커버리지 객체로
+    만듭니다. `decisioninfo`/`executioninfo`가 CUT 수 × 객체 수만큼 호출되어
+    관리 Excel이 커지면 보고서에서 가장 오래 걸리는 단계가 됩니다.
+  - **걸리는 시간만이 아니라 세는 대상이 바뀝니다.** 켜면 CUT 행에서 다른 CUT의
+    객체가 빠지므로 커버리지 수치가 달라질 수 있습니다. 그래서 기본값을 바꾸지
+    않고 선택하게 두었습니다. 기존 `TestSummary.xlsx`와 비교한 뒤 채택하십시오.
+  - 켜고 만든 보고서는 실행 로그에 `Coverage | matched to each CUT`를 남깁니다.
+
 - **기본 실행 방식이 `PER_CUT`이 되었습니다.** `cfg.ExecutionMode`의 기본값을
   `'BATCH'`에서 `'PER_CUT'`으로 바꿉니다. 모든 Test Case가 혼자 돌면 한 Test
   Case가 다른 Test Case에 영향을 주지 않고, 기대값을 고친 뒤에도 그 Test Case만
