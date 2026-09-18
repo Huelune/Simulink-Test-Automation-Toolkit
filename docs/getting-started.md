@@ -288,6 +288,11 @@ st_collect_per_cut_results              % 기본 PER_CUT으로 돌렸을 때
 % 'ExecutionMode','BATCH'로 돌렸으면: st_generate_test_report
 
 cfg = st_config();
+% PER_CUT(기본): 실행 디렉터리 안의 원본을 엽니다
+latest = jsondecode(fileread(cfg.PerCutLatestPointer));
+winopen(latest.Summary)
+
+% BATCH: 복사본이 result/TestSummary.xlsx 로 갱신됩니다
 winopen(cfg.LatestSummaryFile)
 ```
 
