@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `st_run_from_harness`/`st_run_after_harness`의 `FromStage` 자동완성 목록이
+  파서와 어긋나 있었습니다. 두 명령의 `FromStage`는 `FORCE`가 다시 시작할
+  **준비 단계**를 고르는 값인데, 자동완성은 실행 단계인 `EXECUTE`를 제안하고
+  기본값인 `START`는 빠뜨렸습니다. 제안대로 `EXECUTE`를 넣으면
+  `simtest:InvalidPreparationFromStage`로 막혔습니다. `EXECUTE`는
+  `StrictRestart`에서만 유효하므로 `st_run_from_stage` 목록에만 남깁니다.
+
 - 실행 계획이 단계를 **위치가 아니라 이름으로** 표시합니다. `COVERAGE_FILTER`를
   단계 목록에서 뺀 뒤, 위치로 적어 둔 두 줄이 엉뚱한 단계를 가리키고 있었습니다.
   - Test File이 바뀌면 `dirty(7:8)`을 켰는데, 7~8은 여덟 단계일 때의
