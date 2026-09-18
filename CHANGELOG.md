@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- A workflow whose Test Manager stage is fully cached no longer fails right
+  after the stage reports DONE. When no row needs the stage,
+  `st_create_test_manager` returns before any Test File is opened and builds
+  its own result table, but it built that table without a column name list,
+  so MATLAB named the columns `Var1`..`Var9`. `st_checkpoint_workflow_state`
+  looks for `Status` there and rejected the stage it had just skipped with
+  `simtest:InvalidStageResult`. The cached table now declares the same names
+  the full result uses. Every other stage already did.
 - FILE mode no longer writes its Signal Editor scenarios to a sibling MAT
   named after the data format. The scenarios go into the Harness input the
   block already points at, so no `*_sldv.mat` or `*_mat.mat` appears beside
