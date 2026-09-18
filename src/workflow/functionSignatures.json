@@ -11,7 +11,8 @@
       {"name":"ContinueOnFailure", "kind":"namevalue", "type":["logical","scalar"], "purpose":"대상 실패 시 다음 대상 계속"},
       {"name":"ReportMode", "kind":"namevalue", "type":["choices={'SUMMARY','FULL'}"], "purpose":"보고서 상세도"},
       {"name":"FailOnNonPass", "kind":"namevalue", "type":["logical","scalar"], "purpose":"PASS가 아니면 오류로 종료"},
-      {"name":"ExecuteTests", "kind":"namevalue", "type":["logical","scalar"], "purpose":"false면 준비까지만 수행"}
+      {"name":"ExecuteTests", "kind":"namevalue", "type":["logical","scalar"], "purpose":"false면 준비까지만 수행"},
+      {"name":"AutoCollect", "kind":"namevalue", "type":["logical","scalar"], "purpose":"PER_CUT 실행 뒤 st_collect_per_cut_results까지 이어서 실행"}
     ]
   },
 
@@ -25,7 +26,8 @@
       {"name":"ContinueOnFailure", "kind":"namevalue", "type":["logical","scalar"], "purpose":"대상 실패 시 다음 대상 계속"},
       {"name":"ReportMode", "kind":"namevalue", "type":["choices={'SUMMARY','FULL'}"], "purpose":"보고서 상세도"},
       {"name":"FailOnNonPass", "kind":"namevalue", "type":["logical","scalar"], "purpose":"PASS가 아니면 오류로 종료"},
-      {"name":"ExecuteTests", "kind":"namevalue", "type":["logical","scalar"], "purpose":"false면 준비까지만 수행"}
+      {"name":"ExecuteTests", "kind":"namevalue", "type":["logical","scalar"], "purpose":"false면 준비까지만 수행"},
+      {"name":"AutoCollect", "kind":"namevalue", "type":["logical","scalar"], "purpose":"PER_CUT 실행 뒤 st_collect_per_cut_results까지 이어서 실행"}
     ]
   },
 

@@ -451,6 +451,25 @@ st_collect_per_cut_results
 `'INLINE'`은 예전처럼 실행 안에서 전부 처리합니다. standalone 번들은 실행 모델이
 일회용이라 나중에 다시 열 수 없으므로 항상 `'INLINE'`으로 동작합니다.
 
+### `PerCutAutoCollect` — 기본 `false`
+
+워크플로가 `PER_CUT` 실행을 끝낸 뒤 `st_collect_per_cut_results`까지 이어서
+실행할지 정합니다.
+
+기본값 `false`는 실행만 하고 멈춘 뒤 수집 명령을 안내합니다. 수집은 저장된
+커버리지 데이터가 가리키는 모델을 전부 다시 열기 때문에 시간이 걸리고, 별도
+명령이어야 긴 실행을 끊어서 하거나 다른 세션에서 이어 받을 수 있습니다.
+
+`true`로 두면 명령 하나로 보고서까지 끝납니다. 대신 워크플로가 늦게 돌아오고,
+수집이 실패하면 워크플로가 실패합니다. 매번 바꾸지 않고 한 번만 그렇게 하고
+싶으면 실행할 때 넘기십시오.
+
+```matlab
+st_run_after_harness('ExecutionMode','PER_CUT','AutoCollect',true)
+```
+
+`'INLINE'` 실행은 이미 산출물을 만들었으므로 이 설정의 영향을 받지 않습니다.
+
 ### `GenerateTestReport` — 기본 `false`
 
 테스트 실행 **직후에** 통합 보고서까지 만들지 정합니다. 기본은 만들지 않습니다.

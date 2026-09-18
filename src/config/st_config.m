@@ -311,6 +311,21 @@ cfg.PerCutFailOnNonPass = false;
 % of it inside the run.
 cfg.PerCutResultCollection = 'DEFERRED';
 
+% Collect the run the workflow just produced, as its last step.
+%
+% false (default):
+%   The run saves each ResultSet and stops. Build the CVFs and the per-CUT
+%   reports afterwards with st_collect_per_cut_results, in this session or
+%   in another one. Long runs stay interruptible this way.
+%
+% true:
+%   One command ends with the reports in place. Collecting reopens the
+%   models the saved coverage data points at, so the workflow returns later
+%   and a collect failure fails the workflow.
+%
+% Only a DEFERRED run has anything to collect.
+cfg.PerCutAutoCollect = false;
+
 
 %% ============================================================
 % Incremental preparation

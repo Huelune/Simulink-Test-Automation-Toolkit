@@ -58,3 +58,50 @@ source = fileread(fullfile(st_project_root(), 'diagnostics', 'matlab', ...
 verifyNotEmpty(testCase, regexp(source, 'deferredToCollect', 'once'));
 verifyNotEmpty(testCase, regexp(source, "'NOT_REQUIRED'", 'once'));
 end
+function testAutoCollectIsOffByDefault(testCase)
+% Collecting reopens every model the saved coverage data points at. The
+% caller asks for that; it does not happen because a run finished.
+cfg = st_config();
+verifyFalse(testCase, cfg.PerCutAutoCollect);
+verifyEmpty(testCase, st_parse_workflow_options().AutoCollect);
+end
+
+function testAutoCollectIsAWorkflowOverride(testCase)
+% One command that ends with the reports in place must be reachable
+% without editing st_config.
+options = st_parse_workflow_options('AutoCollect', true);
+verifyTrue(testCase, options.AutoCollect);
+verifyError(testCase, ...
+    @() st_parse_workflow_options('AutoCollect', 'YES'), ...
+    'MATLAB:InputParser:ArgumentFailedValidation');
+end
+
+function testWorkflowCollectsOnlyWhenAsked(testCase)
+% Without the option the workflow must still stop after the run and name
+% the command, because that is what makes a long run interruptible.
+source = fileread(fullfile(st_project_root(), 'src', 'workflow', ...
+    'st_run_workflow.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'autoCollect = option_or_default\(\s*\.\.\.\s*options\.AutoCollect, cfg\.PerCutAutoCollect\);', ...
+    'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'if autoCollect\s*\n\s*collectInfo = execute_timed_step\(''Collect PER_CUT Results''', ...
+    'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'else\s*\n\s*fprintf\(\[''\nPER_CUT saved one ResultSet per CUT', 'once'));
+end
+
+function testAutoCollectOnlyAppliesToADeferredRun(testCase)
+% An INLINE run built its artifacts already. Collecting it would find no
+% saved ResultSet, so the option stays inside the DEFERRED branch.
+source = fileread(fullfile(st_project_root(), 'src', 'workflow', ...
+    'st_run_workflow.m'));
+deferredBranch = regexp(source, ...
+    'if strcmpi\(cfg\.PerCutResultCollection, ''DEFERRED''\).*?\n    end', ...
+    'match', 'once');
+verifyNotEmpty(testCase, deferredBranch);
+verifyNotEmpty(testCase, regexp(deferredBranch, ...
+    'st_collect_per_cut_results\(\)', 'once'));
+verifyEqual(testCase, ...
+    numel(regexp(source, 'st_collect_per_cut_results\(\)')), 1);
+end

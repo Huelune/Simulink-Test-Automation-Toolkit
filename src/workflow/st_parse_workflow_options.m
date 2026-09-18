@@ -13,6 +13,8 @@ addParameter(p, 'FailOnNonPass', [], ...
     @(v) isempty(v) || (islogical(v) && isscalar(v)));
 addParameter(p, 'ExecuteTests', [], ...
     @(v) isempty(v) || (islogical(v) && isscalar(v)));
+addParameter(p, 'AutoCollect', [], ...
+    @(v) isempty(v) || (islogical(v) && isscalar(v)));
 addParameter(p, 'StrictRestart', false, @(v) islogical(v) && isscalar(v));
 parse(p, varargin{:});
 
@@ -26,6 +28,7 @@ options.ContinueOnFailure = p.Results.ContinueOnFailure;
 options.ReportMode = upper(strtrim(char(string(p.Results.ReportMode))));
 options.FailOnNonPass = p.Results.FailOnNonPass;
 options.ExecuteTests = p.Results.ExecuteTests;
+options.AutoCollect = p.Results.AutoCollect;
 options.StrictRestart = p.Results.StrictRestart;
 
 if ~isempty(options.PreparationMode) && ...

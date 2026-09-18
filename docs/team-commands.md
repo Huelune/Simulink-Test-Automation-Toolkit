@@ -293,18 +293,27 @@ st_run_from_harness('ExecutionMode','PER_CUT')       % 하나씩
 **`PER_CUT`은 혼자 돌려야만 되는 Test Case가 있을 때만 씁니다.** 커버리지 필터를
 쓰는지 여부는 이 선택과 아무 상관이 없습니다.
 
-`PER_CUT`에만 있는 옵션이 둘 있습니다. 작동 시점이 다릅니다.
+`PER_CUT`에만 있는 옵션이 셋 있습니다. 작동 시점이 다릅니다.
 
 | 옵션 | 언제 | 기본값 | `true`면 |
 | --- | --- | --- | --- |
 | `ContinueOnFailure` | 실행 **도중** CUT 하나가 터졌을 때 | `true` | 기록하고 다음 CUT으로 |
 | `FailOnNonPass` | 전부 끝난 **뒤** 한 번 | `false` | 하나라도 비-통과면 MATLAB 오류 |
+| `AutoCollect` | 실행이 **다 끝난 뒤** | `false` | `st_collect_per_cut_results`까지 이어서 실행 |
 
 ```matlab
 % CI처럼 하나라도 실패하면 알아야 할 때
 st_run_from_harness('ExecutionMode','PER_CUT', ...
     'ContinueOnFailure', true, 'FailOnNonPass', true);
+
+% 명령 하나로 보고서까지 받고 싶을 때
+st_run_from_harness('ExecutionMode','PER_CUT', 'AutoCollect', true);
 ```
+
+`AutoCollect`는 수집을 실행과 한 세션에 묶습니다. 그만큼 늦게 끝나고, 수집이
+실패하면 워크플로가 실패합니다. 긴 실행을 끊어서 하거나 다른 세션에서 수집하려면
+기본값 그대로 두십시오. 항상 이어서 실행하고 싶으면
+`cfg.PerCutAutoCollect = true`로 바꿉니다.
 
 #### 결과 정리하고 보기
 
@@ -496,7 +505,7 @@ File·CVF를 저장하거나 바꾸지 않습니다.
 | CVF 뷰어 이름이 `n/a` | 정상입니다. 그 CVF 옆의 standalone 모델을 먼저 여십시오 (원본 Top Model 아님) |
 | 준비가 너무 오래 걸린다 | Harness 생성과 SLDV `GENERATE`는 원래 느립니다. 마지막 `START` 로그가 현재 위치입니다 |
 | 경로가 너무 길다는 오류 | `st_set_standalone_coverage_root('D:\st_out')`로 짧은 경로 지정 |
-| 실행은 끝났는데 보고서가 없다 | 정상입니다. `st_generate_test_report`(BATCH) 또는 `st_collect_per_cut_results`(PER_CUT)를 부르십시오 |
+| 실행은 끝났는데 보고서가 없다 | 정상입니다. `st_generate_test_report`(BATCH) 또는 `st_collect_per_cut_results`(PER_CUT)를 부르십시오. PER_CUT에서 매번 자동으로 하려면 `AutoCollect`를 쓰십시오 |
 | `RunRecordPointerMissing` | 아직 실행한 적이 없습니다. 먼저 `st_run_from_harness`를 돌리십시오 |
 | `RemovedExecutionMode` | `ExecutionMode='AUTO'`는 없어졌습니다. `'BATCH'` 또는 `'PER_CUT'`을 쓰십시오 |
 | 커버리지에 필터가 안 걸린 것 같다 | 실행 결과가 아니라 **결과 정리 후** 보고서를 보십시오. 필터는 그때 붙습니다 |

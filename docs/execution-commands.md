@@ -255,6 +255,7 @@ struct 배열이고, `BATCH`에서는 단일 최종 ResultSet입니다.
 | `ContinueOnFailure` | `true` | `PER_CUT`에서 한 CUT이 실패해도 다음을 계속할지 |
 | `ReportMode` | `'SUMMARY'` | `'SUMMARY'` 또는 `'FULL'`(PDF와 전체 Coverage HTML 추가) |
 | `FailOnNonPass` | `false` | `true`면 통과하지 못한 Test Case가 있을 때 MATLAB 오류 |
+| `AutoCollect` | `cfg.PerCutAutoCollect` (`false`) | `true`면 `PER_CUT` 실행 뒤 `st_collect_per_cut_results`까지 이어서 실행합니다 |
 | `StrictRestart` | `false` | 선택한 단계만 실행하고 앞 단계는 건드리지 않는 엄격 재시작 모드. `st_run_from_stage`가 내부적으로 켜므로 직접 줄 일은 거의 없습니다 |
 
 ```matlab
