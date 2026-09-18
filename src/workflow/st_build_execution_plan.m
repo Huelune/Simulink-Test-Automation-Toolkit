@@ -107,6 +107,15 @@ for i = 1:n
         end
     end
 
+    % EXECUTE is not one of the stages above. It means the caller has already
+    % prepared and wants the tests run, so nothing is dirty however the
+    % signatures compare. This has to sit after the cascade: an earlier reset
+    % would be undone by the downstream invalidation.
+    if strcmp(fromStage, 'EXECUTE')
+        dirty(:) = false;
+        reasons(:) = "Execution-only run; preparation not inspected";
+    end
+
     for s = 1:numel(stages)
         stage = char(stages(s));
         signatureValues(i,s) = string(signatures.(stage));

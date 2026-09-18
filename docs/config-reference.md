@@ -348,6 +348,10 @@ Harness 입력 인터페이스 검증은 어느 쪽이든 그대로 수행합니
 `FORCE`가 시작할 단계입니다. `'START'`는 전체 workflow에서 `HARNESS`, 기존 Harness
 workflow에서 `SLDV`로 해석됩니다.
 
+`'EXECUTE'`는 준비 단계가 아니라 **준비를 전혀 하지 않겠다**는 뜻입니다. 지문을
+따지지 않고 모든 준비 단계를 `CACHED`로 두고 테스트만 실행하므로, 이 값일 때는
+`RunGeneratedTests=false`여도 테스트가 실행됩니다.
+
 ## 9. 테스트 명세서 추출
 
 ### `DecisionBlockScope` — 기본 `'EXPLICIT'`

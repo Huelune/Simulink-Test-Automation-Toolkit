@@ -25,6 +25,10 @@ executionMode = st_resolve_execution_mode( ...
     requestedExecutionMode, T);
 executeTests = option_or_default(options.ExecuteTests, ...
     cfg.RunGeneratedTests);
+% FromStage=EXECUTE asks for the tests by name, so cfg.RunGeneratedTests=false
+% must not turn the whole run into a no-op.
+executeOnly = strcmp(options.FromStage, 'EXECUTE');
+if executeOnly, executeTests = true; end
 % Pass the resolved policy into fingerprint planning. AUTO itself is not
 % sufficient to decide how the Test File binds its coverage filters.
 cfg.ExecutionMode = executionMode;
@@ -64,7 +68,10 @@ fprintf('Start    : %s\n', timestamp_text());
 fprintf('============================================\n');
 print_plan(plan);
 
-if ~options.StrictRestart || any(plan.RunHARNESS)
+% Link protection changes SynchronizationMode on existing Harnesses. It
+% belongs to preparing them, so neither a strict restart nor an execute-only
+% run may touch it.
+if (~options.StrictRestart && ~executeOnly) || any(plan.RunHARNESS)
 linkProtectionResult = execute_timed_step( ...
     'Protect Library-Linked CUT Harnesses', ...
     @() st_protect_linked_cut_harnesses(T, cfg));

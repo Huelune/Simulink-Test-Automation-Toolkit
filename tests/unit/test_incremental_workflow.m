@@ -35,6 +35,25 @@ verifyError(testCase, @() st_parse_workflow_options( ...
     'FromStage', 'coverage_filter'), 'simtest:RemovedPreparationStage');
 end
 
+function testExecuteOnlySkipsEveryPreparationStage(testCase)
+% FromStage=EXECUTE is the caller saying preparation is done. It must be
+% accepted without StrictRestart, and the plan builder must leave no stage
+% dirty regardless of the signatures.
+options = st_parse_workflow_options('FromStage', 'execute');
+verifyEqual(testCase, options.FromStage, 'EXECUTE');
+verifyFalse(testCase, options.StrictRestart);
+
+source = fileread(fullfile(st_project_root(), 'src', 'workflow', ...
+    'st_build_execution_plan.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'strcmp\(fromStage, ''EXECUTE''\)', 'once'));
+
+% Running nothing and then not executing is a no-op, not a request.
+verifyError(testCase, @() st_parse_workflow_options( ...
+    'FromStage', 'EXECUTE', 'ExecuteTests', false), ...
+    'simtest:ExecuteOnlyWithoutExecution');
+end
+
 function testPerCutWorkflowOptionOverrides(testCase)
 options = st_parse_workflow_options( ...
     'ExecutionMode', 'per_cut', ...

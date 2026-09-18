@@ -242,8 +242,10 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');  % 그 단�
 | verify 대상 또는 Assessment 구성 | `ASSESSMENT` |
 | Coverage 필터 설정 | `TEST_MANAGER` |
 | Test Case 이름 또는 Iteration | `TEST_MANAGER` |
+| 아무것도 안 바뀜, 테스트만 다시 | `EXECUTE` |
 
-> **`FromStage`는 앞 단계를 "건너뛰라"는 뜻이 아닙니다.** `st_build_execution_plan`은
+> **`FromStage`는 앞 단계를 "건너뛰라"는 뜻이 아닙니다.** (`'EXECUTE'`는 예외입니다.
+> 준비 단계를 하나도 실행하지 않고 바로 테스트로 갑니다.) `st_build_execution_plan`은
 > 지정 단계부터 `dirty`로 표시할 뿐이고, 그보다 앞 단계는 여전히 checkpoint와
 > fingerprint로 판정합니다. checkpoint가 없거나(단계 명령을 직접 부른 경우 등) 모델이
 > 바뀌었으면 앞 단계도 함께 실행됩니다.

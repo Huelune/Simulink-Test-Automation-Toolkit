@@ -2,12 +2,22 @@
 
 ## Unreleased
 
-- `st_run_from_harness`/`st_run_after_harness`의 `FromStage` 자동완성 목록이
-  파서와 어긋나 있었습니다. 두 명령의 `FromStage`는 `FORCE`가 다시 시작할
-  **준비 단계**를 고르는 값인데, 자동완성은 실행 단계인 `EXECUTE`를 제안하고
-  기본값인 `START`는 빠뜨렸습니다. 제안대로 `EXECUTE`를 넣으면
-  `simtest:InvalidPreparationFromStage`로 막혔습니다. `EXECUTE`는
-  `StrictRestart`에서만 유효하므로 `st_run_from_stage` 목록에만 남깁니다.
+- `st_run_from_harness`/`st_run_after_harness`가 **`FromStage='EXECUTE'`를
+  지원합니다.** 준비는 이미 끝났고 테스트만 다시 돌리면 될 때, 단계 지문을 따지지
+  않고 준비 단계를 하나도 실행하지 않습니다. 오래 걸리는 `ASSESSMENT`나 `SLDV`를
+  건너뛰는 데 씁니다.
+  - 지금까지 `EXECUTE`는 `StrictRestart`에서만 유효해서 `st_run_from_stage`를
+    거쳐야 했습니다. 그쪽은 앞 단계를 읽기 전용으로 검증하고 유효하지 않으면
+    중단하며, 실행 옵션을 하나도 받지 않습니다. 그냥 실행만 하고 싶을 때 치르기에
+    비싼 값이었습니다. 검증이 필요하면 `st_run_from_stage`는 그대로 있습니다.
+  - Harness의 `SynchronizationMode`를 바꾸는 library-link 보호 단계도 함께
+    건너뜁니다. 준비의 일부이므로 실행만 하는 실행에서 모델을 건드리면 안 됩니다.
+  - `ExecuteTests=false`와 같이 주면 아무 일도 하지 않는 실행이 되므로
+    `simtest:ExecuteOnlyWithoutExecution`으로 막습니다. 같은 이유로 이 값일 때는
+    `cfg.RunGeneratedTests=false`를 무시하고 실행합니다.
+  - 자동완성(`functionSignatures.json`)이 파서와 어긋나 있던 것도 고쳤습니다.
+    실행하지도 못하는 `EXECUTE`를 제안하면서 정작 기본값인 `START`는 빠뜨려,
+    제안대로 고르면 `simtest:InvalidPreparationFromStage`로 막혔습니다.
 
 - 실행 계획이 단계를 **위치가 아니라 이름으로** 표시합니다. `COVERAGE_FILTER`를
   단계 목록에서 뺀 뒤, 위치로 적어 둔 두 줄이 엉뚱한 단계를 가리키고 있었습니다.

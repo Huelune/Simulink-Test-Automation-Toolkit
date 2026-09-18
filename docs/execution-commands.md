@@ -249,7 +249,7 @@ struct 배열이고, `BATCH`에서는 단일 최종 ResultSet입니다.
 | 옵션 | 기본값 | 역할 |
 | --- | --- | --- |
 | `PreparationMode` | `cfg` 값 (`'AUTO'`) | `'AUTO'`는 캐시 재사용, `'FORCE'`는 `FromStage`부터 다시 실행 |
-| `FromStage` | `cfg` 값 (`'START'`) | `FORCE`가 시작할 준비 단계 |
+| `FromStage` | `cfg` 값 (`'START'`) | `FORCE`가 시작할 준비 단계. `'EXECUTE'`는 준비를 전부 건너뛰고 실행만 합니다 |
 | `ExecutionMode` | `cfg` 값 (`'BATCH'`) | `'BATCH'` 또는 `'PER_CUT'` |
 | `ExecuteTests` | `cfg.RunGeneratedTests` | `false`면 준비까지만 하고 실행하지 않습니다 |
 | `ContinueOnFailure` | `true` | `PER_CUT`에서 한 CUT이 실패해도 다음을 계속할지 |
@@ -269,6 +269,20 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');
 
 > `PreparationMode='FORCE'`는 증분 계산 때문에 **앞 단계까지 무효화할 수 있습니다.**
 > 앞 단계를 절대 다시 실행하지 않아야 하면 `st_run_from_stage`를 쓰십시오.
+
+준비는 이미 끝났고 **테스트만 다시 돌리면 될 때**는 `FromStage='EXECUTE'`를 씁니다.
+단계 지문을 따지지 않고 준비 단계를 하나도 실행하지 않으므로, 오래 걸리는
+`ASSESSMENT`나 `SLDV`를 건너뛸 수 있습니다. 실행 옵션은 그대로 받습니다.
+
+```matlab
+st_run_after_harness('FromStage','EXECUTE', ...
+    'ExecutionMode','PER_CUT', 'ContinueOnFailure', true);
+```
+
+`ExecuteTests=false`와는 함께 못 씁니다 — 실행하려고 고르는 값이라
+`simtest:ExecuteOnlyWithoutExecution`으로 막습니다. 앞 단계가 실제로 유효한지
+**검증까지** 하고 싶으면 `st_run_from_stage`를 쓰십시오. 이쪽은 검증 없이
+있는 그대로 실행합니다.
 
 ### `st_run_from_stage` (선택 사항)
 
