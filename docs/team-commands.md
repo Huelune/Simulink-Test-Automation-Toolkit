@@ -1,7 +1,34 @@
-# 내부 표준 명령 8개
+# 내부 표준 명령
 
 우리가 실제로 쓰는 명령만 모았습니다. 이 문서 하나로 준비부터 제출물까지
 끝납니다. 나머지 `st_*` 명령은 평소에 쓸 일이 없습니다.
+
+## 큰 그림 — 세 덩어리
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  1. 준비 + 실행                                               │
+│     Harness·입력·verify·Test Case를 만들고, 돌리고,           │
+│     실패한 기대값을 고치고, 다시 돌린다                       │
+│                                                              │
+│     st_run_from_harness  /  st_run_after_harness             │
+└───────────────────────────┬──────────────────────────────────┘
+                            │  실행 기록만 남기고 끝
+              ┌─────────────┴─────────────┐
+              ▼                           ▼
+┌───────────────────────────┐ ┌───────────────────────────────┐
+│ 2a. 결과 정리             │ │ 2b. 제출물                     │
+│    Harness를 안 내보냄    │ │    Harness를 독립 모델로 내보냄 │
+│                           │ │                               │
+│ st_generate_test_report   │ │ st_run_standalone_            │
+│   (BATCH)                 │ │   coverage_pipeline           │
+│ st_collect_per_cut_results│ │ st_check_standalone_coverage  │
+│   (PER_CUT)               │ │                               │
+└───────────────────────────┘ └───────────────────────────────┘
+```
+
+**커버리지 필터(CVF)는 2단계에서만 만들어집니다.** 1단계는 커버리지를 필터 없이
+수집만 합니다. Excel의 `Coverage*` 열 네 개도 2단계에서만 쓰입니다.
 
 ## 0. 명령 이름
 
@@ -16,6 +43,8 @@
 | `st_run_from_harness` | `st_run_from_harness` |
 | `st_run_after_harness` | `st_run_after_harness` |
 | `st_export_spec` | **`st_export_test_specification`** |
+| `st_report` | **`st_generate_test_report`** |
+| `st_collect` | **`st_collect_per_cut_results`** |
 | `st_run_standalone_coverage_pipeline` | `st_run_standalone_coverage_pipeline` |
 | `st_check_standalone` | **`st_check_standalone_coverage`** |
 
@@ -34,6 +63,9 @@ st_run_from_harness                      Harness가 없을 수 있을 때
   또는 st_run_after_harness               Harness가 전부 있을 때
     │
     │   ← 여기서 모델과 Test File이 바뀝니다
+    │   ← 실행 기록이 result/run_records/ 에 남습니다
+    │
+st_generate_test_report                  보고서가 필요할 때
     │
 st_export_test_specification             명세서 Excel이 필요할 때
     │
@@ -43,6 +75,9 @@ st_run_standalone_coverage_pipeline      제출물 생성
     │
 st_check_standalone_coverage             제출물 검사 → 1111111111 PASS
 ```
+
+`st_generate_test_report`와 standalone은 **둘 다 할 필요가 없습니다.** 필요한
+쪽만 부르십시오.
 
 ## 2. 복사용 전체 코드
 
@@ -59,6 +94,12 @@ st_pre_validate_targets
 %% 4. 준비와 실행
 st_run_from_harness
 % Harness가 이미 전부 있으면: st_run_after_harness
+% 혼자 돌려야만 되는 Test Case가 있으면:
+%   st_run_from_harness('ExecutionMode','PER_CUT')
+
+%% 4-1. 결과 정리 (보고서가 필요할 때만)
+st_generate_test_report                 % BATCH로 돌렸을 때
+% PER_CUT으로 돌렸으면: st_collect_per_cut_results
 
 %% 5. 명세서 Excel (필요할 때)
 [T, specFile] = st_export_test_specification();
@@ -153,16 +194,25 @@ st_run_after_harness    % Harness가 전부 있을 때
 
 각 단계가 하는 일:
 
-| 단계 | 하는 일 |
-| --- | --- |
-| `HARNESS` | 없는 Harness를 만듭니다. **기존 Harness는 건드리지 않습니다** |
-| `SLDV` | 입력 데이터를 준비합니다 (`OFF`/`FILE`/`GENERATE` 전부 여기서) |
-| `HARNESS_CONFIG` | StopTime 등 Harness 설정 |
-| `SIGNAL_EDITOR` | 입력 Scenario를 만들어 Harness에 연결 |
-| `ASSESSMENT` | `verify` 문장 구성 |
-| `TEST_MANAGER` | Test File, Test Case, Iteration 구성 |
-| `ALIGNMENT` | Scenario 수와 Iteration 수가 맞는지 검사 |
-| `EXECUTE` | 테스트 실행, 기대값 갱신, 보고서 |
+| 단계 | 하는 일 | 무엇이 바뀌나 |
+| --- | --- | --- |
+| `HARNESS` | 없는 Harness를 만듭니다. **기존 Harness는 건드리지 않습니다** | 모델 |
+| `SLDV` | 입력 데이터를 준비합니다 (`OFF`/`FILE`/`GENERATE` 전부 여기서) | 입력 MAT |
+| `HARNESS_CONFIG` | StopTime 등 Harness 설정 | Harness |
+| `SIGNAL_EDITOR` | 입력 Scenario를 만들어 Harness에 연결 | Harness |
+| `ASSESSMENT` | `verify` 문장 구성 | Harness |
+| `TEST_MANAGER` | Test File, Test Case, Iteration 구성 | Test File |
+| `ALIGNMENT` | 네 곳의 Scenario가 일치하는지 **검사만** | 없음 |
+| `EXECUTE` | 테스트 실행 → 기대값 갱신 → 재실행 → 실행 기록 저장 | Harness, 실행 기록 |
+
+`ALIGNMENT`는 실행 직전의 마지막 안전장치입니다. 아래 네 곳이 **같은 이름 집합**을
+갖는지 확인합니다. 하나라도 어긋나면 실행은 되지만 엉뚱한 scenario의 기대값이
+덮어써지기 때문입니다.
+
+```text
+SLDV ScenarioNames  ==  Signal Editor  ==  Test Assessment  ==  Test Manager iterations
+        (SLDV)          (SIGNAL_EDITOR)      (ASSESSMENT)        (TEST_MANAGER)
+```
 
 #### 이 명령이 바꾸는 것
 
@@ -194,12 +244,25 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');  % 그 단�
 | 입력 MAT 또는 SLDV 설정 | `SLDV` |
 | Harness StopTime 등 설정 | `HARNESS_CONFIG` |
 | verify 대상 또는 Assessment 구성 | `ASSESSMENT` |
-| Coverage 필터 설정 | `TEST_MANAGER` |
 | Test Case 이름 또는 Iteration | `TEST_MANAGER` |
+| **Coverage 필터 설정** | **없음 — 준비를 다시 할 필요가 없습니다** |
+
+Coverage 열은 준비 단계가 읽지 않습니다. 바꿔도 Harness나 Test File을 다시 만들지
+않고, 다음 결과 정리에만 반영됩니다.
 
 > `FromStage`는 앞 단계를 **건너뛰라는 뜻이 아닙니다.** 지정한 단계부터 강제로
 > 다시 하라는 뜻이고, 그보다 앞 단계는 여전히 지문으로 판정합니다. 모델이
 > 바뀌었거나 checkpoint가 없으면 앞 단계도 함께 실행됩니다.
+
+`AUTO`여도 아래 조건이면 그 단계부터 강제로 다시 돕니다.
+
+| 무엇이 감지되면 | 다시 도는 범위 |
+| --- | --- |
+| checkpoint 없음 / state 파일 깨짐 | `SLDV` 이후 전부 |
+| 모델 파일이 바뀜 | `SLDV` 이후 전부 |
+| SLDV manifest 없음 / 캐시된 profile 깨짐 | `SLDV` 이후 전부 |
+| Test File이 바뀜 | `TEST_MANAGER`, `ALIGNMENT` |
+| 한 단계가 다시 돎 | 그 뒤 단계 전부 |
 
 #### 준비만 하고 실행은 나중에
 
@@ -210,20 +273,58 @@ st_run_from_harness('ExecuteTests', false);
 Test Case까지만 만들고 멈춥니다. 실행은 Test Manager에서 직접 하거나 나중에 다시
 이 명령을 부르면 됩니다.
 
-#### 결과 정리하고 보기
-
-BATCH 실행은 결과 기록만 남기고 끝납니다. 보고서는 원할 때 만듭니다.
+#### 한꺼번에 돌릴까, 하나씩 돌릴까
 
 ```matlab
-st_generate_test_report('RunRecord', 'LATEST');
+st_run_from_harness                                  % BATCH (기본)
+st_run_from_harness('ExecutionMode','PER_CUT')       % 하나씩
+```
+
+| | `BATCH` (기본) | `PER_CUT` |
+| --- | --- | --- |
+| 실행 | `run(tf)` 한 번에 전부 | Test Case마다 따로 |
+| 기대값 고친 뒤 재실행 | Test File **전체** | 그 Test Case만 |
+| 결과 정리 명령 | `st_generate_test_report` | `st_collect_per_cut_results` |
+| 결과물 | 통합 보고서 하나 | CUT별 폴더 |
+
+**`PER_CUT`은 혼자 돌려야만 되는 Test Case가 있을 때만 씁니다.** 커버리지 필터를
+쓰는지 여부는 이 선택과 아무 상관이 없습니다.
+
+`PER_CUT`에만 있는 옵션이 둘 있습니다. 작동 시점이 다릅니다.
+
+| 옵션 | 언제 | 기본값 | `true`면 |
+| --- | --- | --- | --- |
+| `ContinueOnFailure` | 실행 **도중** CUT 하나가 터졌을 때 | `true` | 기록하고 다음 CUT으로 |
+| `FailOnNonPass` | 전부 끝난 **뒤** 한 번 | `false` | 하나라도 비-통과면 MATLAB 오류 |
+
+```matlab
+% CI처럼 하나라도 실패하면 알아야 할 때
+st_run_from_harness('ExecutionMode','PER_CUT', ...
+    'ContinueOnFailure', true, 'FailOnNonPass', true);
+```
+
+#### 결과 정리하고 보기
+
+실행은 **기록만 남기고 끝납니다.** Test Manager의 결과는 그 MATLAB 세션 안에서만
+살아 있어서, 실행이 `result/run_records/`에 저장해 둡니다. 보고서는 원할 때,
+다른 세션에서도 만들 수 있습니다.
+
+```matlab
+st_generate_test_report                 % BATCH로 돌렸을 때
+st_collect_per_cut_results              % PER_CUT으로 돌렸을 때
 
 cfg = st_config();
 winopen(cfg.LatestSummaryFile)
 ```
 
-실행별 상세 결과는 `result/runs/`(BATCH) 또는 `result/per_cut_runs/`(PER_CUT)
-아래에 있습니다. `PER_CUT`은 실행 중에 자체 보고서를 쓰므로 위 명령이 필요하지
-않습니다.
+| 무엇이 | 어디에 |
+| --- | --- |
+| 실행 기록 (ResultSet 포함) | `result/run_records/` |
+| BATCH 통합 보고서 | `result/runs/` |
+| PER_CUT CUT별 결과 | `result/per_cut_runs/` |
+
+커버리지 필터(CVF)는 이 단계에서 만들어져 결과에 붙습니다. 실행은 커버리지를
+필터 없이 수집합니다.
 
 ### `st_export_test_specification`
 
@@ -368,6 +469,10 @@ File·CVF를 저장하거나 바꾸지 않습니다.
 | 입력 MAT을 바꿨다 | `st_run_from_harness('PreparationMode','FORCE','FromStage','SLDV')` |
 | Assessment를 바꿨다 | `st_run_from_harness('PreparationMode','FORCE','FromStage','ASSESSMENT')` |
 | 준비만 하고 실행은 나중에 | `st_run_from_harness('ExecuteTests', false)` |
+| 혼자 돌려야만 되는 Test Case가 있다 | `st_run_from_harness('ExecutionMode','PER_CUT')` |
+| 보고서를 보고 싶다 (BATCH로 돌림) | `st_generate_test_report` |
+| 보고서를 보고 싶다 (PER_CUT으로 돌림) | `st_collect_per_cut_results` |
+| Coverage 필터 설정만 바꿨다 | 준비는 그대로. 결과 정리만 다시 하면 됩니다 |
 | 명세서 Excel이 필요하다 | `st_export_test_specification` |
 | 제출물을 만든다 | Top Model 닫고 → `st_run_standalone_coverage_pipeline('Action','ALL',...)` |
 | 제출물이 맞는지 본다 | `st_check_standalone_coverage` |
@@ -388,6 +493,10 @@ File·CVF를 저장하거나 바꾸지 않습니다.
 | CVF 뷰어 이름이 `n/a` | 정상입니다. 그 CVF 옆의 standalone 모델을 먼저 여십시오 (원본 Top Model 아님) |
 | 준비가 너무 오래 걸린다 | Harness 생성과 SLDV `GENERATE`는 원래 느립니다. 마지막 `START` 로그가 현재 위치입니다 |
 | 경로가 너무 길다는 오류 | `st_set_standalone_coverage_root('D:\st_out')`로 짧은 경로 지정 |
+| 실행은 끝났는데 보고서가 없다 | 정상입니다. `st_generate_test_report`(BATCH) 또는 `st_collect_per_cut_results`(PER_CUT)를 부르십시오 |
+| `RunRecordPointerMissing` | 아직 실행한 적이 없습니다. 먼저 `st_run_from_harness`를 돌리십시오 |
+| `RemovedExecutionMode` | `ExecutionMode='AUTO'`는 없어졌습니다. `'BATCH'` 또는 `'PER_CUT'`을 쓰십시오 |
+| 커버리지에 필터가 안 걸린 것 같다 | 실행 결과가 아니라 **결과 정리 후** 보고서를 보십시오. 필터는 그때 붙습니다 |
 
 오류 식별자별 대처는 [문제 해결](troubleshooting.md)에 있습니다.
 
@@ -395,6 +504,8 @@ File·CVF를 저장하거나 바꾸지 않습니다.
 
 - `st_run_from_harness` / `st_run_after_harness`는 **모델과 Test File을 저장합니다.**
   처음 돌리기 전에 백업하십시오.
+- 실행이 끝나도 보고서는 **자동으로 만들어지지 않습니다.** 결과 정리 명령을
+  부르거나 standalone 제출물을 만드십시오.
 - 기대값 기본 정책은 `APPLY`입니다. 승인된 기준값이 있으면 먼저 `OFF`로 내리십시오.
 - standalone pipeline 전에 **원본 Top Model과 열린 Harness를 닫으십시오.**
 - 제출물은 폴더 전체를 복사해 전달하십시오.

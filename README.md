@@ -169,7 +169,7 @@ result/
 
 | 문서 | 언제 보는가 |
 | --- | --- |
-| [내부 표준 명령 8개](docs/team-commands.md) | **평소 쓰는 명령만 빠르게 볼 때** |
+| [내부 표준 명령](docs/team-commands.md) | **평소 쓰는 명령만 빠르게 볼 때** |
 | [문서 지도](docs/README.md) | 어떤 문서를 봐야 할지 모를 때 |
 | [처음 시작하기](docs/getting-started.md) | 설치하고 첫 실행을 할 때 |
 | [용어집](docs/glossary.md) | 용어가 낯설 때 |

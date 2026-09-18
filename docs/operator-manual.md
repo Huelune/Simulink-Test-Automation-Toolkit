@@ -92,9 +92,25 @@ CUT 사전 검증
 → SIGNAL_EDITOR    Scenario MAT 생성과 연결
 → ASSESSMENT       verify 문장 구성
 → TEST_MANAGER     Test File, Test Case, Iteration 구성
-→ ALIGNMENT        Scenario와 Iteration 정렬 검사
-→ EXECUTE          테스트 실행, 기대값 갱신, 보고서
+→ ALIGNMENT        Scenario와 Iteration 정렬 검사 (검사만)
+→ EXECUTE          테스트 실행 → 기대값 갱신 → 재실행 → 실행 기록 저장
 ```
+
+**여기까지가 workflow입니다.** 보고서와 제출물은 그다음 단계이고, 어느 쪽을 만들지는
+호출자가 고릅니다.
+
+```text
+                    실행 기록 (result/run_records/)
+                              │
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+  결과 정리 (Harness 미포함)          제출물 (Harness 내보냄)
+  st_generate_test_report            st_run_standalone_coverage_pipeline
+  st_collect_per_cut_results         st_check_standalone_coverage
+```
+
+커버리지 필터(CVF)는 오른쪽 두 갈래에서만 만들어집니다. workflow는 커버리지를
+필터 없이 수집만 합니다.
 
 ### 4.1 HARNESS — Harness 생성
 

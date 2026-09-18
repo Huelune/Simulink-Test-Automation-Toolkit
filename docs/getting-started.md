@@ -3,7 +3,7 @@
 MATLAB과 Simulink Test를 처음 쓰는 사람을 기준으로 설명합니다. 용어가 낯설면
 [용어집](glossary.md)을 옆에 두고 읽으십시오.
 
-> 이미 써 본 사람은 [내부 표준 명령 8개](team-commands.md)가 더 빠릅니다.
+> 이미 써 본 사람은 [내부 표준 명령](team-commands.md)가 더 빠릅니다.
 
 ## 1. 이 도구가 해 주는 일
 
@@ -247,9 +247,11 @@ HARNESS_CONFIG   StopTime 등 Harness 설정
 SIGNAL_EDITOR    입력 Scenario 생성과 연결
 ASSESSMENT       verify 문장 구성
 TEST_MANAGER     Test File, Test Case, Iteration 구성
-ALIGNMENT        Scenario와 Iteration 정렬 검사
-EXECUTE          테스트 실행, 기대값 갱신, 보고서
+ALIGNMENT        Scenario와 Iteration 정렬 검사 (검사만)
+EXECUTE          테스트 실행 → 기대값 갱신 → 재실행 → 실행 기록 저장
 ```
+
+여기까지가 workflow입니다. **보고서는 자동으로 만들어지지 않습니다.**
 
 Harness가 이미 전부 있으면 생성 단계를 건너뛰는 진입점을 쓸 수 있습니다.
 
@@ -275,14 +277,22 @@ st_run_from_harness('PreparationMode','FORCE');
 st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');
 ```
 
-### 결과 보기
+### 결과 정리하고 보기
+
+실행은 `result/run_records/`에 기록만 남기고 끝납니다. Test Manager의 결과는 그
+MATLAB 세션 안에서만 살아 있어서, 나중에 보고서를 만들 수 있도록 저장해 두는
+것입니다.
 
 ```matlab
+st_generate_test_report                 % 기본 BATCH로 돌렸을 때
+% 'ExecutionMode','PER_CUT'으로 돌렸으면: st_collect_per_cut_results
+
 cfg = st_config();
 winopen(cfg.LatestSummaryFile)
 ```
 
 `result/runs/` 또는 `result/per_cut_runs/` 아래에 실행별 상세 결과가 저장됩니다.
+커버리지 필터(CVF)도 이 단계에서 만들어져 결과에 붙습니다.
 
 ## 10. 제출물 만들기 — `st_run_standalone_coverage_pipeline`
 

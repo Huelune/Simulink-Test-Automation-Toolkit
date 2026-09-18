@@ -169,19 +169,40 @@ CVF 규칙은 블록을 경로가 아니라 **SID**(모델 안에서 블록에 �
 
 | 모드 | 동작 | 언제 |
 | --- | --- | --- |
-| `BATCH` | Test File 전체를 한 번에 실행합니다 | CVF를 쓰지 않을 때 |
-| `PER_CUT` | CUT을 Excel 순서대로 하나씩 따로 실행하고 결과도 따로 저장합니다 | CVF를 쓸 때 |
-| `AUTO` | 활성 CVF가 하나라도 있으면 `PER_CUT`, 없으면 `BATCH` | 기본값 |
+| `BATCH` (기본) | Test File 전체를 한 번에 실행합니다 | 평소 |
+| `PER_CUT` | Test Case를 Excel 순서대로 하나씩 따로 실행합니다 | **혼자 돌려야만 되는 Test Case가 있을 때** |
 
-CVF는 Test Case마다 다르게 적용해야 하므로, 여러 Test Case를 한꺼번에 돌리면 필터가
-섞입니다. 그래서 CVF를 쓰는 순간 `PER_CUT`이 필요합니다. 보통 `AUTO`를 그대로 두면
-됩니다.
+**어느 쪽으로 돌릴지는 부르는 쪽이 정합니다.** Excel은 관여하지 않습니다.
+
+```matlab
+st_run_after_harness('ExecutionMode','PER_CUT')
+```
+
+커버리지 필터는 이 선택과 무관합니다. 필터는 결과물을 만들 때 적용되므로 CVF를
+쓰는 대상도 `BATCH`로 돌 수 있습니다.
+
+두 모드의 실질적인 차이는 **재실행 범위**입니다. 기대값을 고친 뒤 `BATCH`는 Test
+File 전체를 다시 돌리고, `PER_CUT`은 해당 Test Case만 다시 돌립니다.
+
+> 예전 `AUTO` 모드는 없어졌습니다. Excel의 CVF 설정을 보고 `PER_CUT`을 골랐는데,
+> 필터가 결과물 단계로 옮겨가면서 근거가 사라졌습니다.
+
+### 실행 기록 (run record)
+
+Test Manager의 결과(ResultSet)는 그 결과를 만든 MATLAB 세션 안에서만 살아 있습니다.
+그래서 실행이 끝나면 결과와 표를 `result/run_records/`에 저장해 둡니다. 보고서는
+이 기록에서 나중에, 다른 세션에서도 만들 수 있습니다.
+
+| 실행 방식 | 결과 정리 명령 |
+| --- | --- |
+| `BATCH` | `st_generate_test_report` |
+| `PER_CUT` | `st_collect_per_cut_results` |
 
 ### transient CVF (임시 필터 적용)
 
-`PER_CUT`은 CVF를 Test File에 영구 저장하지 않고, 해당 CUT을 실행하는 동안에만
-붙였다가 끝나면 원래 설정으로 되돌립니다. 되돌리기에 실패하면 다른 테스트의 설정이
-오염될 수 있으므로 전체 실행을 즉시 중단합니다.
+생성된 CVF는 Test File에 영구 저장하지 않습니다. 결과 데이터에 붙이는 동안에만
+쓰고, 모델 설정을 건드린 경우 끝나면 원래대로 되돌립니다. 되돌리기에 실패하면
+다른 테스트의 설정이 오염될 수 있으므로 즉시 중단합니다.
 
 ### Standalone (독립 실행)
 
