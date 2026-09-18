@@ -145,6 +145,13 @@ source = fileread(fullfile(st_project_root(), 'src', 'workflow', ...
 % whatever the list contains. A numeric range like dirty(7:8) does not.
 verifyEmpty(testCase, regexp(source, 'dirty\(\d+:\d+\)', 'once'));
 verifyEmpty(testCase, regexp(source, 'reasons\(\d+:\d+\)', 'once'));
+
+% The same literals survived in the per-row matrices, which this check used
+% to ignore: OverwriteTestFile watched column 7 and wrote 7:8, so it looked
+% at ALIGNMENT and grew a phantom eighth column instead of forcing
+% TEST_MANAGER. Stage columns are selected by name, never by number.
+verifyEmpty(testCase, regexp(source, ...
+    '(run|action|reason|signature)Values\(:,\s*\d', 'once'));
 verifyNotEmpty(testCase, regexp(source, ...
     'stages == "TEST_MANAGER" \| stages == "ALIGNMENT"', 'once'));
 end

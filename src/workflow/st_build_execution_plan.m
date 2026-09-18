@@ -135,10 +135,15 @@ end
 
 % Overwrite mode recreates the shared Test File, so a partial row update
 % would remove cached Test Cases. Rebuild every selected row together.
-if cfg.OverwriteTestFile && any(runValues(:,7))
-    runValues(:,7:8) = true;
-    actionValues(:,7:8) = "RUN";
-    reasonValues(:,7:8) = "OverwriteTestFile requires a full Test File rebuild";
+% Name the stages here too: 7:8 was written for the eight-stage list, so it
+% watched ALIGNMENT instead of TEST_MANAGER and wrote a phantom eighth
+% column that the plan below never reads.
+rebuildStages = stages == "TEST_MANAGER" | stages == "ALIGNMENT";
+if cfg.OverwriteTestFile && any(runValues(:, stages == "TEST_MANAGER"))
+    runValues(:,rebuildStages) = true;
+    actionValues(:,rebuildStages) = "RUN";
+    reasonValues(:,rebuildStages) = ...
+        "OverwriteTestFile requires a full Test File rebuild";
 end
 
 plan = table(Key, T.No, T.CUTName, T.CUTPath, T.HarnessName, ...

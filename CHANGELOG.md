@@ -19,6 +19,15 @@
     실행하지도 못하는 `EXECUTE`를 제안하면서 정작 기본값인 `START`는 빠뜨려,
     제안대로 고르면 `simtest:InvalidPreparationFromStage`로 막혔습니다.
 
+- `OverwriteTestFile=true`가 실제로는 Test File 전체 재생성을 일으키지 못하고
+  있었습니다. 위치 인덱스가 여덟 단계였던 시절 값으로 남아 있어, 트리거는
+  `TEST_MANAGER`(6번) 대신 `ALIGNMENT`(7번)를 봤고 `7:8`을 세우면서 계획이 읽지
+  않는 여덟 번째 열을 만들어 냈습니다. 그래서 **한 행이라도 Test File을 다시
+  만들어야 할 때 나머지 행의 캐시된 Test Case가 함께 재생성되지 않았습니다.**
+  이제 이름으로 `TEST_MANAGER`와 `ALIGNMENT`를 고릅니다.
+  - 이 계열의 회귀를 막던 검사는 `dirty`와 `reasons`만 봐서 행렬 쪽에 남은 같은
+    리터럴을 놓쳤습니다. `runValues`/`actionValues`/`reasonValues`까지 넓혔습니다.
+
 - 실행 계획이 단계를 **위치가 아니라 이름으로** 표시합니다. `COVERAGE_FILTER`를
   단계 목록에서 뺀 뒤, 위치로 적어 둔 두 줄이 엉뚱한 단계를 가리키고 있었습니다.
   - Test File이 바뀌면 `dirty(7:8)`을 켰는데, 7~8은 여덟 단계일 때의
