@@ -105,7 +105,9 @@ cfg = st_config();
 verifyEqual(testCase, cfg.CoverageStructuralLevel, 'Decision');
 verifyEqual(testCase, cfg.CoverageMetricSettings, 'dwe');
 verifyFalse(testCase, cfg.CoverageIncludeReferencedModels);
-verifyTrue(testCase, cfg.GenerateTestReport);
+% Running and collecting are separate steps since a6241bd; the run
+% saves a record either way and the report is built from it later.
+verifyFalse(testCase, cfg.GenerateTestReport);
 end
 
 function descriptors = coverage_descriptors( ...
