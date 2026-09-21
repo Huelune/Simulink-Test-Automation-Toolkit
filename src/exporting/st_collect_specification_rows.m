@@ -1,5 +1,5 @@
 function [rows, details, verifyCells, maxTimes, decisionBlockLists] = ...
-        st_collect_specification_rows(cfg, verifyMode, decisionScope)
+        st_collect_specification_rows(cfg, verifyMode, decisionScope, decisionFinderFactory)
 %ST_COLLECT_SPECIFICATION_ROWS Read saved Assessment definitions per target.
 % Loads nothing that is not already saved, refuses a dirty or running model,
 % hashes every source before reading and verifies the hashes afterwards, and
@@ -8,6 +8,7 @@ function [rows, details, verifyCells, maxTimes, decisionBlockLists] = ...
 % with st_specification_table.
 if nargin < 2 || isempty(verifyMode), verifyMode = 'STEP2'; end
 if nargin < 3 || isempty(decisionScope), decisionScope = 'EXPLICIT'; end
+if nargin < 4, decisionFinderFactory = []; end
 initialModels = string(find_system('SearchDepth', 0, 'Type', 'block_diagram'));
 initialModels = initialModels(:);
 testFile = [];
@@ -92,7 +93,8 @@ for i = 1:height(targets)
             track_source(get_param(harness, 'FileName'));
         end
         [targetRows, targetDetails, inputFiles, targetVerifyCells, targetMaxTimes, targetDecisionBlocks] = ...
-            st_collect_specification_target(target, cfg, suite, verifyMode, decisionScope);
+            st_collect_specification_target(target, cfg, suite, verifyMode, ...
+            decisionScope, decisionFinderFactory);
         check_model(harness, '');
         for f = 1:numel(inputFiles), track_source(inputFiles(f)); end
         rows = [rows; targetRows]; %#ok<AGROW>

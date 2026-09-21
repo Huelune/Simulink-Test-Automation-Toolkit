@@ -99,7 +99,7 @@ st_run_standalone_coverage_pipeline('Action','ALL', ...
 | 2 | `ID` | `12345` | 테스트 케이스명에서 뽑은 codeBeamer ID |
 | 3 | `-` | 빈칸 | 고객 양식의 빈 열 |
 | 4 | `Pre Condition` | 숫자 그대로 (`0.2`) | `MaxTime` |
-| 5 | `Description` | `D1 [T/F]Switch (c1 > 0)` | `DecisionBlocks` |
+| 5 | `Description` | `D1 [T/F]Switch (c1 > 0)` | 커버리지가 잡은 분기 블록 |
 | 6 | `Test Steps.Action` | 입력 신호의 마지막 값 | `input 시나리오 내용` |
 | 7 | `Test Steps.Expected result` | verify 문장 | `verify 내용` |
 | 8–11 | `-` ×4 | 빈칸 | 고객 양식의 빈 열 |
@@ -145,6 +145,28 @@ st_run_standalone_coverage_pipeline('Action','ALL', ...
 남깁니다. 칸이 비지 않고, 어느 행이 규칙 밖인지 보입니다.
 
 손으로 만든 Test Case가 섞여 있으면 이 경우가 나옵니다.
+
+### `Description` — 실행이 잡은 분기 블록
+
+결과 정리를 하면 `st_collect_per_cut_results`가 Simulink Coverage에 **그 CUT에서
+실제로 Decision objective가 잡힌 블록**을 물어 결과 워크북의 `DecisionPoints`
+시트에 적어 둡니다. `Description`은 그 목록을 씁니다.
+
+- 저장된 블록 파라미터로 추정하지 않으므로, 카탈로그에 없는 종류를 놓치거나
+  커버리지가 세지 않는 블록을 더 적는 일이 없습니다.
+- 커버리지는 깊이 제한 없이 인식하므로 CUT 바로 아래가 아닌 중첩 Subsystem
+  안의 분기도 잡힙니다.
+- Subsystem과 Model Reference 자체는 빠집니다. 그 블록의 커버리지 수치는 안쪽
+  합계라서 남기면 모든 상위 블록이 분기로 보입니다.
+
+**커버리지가 없으면 지금까지대로 정적 스캔 결과를 씁니다.** 결과 정리를 하기
+전에도 문서가 나오고, 어느 쪽에서 왔는지는 `Metadata` 시트의
+`DecisionSourceWorkbooks`와 `DecisionSourceCUTs`로 확인합니다. 0이면 전부 정적
+스캔입니다.
+
+커버리지에서 왔을 때는 `DecisionBlockScope`가 `ALL`로 넓혀집니다. 커버리지가
+인식한 종류를 좁은 카탈로그가 도로 걸러내면 안 되기 때문입니다.
+`'NONE'`으로 두면 커버리지가 있어도 열을 비웁니다.
 
 ### `Pre Condition`
 

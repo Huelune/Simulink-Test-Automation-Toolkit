@@ -484,6 +484,64 @@ verifyEqual(testCase, coverage.Rows.ExecutionExecuted(1), 12);
 verifyEqual(testCase, coverage.Rows.ExecutionTotal(1), 15);
 end
 
+function testDecisionPointsAreKeptRelativeToTheirCut(testCase)
+% The recording session and the export session reach the CUT by the same
+% Excel entry, but a standalone bundle renames the model, so only the path
+% below the CUT can be relied on.
+folder = temp_folder(testCase);
+file = fullfile(folder, 'TestSummary.xlsx');
+write_decision_points(file, "Controller", "TOP/Controller", ...
+    ["TOP/Controller/Switch1"; "TOP/Controller/Inner/If1"], ...
+    ["Switch"; "If"]);
+decisions = st_final_document_decisions(base_config(), ...
+    source_with_workbook("ANY", file));
+verifyTrue(testCase, isKey(decisions.ByCut, 'Controller'));
+entries = decisions.ByCut('Controller');
+verifyEqual(testCase, sort(entries.RelativePath), ...
+    sort(["Switch1"; "Inner/If1"]));
+end
+
+function testDecisionFinderRebuildsPathsUnderTheAskedRoot(testCase)
+entries = table(["Switch"; "If"], ["Switch1"; "Inner/If1"], ...
+    'VariableNames', {'BlockType','RelativePath'});
+finder = st_decision_block_finder(entries);
+verifyEqual(testCase, finder('HARNESS/Controller', 'SearchDepth', 1, ...
+    'Type', 'Block', 'BlockType', 'Switch'), {'HARNESS/Controller/Switch1'});
+% A nested block is returned even though the caller asked for depth 1;
+% coverage recognises decisions at any depth.
+verifyEqual(testCase, finder('HARNESS/Controller', 'SearchDepth', 1, ...
+    'Type', 'Block', 'BlockType', 'If'), {'HARNESS/Controller/Inner/If1'});
+verifyEmpty(testCase, finder('HARNESS/Controller', 'SearchDepth', 1, ...
+    'Type', 'Block', 'BlockType', 'MinMax'));
+end
+
+function testDecisionFinderIsEmptyWithoutRecordedBlocks(testCase)
+verifyEmpty(testCase, st_decision_block_finder( ...
+    table(strings(0,1), strings(0,1), ...
+    'VariableNames', {'BlockType','RelativePath'})));
+end
+
+function testWorkbookWithoutTheSheetIsToleratedAsAnOlderRun(testCase)
+folder = temp_folder(testCase);
+file = fullfile(folder, 'TestSummary.xlsx');
+write_iterations(file, "FINAL", "Controller_12345", "Iteration 1", "Passed");
+decisions = st_final_document_decisions(base_config(), ...
+    source_with_workbook("ANY", file));
+verifyEqual(testCase, decisions.ByCut.Count, uint64(0));
+verifyEqual(testCase, height(decisions.Notes), 0);
+end
+
+function testBlockRecordedOutsideItsCutIsDropped(testCase)
+folder = temp_folder(testCase);
+file = fullfile(folder, 'TestSummary.xlsx');
+write_decision_points(file, "Controller", "TOP/Controller", ...
+    ["TOP/Other/Switch1"; "TOP/Controller/Switch2"], ["Switch"; "Switch"]);
+decisions = st_final_document_decisions(base_config(), ...
+    source_with_workbook("ANY", file));
+entries = decisions.ByCut('Controller');
+verifyEqual(testCase, entries.RelativePath, "Switch2");
+end
+
 function testFinalDocumentSourcesNeverSimulateOrOpenResultSets(testCase)
 % Reading a .mldatx would pull in a Test Manager session and cost time on
 % every export. The document quotes the path instead.
@@ -491,7 +549,8 @@ originalPath = path;
 restorePath = onCleanup(@() path(originalPath)); %#ok<NASGU>
 addpath(fullfile(st_project_root(), 'tests', 'fixtures'));
 folder = fullfile(st_project_root(), 'src', 'exporting');
-files = dir(fullfile(folder, 'st_*final_document*.m'));
+files = [dir(fullfile(folder, 'st_*final_document*.m')); ...
+    dir(fullfile(folder, 'st_decision_*.m'))];
 verifyGreaterThan(testCase, numel(files), 0);
 forbidden = {'\bsim\s*\(', 'sltest\.testmanager\.run\s*\(', ...
     '\bsave_system\s*\(', '\bsaveToFile\s*\(', ...
@@ -812,4 +871,13 @@ for k = 0:cells.getLength()-1
     end
     return;
 end
+end
+
+function write_decision_points(file, cutName, cutPath, blockPaths, blockTypes)
+count = numel(blockPaths);
+writetable(table(repmat(string(cutName), count, 1), ...
+    repmat(string(cutPath), count, 1), string(blockPaths(:)), ...
+    string(blockTypes(:)), ones(count,1), 'VariableNames', ...
+    {'CUTName','CUTPath','BlockPath','BlockType','ObjectiveCount'}), ...
+    file, 'Sheet', 'DecisionPoints', 'UseExcel', false);
 end

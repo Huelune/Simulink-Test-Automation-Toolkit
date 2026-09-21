@@ -70,21 +70,25 @@ st_log(cfg, 'INFO', ...
     run_label(resultRun, cfg), coverageSource, outputFile);
 timer = tic;
 try
+    % The run is resolved first so the decision blocks coverage recognised
+    % are available before the model is read.
+    source = st_final_document_run_source(cfg, resultRun);
+    decisions = st_final_document_decisions(cfg, source);
+    finderFactory = @(target, scope) resolve_decision_finder(decisions, target, scope);
     [rows, ~, verifyCells, maxTimes, decisionBlockLists] = ...
-        st_collect_specification_rows(cfg, 'STEP2', decisionScope);
+        st_collect_specification_rows(cfg, 'STEP2', decisionScope, finderFactory);
     specification = st_specification_table(rows, verifyCells, maxTimes, decisionBlockLists);
     % Renders the DecisionBlocks JSON into the Description text.
     specification = st_format_specification_decision_blocks(specification, cfg);
-    source = st_final_document_run_source(cfg, resultRun);
     outcomes = st_final_document_outcomes(cfg, source);
     coverage = st_final_document_coverage(cfg, coverageSource, ...
         char(string(p.Results.CoveragePipelineId)), source);
-    outcomes.Notes = [outcomes.Notes; coverage.Notes];
+    outcomes.Notes = [outcomes.Notes; coverage.Notes; decisions.Notes];
     require_results(p.Results.RequireTestResults, source, outcomes);
     require_coverage(p.Results.RequireCoverage, coverage);
     document = st_final_document_table(cfg, specification, outcomes, source);
     metadata = build_metadata(cfg, source, coverage, decisionScope, ...
-        height(specification));
+        height(specification), decisions);
     usage = [];
     if includeUsage, usage = st_specification_usage_table(cfg); end
     document = st_write_final_document_workbook(document, coverage, metadata, ...
@@ -143,6 +147,26 @@ end
 end
 
 
+function [finder, scope] = resolve_decision_finder(decisions, target, scope)
+% Coverage answers for this CUT, so its block list replaces the saved
+% parameter guess. The catalog is widened at the same time: coverage can
+% recognise a type the EXPLICIT list leaves out, and a narrowed catalog
+% would filter that block back out.
+finder = [];
+if strcmp(scope, 'NONE')
+    return;
+end
+name = char(strtrim(string(target.CUTName)));
+if ~isKey(decisions.ByCut, name)
+    return;
+end
+finder = st_decision_block_finder(decisions.ByCut(name));
+if ~isempty(finder)
+    scope = 'ALL';
+end
+end
+
+
 function label = run_label(requested, cfg)
 label = upper(strtrim(char(string(requested))));
 if isempty(label)
@@ -178,7 +202,7 @@ end
 end
 
 
-function metadata = build_metadata(cfg, source, coverage, decisionScope, rowCount)
+function metadata = build_metadata(cfg, source, coverage, decisionScope, rowCount, decisions)
 % The verdicts and the coverage come from two different executions on
 % purpose, so both identities are recorded here.
 metaKeys = strings(0,1);
@@ -217,6 +241,8 @@ add('CoveragePipelineId', coverage.PipelineId);
 add('CoverageSummary', coverage.SummaryFile);
 add('CoverageSummarySHA256', coverage.SummarySHA256);
 add('DecisionBlockScope', decisionScope);
+add('DecisionSourceWorkbooks', numel(decisions.Workbooks));
+add('DecisionSourceCUTs', decisions.ByCut.Count);
 metadata = table(metaKeys, metaValues, 'VariableNames', {'Key','Value'});
 end
 
