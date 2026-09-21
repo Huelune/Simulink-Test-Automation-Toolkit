@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **standalone 제출물을 팀 제출 트리로 재배치하는 Python 스크립트를 추가했습니다.**
+  `tools/python/classify_standalone_results.py`가 파이프라인 폴더 하나를 받아 옆에
+  `{TopModel}/` 폴더를 만들고, 파일 이름은 그대로 둔 채 `.mat`은 `테스트 케이스/`,
+  `.cvf/.cvt/.html`(부속 asset 포함)과 Test File은 `테스트 보고서/`, `.slx`는
+  `프로젝트/`로 복사합니다. 원본은 그대로 남기고, 세 갈래에 들지 않는 파일은 건너뛴
+  목록으로만 출력합니다. MATLAB과 툴킷 소스에 의존하지 않습니다.
+
 - **번들 러너가 Simulink 빌드 캐시 설정을 실행 뒤 확실히 되돌립니다.** 실행마다
   `CacheFolder`/`CodeGenFolder`를 짧은 임시 폴더로 돌린 뒤 원래 설정 객체로 복원하는데,
   `Simulink.fileGenControl`이 그 객체를 `invalid input config`로 거부하면 WARN만 남기고

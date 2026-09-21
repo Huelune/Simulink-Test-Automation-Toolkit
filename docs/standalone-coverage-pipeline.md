@@ -137,6 +137,31 @@ Coverage 보고서 하나만 보존하며, 렌더링에 필요한 부속 asset�
 > package evidence 경로로 승격합니다. 압축 파일은 캡처 증거용이며 최종 HTML 대신
 > 제출하는 파일이 아닙니다.
 
+### 팀 제출 트리로 재배치
+
+팀 내부 제출은 위 폴더를 파일 종류별 세 갈래로 나눈 형태를 씁니다. MATLAB 없이
+Python만으로 재배치합니다.
+
+```bash
+python tools/python/classify_standalone_results.py result/standalone_coverage/{PipelineId}
+```
+
+파이프라인 폴더 옆에 `{TopModel}/` 폴더(이름은 `TestManager/{TopModel}.mldatx`의
+stem)를 만들고 파일 이름은 바꾸지 않은 채 복사합니다. 원본 폴더는 그대로 남으므로
+`st_open_standalone_test_manager` 같은 툴킷 명령은 계속 원본에 대해 동작합니다.
+
+```text
+{TopModel}/
+├── 테스트 케이스/{NUM}_UT_REQ_{TC_NAME}/   Input .mat
+├── 테스트 보고서/{TopModel}.mldatx
+├── 테스트 보고서/{NUM}_UT_REQ_{TC_NAME}/   .cvf .cvt .html + 부속 asset 폴더
+└── 프로젝트/{NUM}_UT_REQ_{TC_NAME}/        standalone 모델 .slx
+```
+
+`CoverageSummary.xlsx`, manifest, 로그, `target-manifest.json`, launcher는 복사하지
+않고 건너뛴 목록으로만 출력합니다. `--dry-run`은 계획만 보여 주고, `--out`으로 출력
+위치를 바꾸며, 출력 폴더가 이미 있으면 `--overwrite` 없이는 멈춥니다.
+
 ## 5. `CoverageSummary.xlsx`
 
 `CoverageSummary` 시트의 열은 다음 순서로 고정합니다.

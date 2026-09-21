@@ -30,6 +30,8 @@ Simulink-Test-Automation-Toolkit/
 ├── diagnostics/
 │   ├── matlab/
 │   └── python/
+├── tools/
+│   └── python/
 ├── tests/
 │   ├── unit/
 │   ├── integration/
@@ -62,6 +64,8 @@ Simulink-Test-Automation-Toolkit/
 - 기존 공개 `st_*` 명령은 `st_setup` 이후 계속 호출 가능하며, 이번 이전 과정에서
   이름을 바꾸지 않습니다.
 - 진단 명령은 공개 명령이지만 제품 소스 밖(`diagnostics/`)에 둡니다.
+- MATLAB 없이 결과물만 다루는 팀 내부 스크립트는 `tools/`에 둡니다. `st_setup`이
+  등록하지 않으며 툴킷 소스에 의존하지 않습니다.
 - `docs/archive/`의 인수인계 문서는 과거 증거를 보존하는 것이며 **현재 구현 지침이
   아닙니다.**
 
