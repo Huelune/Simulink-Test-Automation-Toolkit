@@ -5,9 +5,12 @@ function points = st_collect_decision_points(cvd, root, cfg)
 % must be loaded for the block paths to resolve, which is the case while a
 % result set is being reported.
 %
-% Aggregating containers are skipped. decisioninfo on a Subsystem returns
-% the total of everything inside it, so keeping them would report every
-% ancestor as a decision block.
+% A plain Subsystem is skipped: decisioninfo on it returns the total of
+% everything inside, so keeping it would report every ancestor as a
+% decision block. An Enabled or Triggered Subsystem is kept, because the
+% enable or trigger itself is a branch the CUT owns. Its objectives are
+% read from the port block rather than from the subsystem, which is what
+% keeps the inner total out.
 %
 % Only the CUT's direct children are listed, matching the static scan this
 % replaces. What changes is which of them count as decisions: coverage is
@@ -41,9 +44,12 @@ blocks = string(blocks(:));
 skipped = 0;
 for i = 1:numel(blocks)
     blockPath = char(blocks(i));
-    blockType = read_block_type(blockPath);
-    if is_container(blockType), continue; end
-    [total, justified] = decision_objectives(cvd, blockPath);
+    [blockType, objectPath] = classify_block(blockPath);
+    if isempty(blockType), continue; end
+    [total, justified] = decision_objectives(cvd, objectPath);
+    if total <= 0
+        [total, justified] = own_objectives(cvd, blockPath);
+    end
     if total <= 0 || active_objectives(total, justified) <= 0
         skipped = skipped + 1;
         continue;
@@ -53,8 +59,8 @@ for i = 1:numel(blocks)
         {'BlockPath','BlockType','ObjectiveCount','JustifiedCount'})]; %#ok<AGROW>
 end
 st_log(cfg, 'INFO', ...
-    'Decision point scan complete | Root=%s | Blocks=%d | Decisions=%d | elapsed=%.3f sec', ...
-    root, numel(blocks), height(points), toc(timer));
+    'Decision point scan complete | Root=%s | Blocks=%d | Decisions=%d | Filtered=%d | elapsed=%.3f sec', ...
+    root, numel(blocks), height(points), skipped, toc(timer));
 end
 
 
@@ -87,8 +93,62 @@ end
 end
 
 
-function tf = is_container(blockType)
-tf = any(strcmp(blockType, {'SubSystem', 'ModelReference', ''}));
+function [blockType, objectPath] = classify_block(blockPath)
+% Returns the catalog type this block stands for and the path to ask
+% coverage about, or an empty type when the block is not a decision at all.
+objectPath = blockPath;
+blockType = read_block_type(blockPath);
+if ~any(strcmp(blockType, {'SubSystem', 'ModelReference', ''}))
+    return;
+end
+if ~strcmp(blockType, 'SubSystem')
+    blockType = '';
+    return;
+end
+for portType = {'EnablePort', 'TriggerPort'}
+    port = conditional_port(blockPath, portType{1});
+    if ~isempty(port)
+        blockType = portType{1};
+        objectPath = port;
+        return;
+    end
+end
+blockType = '';
+end
+
+
+function port = conditional_port(blockPath, portType)
+port = '';
+try
+    found = find_system(blockPath, 'SearchDepth', 1, 'LookUnderMasks', 'all', ...
+        'FollowLinks', 'on', 'BlockType', portType);
+catch
+    return;
+end
+if ~isempty(found)
+    port = char(string(found{1}));
+end
+end
+
+
+function [total, justified] = own_objectives(cvd, blockPath)
+% Some releases attribute a conditional subsystem's branch to the
+% subsystem rather than to its port block. Asking with descendants
+% ignored keeps the inner blocks out of the count either way.
+total = 0;
+justified = 0;
+try
+    [values, description] = decisioninfo(cvd, blockPath, 1);
+catch
+    return;
+end
+if isempty(values) || numel(values) < 2, return; end
+total = double(values(2));
+if ~isscalar(total) || ~isfinite(total)
+    total = 0;
+    return;
+end
+justified = st_coverage_justified_count(description);
 end
 
 

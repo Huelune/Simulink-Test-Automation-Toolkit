@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **Enabled / Triggered Subsystem도 분기 블록으로 셉니다.** enable과 trigger
+  자체가 CUT이 가진 분기인데 지금까지 어느 목록에도 없었습니다.
+  `st_specification_decision_catalog`에 `EnablePort`와 `TriggerPort`를 넣어
+  명세서와 최종 문서가 같이 보게 합니다.
+  - 그 분기는 Subsystem 한 겹 안의 port 블록에 붙어 있어 직계 검색에 걸리지
+    않습니다. 스캔이 port를 찾아 **Subsystem을** 보고합니다. port 블록 이름은
+    어느 모델에서나 `Enable`이라 그것을 적으면 어느 서브시스템인지 알 수
+    없습니다.
+  - 평범한 Subsystem은 그대로 빠집니다. 자기 분기가 없기 때문입니다.
+    커버리지 쪽은 objective를 port 블록에 물어 안쪽 합계가 섞이지 않게 합니다.
+  - 조건을 대화상자에 적는 블록이 아니므로 `Kind`는 `IMPLICIT`입니다. 명세서는
+    `st_export_test_specification('DecisionBlockScope','ALL')`로 봐야 나오고,
+    최종 문서는 커버리지에서 목록을 받을 때 범위를 `ALL`로 넓히므로 그냥
+    나옵니다.
+
 - **standalone 제출물을 팀 제출 트리로 재배치하는 Python 스크립트를 추가했습니다.**
   `tools/python/classify_standalone_results.py`가 파이프라인 폴더 하나를 받아 옆에
   `{TopModel}/` 폴더를 만들고, 파일 이름은 그대로 둔 채 `.mat`은 `테스트 케이스/`,

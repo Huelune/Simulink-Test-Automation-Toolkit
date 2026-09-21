@@ -595,3 +595,35 @@ switch key
         error('fixture:UnknownParameter', 'Unexpected parameter: %s', key);
 end
 end
+
+function testCatalogCarriesEnabledAndTriggeredSubsystems(testCase)
+catalog = st_specification_decision_catalog('ALL');
+verifyTrue(testCase, any(catalog.BlockType == "EnablePort"));
+verifyTrue(testCase, any(catalog.BlockType == "TriggerPort"));
+enable = catalog(catalog.BlockType == "EnablePort", :);
+verifyEqual(testCase, enable.DisplayType, "EnabledSubsystem");
+verifyEqual(testCase, enable.Outcome, "ON/OFF");
+% No dialog parameter is read: the reported path is the subsystem, not the
+% port block, so a parameter lookup would be aimed at the wrong block.
+verifyEqual(testCase, enable.Parameters, "");
+verifyEqual(testCase, enable.OptionalParameters, "");
+end
+
+function testConditionalSubsystemsAreImplicitDecisions(testCase)
+% They carry no condition in their dialog, so EXPLICIT leaves them out.
+% The final document forces ALL when the list comes from coverage.
+explicit = st_specification_decision_catalog('EXPLICIT');
+verifyFalse(testCase, any(explicit.BlockType == "EnablePort"));
+verifyFalse(testCase, any(explicit.BlockType == "TriggerPort"));
+end
+
+function testScanReportsTheSubsystemNotThePortBlock(testCase)
+% The port block is named Enable in every model, so reporting it would
+% lose the one name the reader recognises.
+source = fileread(fullfile(st_project_root(), 'src', 'exporting', ...
+    'st_specification_decision_blocks.m'));
+verifyNotEmpty(testCase, regexp(source, 'function paths = conditional_subsystems', 'once'));
+verifyNotEmpty(testCase, regexp(source, "paths\{end\+1,1\} = child;", 'once'));
+% find_system reports the root itself when the root is a Subsystem.
+verifyNotEmpty(testCase, regexp(source, 'if strcmp\(child, root\)', 'once'));
+end

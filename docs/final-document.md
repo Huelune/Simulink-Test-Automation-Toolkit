@@ -162,6 +162,12 @@ st_run_standalone_coverage_pipeline('Action','ALL', ...
 - **CUT의 직계 블록만 봅니다.** 중첩 Subsystem 안의 분기는 그 Subsystem의
   것이지 이 CUT의 것이 아니고, 넣으면 `Description`을 읽을 수 없게 됩니다.
   정적 스캔과 같은 범위이고, 바뀌는 것은 그중 무엇을 분기로 세느냐뿐입니다.
+- **Enabled / Triggered Subsystem도 분기로 셉니다.** enable과 trigger 자체가
+  CUT이 가진 분기입니다. 다만 그 분기는 Subsystem 한 겹 안의 port 블록에
+  붙어 있어 직계 검색에 걸리지 않으므로, 스캔이 port를 찾아 **Subsystem을**
+  보고합니다. port 블록 이름은 어느 모델에서나 `Enable`이라 그것을 적으면
+  어느 서브시스템인지 알 수 없기 때문입니다. 평범한 Subsystem은 자기 분기가
+  없으므로 그대로 빠집니다.
 - Subsystem과 Model Reference 자체는 빠집니다. 그 블록의 커버리지 수치는 안쪽
   합계라서 남기면 모든 상위 블록이 분기로 보입니다.
 

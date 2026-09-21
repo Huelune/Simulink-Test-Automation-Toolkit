@@ -291,6 +291,16 @@ ExternalReset=none`인 `Integrator`도 그대로 남기고 상태를 표시합�
 {"BlockType":"If","Name":"If","Path":"Top/CUT/Logic/If","Outcome":"T/F","Expression":"u1 > 0","ExpressionStatus":"OK","Message":""}
 ```
 
+### Enabled / Triggered Subsystem
+
+`'ALL'`에는 Enabled Subsystem과 Triggered Subsystem도 들어갑니다. enable과
+trigger 자체가 분기이기 때문입니다. 조건을 대화상자에 적는 블록이 아니므로
+`'EXPLICIT'`(기본)에는 나오지 않습니다.
+
+그 분기는 Subsystem 한 겹 안의 port 블록에 붙어 있지만, 목록에는 **Subsystem이**
+적힙니다. port 블록 이름은 어느 모델에서나 `Enable`이라 그것을 적으면 어느
+서브시스템인지 알 수 없습니다.
+
 ### 탐색 범위
 
 CUT의 **직계 자식만** 포함합니다. `CUT/Subsystem/Switch`처럼 하위 Subsystem 안에 있는

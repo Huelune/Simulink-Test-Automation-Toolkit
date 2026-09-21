@@ -10,7 +10,7 @@ function [text, count, note] = st_specification_decision_blocks( ...
 % Each seam accepts [] so a caller can override one of them and leave the
 % rest at their defaults, which is how the export scope reaches the scan.
 if nargin < 3 || isempty(finder)
-    finder = @find_system;
+    finder = @default_finder;
 end
 if nargin < 4 || isempty(nameReader)
     nameReader = @read_name;
@@ -165,5 +165,44 @@ if numel(outcome) ~= numel(expression)
     error('simtest:SpecificationDecisionBranch', ...
         'Decision branch count mismatch for %s (%s): %d outcome(s), %d expression(s).', ...
         path, blockType, numel(outcome), numel(expression));
+end
+end
+
+
+function paths = default_finder(root, varargin)
+%DEFAULT_FINDER find_system, plus conditional subsystems by their port.
+% An Enabled or Triggered Subsystem carries its branch on a port block one
+% level inside it, so find_system at depth 1 never sees it. The branch
+% belongs to the subsystem the CUT owns, and the subsystem is the name a
+% reader recognises, so that is what gets reported.
+index = find(strcmp(varargin, 'BlockType'), 1);
+blockType = '';
+if ~isempty(index) && index < numel(varargin)
+    blockType = char(string(varargin{index + 1}));
+end
+if ~any(strcmp(blockType, {'EnablePort', 'TriggerPort'}))
+    paths = find_system(root, varargin{:});
+    return;
+end
+paths = conditional_subsystems(root, blockType);
+end
+
+
+function paths = conditional_subsystems(root, portType)
+paths = {};
+root = char(string(root));
+children = find_system(root, 'SearchDepth', 1, 'LookUnderMasks', 'all', ...
+    'FollowLinks', 'on', 'BlockType', 'SubSystem');
+for i = 1:numel(children)
+    child = char(string(children{i}));
+    % find_system reports the root itself when it is a Subsystem too.
+    if strcmp(child, root)
+        continue;
+    end
+    ports = find_system(child, 'SearchDepth', 1, 'LookUnderMasks', 'all', ...
+        'FollowLinks', 'on', 'BlockType', portType);
+    if ~isempty(ports)
+        paths{end+1,1} = child; %#ok<AGROW>
+    end
 end
 end
