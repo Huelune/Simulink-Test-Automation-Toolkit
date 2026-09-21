@@ -131,7 +131,7 @@ if strlength(filterPath) > 0
     attachInfo = st_apply_result_coverage_filters( ...
         resultObj, char(filterPath), cfg, ...
         'RequireCoverage', true, ...
-        'CoveragePath', coverage_path(row), ...
+        'CoveragePath', st_coverage_object_path(row), ...
         'RequireExactSet', true);
     if ~strcmp(attachInfo.Status, 'OK')
         error('simtest:CollectResultFilterFailed', ...
@@ -187,18 +187,6 @@ for i = numel(names):-1:1
     catch ME
         st_log(cfg, 'WARN', 'Could not close %s | %s', name, ME.message);
     end
-end
-end
-
-
-function path = coverage_path(row)
-%COVERAGE_PATH A standalone bundle renames the CUT; follow it when present.
-path = '';
-if ismember('StandaloneCUTPath', row.Properties.VariableNames)
-    path = strtrim(char(string(row.StandaloneCUTPath)));
-end
-if isempty(path)
-    path = char(string(row.CUTPath));
 end
 end
 
