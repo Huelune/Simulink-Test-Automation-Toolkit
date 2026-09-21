@@ -418,3 +418,21 @@ verifyTrue(testCase, contains(source, ...
 verifyTrue(testCase, contains(source, ...
     'Toolbox product analysis skipped | AnalyzeProducts=false'));
 end
+
+function testSldvManifestIsValidatedBeforeExpensiveStages(testCase)
+% A manifest that lacks rows (they were Enabled=false when it was written)
+% used to surface only in Collect Target Inputs, after dependency analysis
+% and standalone Harness export. The export must resolve every
+% FILE/GENERATE row in Validate Export Sources and report all gaps at once.
+text = string(fileread(fullfile(st_project_root(), 'src', 'exporting', ...
+    'st_export_test_bundle.m')));
+checkAt = strfind(text, 'assert_sldv_manifest_covers_targets(targets, cfg);');
+dependencyAt = strfind(text, "currentStage = 'Discover Model Dependencies';");
+verifyNumElements(testCase, checkAt, 1);
+verifyNumElements(testCase, dependencyAt, 1);
+verifyTrue(testCase, checkAt < dependencyAt, ...
+    'The SLDV manifest check must run before dependency analysis.');
+verifyTrue(testCase, contains(text, "'simtest:ExportSldvManifestIncomplete'"));
+verifyTrue(testCase, contains(text, 'st_get_sldv_profile(targets(i,:), cfg);'));
+verifyTrue(testCase, contains(text, 'char(strjoin(failures, newline))'));
+end

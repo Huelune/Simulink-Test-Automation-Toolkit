@@ -101,6 +101,62 @@ verifyEqual(testCase, profiles(1).Mode, 'FILE');
 end
 
 
+function testMissingManifestRowNamesTheNearestRowAndTheFix(testCase)
+% A stale or partial manifest (rows Enabled=false when it was written) used
+% to fail with a bare "no matching row". The error must identify the target,
+% the manifest, the nearest row's differing fields, and the repair command.
+temporaryRoot = tempname;
+mkdir(temporaryRoot);
+cleanup = onCleanup(@() rmdir(temporaryRoot, 's')); %#ok<NASGU>
+manifestFile = fullfile(temporaryRoot, 'sldv_manifest.mat');
+knownProfile = struct( ...
+    'No', 1, ...
+    'CUTName', 'Controller', ...
+    'CUTPath', 'TestModel/Controller', ...
+    'HarnessName', 'ControllerHarness', ...
+    'TestCaseName', 'ControllerTest', ...
+    'Mode', 'FILE', ...
+    'RequestedDataFile', 'a.mat', ...
+    'EffectiveDataFile', 'a.mat', ...
+    'Status', 'OK', ...
+    'Message', '');
+manifest = struct('TopModel', 'TestModel', 'Profiles', knownProfile); %#ok<NASGU>
+save(manifestFile, 'manifest');
+cfg = struct('SldvManifestFile', manifestFile, 'TopModel', 'TestModel');
+
+% Never prepared: nothing in the manifest resembles this row.
+unprepared = table(24, "Find_SnapData", "TestModel/Find_SnapData", ...
+    "Find_SnapDataHarness", "Find_SnapData_1234", "FILE", "b.mat", ...
+    'VariableNames', {'No','CUTName','CUTPath','HarnessName', ...
+    'TestCaseName','SldvMode','SldvDataFile'});
+verifyError(testCase, @() st_get_sldv_profile(unprepared, cfg), ...
+    'simtest:SldvManifestRowMissing');
+try
+    st_get_sldv_profile(unprepared, cfg);
+catch ME
+end
+verifyTrue(testCase, contains(ME.message, 'No=24 | CUT=Find_SnapData'));
+verifyTrue(testCase, contains(ME.message, manifestFile));
+verifyTrue(testCase, contains(ME.message, 'never prepared'));
+verifyTrue(testCase, contains(ME.message, 'st_prepare_sldv_targets'));
+
+% Renamed after preparation: the same No exists with another Test Case.
+renamed = table(1, "Controller", "TestModel/Controller", ...
+    "ControllerHarness", "Controller_5678", "FILE", "a.mat", ...
+    'VariableNames', {'No','CUTName','CUTPath','HarnessName', ...
+    'TestCaseName','SldvMode','SldvDataFile'});
+try
+    st_get_sldv_profile(renamed, cfg);
+catch ME
+end
+verifyEqual(testCase, ME.identifier, 'simtest:SldvManifestRowMissing');
+verifyTrue(testCase, contains(ME.message, 'Closest manifest row 1'));
+verifyTrue(testCase, contains(ME.message, ...
+    'TestCaseName: manifest=ControllerTest, Excel=Controller_5678'));
+verifyFalse(testCase, contains(ME.message, 'never prepared'));
+end
+
+
 function testNormalizeParametersAllowsMissingSource(testCase)
 raw = struct('name', 'GainValue', 'value', 4.5);
 normalized = st_normalize_sldv_parameters(raw, 2);
