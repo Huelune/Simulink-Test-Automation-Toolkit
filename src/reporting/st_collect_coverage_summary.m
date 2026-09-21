@@ -219,7 +219,7 @@ end
 
 covered = double(values(1));
 total = double(values(2));
-justified = justified_count(description);
+justified = st_coverage_justified_count(description);
 [percentage, percentageText] = st_coverage_percentage(covered, total);
 row = empty_coverage_table();
 row(1,:) = {string(runLabel), string(level), double(target.No), ...
@@ -228,18 +228,6 @@ row(1,:) = {string(runLabel), string(level), double(target.No), ...
     string(metric), covered, total, justified, percentage, ...
     percentageText, "OK", ""};
 coverage = [coverage; row];
-end
-
-function value = justified_count(description)
-value = 0;
-try
-    if isstruct(description) && isfield(description, 'justifiedCoverage')
-        values = [description.justifiedCoverage];
-        value = sum(double(values));
-    end
-catch
-    value = NaN;
-end
 end
 
 function value = coverage_checksum(cvd)

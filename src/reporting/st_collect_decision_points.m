@@ -9,7 +9,14 @@ function points = st_collect_decision_points(cvd, root, cfg)
 % the total of everything inside it, so keeping them would report every
 % ancestor as a decision block.
 %
-% Returns BlockPath, BlockType and ObjectiveCount, one row per block.
+% A block whose objectives were all excused by the registered coverage
+% filter is left out. The filter is what says which blocks belong to this
+% CUT, so honouring it is what keeps a nested subsystem from appearing
+% here when the CUT never claimed it. With no filter registered nothing is
+% excused and nothing is dropped.
+%
+% Returns BlockPath, BlockType, ObjectiveCount and JustifiedCount, one row
+% per block.
 if nargin < 3, cfg = []; end
 points = empty_points();
 root = char(string(root));
@@ -29,13 +36,14 @@ for i = 1:numel(blocks)
     blockPath = char(blocks(i));
     blockType = read_block_type(blockPath);
     if is_container(blockType), continue; end
-    total = decision_objectives(cvd, blockPath);
-    if total <= 0
+    [total, justified] = decision_objectives(cvd, blockPath);
+    if total <= 0 || active_objectives(total, justified) <= 0
         skipped = skipped + 1;
         continue;
     end
-    points = [points; table(string(blockPath), string(blockType), total, ...
-        'VariableNames', {'BlockPath','BlockType','ObjectiveCount'})]; %#ok<AGROW>
+    points = [points; table(string(blockPath), string(blockType), ...
+        total, justified, 'VariableNames', ...
+        {'BlockPath','BlockType','ObjectiveCount','JustifiedCount'})]; %#ok<AGROW>
 end
 st_log(cfg, 'INFO', ...
     'Decision point scan complete | Root=%s | Blocks=%d | Decisions=%d | elapsed=%.3f sec', ...
@@ -44,8 +52,20 @@ end
 
 
 function T = empty_points()
-T = table(strings(0,1), strings(0,1), zeros(0,1), ...
-    'VariableNames', {'BlockPath','BlockType','ObjectiveCount'});
+T = table(strings(0,1), strings(0,1), zeros(0,1), zeros(0,1), ...
+    'VariableNames', {'BlockPath','BlockType','ObjectiveCount','JustifiedCount'});
+end
+
+
+function count = active_objectives(total, justified)
+% An unreadable justified count is not zero justified objectives. Keeping
+% the block is the safe reading: a filtered block shown is a nuisance, a
+% real decision silently dropped is a wrong document.
+if isnan(justified)
+    count = total;
+    return;
+end
+count = total - justified;
 end
 
 
@@ -65,17 +85,23 @@ tf = any(strcmp(blockType, {'SubSystem', 'ModelReference', ''}));
 end
 
 
-function total = decision_objectives(cvd, blockPath)
+function [total, justified] = decision_objectives(cvd, blockPath)
 % decisioninfo returns [covered total] and an empty value for a block that
 % carries no decision at all. Both mean the same thing here: not a
-% decision point in this run.
+% decision point in this run. The second output carries what the coverage
+% filter excused.
 total = 0;
+justified = 0;
 try
-    values = decisioninfo(cvd, blockPath);
+    [values, description] = decisioninfo(cvd, blockPath);
 catch
     return;
 end
 if isempty(values) || numel(values) < 2, return; end
 total = double(values(2));
-if ~isscalar(total) || ~isfinite(total), total = 0; end
+if ~isscalar(total) || ~isfinite(total)
+    total = 0;
+    return;
+end
+justified = st_coverage_justified_count(description);
 end

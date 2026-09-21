@@ -279,3 +279,33 @@ verifyNotEmpty(testCase, regexp(source, ...
 verifyNotEmpty(testCase, regexp(source, ...
     "'SubSystem', 'ModelReference'", 'once'));
 end
+
+function testJustifiedCountSumsWhatTheFilterExcused(testCase)
+description = struct('justifiedCoverage', {2, 3});
+verifyEqual(testCase, st_coverage_justified_count(description), 5);
+end
+
+function testJustifiedCountIsZeroWithoutFilterDetail(testCase)
+verifyEqual(testCase, st_coverage_justified_count(struct()), 0);
+verifyEqual(testCase, st_coverage_justified_count([]), 0);
+end
+
+function testDecisionPointScanDropsFullyFilteredBlocks(testCase)
+% A block whose objectives the CVF excused is not part of this CUT's
+% measurement, so it must not reach the customer Description.
+source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
+    'st_collect_decision_points.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'active_objectives\(total, justified\) <= 0', 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'st_coverage_justified_count\(description\)', 'once'));
+end
+
+function testUnreadableJustifiedCountKeepsTheBlock(testCase)
+% NaN means the detail could not be read. Dropping the block then would
+% silently lose a real decision, which is worse than showing a filtered one.
+source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
+    'st_collect_decision_points.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'if isnan\(justified\)\s*\n\s*count = total;', 'once'));
+end

@@ -632,8 +632,9 @@ end
 
 
 function T = empty_decision_points()
-T = table(strings(0,1), strings(0,1), strings(0,1), strings(0,1), zeros(0,1), ...
-    'VariableNames', {'CUTName','CUTPath','BlockPath','BlockType','ObjectiveCount'});
+T = table(strings(0,1), strings(0,1), strings(0,1), strings(0,1), ...
+    zeros(0,1), zeros(0,1), 'VariableNames', ...
+    {'CUTName','CUTPath','BlockPath','BlockType','ObjectiveCount','JustifiedCount'});
 end
 
 
