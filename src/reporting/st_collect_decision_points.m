@@ -9,11 +9,13 @@ function points = st_collect_decision_points(cvd, root, cfg)
 % the total of everything inside it, so keeping them would report every
 % ancestor as a decision block.
 %
+% Only the CUT's direct children are listed, matching the static scan this
+% replaces. What changes is which of them count as decisions: coverage is
+% asked instead of the saved block parameters being guessed at.
+%
 % A block whose objectives were all excused by the registered coverage
-% filter is left out. The filter is what says which blocks belong to this
-% CUT, so honouring it is what keeps a nested subsystem from appearing
-% here when the CUT never claimed it. With no filter registered nothing is
-% excused and nothing is dropped.
+% filter is left out too. With no filter registered nothing is excused and
+% nothing is dropped.
 %
 % Returns BlockPath, BlockType, ObjectiveCount and JustifiedCount, one row
 % per block.
@@ -23,7 +25,12 @@ root = char(string(root));
 if isempty(root), return; end
 timer = tic;
 try
-    blocks = find_system(root, 'LookUnderMasks', 'all', ...
+    % Direct children only, like the static scan it replaces. A decision
+    % inside a nested subsystem belongs to that subsystem, not to this CUT,
+    % and listing it makes the customer Description unreadable.
+    % LookUnderMasks and FollowLinks stay on: without them a masked or
+    % library-linked CUT reports no children at all.
+    blocks = find_system(root, 'SearchDepth', 1, 'LookUnderMasks', 'all', ...
         'FollowLinks', 'on', 'Type', 'Block');
 catch ME
     st_log(cfg, 'WARN', ...

@@ -14,14 +14,17 @@ end
 
 function paths = select_blocks(entries, root, args)
 % The caller asks one BlockType at a time and limits find_system to the
-% CUT's direct children. Coverage recognises decisions at any depth, so the
-% depth limit is deliberately not applied to a recorded list.
+% CUT's direct children. That limit is honoured here as well: a relative
+% path with a separator in it sits inside a nested subsystem and belongs to
+% that subsystem, not to this CUT. The recording side already filters these
+% out, so this only guards a sheet written before it did.
 paths = {};
 index = find(strcmp(args, 'BlockType'), 1);
 if isempty(index) || index >= numel(args)
     return;
 end
-keep = entries.BlockType == string(args{index + 1});
+keep = entries.BlockType == string(args{index + 1}) & ...
+    ~contains(entries.RelativePath, "/");
 if ~any(keep)
     return;
 end

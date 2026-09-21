@@ -309,3 +309,15 @@ source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
 verifyNotEmpty(testCase, regexp(source, ...
     'if isnan\(justified\)\s*\n\s*count = total;', 'once'));
 end
+
+function testDecisionScanAsksOnlyForDirectChildren(testCase)
+% A decision inside a nested subsystem belongs to that subsystem. Listing
+% it makes the customer Description unreadable, so the scan is depth 1.
+source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
+    'st_collect_decision_points.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "find_system\(root, 'SearchDepth', 1", 'once'));
+% Masked and library-linked CUTs report no children without these.
+verifyNotEmpty(testCase, regexp(source, "'LookUnderMasks', 'all'", 'once'));
+verifyNotEmpty(testCase, regexp(source, "'FollowLinks', 'on'", 'once'));
+end

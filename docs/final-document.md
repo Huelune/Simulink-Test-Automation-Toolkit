@@ -159,8 +159,9 @@ st_run_standalone_coverage_pipeline('Action','ALL', ...
   정하므로, CUT이 자기 것으로 claim하지 않은 중첩 Subsystem 안쪽이 여기 올라오지
   않게 하는 것이 이 규칙입니다. 필터를 안 쓰면 면제되는 것이 없으므로 아무것도
   빠지지 않습니다.
-- 그 위에서 커버리지는 깊이 제한 없이 인식하므로, CUT이 claim한 범위 안이라면
-  중첩 Subsystem 안의 분기도 잡힙니다.
+- **CUT의 직계 블록만 봅니다.** 중첩 Subsystem 안의 분기는 그 Subsystem의
+  것이지 이 CUT의 것이 아니고, 넣으면 `Description`을 읽을 수 없게 됩니다.
+  정적 스캔과 같은 범위이고, 바뀌는 것은 그중 무엇을 분기로 세느냐뿐입니다.
 - Subsystem과 Model Reference 자체는 빠집니다. 그 블록의 커버리지 수치는 안쪽
   합계라서 남기면 모든 상위 블록이 분기로 보입니다.
 
