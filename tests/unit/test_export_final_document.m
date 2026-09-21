@@ -354,6 +354,21 @@ styles = fileread(fullfile(package, 'xl', 'styles.xml'));
 verifyTrue(testCase, contains(styles, 'wrapText="1"'));
 end
 
+function testResultSheetHeadersKeepTheRowColumnName(testCase)
+% The variable is RowNumber because a table variable may not repeat a
+% dimension name, but the published heading has to stay Row.
+folder = temp_folder(testCase);
+file = fullfile(folder, 'final.xlsx');
+st_write_final_document_workbook(minimal_document(), ...
+    coverage_struct(["Controller"], 7, 10, 12, 15), sample_metadata(), ...
+    file, base_config());
+cells = readcell(file, 'Sheet', 'TestResults');
+headers = cellfun(@(v) string(v), cells(1,:));
+verifyEqual(testCase, headers, ["Row", "Test Case ID", "TestCaseName", ...
+    "Iteration명", "판정 결과", "확인 필요", "확인 사유", "확인 위치", "추출상태"]);
+verifyEqual(testCase, cells{2,1}, 2);
+end
+
 function testExistingOutputIsRefusedAndLeftUntouched(testCase)
 folder = temp_folder(testCase);
 file = fullfile(folder, 'final.xlsx');
