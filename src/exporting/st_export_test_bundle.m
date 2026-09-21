@@ -136,6 +136,7 @@ else
 end
 targets = st_load_targets(cfg.OnlyEnabled);
 fprintf('Targets      : %d\n', height(targets));
+assert_sldv_manifest_covers_targets(targets, cfg);
 finish_step(currentStage, stageTimer);
 
 currentStage = 'Discover Model Dependencies';
@@ -709,6 +710,40 @@ catch
     % Product discovery is informative. Runtime API checks remain the
     % authoritative validation on the recipient machine.
 end
+end
+
+function assert_sldv_manifest_covers_targets(targets, cfg)
+%ASSERT_SLDV_MANIFEST_COVERS_TARGETS Resolve every FILE/GENERATE row now.
+% Collect Target Inputs performs the same lookup, but only after dependency
+% analysis and standalone Harness export. A manifest written while some rows
+% were Enabled=false used to fail the export tens of minutes in, one row at
+% a time. Check every row up front and report all gaps together.
+modes = upper(strtrim(string(targets.SldvMode)));
+modes(ismissing(modes)) = "OFF";
+rows = find(modes ~= "OFF" & modes ~= "");
+failures = strings(0,1);
+for i = rows(:)'
+    try
+        st_get_sldv_profile(targets(i,:), cfg);
+    catch ME
+        failures(end+1,1) = sprintf('No=%g %s: %s', ...
+            double(targets.No(i)), char(string(targets.CUTName(i))), ...
+            first_line(ME.message)); %#ok<AGROW>
+    end
+end
+fprintf('SLDV inputs  : %d rows, %d unresolved\n', ...
+    numel(rows), numel(failures));
+if isempty(failures), return; end
+error('simtest:ExportSldvManifestIncomplete', ...
+    ['%d of %d FILE/GENERATE target rows do not resolve in the SLDV ' ...
+     'manifest %s. Run st_prepare_sldv_targets with these rows enabled, ' ...
+     'then retry.\n%s'], numel(failures), numel(rows), ...
+    cfg.SldvManifestFile, char(strjoin(failures, newline)));
+end
+
+function value = first_line(text)
+parts = splitlines(string(text));
+value = char(parts(1));
 end
 
 function inventory = collect_target_inputs( ...

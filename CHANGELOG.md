@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **번들 export가 SLDV manifest를 긴 단계 전에 먼저 검사합니다.** `SldvMode`가
+  `OFF`가 아닌 행의 manifest 조회는 `Collect Target Inputs`에서만 했는데, 그 단계는
+  dependency 분석과 standalone Harness export 뒤에 옵니다. 일부 행만 켜서 준비한
+  manifest로 전체를 export하면 40분 뒤 한 행에서 멈추고, 고친 뒤 다시 돌리면 다음
+  행에서 또 멈출 수 있었습니다. 이제 `Validate Export Sources`에서 모든 행을
+  조회하고 빠진 행을 `ExportSldvManifestIncomplete` 하나로 한 번에 나열합니다.
+  standalone 파이프라인의 `PREPARE`/`EXECUTE`/`ALL`도 이 export를 쓰므로 같이
+  빨리 멈춥니다.
+
 - **SLDV manifest에 행이 없을 때 어느 행과 어떻게 다른지, 어떻게 고치는지 알려 줍니다.**
   `st_get_sldv_profile`은 지금까지 "No matching target row exists in the SLDV
   manifest."만 냈습니다. 이제 `SldvManifestRowMissing` 오류가 대상 행(No, CUT,
