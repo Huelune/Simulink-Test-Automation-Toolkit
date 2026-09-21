@@ -55,6 +55,7 @@
 | `st_collect` | **`st_collect_per_cut_results`** |
 | `st_run_standalone_coverage_pipeline` | `st_run_standalone_coverage_pipeline` |
 | `st_check_standalone` | **`st_check_standalone_coverage`** |
+| `st_open_standalone` | **`st_open_standalone_test_manager`** |
 | `st_export_final` | **`st_export_final_document`** |
 
 ## 1. 전체 흐름
@@ -83,6 +84,8 @@ st_export_test_specification             명세서 Excel이 필요할 때
 st_run_standalone_coverage_pipeline      제출물 생성
     │
 st_check_standalone_coverage             제출물 검사 → 1111111111 PASS
+    │
+st_open_standalone_test_manager          제출물을 Test Manager에 다시 올려 볼 때
     │
 st_export_final_document                 고객 제출용 최종 문서
 ```
@@ -130,6 +133,9 @@ info = st_run_standalone_coverage_pipeline( ...
 disp(code)
 disp(summary)
 disp(details)
+
+%% 7-1. 제출물을 Test Manager에서 다시 보기 (필요할 때)
+st_open_standalone_test_manager
 
 %% 8. 고객 제출용 최종 문서 — 4-1 결과 정리를 먼저 해야 판정이 채워집니다
 [T, finalFile] = st_export_final_document();
@@ -491,6 +497,49 @@ File·CVF를 저장하거나 바꾸지 않습니다.
 | B9 | 원본 model/Test File/Harness/Input/Excel 불변 |
 | B10 | filter 복원, model/path 정리, CUT 폴더 격리 |
 
+### `st_open_standalone_test_manager`
+
+```matlab
+st_open_standalone_test_manager                         % 가장 최근 제출물
+st_open_standalone_test_manager('PipelineId', info.PipelineId)
+```
+
+standalone이 끝나면 실행에 쓴 모델은 닫히고 Test Manager에는 아무것도 남지
+않습니다. 이 명령은 **제출물 폴더의 파일만으로** Test Manager를 다시 구성해서
+엽니다. 원본 Top Model은 열지 않습니다.
+
+하는 일, 이 순서대로:
+
+1. CUT 폴더의 standalone 모델을 전부 로드합니다. Test Case의 Model 항목과 CVF
+   뷰어의 이름이 이 모델에 대조되어 풀립니다.
+2. `TestManager/` 폴더의 재배선된 Test File을 엽니다.
+3. Test Case마다 옆에 있는 `UT_REQ_{TC_NAME}.cvf`를 다시 걸고 읽어서 확인합니다.
+4. 저장된 aggregate Result가 있으면 import해서 Results and Artifacts에 올립니다.
+5. Test Manager 창을 엽니다.
+
+**파일은 하나도 만들거나 바꾸지 않습니다.** 세션에 올리기만 합니다. 이 명령을
+쓴 뒤에 `st_check_standalone_coverage`를 돌려도 결과가 같습니다.
+
+| 옵션 | 기본값 | 역할 |
+| --- | --- | --- |
+| `PipelineId` | `'LATEST'` | 열 실행 id |
+| `ImportResults` | `true` | 저장된 Result를 import할지 |
+| `ClearTestManager` | `false` | 열기 전에 Test Manager에 열린 Test File과 Result를 전부 닫을지 |
+| `View` | `true` | Test Manager 창을 열지 |
+
+> **결과(Results)까지 보려면 파이프라인이 Result를 저장했어야 합니다.**
+> `'Action','ALL'`은 기본으로 저장하지 않습니다(`SaveTestResult=false`). 이때는
+> Test File·모델·CVF만 올라오고 화면에 `Results : none saved`가 찍힙니다.
+> Results까지 다시 보고 싶으면 파이프라인을
+> `st_run_standalone_coverage_pipeline('Action','ALL','SaveTestResult',true, ...)`
+> 로 돌리십시오. Result 파일 하나(`StandaloneCoverageResults.mldatx`)가
+> root에 추가되고, checker도 그 하나를 정상으로 봅니다.
+
+같은 이름의 Test File이 이미 열려 있으면 멈춥니다(같은 MATLAB 세션에서
+파이프라인을 돌린 직후에 생길 수 있습니다). 그 파일을 닫거나
+`'ClearTestManager', true`로 부르십시오. `ClearTestManager`는 Test Manager에 열린
+**모든** Test File과 Result를 닫으니, 저장하지 않은 것이 있으면 먼저 저장하십시오.
+
 ### `st_export_final_document`
 
 ```matlab
@@ -555,6 +604,8 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 | 명세서 Excel이 필요하다 | `st_export_test_specification` |
 | 제출물을 만든다 | Top Model 닫고 → `st_run_standalone_coverage_pipeline('Action','ALL',...)` |
 | 제출물이 맞는지 본다 | `st_check_standalone_coverage` |
+| 제출물을 Test Manager에서 다시 본다 | `st_open_standalone_test_manager` |
+| 제출물의 Results까지 다시 본다 | 파이프라인을 `'SaveTestResult', true`로 돌린 뒤 `st_open_standalone_test_manager` |
 | 고객에게 낼 문서를 만든다 | 결과 정리 후 → `st_export_final_document` |
 
 ## 5. 자주 막히는 곳
@@ -576,6 +627,9 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 | 실행은 끝났는데 보고서가 없다 | 정상입니다. `st_generate_test_report`(BATCH) 또는 `st_collect_per_cut_results`(PER_CUT)를 부르십시오. PER_CUT에서 매번 자동으로 하려면 `AutoCollect`를 쓰십시오 |
 | `RunRecordPointerMissing` | 아직 실행한 적이 없습니다. 먼저 `st_run_from_harness`를 돌리십시오 |
 | `RemovedExecutionMode` | `ExecutionMode='AUTO'`는 없어졌습니다. `'BATCH'` 또는 `'PER_CUT'`을 쓰십시오 |
+| `StandaloneTestManagerFileNameConflict` | 같은 이름의 Test File이 이미 열려 있습니다. 닫거나 `st_open_standalone_test_manager('ClearTestManager', true)` |
+| `StandaloneTestManagerNotPackaged` | 그 PipelineId는 `PACKAGE`를 안 거쳤습니다. `'Action','PACKAGE'`를 먼저 돌리십시오 |
+| 다시 연 Test Manager에 Results가 없다 | 파이프라인이 Result를 저장하지 않았습니다(`ALL`의 기본). `'SaveTestResult', true`로 다시 돌리십시오 |
 | 커버리지에 필터가 안 걸린 것 같다 | 실행 결과가 아니라 **결과 정리 후** 보고서를 보십시오. 필터는 그때 붙습니다 |
 
 오류 식별자별 대처는 [문제 해결](troubleshooting.md)에 있습니다.

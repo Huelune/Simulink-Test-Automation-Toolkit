@@ -56,6 +56,7 @@ st_run_standalone_coverage_pipeline( ...
 | 사전 검증 | `st_validate_targets` | 기존 Harness와 CUT 연결 검사 |
 | 명세서 | `st_export_test_specification` | 실행 없이 입력·verify를 Excel로 추출 |
 | 점검 | `st_check_per_cut_cvf` | 최신 PER_CUT CVF를 6비트 코드로 검사 |
+| Pipeline | `st_open_standalone_test_manager` | standalone 제출물을 Test Manager에 다시 올려 열기 |
 | Coverage | `st_prepare_coverage_filters` | 공유 CVF를 지금 만들어 내용 확인 (실행이 알아서 다시 만듭니다) |
 | 정리 | `st_cleanup_results` | 생성 결과 미리보기 또는 삭제 |
 | 테스트 | `st_run_tests_per_cut` | 준비된 Test File을 CUT별로만 실행 |
@@ -448,6 +449,32 @@ Action의 역할:
 
 자세한 내용은 [Standalone Coverage 파이프라인](standalone-coverage-pipeline.md)에
 있습니다.
+
+### `st_open_standalone_test_manager`
+
+PACKAGE가 끝난 제출물을 Test Manager에 다시 올려 엽니다. standalone 모델 로드 →
+재배선된 Test File 열기 → Test Case별 CVF 재적용 → 저장된 aggregate Result import
+→ `sltest.testmanager.view` 순서입니다. **파일을 만들거나 바꾸지 않습니다.**
+
+```matlab
+info = st_open_standalone_test_manager();                          % LATEST
+info = st_open_standalone_test_manager('PipelineId', info.PipelineId);
+info = st_open_standalone_test_manager('ClearTestManager', true);  % 열린 것 다 닫고
+```
+
+| 옵션 | 기본값 | 역할 |
+| --- | --- | --- |
+| `PipelineId` | `'LATEST'` | 열 실행 id |
+| `OutputRoot` | `cfg.StandaloneCoverageRootDir` | 결과가 있는 루트 |
+| `ImportResults` | `true` | 저장된 aggregate Result를 import할지. 파이프라인이 저장하지 않았으면(`SaveTestResult=false`) 건너뜁니다 |
+| `ClearTestManager` | `false` | 열기 전에 Test Manager의 Test File과 Result를 전부 닫을지 |
+| `View` | `true` | Test Manager 창을 열지 |
+
+반환 `info`에는 `LoadedModels`, `AppliedFilterCount`, `ResultStatus`
+(`IMPORTED`/`NOT_SAVED`/`SKIPPED`/`MISSING`/`CHECKSUM_MISMATCH`)가 들어 있습니다.
+`PACKAGE`를 거치지 않은 PipelineId는 `StandaloneTestManagerNotPackaged`로 멈추고,
+같은 이름의 Test File이 이미 열려 있으면 `StandaloneTestManagerFileNameConflict`로
+멈춥니다.
 
 ## 9. 결과 정리와 내보내기
 

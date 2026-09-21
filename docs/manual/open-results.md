@@ -1,5 +1,30 @@
 # 제출된 Test Manager와 standalone 모델 열기
 
+## 이 PC에서 한 번에 열기: `st_open_standalone_test_manager`
+
+파이프라인을 돌린 PC(저장소와 `runtime_target.mat`이 있는 곳)에서는 명령 하나로
+끝납니다.
+
+```matlab
+st_setup
+st_open_standalone_test_manager                                  % 가장 최근 제출물
+st_open_standalone_test_manager('PipelineId', '여기에_PipelineId')
+```
+
+manifest를 읽어 standalone 모델을 전부 로드하고, 재배선된 Test File을 열고, Test
+Case마다 옆의 CVF를 다시 걸고, 저장된 aggregate Result가 있으면 import한 뒤 Test
+Manager 창을 엽니다. 파일은 만들거나 바꾸지 않습니다.
+
+- Results까지 다시 보려면 파이프라인이 Result를 저장했어야 합니다. `'Action','ALL'`의
+  기본은 저장하지 않으므로(`SaveTestResult=false`) `'SaveTestResult', true`로 돌린
+  제출물이어야 합니다. 저장하지 않았으면 Test File·모델·CVF만 올라옵니다.
+- 같은 이름의 Test File이 이미 열려 있으면 멈춥니다. 닫거나
+  `'ClearTestManager', true`로 부르십시오.
+- 제출물 폴더를 다른 위치로 옮겼거나 다른 PC라면 manifest의 절대 경로가 맞지
+  않으므로 아래 수동 방법을 쓰십시오.
+
+## 수동으로 열기
+
 launcher를 반드시 사용할 필요는 없습니다. **Model 폴더 버튼으로 standalone `.slx`를
 선택하는 방식**을 지원합니다. 이 파일은 원본 Top Model의 내부 Harness가 아니라 독립 Model입니다.
 Test Harness 항목에는 원본 Top Model/Harness 연결을 다시 지정하지 않습니다.
