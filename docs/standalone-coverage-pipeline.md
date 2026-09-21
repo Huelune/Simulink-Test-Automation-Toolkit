@@ -64,10 +64,19 @@ st_run_standalone_coverage_pipeline('Action','SUMMARY', 'PipelineId', info.Pipel
 
 | Action | 하는 일 |
 | --- | --- |
+| `PREPARE` | standalone export, Test Case를 standalone 모델로 재배선한 Test File 저장. **실행하지 않습니다** |
 | `EXECUTE` | standalone export, Test Case 1회 실행, CVF 1회 등록, 모델이 열린 동안 report/metric/CVT 임시 증거 캡처 |
 | `PACKAGE` | 임시 증거를 검증해 Model/Input/CVF/CVT/HTML/Test File을 최종 산출물로 승격 |
 | `SUMMARY` | manifest 값에서 `CoverageSummary.xlsx` 생성 |
-| `ALL` (기본) | 세 Action 연속 실행 |
+| `ALL` (기본) | `EXECUTE` → `PACKAGE` → `SUMMARY` 연속 실행 |
+
+`PREPARE`는 `EXECUTE`가 실행 직전까지 하는 일만 하고 멈춥니다. 산출물은
+`<PipelineRoot>/TestManager/<TopModel>.mldatx` 하나이고 standalone 모델은
+`.work` 아래 실행 workspace에 남습니다. 실행 증거가 없으므로 같은 PipelineId에
+`PACKAGE`나 `SUMMARY`를 부르면 `StandalonePipelinePrepareOnly`로 멈추고,
+`latest.json`을 갱신하지 않아 `LATEST`가 되지 않으며,
+`st_check_standalone_coverage`에 넘기면 `FAIL`입니다. 절차는
+[Standalone 실행](manual/standalone-run.md)의 "Test File만 만들기"에 있습니다.
 
 ### `SaveTestResult`의 기본값이 Action마다 다른 이유
 
@@ -76,6 +85,7 @@ st_run_standalone_coverage_pipeline('Action','SUMMARY', 'PipelineId', info.Pipel
 | `ALL` | `false` | live Result를 그대로 PACKAGE에 넘기므로 export/import가 필요 없습니다 |
 | `EXECUTE` | `true` | 다른 세션에서 재개하려면 Result를 파일로 남겨야 합니다 |
 | `PACKAGE` / `SUMMARY` | 지정 불가 | 이미 만들어진 증거를 읽기만 합니다 |
+| `PREPARE` | 지정 불가 | 실행하지 않으므로 저장할 Result가 없습니다 |
 
 ### 한 번만 실행할 수 있는 이유
 

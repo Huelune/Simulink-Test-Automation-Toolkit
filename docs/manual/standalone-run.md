@@ -131,5 +131,51 @@ live Result를 그대로 넘기므로 저장하지 않습니다).
 같은 PipelineId의 `PACKAGE`와 `SUMMARY`는 **각각 한 번만** 실행할 수 있습니다. 다시
 만들어야 하면 [재시작](restart.md)의 재생성 절차를 쓰십시오.
 
+## 8. 참고: Test File만 만들기
+
+standalone 모델·Input·CVF는 이미 있고, 그 모델들을 가리키는 **Test Manager
+파일(`.mldatx`)만** 새로 필요할 때 씁니다. 실행 직전까지만 하고 멈추므로
+시뮬레이션과 커버리지 수집은 하지 않습니다.
+
+```matlab
+st_setup
+
+info = st_run_standalone_coverage_pipeline('Action', 'PREPARE');
+disp(info.TestManagerFile)
+```
+
+전제 조건은 1절과 같습니다. 원본 Top Model과 Test File을 저장하고 닫아 두어야
+합니다.
+
+하는 일은 `EXECUTE`의 앞부분과 같습니다. standalone 모델을 export하고, 복사한
+Test File의 모든 Test Case를 **Harness SUT에서 standalone 모델 SUT로 다시
+연결**해 저장한 뒤, 그 파일을 다음 위치에 복사합니다.
+
+```text
+<StandaloneCoverageRootDir>/<PipelineId>/TestManager/<TopModel>.mldatx
+```
+
+이 Test File은 standalone 모델을 **이름으로** 참조합니다. 같은 이름의 모델이
+있는 폴더를 path에 올린 뒤 열면 Test Manager에서 바로 실행할 수 있습니다.
+
+```matlab
+addpath('<standalone 모델 폴더>');            % 이미 갖고 있는 모델
+tf = sltest.testmanager.load(info.TestManagerFile);
+sltest.testmanager.view
+```
+
+방금 export한 모델을 쓰려면 경로는 `info.Targets(k).StandaloneModelFile`에 있습니다.
+`<PipelineId>/.work/.../workspace/standalone/` 아래입니다.
+
+주의할 점입니다.
+
+- 실행 증거가 없으므로 같은 PipelineId에 `PACKAGE`나 `SUMMARY`를 부르면
+  `StandalonePipelinePrepareOnly` 오류로 멈춥니다. 커버리지를 모으려면
+  `Action='ALL'`을 새로 실행합니다.
+- `latest.json`을 갱신하지 않습니다. `st_check_standalone_coverage()`나
+  `st_open_standalone_test_manager()`의 `LATEST`는 마지막 `EXECUTE`/`ALL`을
+  계속 가리킵니다. PREPARE 결과를 checker에 넘기면 `FAIL`이 정상입니다.
+- `SaveTestResult`는 지정할 수 없습니다. 실행이 없어 저장할 Result가 없습니다.
+
 경계와 결과 구조는
 [Standalone Coverage 파이프라인](../standalone-coverage-pipeline.md)에 있습니다.
