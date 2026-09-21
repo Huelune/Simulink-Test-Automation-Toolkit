@@ -176,9 +176,13 @@ st_run_standalone_coverage_pipeline('Action','ALL', ...
 `DecisionSourceWorkbooks`와 `DecisionSourceCUTs`로 확인합니다. 0이면 전부 정적
 스캔입니다.
 
-커버리지에서 왔을 때는 `DecisionBlockScope`가 `ALL`로 넓혀집니다. 커버리지가
-인식한 종류를 좁은 카탈로그가 도로 걸러내면 안 되기 때문입니다.
-`'NONE'`으로 두면 커버리지가 있어도 열을 비웁니다.
+**`DecisionBlockScope`의 기본값은 `'ALL'`이고 `cfg.DecisionBlockScope`를
+따르지 않습니다.** 고객 문서는 CUT이 가진 분기를 다 적어야 하고, Enabled /
+Triggered Subsystem은 `'EXPLICIT'`에서 빠지기 때문입니다. 명세서 설정을
+물려받으면 커버리지가 있을 때만 보이는 들쭉날쭉한 결과가 됩니다. 명세서
+쪽(`st_export_test_specification`)의 기본값은 그대로 `'EXPLICIT'`입니다.
+
+`'NONE'`을 주면 커버리지가 있어도 열을 비웁니다.
 
 ### `Pre Condition`
 
@@ -376,7 +380,7 @@ manifest에 적힌 체크섬과 실제 `CoverageSummary.xlsx`가 다르면 **중
 ```matlab
 [T, file] = st_export_final_document( ...
     'OutputFile',         '', ...      % 기본 result/final_document_<ts>.xlsx
-    'DecisionBlockScope', '', ...      % '' → cfg | 'EXPLICIT' | 'ALL' | 'NONE'
+    'DecisionBlockScope', '', ...      % '' → 'ALL' | 'EXPLICIT' | 'NONE'
     'CoverageSource',     '', ...      % '' → cfg | 'STANDALONE' | 'TEST_RUN' | 'NONE'
     'CoveragePipelineId', 'LATEST', ...
     'ResultRun',          '', ...      % '' → cfg | 'AUTO' | 'BATCH' | 'PER_CUT' | 경로

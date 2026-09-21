@@ -13,9 +13,12 @@
   - 평범한 Subsystem은 그대로 빠집니다. 자기 분기가 없기 때문입니다.
     커버리지 쪽은 objective를 port 블록에 물어 안쪽 합계가 섞이지 않게 합니다.
   - 조건을 대화상자에 적는 블록이 아니므로 `Kind`는 `IMPLICIT`입니다. 명세서는
-    `st_export_test_specification('DecisionBlockScope','ALL')`로 봐야 나오고,
-    최종 문서는 커버리지에서 목록을 받을 때 범위를 `ALL`로 넓히므로 그냥
-    나옵니다.
+    `st_export_test_specification('DecisionBlockScope','ALL')`로 봐야 나옵니다.
+  - **최종 문서의 `DecisionBlockScope` 기본값을 `'ALL'`로 바꾸고
+    `cfg.DecisionBlockScope`를 따르지 않게 했습니다.** 그러지 않으면 커버리지가
+    있을 때만 Enabled/Triggered Subsystem이 보이고, 정적 스캔으로 떨어지면
+    사라집니다. 고객 문서가 실행 기록 유무에 따라 달라지면 안 됩니다.
+    `'NONE'`은 그대로 존중합니다. 명세서 쪽 기본값은 `'EXPLICIT'` 그대로입니다.
 
 - **standalone 제출물을 팀 제출 트리로 재배치하는 Python 스크립트를 추가했습니다.**
   `tools/python/classify_standalone_results.py`가 파이프라인 폴더 하나를 받아 옆에

@@ -22,7 +22,7 @@ function [specification, outputFile] = st_export_final_document(varargin)
 %
 %   Options:
 %     OutputFile          Target path, default result/final_document_<ts>.xlsx
-%     DecisionBlockScope  'EXPLICIT', 'ALL' or 'NONE'
+%     DecisionBlockScope  'ALL' (default), 'EXPLICIT' or 'NONE'
 %     CoverageSource      'STANDALONE' (default), 'TEST_RUN' or 'NONE'
 %     CoveragePipelineId  Standalone pipeline id, default 'LATEST'
 %     ResultRun           'AUTO' (default), 'BATCH', 'PER_CUT' or a run directory
@@ -134,10 +134,16 @@ end
 end
 
 
-function scope = resolve_decision_scope(requested, cfg)
+function scope = resolve_decision_scope(requested, cfg) %#ok<INUSD>
+% ALL by default, and cfg.DecisionBlockScope is deliberately not read.
+% The customer document has to describe every branch the CUT has, and the
+% widest catalog is also what the coverage backed list needs: a narrower
+% one would filter a recognised type straight back out. Inheriting the
+% specification setting would make Enabled and Triggered Subsystems appear
+% only when coverage data happened to be available.
 scope = upper(strtrim(char(string(requested))));
 if isempty(scope)
-    scope = upper(strtrim(char(string(config_value(cfg, 'DecisionBlockScope', 'EXPLICIT')))));
+    scope = 'ALL';
 end
 if isempty(scope), scope = 'EXPLICIT'; end
 if ~ismember(scope, {'EXPLICIT', 'ALL', 'NONE'})

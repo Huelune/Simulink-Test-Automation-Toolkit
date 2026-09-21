@@ -566,6 +566,22 @@ for i = 1:numel(files)
 end
 end
 
+function testFinalDocumentWidensTheCatalogByDefault(testCase)
+% Enabled and Triggered Subsystems are IMPLICIT, so an EXPLICIT scope
+% drops them. The customer document must not show them only when coverage
+% data happened to be available, so ALL is its own default and
+% cfg.DecisionBlockScope is not inherited.
+source = fileread(fullfile(st_project_root(), 'src', 'exporting', ...
+    'st_export_final_document.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "scope = 'ALL';", 'once'));
+verifyEmpty(testCase, regexp(source, ...
+    "config_value\(cfg, 'DecisionBlockScope'", 'once'));
+% NONE stays honoured: it is an explicit request for an empty column.
+verifyNotEmpty(testCase, regexp(source, ...
+    "if strcmp\(scope, 'NONE'\)", 'once'));
+end
+
 function testMetadataRecordsBothRunIdentities(testCase)
 % The verdicts and the coverage come from different executions, so the
 % document has to name both.

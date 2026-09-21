@@ -390,7 +390,7 @@ Excel로 뽑습니다.
 | 옵션 | 기본값 | 역할 |
 | --- | --- | --- |
 | `OutputFile` | `result/final_document_<timestamp>.xlsx` | 저장할 파일 경로. **이미 있으면 덮어쓰지 않고 실패합니다** |
-| `DecisionBlockScope` | `cfg.DecisionBlockScope` (`'EXPLICIT'`) | `Description` 열에 담을 분기 블록 범위 |
+| `DecisionBlockScope` | `'ALL'` | `Description` 열에 담을 분기 블록 범위. 명세서와 달리 `cfg.DecisionBlockScope`를 따르지 않습니다. 고객 문서는 Enabled/Triggered Subsystem까지 다 적어야 하기 때문입니다 |
 | `CoverageSource` | `cfg.FinalDocumentCoverageSource` (`'STANDALONE'`) | `'STANDALONE'`은 pipeline 산출물, `'TEST_RUN'`은 실행의 Coverage 시트, `'NONE'`은 수집 안 함 |
 | `CoveragePipelineId` | `'LATEST'` | 읽을 standalone pipeline 실행 |
 | `ResultRun` | `cfg.FinalDocumentResultRun` (`'AUTO'`) | 판정을 읽을 실행. `'AUTO'`/`'BATCH'`/`'PER_CUT'` 또는 실행 디렉터리 경로 |
