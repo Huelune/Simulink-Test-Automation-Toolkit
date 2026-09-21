@@ -12,7 +12,8 @@
     └── 프로젝트/{CUT 폴더}/            *.slx
 
 세 갈래에 들지 않는 파일(CoverageSummary.xlsx, manifest, logs, target-manifest.json,
-launcher .m, .work, .provenance 등)은 복사하지 않고 건너뛴 목록으로만 출력한다.
+launcher .m, .work, .provenance 등)과 CUT 폴더 안의 `scv_images` 폴더는 복사하지 않고
+건너뛴 목록으로만 출력한다.
 
 사용법:
     python tools/python/classify_standalone_results.py <pipeline_root> [--out DIR] [--dry-run] [--overwrite]
@@ -31,6 +32,8 @@ from pathlib import Path
 
 CUT_FOLDER_PATTERN = re.compile(r'^\d{3}_UT_REQ_')
 TEST_MANAGER_DIR = 'TestManager'
+# CUT 폴더 안에 있어도 제출하지 않는 하위 폴더 (대소문자 무시)
+EXCLUDED_DIR_NAMES = frozenset({'scv_images'})
 
 TEST_CASE_DIR = '테스트 케이스'
 REPORT_DIR = '테스트 보고서'
@@ -152,7 +155,10 @@ def build_plan(pipeline_root: Path, output_root: Path | None, overwrite: bool) -
             plan.directories.append(output_root / category / cut.name)
         for entry in sorted(cut.iterdir()):
             if entry.is_dir():
-                # CUT 폴더 안의 하위 폴더는 cvhtml 보고서의 부속 asset이다.
+                if entry.name.lower() in EXCLUDED_DIR_NAMES:
+                    plan.skipped.append(_relative(entry, pipeline_root))
+                    continue
+                # 그 외 CUT 폴더 안의 하위 폴더는 cvhtml 보고서의 부속 asset이다.
                 # HTML 옆에 있어야 렌더링되므로 보고서 갈래로 트리째 옮긴다.
                 plan.trees.append((entry, output_root / REPORT_DIR / cut.name / entry.name))
                 continue

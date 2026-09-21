@@ -158,8 +158,8 @@ stem)를 만들고 파일 이름은 바꾸지 않은 채 복사합니다. 원본
 └── 프로젝트/{NUM}_UT_REQ_{TC_NAME}/        standalone 모델 .slx
 ```
 
-`CoverageSummary.xlsx`, manifest, 로그, `target-manifest.json`, launcher는 복사하지
-않고 건너뛴 목록으로만 출력합니다. `--dry-run`은 계획만 보여 주고, `--out`으로 출력
+`CoverageSummary.xlsx`, manifest, 로그, `target-manifest.json`, launcher와 CUT 폴더
+안의 `scv_images` 폴더는 복사하지 않고 건너뛴 목록으로만 출력합니다. `--dry-run`은 계획만 보여 주고, `--out`으로 출력
 위치를 바꾸며, 출력 폴더가 이미 있으면 `--overwrite` 없이는 멈춥니다.
 
 ## 5. `CoverageSummary.xlsx`

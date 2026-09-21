@@ -47,6 +47,7 @@ def _build_pipeline(root: Path, mldatx_names: tuple[str, ...] = ('TOP.mldatx',))
     _touch(cut_a / 'UT_REQ_Controller_12345.html')
     _touch(cut_a / 'UT_REQ_Controller_12345_files' / 'style.css')
     _touch(cut_a / 'UT_REQ_Controller_12345_files' / 'img' / 'a.png')
+    _touch(cut_a / 'scv_images' / 'block1.png')
     _touch(cut_a / 'target-manifest.json')
 
     # 실행에 실패한 대상: 하네스와 Input만 있고 보고서가 없다.
@@ -114,8 +115,10 @@ class ClassifyStandaloneResultsTest(unittest.TestCase):
             'StandaloneCoverageResults.mldatx', 'logs', '.work',
             'TestManager/open_standalone_coverage_test_manager.m',
             f'{CUT_A}/target-manifest.json', f'{CUT_B}/target-manifest.json',
+            f'{CUT_A}/scv_images',
         ):
             self.assertIn(item, skipped)
+        self.assertNotIn(f'{CUT_A}/scv_images', {src.relative_to(pipeline).as_posix() for src, _ in plan.trees})
         self.assertNotIn('TestManager/TOP.mldatx', skipped)
         self.assertEqual(plan.count(csr.TEST_CASE_DIR), 2)
         self.assertEqual(plan.count(csr.REPORT_DIR), 4)  # cvf, cvt, html, mldatx
