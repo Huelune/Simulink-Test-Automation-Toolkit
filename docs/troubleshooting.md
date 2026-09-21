@@ -108,7 +108,23 @@ summary = st_check_actual_system();
 **대처:** `SldvDataFile`의 상대 경로 기준은 MATLAB의 Current Folder가 아니라
 **`TestManagement.xlsx`가 있는 폴더**입니다. 가장 흔한 실수입니다.
 
-### 준비가 이상하게 오래 걸린다
+### `SldvManifestRowMissing` / `ExportSldvManifestIncomplete`
+
+**뜻:** `SldvMode`가 `OFF`가 아닌 행이 `result/sldv/sldv_manifest.mat`에 없습니다.
+manifest는 `st_prepare_sldv_targets`가 **그때 `Enabled=true`였던 행만** 기록합니다.
+일부 행만 켜서 준비한 뒤 나머지를 켜고 export나 standalone 파이프라인을 돌리면
+새로 켠 행에서 납니다. 행의 `No`, Test Case 이름, Harness 이름, `SldvMode`를 준비 뒤에
+고친 경우에도 납니다. 오류 메시지가 가장 가까운 manifest 행과 어느 필드가 다른지,
+"never prepared"인지 알려 줍니다.
+
+번들 export는 이 검사를 `Validate Export Sources` 단계에서 모든 행에 대해 먼저 하고,
+빠진 행을 한 번에 나열합니다(`ExportSldvManifestIncomplete`). 긴 단계에 들어간 뒤
+한 행씩 실패하지 않습니다.
+
+**대처:** 빠진 행이 켜진 상태로 `st_prepare_sldv_targets()`를 다시 실행해 manifest를
+채운 뒤 재시도합니다. `GENERATE` 행은 SLDV 분석을 돌리므로 오래 걸립니다. 준비 단계
+전체를 다시 밟으려면 `st_run_from_harness('PreparationMode','FORCE','FromStage','SLDV')`를
+씁니다.
 
 Harness 생성은 모델 컴파일을 포함하고, SLDV `GENERATE`는 분기를 탐색하므로 CUT 하나에
 수 분 이상 걸릴 수 있습니다. 정상입니다.
