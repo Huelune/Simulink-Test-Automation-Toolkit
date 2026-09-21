@@ -61,10 +61,19 @@
   [T, file] = st_export_final_document();
   ```
 
-  - `TestCase` 시트는 14열입니다. `Test Case ID`(시나리오명과 TestCaseName 두
-    줄), `Pre Condition`(`MaxTime`), `Description`(분기 블록), `Test Steps.Action`,
-    `Test Steps.Expected result`, `출력값`, `판정 결과`, `테스트 자료`, 그리고
-    고객 양식의 빈 칸 6개입니다.
+  - `TestCase` 시트는 14열입니다. `Test Case ID`(`UT_REQ_{CUT}_{ID}_{NUM}`),
+    `ID`(codeBeamer ID만), `Pre Condition`(`MaxTime`), `Description`(분기 블록),
+    `Test Steps.Action`, `Test Steps.Expected result`, `출력값`, `판정 결과`,
+    `테스트 자료`, 그리고 고객 양식의 빈 칸 5개입니다.
+  - **ID는 두 열로 나뉩니다.** `{ID}`는 테스트 케이스명 `{CUT}_{ID}`에서 CUT
+    이름 접두사를 떼어 얻습니다. 마지막 밑줄 뒤를 자르면 `Motor_Ctrl_Unit`처럼
+    밑줄이 있는 CUT 이름에서 틀립니다. 1열은 CUT 이름으로 다시 조립하지 않고
+    시나리오명의 끝 `_{NUM}` 앞에 `_{ID}`를 끼워 넣어 만듭니다.
+    `st_scenario_name`이 식별자로 쓸 수 없는 CUT 이름을 고쳐 쓰고 digest를
+    붙이기 때문에, 조립하면 실제 시나리오와 어긋납니다.
+  - 이름이 그 규칙과 다르면 두 열에 원문을 그대로 적고 `TestResults` 시트에
+    `TESTCASE_ID_PATTERN_UNMATCHED`를 남깁니다. 손으로 만든 Test Case가 섞여
+    있으면 이 경우가 나옵니다.
   - `Coverage` 시트는 CUT마다 한 줄이며 분자와 분모를 **각각 한 칸씩 숫자로**
     씁니다. `%` 열은 숫자를 박아 넣지 않고 **Excel 수식**(`=B2/C2`)에 표시형식
     `0.00%`를 줍니다. 계산된 값도 함께 저장하므로 LibreOffice처럼 열 때
@@ -95,9 +104,9 @@
     안의 원본을 읽고 어느 실행이었는지 `Metadata`에 남깁니다.
   - 읽기 전용입니다. 시뮬레이션, 테스트 실행, SLDV 생성, 기대값 갱신을 하지
     않습니다. 미저장이거나 실행 중인 모델은 명세서 추출과 똑같이 거절합니다.
-  - 옵션: `OutputFile`, `TestCaseIdMode`, `DecisionBlockScope`, `CoverageSource`,
+  - 옵션: `OutputFile`, `DecisionBlockScope`, `CoverageSource`,
     `CoveragePipelineId`, `ResultRun`, `RequireTestResults`, `RequireCoverage`,
-    `IncludeUsageSheet`. 기본값은 `cfg.FinalDocument*` 다섯 개입니다.
+    `IncludeUsageSheet`. 기본값은 `cfg.FinalDocument*` 네 개입니다.
 
 - **명세서 추출의 정적 검사가 2026-09-08부터 계속 실패하고 있던 것을
   고쳤습니다.** `testExporterHasNoSimulationOrSourceMutationCalls`는

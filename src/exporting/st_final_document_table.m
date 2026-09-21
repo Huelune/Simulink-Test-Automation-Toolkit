@@ -1,4 +1,4 @@
-function document = st_final_document_table(cfg, specification, outcomes, source, idMode)
+function document = st_final_document_table(cfg, specification, outcomes, source)
 %ST_FINAL_DOCUMENT_TABLE Build the customer sheet and its result sheet.
 % One specification row becomes one customer row. The customer form has no
 % remarks column, so every reason lives on the result sheet, which stays
@@ -7,28 +7,11 @@ function document = st_final_document_table(cfg, specification, outcomes, source
 % The failed verify text is deliberately not extracted. The result sheet
 % says which row to look at and which saved ResultSet to open, and no
 % .mldatx is read here.
-%
-%   idMode  'COMBINED' (default) writes the scenario name and the test case
-%           name on two lines of one cell. 'SCENARIO' writes the scenario
-%           name only. Neither builds a new identifier, so the 80 character
-%           truncation of st_export_safe_name cannot apply.
-if nargin < 5 || isempty(idMode), idMode = ''; end
-idMode = upper(strtrim(char(string(idMode))));
-if isempty(idMode)
-    idMode = upper(strtrim(char(string( ...
-        config_value(cfg, 'FinalDocumentTestCaseIdMode', 'COMBINED')))));
-end
-if isempty(idMode), idMode = 'COMBINED'; end
-if ~ismember(idMode, {'COMBINED','SCENARIO'})
-    error('simtest:FinalDocumentTestCaseIdMode', ...
-        'TestCaseIdMode must be COMBINED or SCENARIO.');
-end
 naText = string(config_value(cfg, 'FinalDocumentNAText', 'N/A'));
 
 count = height(specification);
-st_log(cfg, 'INFO', 'Final document table start | Rows=%d | TestCaseIdMode=%s', ...
-    count, idMode);
-identifier = build_identifier(specification, idMode);
+st_log(cfg, 'INFO', 'Final document table start | Rows=%d', count);
+[identifier, caseId, idReasons] = build_identifiers(specification);
 expected = column_text(specification, 'verify 내용');
 action = replace_not_applicable(column_text(specification, 'input 시나리오 내용'), naText);
 material = replace_not_applicable(column_text(specification, ...
@@ -36,20 +19,20 @@ material = replace_not_applicable(column_text(specification, ...
 
 document.ResultHeaders = {'Row', 'Test Case ID', 'TestCaseName', ...
     'Iteration명', '판정 결과', '확인 필요', '확인 사유', '확인 위치', '추출상태'};
-document.DisplayHeaders = {'Test Case ID', '-', '-', 'Pre Condition', ...
+document.DisplayHeaders = {'Test Case ID', 'ID', '-', 'Pre Condition', ...
     'Description', 'Test Steps.Action', 'Test Steps.Expected result', ...
     '-', '-', '-', '-', '출력값', '판정 결과', '테스트 자료'};
 blank = repmat("", count, 1);
-document.Sheet1 = table(identifier, blank, blank, ...
+document.Sheet1 = table(identifier, caseId, blank, ...
     column_number(specification, 'MaxTime'), ...
     column_text(specification, 'DecisionBlocks'), action, expected, ...
     blank, blank, blank, blank, expected, blank, material, ...
-    'VariableNames', {'TestCaseID','Dash02','Dash03','PreCondition', ...
+    'VariableNames', {'TestCaseID','CaseId','Dash03','PreCondition', ...
     'Description','Action','ExpectedResult','Dash08','Dash09','Dash10', ...
     'Dash11','OutputValue','Judgement','TestData'});
 
 [judgement, results] = resolve_judgements( ...
-    cfg, specification, outcomes, source, identifier, naText);
+    cfg, specification, outcomes, source, identifier, idReasons);
 document.Sheet1.Judgement = judgement;
 document.Results = results;
 document.Results = append_source_notes(document.Results, outcomes.Notes);
@@ -57,7 +40,6 @@ st_log(cfg, 'INFO', ...
     'Final document table end | Rows=%d | Flagged=%d | ResultRows=%d', ...
     count, sum(document.Results.('확인 필요') == "Y"), height(document.Results));
 end
-
 
 function value = config_value(cfg, name, fallback)
 value = fallback;
@@ -95,21 +77,67 @@ text(strtrim(text) == "해당 없음") = naText;
 end
 
 
-function identifier = build_identifier(specification, idMode)
+function [identifier, caseId, reasons] = build_identifiers(specification)
+%BUILD_IDENTIFIERS Split the scenario and test case names into two columns.
+% Column 1 becomes UT_REQ_{CUT}_{ID}_{NUM} and column 2 the bare {ID}.
+%
+% The {ID} is taken by removing the CUT name prefix from the test case
+% name, not by splitting on the last underscore, because a CUT name may
+% contain underscores of its own.
+%
+% The composed value is built by splicing {ID} into the scenario name
+% rather than reassembling it from the CUT name. st_scenario_name rewrites
+% a CUT name that is not a valid identifier, replacing characters and
+% appending a digest, so the scenario may read UT_REQ_A_B_C_3f9a2c_001. The
+% splice keeps whatever that scenario actually is, so column 1 always
+% matches a real scenario with only the ID added.
 scenario = column_text(specification, 'Test Sequence scenario 명');
 testCase = column_text(specification, '테스트 케이스명');
-if strcmp(idMode, 'SCENARIO')
-    identifier = scenario;
+cutName = strtrim(column_text(specification, '대상 모델명'));
+count = numel(scenario);
+identifier = scenario;
+caseId = testCase;
+reasons = repmat("", count, 1);
+for i = 1:count
+    id = extract_case_id(testCase(i), cutName(i));
+    [stem, number] = split_scenario(scenario(i));
+    if strlength(id) == 0 || strlength(number) == 0
+        % Keep both names as they are so no cell goes blank, and say which
+        % row is off the convention.
+        reasons(i) = "TESTCASE_ID_PATTERN_UNMATCHED";
+        continue;
+    end
+    identifier(i) = stem + "_" + id + "_" + number;
+    caseId(i) = id;
+end
+end
+
+
+function id = extract_case_id(testCase, cutName)
+% The convention is {CUT}_{codeBeamer ID}.
+id = "";
+prefix = cutName + "_";
+if strlength(cutName) == 0 || ~startsWith(testCase, prefix)
     return;
 end
-% The cell is already wrapped, so the two lines show as two lines.
-identifier = scenario;
-join = strlength(testCase) > 0;
-identifier(join) = scenario(join) + newline + testCase(join);
+id = extractAfter(testCase, strlength(prefix));
 end
 
 
-function [judgement, results] = resolve_judgements(cfg, specification, outcomes, source, identifier, naText) %#ok<INUSD>
+function [stem, number] = split_scenario(scenario)
+% The convention is {anything}_{three digit index}.
+stem = "";
+number = "";
+token = regexp(scenario, '^(.*)_(\d{3})$', 'tokens', 'once');
+if isempty(token)
+    return;
+end
+stem = string(token{1});
+number = string(token{2});
+end
+
+
+function [judgement, results] = resolve_judgements(cfg, specification, outcomes, source, identifier, idReasons)
 count = height(specification);
 judgement = repmat("", count, 1);
 testCaseName = column_text(specification, '테스트 케이스명');
@@ -127,7 +155,7 @@ for i = 1:count
         testCaseName(i), iterationName(i));
     judgement(i) = verdict;
     location(i) = resultSet;
-    reasons(i) = reason;
+    reasons(i) = join_reasons(idReasons(i), reason);
     if verdict == "FAIL"
         reasons(i) = join_reasons(reasons(i), "FAILED");
     elseif strlength(verdict) > 0 && verdict ~= "PASS"

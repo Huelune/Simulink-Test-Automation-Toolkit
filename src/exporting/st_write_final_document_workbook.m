@@ -26,7 +26,7 @@ payloads = {table_to_cells(document.Sheet1, document.DisplayHeaders), ...
     coverageCells, table_to_cells(document.Results, document.ResultHeaders), ...
     overflow_cells(overflow), table_to_cells(metadata, {})};
 widths = containers.Map();
-widths('TestCase') = [26 8 8 14 60 60 60 8 8 8 8 60 12 38];
+widths('TestCase') = [34 14 8 14 60 60 60 8 8 8 8 60 12 38];
 widths('Coverage') = [26 18 18 16 18 18 16];
 widths('TestResults') = [8 26 26 26 12 10 60 60 12];
 widths('OverflowDetails') = [18 12 26 8 60];

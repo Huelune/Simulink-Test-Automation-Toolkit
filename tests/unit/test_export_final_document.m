@@ -3,29 +3,67 @@ function tests = test_export_final_document
 tests = functiontests(localfunctions);
 end
 
-function testCombinedIdentifierPutsScenarioAndTestCaseOnTwoLines(testCase)
+function testIdentifierSplitsIntoComposedIdAndBareId(testCase)
 specification = sample_specification();
 document = st_final_document_table(base_config(), specification, ...
-    empty_outcomes(), empty_source(), 'COMBINED');
-verifyEqual(testCase, document.Sheet1.TestCaseID(1), ...
-    "UT_REQ_CUT_NAME_001" + newline + "Controller_TC");
-verifyEqual(testCase, document.DisplayHeaders, {'Test Case ID', '-', '-', ...
-    'Pre Condition', 'Description', 'Test Steps.Action', ...
-    'Test Steps.Expected result', '-', '-', '-', '-', '출력값', ...
-    '판정 결과', '테스트 자료'});
+    empty_outcomes(), empty_source());
+verifyEqual(testCase, document.Sheet1.TestCaseID(1), "UT_REQ_Controller_12345_001");
+verifyEqual(testCase, document.Sheet1.CaseId(1), "12345");
+verifyEqual(testCase, document.DisplayHeaders(1:3), {'Test Case ID', 'ID', '-'});
+verifyEqual(testCase, document.Results.('확인 사유')(1), "NO_MATCHING_TEST_RESULT");
 end
 
-function testScenarioIdentifierKeepsTheScenarioNameOnly(testCase)
+function testComposedIdKeepsASanitizedScenarioNameIntact(testCase)
+% st_scenario_name rewrites a CUT name that is not a valid identifier and
+% appends a digest. Column 1 splices the ID into that actual scenario name
+% instead of rebuilding it from the CUT name.
 specification = sample_specification();
+specification.("Test Sequence scenario 명")(1) = "UT_REQ_A_B_C_3f9a2c_007";
 document = st_final_document_table(base_config(), specification, ...
-    empty_outcomes(), empty_source(), 'SCENARIO');
-verifyEqual(testCase, document.Sheet1.TestCaseID(1), "UT_REQ_CUT_NAME_001");
+    empty_outcomes(), empty_source());
+verifyEqual(testCase, document.Sheet1.TestCaseID(1), "UT_REQ_A_B_C_3f9a2c_12345_007");
+verifyEqual(testCase, document.Sheet1.CaseId(1), "12345");
+end
+
+function testCutNameWithUnderscoresStillYieldsTheRightId(testCase)
+% The ID is taken by removing the CUT name prefix, not by splitting on the
+% last underscore, so a CUT name of its own underscores is safe.
+specification = sample_specification();
+specification.("대상 모델명")(1) = "Motor_Ctrl_Unit";
+specification.("테스트 케이스명")(1) = "Motor_Ctrl_Unit_98765";
+document = st_final_document_table(base_config(), specification, ...
+    empty_outcomes(), empty_source());
+verifyEqual(testCase, document.Sheet1.CaseId(1), "98765");
+verifyEqual(testCase, document.Sheet1.TestCaseID(1), "UT_REQ_Controller_98765_001");
+end
+
+function testNamesOffTheConventionKeepBothOriginalsAndSaySo(testCase)
+specification = sample_specification();
+specification.("테스트 케이스명")(1) = "ManualCase";
+document = st_final_document_table(base_config(), specification, ...
+    empty_outcomes(), empty_source());
+verifyEqual(testCase, document.Sheet1.TestCaseID(1), "UT_REQ_Controller_001");
+verifyEqual(testCase, document.Sheet1.CaseId(1), "ManualCase");
+verifyTrue(testCase, contains(document.Results.('확인 사유')(1), ...
+    "TESTCASE_ID_PATTERN_UNMATCHED"));
+verifyEqual(testCase, document.Results.('확인 필요')(1), "Y");
+end
+
+function testScenarioWithoutAThreeDigitIndexIsLeftAlone(testCase)
+specification = sample_specification();
+specification.("Test Sequence scenario 명")(1) = "LegacyScenario";
+document = st_final_document_table(base_config(), specification, ...
+    empty_outcomes(), empty_source());
+verifyEqual(testCase, document.Sheet1.TestCaseID(1), "LegacyScenario");
+verifyEqual(testCase, document.Sheet1.CaseId(1), "Controller_12345");
+verifyTrue(testCase, contains(document.Results.('확인 사유')(1), ...
+    "TESTCASE_ID_PATTERN_UNMATCHED"));
 end
 
 function testOutputValueRepeatsTheExpectedResult(testCase)
 specification = sample_specification();
 document = st_final_document_table(base_config(), specification, ...
-    empty_outcomes(), empty_source(), '');
+    empty_outcomes(), empty_source());
 verifyEqual(testCase, document.Sheet1.OutputValue, document.Sheet1.ExpectedResult);
 end
 
@@ -34,17 +72,17 @@ specification = sample_specification();
 specification.("하네스 input 파일명")(1) = "해당 없음";
 specification.("input 시나리오 내용")(1) = "해당 없음";
 document = st_final_document_table(base_config(), specification, ...
-    empty_outcomes(), empty_source(), '');
+    empty_outcomes(), empty_source());
 verifyEqual(testCase, document.Sheet1.TestData(1), "N/A");
 verifyEqual(testCase, document.Sheet1.Action(1), "N/A");
 end
 
 function testFailedIterationIsFlaggedWithTheResultSetToOpen(testCase)
 specification = sample_specification();
-outcomes = outcomes_with("Controller_TC", "Iteration 1", "Failed", ...
+outcomes = outcomes_with("Controller_12345", "Iteration 1", "Failed", ...
     "D:\run\targets\001\final\Results.mldatx");
 document = st_final_document_table(base_config(), specification, outcomes, ...
-    empty_source(), '');
+    empty_source());
 verifyEqual(testCase, document.Sheet1.Judgement(1), "FAIL");
 verifyEqual(testCase, document.Results.('확인 필요')(1), "Y");
 verifyEqual(testCase, document.Results.('확인 위치')(1), ...
@@ -54,18 +92,18 @@ end
 
 function testPassedIterationIsNotFlagged(testCase)
 specification = sample_specification();
-outcomes = outcomes_with("Controller_TC", "Iteration 1", "Passed", "");
+outcomes = outcomes_with("Controller_12345", "Iteration 1", "Passed", "");
 document = st_final_document_table(base_config(), specification, outcomes, ...
-    empty_source(), '');
+    empty_source());
 verifyEqual(testCase, document.Sheet1.Judgement(1), "PASS");
 verifyEqual(testCase, document.Results.('확인 필요')(1), "");
 end
 
 function testUnknownOutcomeTokenIsWrittenThroughInUpperCase(testCase)
 specification = sample_specification();
-outcomes = outcomes_with("Controller_TC", "Iteration 1", "Incomplete", "");
+outcomes = outcomes_with("Controller_12345", "Iteration 1", "Incomplete", "");
 document = st_final_document_table(base_config(), specification, outcomes, ...
-    empty_source(), '');
+    empty_source());
 verifyEqual(testCase, document.Sheet1.Judgement(1), "INCOMPLETE");
 verifyTrue(testCase, contains(document.Results.('확인 사유')(1), ...
     "NOT_PASSED:INCOMPLETE"));
@@ -74,7 +112,7 @@ end
 function testMissingResultLeavesTheVerdictBlankAndSaysWhy(testCase)
 specification = sample_specification();
 document = st_final_document_table(base_config(), specification, ...
-    empty_outcomes(), empty_source(), '');
+    empty_outcomes(), empty_source());
 verifyEqual(testCase, document.Sheet1.Judgement(1), "");
 verifyTrue(testCase, contains(document.Results.('확인 사유')(1), ...
     "NO_MATCHING_TEST_RESULT"));
@@ -84,9 +122,9 @@ function testIterationWithoutAUsableNameFallsBackToTheTestCase(testCase)
 specification = sample_specification();
 specification.("Iteration명")(1) = "<기본 설정>";
 outcomes = empty_outcomes();
-outcomes.Cases = outcome_rows("Controller_TC", "", "Passed", "");
+outcomes.Cases = outcome_rows("Controller_12345", "", "Passed", "");
 document = st_final_document_table(base_config(), specification, outcomes, ...
-    empty_source(), '');
+    empty_source());
 verifyEqual(testCase, document.Sheet1.Judgement(1), "PASS");
 verifyTrue(testCase, contains(document.Results.('확인 사유')(1), ...
     "ITERATION_MATCHED_BY_TEST_CASE"));
@@ -95,11 +133,11 @@ end
 function testConflictingDuplicateResultsAreNotResolvedBySilentChoice(testCase)
 specification = sample_specification();
 outcomes = empty_outcomes();
-outcomes.Iterations = [outcome_rows("Controller_TC", "Iteration 1", "Passed", ""); ...
-    outcome_rows("Controller_TC", "Iteration 1", "Failed", "")];
+outcomes.Iterations = [outcome_rows("Controller_12345", "Iteration 1", "Passed", ""); ...
+    outcome_rows("Controller_12345", "Iteration 1", "Failed", "")];
 outcomes.Iterations.Ambiguous(:) = true;
 document = st_final_document_table(base_config(), specification, outcomes, ...
-    empty_source(), '');
+    empty_source());
 verifyEqual(testCase, document.Sheet1.Judgement(1), "");
 verifyTrue(testCase, contains(document.Results.('확인 사유')(1), ...
     "AMBIGUOUS_TEST_RESULT"));
@@ -340,10 +378,10 @@ verifyEqual(testCase, string(sheetnames(file))', ["TestCase"; "Coverage"; ...
     "TestResults"; "OverflowDetails"; "Metadata"]');
 cells = readcell(file, 'Sheet', 'TestCase');
 headers = cellfun(@(v) string(v), cells(1,:));
-verifyEqual(testCase, headers, ["Test Case ID", "-", "-", "Pre Condition", ...
+verifyEqual(testCase, headers, ["Test Case ID", "ID", "-", "Pre Condition", ...
     "Description", "Test Steps.Action", "Test Steps.Expected result", ...
     "-", "-", "-", "-", "출력값", "판정 결과", "테스트 자료"]);
-for column = [2 3 8 9 10 11]
+for column = [3 8 9 10 11]
     verifyTrue(testCase, ismissing(cells{2,column}) || ...
         strlength(string(cells{2,column})) == 0);
 end
@@ -458,7 +496,7 @@ end
 
 function cfg = base_config()
 cfg = struct('VerboseLogging', false, 'FinalDocumentNAText', 'N/A', ...
-    'FinalDocumentTestCaseIdMode', 'COMBINED', 'OnlyEnabled', true);
+    'OnlyEnabled', true);
 end
 
 
@@ -487,11 +525,11 @@ end
 
 function specification = sample_specification()
 rows = strings(1,13);
-rows(1) = "Controller_TC";
+rows(1) = "Controller_12345";
 rows(2) = "Controller";
 rows(3) = "Controller_Harness1";
 rows(4) = "TOP_Controller_Harness1_HarnessInputs.mat";
-rows(5) = "UT_REQ_CUT_NAME_001";
+rows(5) = "UT_REQ_Controller_001";
 rows(6) = "ABC: 1";
 rows(8) = "TOP";
 rows(9) = "TOP/Controller";
@@ -511,7 +549,7 @@ end
 
 function document = minimal_document()
 document = st_final_document_table(base_config(), sample_specification(), ...
-    empty_outcomes(), empty_source(), 'COMBINED');
+    empty_outcomes(), empty_source());
 end
 
 

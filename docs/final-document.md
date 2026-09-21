@@ -90,8 +90,8 @@ st_run_standalone_coverage_pipeline('Action','ALL', ...
 
 | # | 머리글 | 무엇이 들어가나 | 어디서 오나 |
 | --- | --- | --- | --- |
-| 1 | `Test Case ID` | 두 줄 셀 | 시나리오명 + 테스트 케이스명 |
-| 2 | `-` | 빈칸 | 고객 양식의 빈 열 |
+| 1 | `Test Case ID` | `UT_REQ_Controller_12345_001` | 시나리오명 + codeBeamer ID |
+| 2 | `ID` | `12345` | 테스트 케이스명에서 뽑은 codeBeamer ID |
 | 3 | `-` | 빈칸 | 고객 양식의 빈 열 |
 | 4 | `Pre Condition` | 숫자 그대로 (`0.2`) | `MaxTime` |
 | 5 | `Description` | `D1 [T/F]Switch (c1 > 0)` | `DecisionBlocks` |
@@ -102,25 +102,44 @@ st_run_standalone_coverage_pipeline('Action','ALL', ...
 | 13 | `판정 결과` | `PASS` / `FAIL` / 빈 칸 | 결과 정리 산출물 |
 | 14 | `테스트 자료` | `TOP_Ctrl_Harness1_HarnessInputs.mat` | 하네스 input 파일명 |
 
-`-` 여섯 개는 머리글에 하이픈을 그대로 적고 데이터 칸은 비웁니다. 고객 양식의
+`-` 다섯 개는 머리글에 하이픈을 그대로 적고 데이터 칸은 비웁니다. 고객 양식의
 빈 열 자리를 맞추기 위한 것입니다.
 
-### `Test Case ID`
+### `Test Case ID`와 `ID`
 
-기본값 `COMBINED`은 한 셀에 두 줄을 씁니다.
+두 열로 나눠 적습니다.
 
-```text
-UT_REQ_CUT_NAME_001
-Controller_TC
-```
+| 열 | 값 | 예 |
+| --- | --- | --- |
+| 1 `Test Case ID` | `UT_REQ_{CUT}_{ID}_{NUM}` | `UT_REQ_Controller_12345_001` |
+| 2 `ID` | codeBeamer ID만 | `12345` |
 
-1줄은 기존 명세서의 `Test Sequence scenario 명`, 2줄은 테스트 케이스명입니다.
-셀이 자동 줄바꿈되어 있으므로 두 줄이 그대로 보입니다.
+재료는 두 가지입니다.
 
-시나리오명만 쓰려면 `TestCaseIdMode`를 `'SCENARIO'`로 주십시오.
+- Test Sequence 시나리오명 `UT_REQ_{CUT}_{NUM}` (예: `UT_REQ_Controller_001`)
+- 테스트 케이스명 `{CUT}_{ID}` (예: `Controller_12345`)
 
-이 값은 **새로 조립하지 않고 있는 이름을 옮기기만** 합니다. 그래서 파일 이름
-규칙의 80자 절단이나 이름 충돌 문제가 생기지 않습니다.
+`{ID}`는 테스트 케이스명에서 **CUT 이름 접두사를 떼어** 얻습니다. 마지막 밑줄
+뒤를 자르지 않습니다. CUT 이름 자체에 밑줄이 있으면 (`Motor_Ctrl_Unit`) 틀린
+값이 나오기 때문입니다.
+
+1열은 CUT 이름으로 다시 조립하지 않고 **시나리오명의 끝 `_{NUM}` 앞에 `_{ID}`를
+끼워 넣어** 만듭니다. `st_scenario_name`은 식별자로 쓸 수 없는 CUT 이름을 고쳐
+쓰고 길면 digest를 붙이므로(`UT_REQ_A_B_C_3f9a2c_001`), 조립하면 실제 시나리오와
+어긋납니다. 끼워 넣으면 1열은 언제나 실재하는 시나리오명에 ID만 더한 값입니다.
+
+> 1열은 **표시용 이름입니다.** Test File이나 관리 Excel에 그 이름의 식별자는
+> 없습니다. 무엇을 찾아 들어갈 때는 2열 `ID`나 `TestResults` 시트의
+> `TestCaseName`을 쓰십시오.
+
+#### 규칙과 다른 이름
+
+테스트 케이스명이 `{CUT}_`로 시작하지 않거나 시나리오명이 세 자리 숫자로
+끝나지 않으면 조립하지 않습니다. 1열에 시나리오명을, 2열에 테스트 케이스명을
+**원문 그대로** 적고 `TestResults` 시트에 `TESTCASE_ID_PATTERN_UNMATCHED`를
+남깁니다. 칸이 비지 않고, 어느 행이 규칙 밖인지 보입니다.
+
+손으로 만든 Test Case가 섞여 있으면 이 경우가 나옵니다.
 
 ### `Pre Condition`
 
@@ -273,6 +292,7 @@ manifest에 적힌 체크섬과 실제 `CoverageSummary.xlsx`가 다르면 **중
 | `RESULT_WORKBOOK_SHAPE_UNEXPECTED` | 결과 워크북의 시트나 열이 예상과 다릅니다 |
 | `MAXTIME_UNAVAILABLE` | `Pre Condition`이 빈 칸인 이유입니다 |
 | `DUPLICATE_TEST_CASE_ID` | 같은 `Test Case ID`가 여러 행에 있습니다. 값은 바꾸지 않습니다 |
+| `TESTCASE_ID_PATTERN_UNMATCHED` | 이름이 `{CUT}_{ID}` / `UT_REQ_{CUT}_{NUM}` 규칙과 달라 ID를 나누지 못했습니다. 1·2열은 원문입니다 |
 | `COVERAGE_ROW_MISSING` | 그 CUT의 커버리지 행이 없습니다 |
 | `COVERAGE_CONFLICT` | 같은 CUT의 커버리지 분모가 서로 다릅니다 |
 | `COVERAGE_ROW_UNKNOWN_CUT` | 관리 Excel에 없는 CUT이 커버리지에만 있습니다 |
@@ -307,7 +327,7 @@ manifest에 적힌 체크섬과 실제 `CoverageSummary.xlsx`가 다르면 **중
 | 원본 | `ModelFile`, `TestFile`, `ManagementExcel`과 각각의 `...SHA256` |
 | 판정 출처 | `ResultRunRequested`, `ResultRunMode`, `ResultRunId`, `ResultRunDirectory`, `ResultRunUpdatedAt`, `ResultWorkbooks`, `ResultSets` |
 | 커버리지 출처 | `CoverageSource`, `CoveragePipelineId`, `CoverageSummary`, `CoverageSummarySHA256` |
-| 설정 | `TestCaseIdMode`, `DecisionBlockScope` |
+| 설정 | `DecisionBlockScope` |
 
 **판정과 커버리지가 서로 다른 실행에서 왔다는 사실이 여기서 드러납니다.**
 제출 전에 `ResultRunId`가 방금 돌린 실행과 맞는지 확인하십시오.
@@ -317,7 +337,6 @@ manifest에 적힌 체크섬과 실제 `CoverageSummary.xlsx`가 다르면 **중
 ```matlab
 [T, file] = st_export_final_document( ...
     'OutputFile',         '', ...      % 기본 result/final_document_<ts>.xlsx
-    'TestCaseIdMode',     '', ...      % '' → cfg | 'COMBINED' | 'SCENARIO'
     'DecisionBlockScope', '', ...      % '' → cfg | 'EXPLICIT' | 'ALL' | 'NONE'
     'CoverageSource',     '', ...      % '' → cfg | 'STANDALONE' | 'TEST_RUN' | 'NONE'
     'CoveragePipelineId', 'LATEST', ...
@@ -387,8 +406,9 @@ assertSuccess(runtests('tests/unit/test_project_layout.m'));
 개발 PC에 MATLAB이 없어 **구문·정적 검증만 수행했습니다.** 실제 모델로 다음을
 확인해야 합니다. 기본 실행 방식이 `PER_CUT`이므로 그쪽부터 보십시오.
 
-- 머리글 14개가 고객 양식과 글자까지 같고 `-` 여섯 칸이 비어 있는지
-- `Test Case ID` 셀이 두 줄로 보이는지
+- 머리글 14개가 고객 양식과 글자까지 같고 `-` 다섯 칸이 비어 있는지
+- 1열이 `UT_REQ_{CUT}_{ID}_{NUM}`, 2열이 `{ID}`로 나뉘어 있는지. 손으로 만든
+  Test Case가 있으면 `TESTCASE_ID_PATTERN_UNMATCHED` 행도 확인하십시오
 - `판정 결과`가 Test Manager의 최종 결과와 같은지. 기대값 갱신 재실행이
   있었다면 **재실행 후** 값인지
 - `출력값`이 `Test Steps.Expected result`와 같은지

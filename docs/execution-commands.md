@@ -390,7 +390,6 @@ Excel로 뽑습니다.
 | 옵션 | 기본값 | 역할 |
 | --- | --- | --- |
 | `OutputFile` | `result/final_document_<timestamp>.xlsx` | 저장할 파일 경로. **이미 있으면 덮어쓰지 않고 실패합니다** |
-| `TestCaseIdMode` | `cfg.FinalDocumentTestCaseIdMode` (`'COMBINED'`) | `'COMBINED'`은 시나리오명과 테스트 케이스명을 한 셀에 두 줄로, `'SCENARIO'`는 시나리오명만 |
 | `DecisionBlockScope` | `cfg.DecisionBlockScope` (`'EXPLICIT'`) | `Description` 열에 담을 분기 블록 범위 |
 | `CoverageSource` | `cfg.FinalDocumentCoverageSource` (`'STANDALONE'`) | `'STANDALONE'`은 pipeline 산출물, `'TEST_RUN'`은 실행의 Coverage 시트, `'NONE'`은 수집 안 함 |
 | `CoveragePipelineId` | `'LATEST'` | 읽을 standalone pipeline 실행 |

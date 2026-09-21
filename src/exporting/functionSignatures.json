@@ -30,7 +30,6 @@
     "inputs":
     [
       {"name":"OutputFile", "kind":"namevalue", "type":["file=*.xlsx"], "purpose":"저장할 파일 경로. 이미 있으면 실패"},
-      {"name":"TestCaseIdMode", "kind":"namevalue", "type":["choices={'COMBINED','SCENARIO'}"], "purpose":"Test Case ID를 두 줄로 쓸지 시나리오명만 쓸지"},
       {"name":"DecisionBlockScope", "kind":"namevalue", "type":["choices={'EXPLICIT','ALL','NONE'}"], "purpose":"Description에 담을 분기 블록 범위"},
       {"name":"CoverageSource", "kind":"namevalue", "type":["choices={'STANDALONE','TEST_RUN','NONE'}"], "purpose":"커버리지를 어디서 읽을지"},
       {"name":"CoveragePipelineId", "kind":"namevalue", "type":["char"], "purpose":"standalone pipeline 실행 id 또는 LATEST"},

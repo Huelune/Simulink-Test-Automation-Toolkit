@@ -541,16 +541,6 @@ cfg.DecisionBlockScope = 'EXPLICIT';
 % these per run, for example
 % st_export_final_document('ResultRun','BATCH').
 
-% How the Test Case ID cell is written.
-%
-% 'COMBINED':
-%   Two lines in one cell: the Test Sequence scenario name, then the Test
-%   Case name. The cell is wrapped, so both lines show.
-%
-% 'SCENARIO':
-%   The scenario name only.
-cfg.FinalDocumentTestCaseIdMode = 'COMBINED';
-
 % Which executed run the per-iteration verdicts are read from.
 %
 % 'AUTO':

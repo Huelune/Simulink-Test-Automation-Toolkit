@@ -376,18 +376,6 @@ workflow에서 `SLDV`로 해석됩니다.
 실행마다 덮어쓰려면 `st_export_test_specification('DecisionBlockScope','ALL')`을
 쓰십시오. 어느 범위로 뽑았는지는 실행 로그의 `DecisionBlockScope=` 항목에 남습니다.
 
-### `FinalDocumentTestCaseIdMode` — 기본 `'COMBINED'`
-
-`st_export_final_document`가 `Test Case ID` 셀을 어떻게 쓸지 정합니다.
-
-| 값 | 결과 |
-| --- | --- |
-| `'COMBINED'` (기본) | 한 셀에 두 줄. 1줄은 Test Sequence 시나리오명, 2줄은 테스트 케이스명 |
-| `'SCENARIO'` | 시나리오명 한 줄만 |
-
-셀이 자동 줄바꿈되어 있으므로 두 줄이 그대로 보입니다. 새 이름을 조립하지 않고
-있는 이름을 옮기기만 하므로 길이 절단이나 이름 충돌이 생기지 않습니다.
-
 ### `FinalDocumentResultRun` — 기본 `'AUTO'`
 
 `판정 결과` 열을 어느 실행에서 읽을지 정합니다.

@@ -22,7 +22,6 @@ function [specification, outputFile] = st_export_final_document(varargin)
 %
 %   Options:
 %     OutputFile          Target path, default result/final_document_<ts>.xlsx
-%     TestCaseIdMode      'COMBINED' (default) or 'SCENARIO'
 %     DecisionBlockScope  'EXPLICIT', 'ALL' or 'NONE'
 %     CoverageSource      'STANDALONE' (default), 'TEST_RUN' or 'NONE'
 %     CoveragePipelineId  Standalone pipeline id, default 'LATEST'
@@ -32,7 +31,6 @@ function [specification, outputFile] = st_export_final_document(varargin)
 %     IncludeUsageSheet   Append the internal command list, default false
 p = inputParser;
 addParameter(p, 'OutputFile', '', @is_text_or_empty);
-addParameter(p, 'TestCaseIdMode', '', @is_text_or_empty);
 addParameter(p, 'DecisionBlockScope', '', @is_text_or_empty);
 addParameter(p, 'CoverageSource', '', @is_text_or_empty);
 addParameter(p, 'CoveragePipelineId', 'LATEST', @is_text_or_empty);
@@ -44,10 +42,6 @@ parse(p, varargin{:});
 
 cfg = st_config();
 decisionScope = resolve_decision_scope(p.Results.DecisionBlockScope, cfg);
-idMode = resolve_choice(p.Results.TestCaseIdMode, cfg, ...
-    'FinalDocumentTestCaseIdMode', 'COMBINED', {'COMBINED','SCENARIO'}, ...
-    'simtest:FinalDocumentTestCaseIdMode', ...
-    'TestCaseIdMode must be COMBINED or SCENARIO.');
 coverageSource = resolve_choice(p.Results.CoverageSource, cfg, ...
     'FinalDocumentCoverageSource', 'STANDALONE', ...
     {'STANDALONE','TEST_RUN','NONE'}, 'simtest:FinalDocumentCoverageSource', ...
@@ -72,8 +66,8 @@ if isfile(outputFile)
     error('simtest:FinalDocumentOutputExists', 'Output already exists: %s', outputFile);
 end
 st_log(cfg, 'INFO', ...
-    'Final document export start | TestCaseIdMode=%s | ResultRun=%s | CoverageSource=%s | Output=%s', ...
-    idMode, run_label(resultRun, cfg), coverageSource, outputFile);
+    'Final document export start | ResultRun=%s | CoverageSource=%s | Output=%s', ...
+    run_label(resultRun, cfg), coverageSource, outputFile);
 timer = tic;
 try
     [rows, ~, verifyCells, maxTimes, decisionBlockLists] = ...
@@ -88,8 +82,8 @@ try
     outcomes.Notes = [outcomes.Notes; coverage.Notes];
     require_results(p.Results.RequireTestResults, source, outcomes);
     require_coverage(p.Results.RequireCoverage, coverage);
-    document = st_final_document_table(cfg, specification, outcomes, source, idMode);
-    metadata = build_metadata(cfg, source, coverage, idMode, decisionScope, ...
+    document = st_final_document_table(cfg, specification, outcomes, source);
+    metadata = build_metadata(cfg, source, coverage, decisionScope, ...
         height(specification));
     usage = [];
     if includeUsage, usage = st_specification_usage_table(cfg); end
@@ -184,7 +178,7 @@ end
 end
 
 
-function metadata = build_metadata(cfg, source, coverage, idMode, decisionScope, rowCount)
+function metadata = build_metadata(cfg, source, coverage, decisionScope, rowCount)
 % The verdicts and the coverage come from two different executions on
 % purpose, so both identities are recorded here.
 metaKeys = strings(0,1);
@@ -222,7 +216,6 @@ add('CoverageSource', coverage.Source);
 add('CoveragePipelineId', coverage.PipelineId);
 add('CoverageSummary', coverage.SummaryFile);
 add('CoverageSummarySHA256', coverage.SummarySHA256);
-add('TestCaseIdMode', idMode);
 add('DecisionBlockScope', decisionScope);
 metadata = table(metaKeys, metaValues, 'VariableNames', {'Key','Value'});
 end
