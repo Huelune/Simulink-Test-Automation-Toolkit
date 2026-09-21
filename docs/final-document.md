@@ -168,6 +168,12 @@ st_run_standalone_coverage_pipeline('Action','ALL', ...
   보고합니다. port 블록 이름은 어느 모델에서나 `Enable`이라 그것을 적으면
   어느 서브시스템인지 알 수 없기 때문입니다. 평범한 Subsystem은 자기 분기가
   없으므로 그대로 빠집니다.
+- 이 두 종류만은 **커버리지 목록이 아니라 모델에서 직접** 읽습니다. 서브시스템이
+  조건부인지는 구조적 사실이라 커버리지에 물을 이유가 없고, 물으면 결과 정리를
+  언제 했는지에 따라 보였다 안 보였다 합니다. 나머지 종류는 그대로 커버리지
+  목록이 정합니다.
+- 대화상자 조건이 없으므로 셀에는 `D1 [ON/OFF]EnabledSubsystem`처럼 종류만
+  찍힙니다. `DecisionBlockDetails` 시트에는 `enable` / `trigger`가 남습니다.
 - Subsystem과 Model Reference 자체는 빠집니다. 그 블록의 커버리지 수치는 안쪽
   합계라서 남기면 모든 상위 블록이 분기로 보입니다.
 

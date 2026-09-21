@@ -23,7 +23,16 @@ index = find(strcmp(args, 'BlockType'), 1);
 if isempty(index) || index >= numel(args)
     return;
 end
-keep = entries.BlockType == string(args{index + 1}) & ...
+blockType = char(string(args{index + 1}));
+% Whether a subsystem is enabled or triggered is structural, so it is read
+% from the model. Answering these from the recorded list would drop them
+% whenever the list was written before this was supported, or whenever
+% coverage attributed the branch somewhere this scan did not look.
+if any(strcmp(blockType, {'EnablePort', 'TriggerPort'}))
+    paths = st_conditional_subsystems(root, blockType);
+    return;
+end
+keep = entries.BlockType == string(blockType) & ...
     ~contains(entries.RelativePath, "/");
 if ~any(keep)
     return;

@@ -184,25 +184,5 @@ if ~any(strcmp(blockType, {'EnablePort', 'TriggerPort'}))
     paths = find_system(root, varargin{:});
     return;
 end
-paths = conditional_subsystems(root, blockType);
-end
-
-
-function paths = conditional_subsystems(root, portType)
-paths = {};
-root = char(string(root));
-children = find_system(root, 'SearchDepth', 1, 'LookUnderMasks', 'all', ...
-    'FollowLinks', 'on', 'BlockType', 'SubSystem');
-for i = 1:numel(children)
-    child = char(string(children{i}));
-    % find_system reports the root itself when it is a Subsystem too.
-    if strcmp(child, root)
-        continue;
-    end
-    ports = find_system(child, 'SearchDepth', 1, 'LookUnderMasks', 'all', ...
-        'FollowLinks', 'on', 'BlockType', portType);
-    if ~isempty(ports)
-        paths{end+1,1} = child; %#ok<AGROW>
-    end
-end
+paths = st_conditional_subsystems(root, blockType);
 end

@@ -607,6 +607,10 @@ verifyEqual(testCase, enable.Outcome, "ON/OFF");
 % port block, so a parameter lookup would be aimed at the wrong block.
 verifyEqual(testCase, enable.Parameters, "");
 verifyEqual(testCase, enable.OptionalParameters, "");
+% There is no dialog condition, so the main cell prints the type alone.
+% Showing it would render an empty pair of brackets.
+verifyEqual(testCase, enable.MainExpression, "HIDE");
+verifyEqual(testCase, enable.FixedText, "enable");
 end
 
 function testConditionalSubsystemsAreImplicitDecisions(testCase)

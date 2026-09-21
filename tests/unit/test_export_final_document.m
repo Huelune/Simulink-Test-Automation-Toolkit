@@ -515,6 +515,21 @@ verifyEmpty(testCase, finder('HARNESS/Controller', 'SearchDepth', 1, ...
     'Type', 'Block', 'BlockType', 'MinMax'));
 end
 
+function testConditionalSubsystemsBypassTheRecordedList(testCase)
+% A coverage backed list replaces the static scan entirely. If it also
+% owned the conditional types, an Enabled Subsystem would vanish whenever
+% the sheet was written before they were supported.
+entries = table("Switch", "Switch1", ...
+    'VariableNames', {'BlockType','RelativePath'});
+source = fileread(fullfile(st_project_root(), 'src', 'exporting', ...
+    'st_decision_block_finder.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "st_conditional_subsystems\(root, blockType\)", 'once'));
+% The recorded list still owns every other type.
+finder = st_decision_block_finder(entries);
+verifyEqual(testCase, finder('CUT', 'BlockType', 'Switch'), {'CUT/Switch1'});
+end
+
 function testDecisionFinderIsEmptyWithoutRecordedBlocks(testCase)
 verifyEmpty(testCase, st_decision_block_finder( ...
     table(strings(0,1), strings(0,1), ...
