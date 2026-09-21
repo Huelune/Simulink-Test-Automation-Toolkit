@@ -111,10 +111,9 @@ lifecycle 횟수를 보존하기 위해 **각 PipelineId의 `PACKAGE`와 `SUMMAR
 `open_standalone_coverage_test_manager.m` launcher가 함께 생성됩니다. launcher는
 편의 기능이며 필수가 아닙니다.
 
-이 PC에서 제출물을 Test Manager에 다시 올려 보려면
-`st_open_standalone_test_manager`를 부릅니다. launcher와 같은 순서로 모델·Test
-File·CVF를 올리고, `SaveTestResult=true`로 저장한 aggregate Result가 있으면 그것도
-import합니다. 파일은 만들거나 바꾸지 않습니다. 자세한 여는 방법은
+이 PC에서 제출물을 Test Manager에서 열려면 `st_open_standalone_test_manager`를
+부릅니다. 대상 폴더를 path에 올리고 재배선된 MLDATX를 열어 창을 띄우는 수동 절차를
+명령 하나로 묶은 것이며, 파일은 만들거나 바꾸지 않습니다. 자세한 여는 방법은
 [결과 열기](manual/open-results.md)에 있습니다.
 
 ### 일부러 만들지 않는 것

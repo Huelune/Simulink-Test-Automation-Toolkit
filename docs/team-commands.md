@@ -85,7 +85,7 @@ st_run_standalone_coverage_pipeline      제출물 생성
     │
 st_check_standalone_coverage             제출물 검사 → 1111111111 PASS
     │
-st_open_standalone_test_manager          제출물을 Test Manager에 다시 올려 볼 때
+st_open_standalone_test_manager          제출물을 Test Manager에서 열 때
     │
 st_export_final_document                 고객 제출용 최종 문서
 ```
@@ -134,7 +134,7 @@ disp(code)
 disp(summary)
 disp(details)
 
-%% 7-1. 제출물을 Test Manager에서 다시 보기 (필요할 때)
+%% 7-1. 제출물을 Test Manager에서 열기 (필요할 때)
 st_open_standalone_test_manager
 
 %% 8. 고객 제출용 최종 문서 — 4-1 결과 정리를 먼저 해야 판정이 채워집니다
@@ -504,36 +504,29 @@ st_open_standalone_test_manager                         % 가장 최근 제출�
 st_open_standalone_test_manager('PipelineId', info.PipelineId)
 ```
 
-standalone이 끝나면 실행에 쓴 모델은 닫히고 Test Manager에는 아무것도 남지
-않습니다. 이 명령은 **제출물 폴더의 파일만으로** Test Manager를 다시 구성해서
-엽니다. 원본 Top Model은 열지 않습니다.
+[결과 열기](manual/open-results.md)에 있던 아래 수동 절차를 명령 하나로 묶은
+것입니다. 기본 동작은 이것과 **똑같고**, 그 이상은 하지 않습니다.
 
-하는 일, 이 순서대로:
+```matlab
+m = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir, pipelineId);
+for k = 1:numel(m.Targets), addpath(m.Targets(k).OutputDirectory); end
+sltest.testmanager.TestFile(m.TestManagerFile);
+sltest.testmanager.view;
+```
 
-1. CUT 폴더의 standalone 모델을 전부 로드합니다. Test Case의 Model 항목과 CVF
-   뷰어의 이름이 이 모델에 대조되어 풀립니다.
-2. `TestManager/` 폴더의 재배선된 Test File을 엽니다.
-3. Test Case마다 옆에 있는 `UT_REQ_{TC_NAME}.cvf`를 다시 걸고 읽어서 확인합니다.
-4. 저장된 aggregate Result가 있으면 import해서 Results and Artifacts에 올립니다.
-5. Test Manager 창을 엽니다.
-
-**파일은 하나도 만들거나 바꾸지 않습니다.** 세션에 올리기만 합니다. 이 명령을
-쓴 뒤에 `st_check_standalone_coverage`를 돌려도 결과가 같습니다.
+즉 CUT 폴더를 전부 MATLAB path에 올리고(Test Manager가 standalone 모델·Input
+MAT·CVF를 이름으로 찾을 수 있게), `TestManager/`의 재배선된 Test File을 열고,
+창을 띄웁니다. 모델을 로드하지 않고, 원본 Top Model도 열지 않습니다.
+**파일은 하나도 만들거나 바꾸지 않습니다.**
 
 | 옵션 | 기본값 | 역할 |
 | --- | --- | --- |
 | `PipelineId` | `'LATEST'` | 열 실행 id |
-| `ImportResults` | `true` | 저장된 Result를 import할지 |
-| `ClearTestManager` | `false` | 열기 전에 Test Manager에 열린 Test File과 Result를 전부 닫을지 |
-| `View` | `true` | Test Manager 창을 열지 |
-
-> **결과(Results)까지 보려면 파이프라인이 Result를 저장했어야 합니다.**
-> `'Action','ALL'`은 기본으로 저장하지 않습니다(`SaveTestResult=false`). 이때는
-> Test File·모델·CVF만 올라오고 화면에 `Results : none saved`가 찍힙니다.
-> Results까지 다시 보고 싶으면 파이프라인을
-> `st_run_standalone_coverage_pipeline('Action','ALL','SaveTestResult',true, ...)`
-> 로 돌리십시오. Result 파일 하나(`StandaloneCoverageResults.mldatx`)가
-> root에 추가되고, checker도 그 하나를 정상으로 봅니다.
+| `LoadModels` | `false` | standalone 모델을 `load_system`까지 합니다. CVF 뷰어 Name이 `n/a`로 나올 때 |
+| `ApplyFilters` | `false` | Test Case마다 옆의 `UT_REQ_{TC_NAME}.cvf`를 다시 걸고 readback을 확인합니다 (launcher가 하는 일) |
+| `ImportResults` | `false` | 파이프라인이 `SaveTestResult=true`로 저장한 aggregate Result를 import합니다 |
+| `ClearTestManager` | `false` | 열기 전에 Test Manager에 열린 Test File과 Result를 전부 닫습니다 |
+| `View` | `true` | Test Manager 창을 엽니다 |
 
 같은 이름의 Test File이 이미 열려 있으면 멈춥니다(같은 MATLAB 세션에서
 파이프라인을 돌린 직후에 생길 수 있습니다). 그 파일을 닫거나
@@ -604,8 +597,8 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 | 명세서 Excel이 필요하다 | `st_export_test_specification` |
 | 제출물을 만든다 | Top Model 닫고 → `st_run_standalone_coverage_pipeline('Action','ALL',...)` |
 | 제출물이 맞는지 본다 | `st_check_standalone_coverage` |
-| 제출물을 Test Manager에서 다시 본다 | `st_open_standalone_test_manager` |
-| 제출물의 Results까지 다시 본다 | 파이프라인을 `'SaveTestResult', true`로 돌린 뒤 `st_open_standalone_test_manager` |
+| 제출물을 Test Manager에서 연다 | `st_open_standalone_test_manager` |
+| 제출물의 Results까지 본다 | 파이프라인을 `'SaveTestResult', true`로 돌린 뒤 `st_open_standalone_test_manager('ImportResults', true)` |
 | 고객에게 낼 문서를 만든다 | 결과 정리 후 → `st_export_final_document` |
 
 ## 5. 자주 막히는 곳
@@ -629,7 +622,7 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 | `RemovedExecutionMode` | `ExecutionMode='AUTO'`는 없어졌습니다. `'BATCH'` 또는 `'PER_CUT'`을 쓰십시오 |
 | `StandaloneTestManagerFileNameConflict` | 같은 이름의 Test File이 이미 열려 있습니다. 닫거나 `st_open_standalone_test_manager('ClearTestManager', true)` |
 | `StandaloneTestManagerNotPackaged` | 그 PipelineId는 `PACKAGE`를 안 거쳤습니다. `'Action','PACKAGE'`를 먼저 돌리십시오 |
-| 다시 연 Test Manager에 Results가 없다 | 파이프라인이 Result를 저장하지 않았습니다(`ALL`의 기본). `'SaveTestResult', true`로 다시 돌리십시오 |
+| 연 Test Manager에 Results가 없다 | 기본은 Test File만 엽니다. `'ImportResults', true`를 주고, 파이프라인도 `'SaveTestResult', true`로 돌렸어야 합니다 |
 | 커버리지에 필터가 안 걸린 것 같다 | 실행 결과가 아니라 **결과 정리 후** 보고서를 보십시오. 필터는 그때 붙습니다 |
 
 오류 식별자별 대처는 [문제 해결](troubleshooting.md)에 있습니다.

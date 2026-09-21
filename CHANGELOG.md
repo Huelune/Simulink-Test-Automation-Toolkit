@@ -2,22 +2,20 @@
 
 ## Unreleased
 
-- **standalone 제출물을 Test Manager에 다시 올려 여는 `st_open_standalone_test_manager`를
-  추가했습니다.** standalone 파이프라인은 끝나면 실행 모델을 닫고 Test Manager에
-  아무것도 남기지 않아, 결과를 다시 보려면 launcher 스크립트를 찾아 `run`하거나
-  `open-results.md`의 코드를 손으로 옮겨야 했습니다. 새 명령은 manifest를 읽어
-  launcher와 같은 순서로 standalone 모델 로드 → 재배선된 Test File 열기 →
-  Test Case별 CVF 재적용 → Test Manager 창 열기를 하고, 거기에
-  `SaveTestResult=true`로 저장한 aggregate Result가 있으면 checksum을 확인한 뒤
-  import해 Results and Artifacts까지 되살립니다.
-  - 파일은 만들거나 바꾸지 않습니다. `st_check_standalone_coverage`의 B6/B9가
-    세는 산출물과 원본 해시에 영향이 없습니다.
+- **standalone 제출물을 Test Manager에서 여는 `st_open_standalone_test_manager`를
+  추가했습니다.** `open-results.md`의 수동 절차(manifest 읽기 → 대상 CUT 폴더 전부
+  `addpath` → `sltest.testmanager.TestFile(TestManagerFile)` →
+  `sltest.testmanager.view`)를 명령 하나로 묶었습니다. 기본 동작은 그 절차와
+  같고, 모델을 로드하거나 파일을 만들거나 바꾸지 않습니다.
+  - 옵션으로 켤 수 있는 것: `LoadModels`(standalone 모델 `load_system`),
+    `ApplyFilters`(Test Case별 CVF 재적용과 readback 확인),
+    `ImportResults`(`SaveTestResult=true`로 저장한 aggregate Result를 checksum
+    확인 뒤 import). 셋을 모두 켜면 패키징된 launcher 스크립트와 같은 일을 합니다.
   - `PACKAGE`를 거치지 않은 PipelineId는 `StandaloneTestManagerNotPackaged`로,
     같은 이름의 Test File이 이미 열려 있으면
     `StandaloneTestManagerFileNameConflict`로 멈춥니다. 후자는
-    `'ClearTestManager', true`로 열린 것을 모두 닫고 다시 올릴 수 있습니다.
-  - 옵션: `PipelineId`, `OutputRoot`, `ImportResults`, `ClearTestManager`, `View`.
-    `functionSignatures.json`에 자동완성을 등록했습니다.
+    `'ClearTestManager', true`로 열린 것을 모두 닫고 다시 열 수 있습니다.
+  - `functionSignatures.json`에 자동완성을 등록했습니다.
 
 - **standalone pipeline의 Simulink 빌드가 Windows 260자 제한에 걸리지 않게 했습니다.**
   번들 실행기는 `executions\<id>\workspace`로 `cd`한 뒤 Test Case를 돌리는데,

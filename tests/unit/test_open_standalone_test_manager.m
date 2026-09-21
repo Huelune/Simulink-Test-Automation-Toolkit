@@ -1,5 +1,5 @@
 function tests = test_open_standalone_test_manager
-%TEST_OPEN_STANDALONE_TEST_MANAGER Rebuild-and-open command contracts.
+%TEST_OPEN_STANDALONE_TEST_MANAGER Open-submission command contracts.
 tests = functiontests(localfunctions);
 end
 
@@ -12,7 +12,8 @@ signatures = jsondecode(fileread(fullfile(rootDir, 'src', 'pipeline', ...
 verifyTrue(testCase, isfield(signatures, 'st_open_standalone_test_manager'));
 names = string({signatures.st_open_standalone_test_manager.inputs.name});
 verifyEqual(testCase, sort(names), sort(["PipelineId", "OutputRoot", ...
-    "ImportResults", "ClearTestManager", "View"]));
+    "LoadModels", "ApplyFilters", "ImportResults", "ClearTestManager", ...
+    "View"]));
 end
 
 function testCommandIsReadOnlyOnDisk(testCase)
@@ -31,33 +32,48 @@ verifyTrue(testCase, contains(text, ...
 verifyFalse(testCase, contains(text, 'load_system(cfg.ModelFile)'));
 end
 
-function testCommandRebuildsEverythingTheLauncherDoesAndImportsResults(testCase)
+function testDefaultMatchesTheManualSnippet(testCase)
+% docs/manual/open-results.md: addpath every target OutputDirectory, open
+% the packaged Test File with sltest.testmanager.TestFile, then view.
+% Everything beyond that is opt-in.
+text = source();
+addpathAt = strfind(text, 'addpath(folder)');
+openAt = strfind(text, 'testFile = open_test_file(testFilePath, cfg)');
+viewAt = strfind(text, 'if p.Results.View');
+verifyTrue(testCase, contains(text, 'sltest.testmanager.view;'));
+verifyNotEmpty(testCase, addpathAt);
+verifyNotEmpty(testCase, openAt);
+verifyNotEmpty(testCase, viewAt);
+verifyLessThan(testCase, addpathAt(1), openAt(1));
+verifyLessThan(testCase, openAt(1), viewAt(1));
+verifyTrue(testCase, contains(text, "field_text(targets(k), 'OutputDirectory')"));
+verifyTrue(testCase, contains(text, 'sltest.testmanager.TestFile(testFilePath)'));
+for extra = ["LoadModels", "ApplyFilters", "ImportResults", "ClearTestManager"]
+    verifyTrue(testCase, contains(text, ...
+        "addParameter(p, '" + extra + "', false"), ...
+        extra + " must default to false");
+end
+verifyTrue(testCase, contains(text, "addParameter(p, 'View', true"));
+% Each extra only runs behind its option.
+verifyTrue(testCase, contains(text, 'if p.Results.LoadModels'));
+verifyTrue(testCase, contains(text, 'if p.Results.ApplyFilters'));
+verifyTrue(testCase, contains(text, 'if p.Results.ClearTestManager'));
+end
+
+function testOptionalExtrasMirrorTheLauncher(testCase)
 text = source();
 launcher = string(fileread(fullfile(st_project_root(), 'resources', ...
     'standalone_coverage', 'open_standalone_coverage_test_manager.m')));
-% Same rebuild steps as the packaged launcher, in the same order: models
-% first so the Test Case SUT and CVF names resolve, then the Test File,
-% then the filters, then the window.
-modelAt = strfind(text, 'load_system(modelFile)');
-testFileAt = strfind(text, 'testFile = load_test_file(testFilePath, cfg)');
-filterAt = strfind(text, 'coverage.CoverageFilterFilename = filterFile');
-resultAt = strfind(text, 'sltest.testmanager.importResults(resultFile)');
-viewAt = strfind(text, 'sltest.testmanager.view');
-verifyNotEmpty(testCase, modelAt);
-verifyNotEmpty(testCase, testFileAt);
-verifyNotEmpty(testCase, filterAt);
-verifyNotEmpty(testCase, resultAt);
-verifyNotEmpty(testCase, viewAt);
-verifyTrue(testCase, contains(text, 'sltest.testmanager.load(testFilePath)'));
-verifyLessThan(testCase, modelAt(1), testFileAt(1));
-verifyLessThan(testCase, testFileAt(1), filterAt(1));
-verifyLessThan(testCase, filterAt(1), viewAt(1));
+verifyTrue(testCase, contains(text, 'load_system(modelFile)'));
+verifyTrue(testCase, contains(text, ...
+    'coverage.CoverageFilterFilename = filterFile'));
 verifyTrue(testCase, contains(text, ...
     'filter_readback_matches(filterFile, actual)'));
 verifyTrue(testCase, contains(launcher, ...
     'filter_readback_matches(filterFile, actual)'));
 % The saved Result is imported exactly once and only after its checksum
 % still matches the manifest.
+resultAt = strfind(text, 'sltest.testmanager.importResults(resultFile)');
 verifyEqual(testCase, numel(resultAt), 1);
 verifyTrue(testCase, contains(text, "'ResultSHA256'"));
 verifyTrue(testCase, contains(text, 'CHECKSUM_MISMATCH'));
@@ -69,18 +85,15 @@ text = source();
 verifyTrue(testCase, contains(text, ...
     'simtest:StandaloneTestManagerNotPackaged'));
 verifyTrue(testCase, contains(text, ...
+    'simtest:StandaloneTestManagerTargetFolderMissing'));
+verifyTrue(testCase, contains(text, ...
     'simtest:StandaloneTestManagerFileNameConflict'));
 verifyTrue(testCase, contains(text, ...
     'simtest:StandaloneTestManagerModelIsolationFailed'));
 verifyTrue(testCase, contains(text, 'sltest.testmanager.getTestFiles'));
-% Clearing Test Manager is opt-in; the default must not discard whatever
-% the user still has open.
-verifyTrue(testCase, contains(text, ...
-    "addParameter(p, 'ClearTestManager', false"));
 clearAt = strfind(text, 'sltest.testmanager.clear;');
 verifyNotEmpty(testCase, clearAt);
 guardAt = strfind(text, 'if p.Results.ClearTestManager');
-verifyNotEmpty(testCase, guardAt);
 verifyLessThan(testCase, guardAt(1), clearAt(1));
 end
 

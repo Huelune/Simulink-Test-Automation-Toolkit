@@ -61,7 +61,7 @@ HTML은 Test Manager 요약 보고서가 아니라 Coverage REPORT 화살표가 
 부속 asset도 함께 보존합니다. 압축 파일은 캡처 증거용이지 최종 HTML 대신 제출하는
 파일이 아닙니다.
 
-만든 제출물을 Test Manager에 다시 올려 보려면 `st_open_standalone_test_manager`를
+만든 제출물을 Test Manager에서 열려면 `st_open_standalone_test_manager`를
 부릅니다. 수동으로 여는 방법은 [결과 열기](open-results.md)에 있습니다.
 
 ## 4. 예외가 난 대상

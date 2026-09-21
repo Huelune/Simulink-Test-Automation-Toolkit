@@ -1,40 +1,42 @@
 function info = st_open_standalone_test_manager(varargin)
-%ST_OPEN_STANDALONE_TEST_MANAGER Rebuild Test Manager from a standalone run.
+%ST_OPEN_STANDALONE_TEST_MANAGER Open a standalone submission in Test Manager.
 %
-%   info = st_open_standalone_test_manager()
-%   info = st_open_standalone_test_manager('PipelineId', id)
+%   st_open_standalone_test_manager()                      % LATEST
+%   st_open_standalone_test_manager('PipelineId', id)
 %
-% After st_run_standalone_coverage_pipeline finishes, its execution models
-% are closed and nothing is left open in Test Manager. This command puts the
-% packaged submission back into Test Manager so it can be inspected:
+% One command for the manual steps in docs/manual/open-results.md:
 %
-%   1. loads every packaged standalone model (so the Test Case SUT and the
-%      CVF viewer names resolve against the model that produced them),
-%   2. loads the packaged, rewired Test File,
-%   3. re-applies each packaged CVF to its Test Case,
-%   4. imports the saved aggregate Result when the pipeline kept one
-%      (SaveTestResult=true), and
-%   5. opens the Test Manager window.
+%   m = st_load_standalone_pipeline_manifest(root, pipelineId);
+%   for k = 1:numel(m.Targets), addpath(m.Targets(k).OutputDirectory); end
+%   sltest.testmanager.TestFile(m.TestManagerFile);
+%   sltest.testmanager.view;
 %
-% It is read-only on disk: no model, Test File, CVF or Result is saved or
-% changed. It only loads them into the current MATLAB session. It also does
-% not touch the original Top Model.
+% By default it does exactly that: every packaged CUT folder goes on the
+% MATLAB path so Test Manager can resolve each Test Case's standalone model,
+% input MAT and CVF by name, then the packaged Test File is opened and the
+% Test Manager window shown. Nothing is loaded, saved or changed on disk.
 %
-% Options:
+% Optional extras, all off by default:
+%   'LoadModels'        - load_system every packaged standalone model first,
+%                         so the CVF viewer resolves block names.
+%   'ApplyFilters'      - re-apply each packaged CVF to its Test Case and
+%                         verify the readback (what the packaged launcher does).
+%   'ImportResults'     - import the saved aggregate Result when the pipeline
+%                         kept one (SaveTestResult=true).
+%   'ClearTestManager'  - close every Test File and Result already open in
+%                         Test Manager first. Use it when a Test File of the
+%                         same name is still loaded from the pipeline run.
+%   'View'              - open the Test Manager window (default true).
 %   'PipelineId'        - pipeline to open, or 'LATEST' (default).
 %   'OutputRoot'        - pipeline root. Default cfg.StandaloneCoverageRootDir.
-%   'ImportResults'     - import the saved aggregate Result (default true).
-%                         Silently skipped when the pipeline saved none.
-%   'ClearTestManager'  - close every Test File and Result already open in
-%                         Test Manager first (default false). Use it when a
-%                         Test File of the same name is still loaded.
-%   'View'              - open the Test Manager window (default true).
 
 p = inputParser;
 p.FunctionName = mfilename;
 addParameter(p, 'PipelineId', 'LATEST', @(x) ischar(x) || isstring(x));
 addParameter(p, 'OutputRoot', '', @(x) ischar(x) || isstring(x));
-addParameter(p, 'ImportResults', true, @(x) islogical(x) && isscalar(x));
+addParameter(p, 'LoadModels', false, @(x) islogical(x) && isscalar(x));
+addParameter(p, 'ApplyFilters', false, @(x) islogical(x) && isscalar(x));
+addParameter(p, 'ImportResults', false, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'ClearTestManager', false, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'View', true, @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
@@ -65,8 +67,109 @@ if p.Results.ClearTestManager
     st_log(cfg, 'INFO', 'Standalone Test Manager clear complete');
 end
 
-% 1. Standalone models. Load every packaged model before Test Manager
-%    resolves the Test Case SUT, exactly as the packaged launcher does.
+% 1. Every packaged CUT folder on the path. Test Manager resolves the
+%    standalone model, its input MAT and the CVF beside it by name.
+addedFolders = strings(0,1);
+for k = 1:numel(targets)
+    folder = field_text(targets(k), 'OutputDirectory');
+    if isempty(folder) || ~isfolder(folder)
+        error('simtest:StandaloneTestManagerTargetFolderMissing', ...
+            'Packaged target folder is missing for target %d (%s): %s', ...
+            k, field_text(targets(k), 'TestCaseName'), folder);
+    end
+    addpath(folder);
+    addedFolders(end+1,1) = string(folder); %#ok<AGROW>
+end
+st_log(cfg, 'INFO', ...
+    'Packaged target folders added to path | Folders=%d', numel(addedFolders));
+
+% 2. Optional: load the standalone models themselves.
+loadedModels = strings(0,1);
+if p.Results.LoadModels
+    loadedModels = load_standalone_models(targets, cfg);
+end
+
+% 3. Packaged Test File.
+testFilePath = field_text(manifest, 'TestManagerFile');
+if ~isfile(testFilePath)
+    error('simtest:StandaloneTestManagerFileMissing', ...
+        'Packaged Test File is missing: %s', testFilePath);
+end
+testFile = open_test_file(testFilePath, cfg);
+
+% 4. Optional: re-apply the packaged CVFs.
+appliedFilters = 0;
+if p.Results.ApplyFilters
+    appliedFilters = apply_packaged_filters(testFile, targets, testFilePath, cfg);
+end
+
+% 5. Optional: saved aggregate Result.
+[resultStatus, resultRoots, resultFile] = import_saved_result( ...
+    manifest, p.Results.ImportResults, cfg);
+
+% 6. Window.
+if p.Results.View
+    sltest.testmanager.view;
+end
+
+info = struct( ...
+    'PipelineId', pipelineId, ...
+    'Manifest', manifestPath, ...
+    'TestManagerFile', testFilePath, ...
+    'TestFile', testFile, ...
+    'AddedFolders', addedFolders, ...
+    'LoadedModels', loadedModels, ...
+    'AppliedFilterCount', appliedFilters, ...
+    'ResultStatus', resultStatus, ...
+    'ResultFile', resultFile, ...
+    'ResultRootCount', resultRoots);
+
+fprintf('\n');
+fprintf('============================================\n');
+fprintf('Standalone Test Manager opened\n');
+fprintf('PipelineId : %s\n', pipelineId);
+fprintf('Test File  : %s\n', testFilePath);
+fprintf('Path       : %d target folder(s) added\n', numel(addedFolders));
+if p.Results.LoadModels
+    fprintf('Models     : %d loaded\n', numel(loadedModels));
+end
+if p.Results.ApplyFilters
+    fprintf('CVF        : %d applied\n', appliedFilters);
+end
+if p.Results.ImportResults
+    fprintf('Results    : %s\n', result_summary_text(resultStatus, resultRoots));
+end
+fprintf('============================================\n');
+st_log(cfg, 'INFO', ...
+    ['Standalone Test Manager open complete | PipelineId=%s | Folders=%d | ' ...
+     'Models=%d | CVFs=%d | Results=%s | elapsed=%.3f sec'], ...
+    pipelineId, numel(addedFolders), numel(loadedModels), appliedFilters, ...
+    resultStatus, toc(timerValue));
+end
+
+function require_packaged(manifest, manifestPath)
+%REQUIRE_PACKAGED The Test File and CUT folders exist only after PACKAGE.
+packaged = isfield(manifest, 'Actions') && ...
+    isfield(manifest.Actions, 'PACKAGE') && ...
+    ismember(upper(string(field_text(manifest.Actions.PACKAGE, 'Status'))), ...
+        ["OK","WARN"]);
+if ~packaged
+    error('simtest:StandaloneTestManagerNotPackaged', ...
+        ['Pipeline %s has not completed PACKAGE, so there is no packaged ' ...
+         'Test File to open. Run st_run_standalone_coverage_pipeline(' ...
+         '''Action'',''PACKAGE'',''PipelineId'',''%s'') first. Manifest=%s'], ...
+        char(string(manifest.PipelineId)), ...
+        char(string(manifest.PipelineId)), manifestPath);
+end
+if ~isfield(manifest, 'Targets') || isempty(manifest.Targets)
+    error('simtest:StandaloneTestManagerTargetsMissing', ...
+        'Pipeline manifest has no packaged targets: %s', manifestPath);
+end
+end
+
+function loadedModels = load_standalone_models(targets, cfg)
+%LOAD_STANDALONE_MODELS Load every packaged model, refusing a same-named
+% model from another path (the packaged launcher's isolation rule).
 loadedModels = strings(0,1);
 for k = 1:numel(targets)
     item = targets(k);
@@ -81,7 +184,6 @@ for k = 1:numel(targets)
         error('simtest:StandaloneTestManagerModelMissing', ...
             'Standalone model is missing for target %d: %s', k, modelFile);
     end
-    addpath(fileparts(modelFile));
     [~, modelName] = fileparts(modelFile);
     if bdIsLoaded(modelName)
         loadedFile = char(string(get_param(modelName, 'FileName')));
@@ -91,8 +193,6 @@ for k = 1:numel(targets)
                  'Close it first. Expected=%s | Actual=%s'], ...
                 modelName, modelFile, loadedFile);
         end
-        st_log(cfg, 'DEBUG', ...
-            'Standalone model already loaded | Model=%s', modelName);
     else
         st_log(cfg, 'DEBUG', ...
             'Standalone model load start | Model=%s | File=%s', ...
@@ -102,32 +202,55 @@ for k = 1:numel(targets)
     loadedModels(end+1,1) = string(modelName); %#ok<AGROW>
 end
 st_log(cfg, 'INFO', ...
-    'Standalone models ready | Loaded=%d | Targets=%d', ...
+    'Standalone models loaded | Models=%d | Targets=%d', ...
     numel(loadedModels), numel(targets));
-
-% 2. Packaged Test File.
-testFilePath = field_text(manifest, 'TestManagerFile');
-if ~isfile(testFilePath)
-    error('simtest:StandaloneTestManagerFileMissing', ...
-        'Packaged Test File is missing: %s', testFilePath);
 end
-testFile = load_test_file(testFilePath, cfg);
+
+function testFile = open_test_file(testFilePath, cfg)
+%OPEN_TEST_FILE Reuse the packaged Test File if it is already open.
+%
+% Test Manager identifies Test Files by name, and the packaged file shares
+% its name with the working copy the pipeline ran. A same-named file from a
+% different path cannot be opened beside it, so fail with a clear action.
+[~, wantedName, wantedExtension] = fileparts(testFilePath);
+open = sltest.testmanager.getTestFiles;
+for k = 1:numel(open)
+    openPath = char(string(open(k).FilePath));
+    if st_same_path(openPath, testFilePath)
+        st_log(cfg, 'INFO', ...
+            'Packaged Test File already open | File=%s', testFilePath);
+        testFile = open(k);
+        return;
+    end
+    [~, openName, openExtension] = fileparts(openPath);
+    if strcmpi([openName openExtension], [wantedName wantedExtension])
+        error('simtest:StandaloneTestManagerFileNameConflict', ...
+            ['A Test File named %s is already open from another path. ' ...
+             'Close it, or call st_open_standalone_test_manager(' ...
+             '''ClearTestManager'', true). Open=%s | Packaged=%s'], ...
+            [wantedName wantedExtension], openPath, testFilePath);
+    end
+end
+st_log(cfg, 'INFO', ...
+    'Packaged Test File open start | File=%s', testFilePath);
+testFile = sltest.testmanager.TestFile(testFilePath);
+st_log(cfg, 'INFO', ...
+    'Packaged Test File open complete | File=%s', testFilePath);
+end
+
+function applied = apply_packaged_filters(testFile, targets, testFilePath, cfg)
+%APPLY_PACKAGED_FILTERS Point each Test Case at the CVF packaged beside it.
 testCases = getAllTestCases(testFile);
 caseNames = strings(numel(testCases),1);
 for k = 1:numel(testCases)
     caseNames(k) = string(testCases(k).Name);
 end
-
-% 3. CVF per Test Case. Targets that never produced a CVF (EXCEPT) keep
-%    their Test Case without a filter.
-appliedFilters = 0;
-skippedFilters = strings(0,1);
+applied = 0;
 for k = 1:numel(targets)
     item = targets(k);
     testCaseName = string(field_text(item, 'TestCaseName'));
     filterFile = field_text(item, 'PackagedCVF');
     if isempty(filterFile)
-        skippedFilters(end+1,1) = testCaseName; %#ok<AGROW>
         st_log(cfg, 'WARN', ...
             'No packaged CVF for Test Case | TestCase=%s | Status=%s', ...
             char(testCaseName), field_text(item, 'ExecutionStatus'));
@@ -153,107 +276,14 @@ for k = 1:numel(targets)
              'Expected=%s | Actual=%s'], ...
             char(testCaseName), filterFile, char(strjoin(actual, ' | ')));
     end
-    appliedFilters = appliedFilters + 1;
+    applied = applied + 1;
     st_log(cfg, 'DEBUG', ...
         'Coverage filter applied | TestCase=%s | Filter=%s', ...
         char(testCaseName), filterFile);
 end
 st_log(cfg, 'INFO', ...
-    'Coverage filters applied | Applied=%d | Skipped=%d', ...
-    appliedFilters, numel(skippedFilters));
-
-% 4. Saved aggregate Result.
-[resultStatus, resultRoots, resultFile] = import_saved_result( ...
-    manifest, p.Results.ImportResults, cfg);
-
-% 5. Window.
-if p.Results.View
-    sltest.testmanager.view;
-end
-
-info = struct( ...
-    'PipelineId', pipelineId, ...
-    'Manifest', manifestPath, ...
-    'TestManagerFile', testFilePath, ...
-    'TestFile', testFile, ...
-    'LoadedModels', loadedModels, ...
-    'AppliedFilterCount', appliedFilters, ...
-    'SkippedFilterTestCases', skippedFilters, ...
-    'ResultStatus', resultStatus, ...
-    'ResultFile', resultFile, ...
-    'ResultRootCount', resultRoots);
-
-fprintf('\n');
-fprintf('============================================\n');
-fprintf('Standalone Test Manager rebuilt\n');
-fprintf('PipelineId : %s\n', pipelineId);
-fprintf('Test File  : %s\n', testFilePath);
-fprintf('Models     : %d loaded\n', numel(loadedModels));
-fprintf('CVF        : %d applied', appliedFilters);
-if ~isempty(skippedFilters)
-    fprintf(', %d without CVF (%s)', numel(skippedFilters), ...
-        char(strjoin(skippedFilters, ', ')));
-end
-fprintf('\n');
-fprintf('Results    : %s\n', result_summary_text(resultStatus, resultRoots));
-fprintf('============================================\n');
-st_log(cfg, 'INFO', ...
-    ['Standalone Test Manager open complete | PipelineId=%s | Models=%d | ' ...
-     'CVFs=%d | Results=%s | elapsed=%.3f sec'], ...
-    pipelineId, numel(loadedModels), appliedFilters, resultStatus, ...
-    toc(timerValue));
-end
-
-function require_packaged(manifest, manifestPath)
-%REQUIRE_PACKAGED The Test File and CVFs exist only after PACKAGE.
-packaged = isfield(manifest, 'Actions') && ...
-    isfield(manifest.Actions, 'PACKAGE') && ...
-    ismember(upper(string(field_text(manifest.Actions.PACKAGE, 'Status'))), ...
-        ["OK","WARN"]);
-if ~packaged
-    error('simtest:StandaloneTestManagerNotPackaged', ...
-        ['Pipeline %s has not completed PACKAGE, so there is no packaged ' ...
-         'Test File to open. Run st_run_standalone_coverage_pipeline(' ...
-         '''Action'',''PACKAGE'',''PipelineId'',''%s'') first. Manifest=%s'], ...
-        char(string(manifest.PipelineId)), ...
-        char(string(manifest.PipelineId)), manifestPath);
-end
-if ~isfield(manifest, 'Targets') || isempty(manifest.Targets)
-    error('simtest:StandaloneTestManagerTargetsMissing', ...
-        'Pipeline manifest has no packaged targets: %s', manifestPath);
-end
-end
-
-function testFile = load_test_file(testFilePath, cfg)
-%LOAD_TEST_FILE Reuse the packaged Test File if it is already open.
-%
-% Test Manager identifies Test Files by name, and the packaged file shares
-% its name with the working copy the pipeline ran. A same-named file from a
-% different path cannot be opened beside it, so fail with a clear action.
-[~, wantedName, wantedExtension] = fileparts(testFilePath);
-open = sltest.testmanager.getTestFiles;
-for k = 1:numel(open)
-    openPath = char(string(open(k).FilePath));
-    if st_same_path(openPath, testFilePath)
-        st_log(cfg, 'INFO', ...
-            'Packaged Test File already open | File=%s', testFilePath);
-        testFile = open(k);
-        return;
-    end
-    [~, openName, openExtension] = fileparts(openPath);
-    if strcmpi([openName openExtension], [wantedName wantedExtension])
-        error('simtest:StandaloneTestManagerFileNameConflict', ...
-            ['A Test File named %s is already open from another path. ' ...
-             'Close it, or call st_open_standalone_test_manager(' ...
-             '''ClearTestManager'', true). Open=%s | Packaged=%s'], ...
-            [wantedName wantedExtension], openPath, testFilePath);
-    end
-end
-st_log(cfg, 'INFO', ...
-    'Packaged Test File load start | File=%s', testFilePath);
-testFile = sltest.testmanager.load(testFilePath);
-st_log(cfg, 'INFO', ...
-    'Packaged Test File load complete | File=%s', testFilePath);
+    'Coverage filters applied | Applied=%d | Targets=%d', ...
+    applied, numel(targets));
 end
 
 function [status, rootCount, resultFile] = import_saved_result( ...
@@ -263,12 +293,11 @@ rootCount = 0;
 resultFile = field_text(manifest, 'ResultFile');
 if ~wanted
     status = 'SKIPPED';
-    st_log(cfg, 'INFO', 'Saved Result import skipped by option');
     return;
 end
 if isempty(resultFile)
     status = 'NOT_SAVED';
-    st_log(cfg, 'INFO', ...
+    st_log(cfg, 'WARN', ...
         ['Saved Result import skipped | The pipeline kept no aggregate ' ...
          'Result (SaveTestResult=false)']);
     return;
@@ -304,11 +333,9 @@ switch status
     case 'IMPORTED'
         text = sprintf('%d result set(s) imported', rootCount);
     case 'NOT_SAVED'
-        text = 'none saved (SaveTestResult=false); Test File only';
-    case 'SKIPPED'
-        text = 'import skipped (ImportResults=false)';
+        text = 'none saved (SaveTestResult=false)';
     case 'MISSING'
-        text = 'saved Result file is missing; Test File only';
+        text = 'saved Result file is missing';
     case 'CHECKSUM_MISMATCH'
         text = 'saved Result changed since packaging; not imported';
     otherwise

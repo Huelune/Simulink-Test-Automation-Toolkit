@@ -23,6 +23,8 @@
     [
       {"name":"PipelineId", "kind":"namevalue", "type":["char"], "purpose":"열 PipelineId 또는 LATEST"},
       {"name":"OutputRoot", "kind":"namevalue", "type":["folder"], "purpose":"결과 루트. 비우면 cfg 기본값"},
+      {"name":"LoadModels", "kind":"namevalue", "type":["logical","scalar"], "purpose":"standalone 모델을 load_system까지 할지"},
+      {"name":"ApplyFilters", "kind":"namevalue", "type":["logical","scalar"], "purpose":"Test Case에 CVF를 다시 걸지"},
       {"name":"ImportResults", "kind":"namevalue", "type":["logical","scalar"], "purpose":"저장된 aggregate Result를 import할지"},
       {"name":"ClearTestManager", "kind":"namevalue", "type":["logical","scalar"], "purpose":"열기 전에 Test Manager를 비울지"},
       {"name":"View", "kind":"namevalue", "type":["logical","scalar"], "purpose":"Test Manager 창을 열지"}
