@@ -18,6 +18,10 @@ end
 if ~ismember(stage,{'PACKAGE','SUMMARY'})
     error('simtest:RestartStageInvalid','Regeneration starts at PACKAGE or SUMMARY.');
 end
+if strcmpi(char(string(manifest.Action)),'PREPARE') || ~isfield(manifest.Actions,'EXECUTE')
+    error('simtest:RestartSourcePrepareOnly', ...
+        'Source %s was created by Action=PREPARE and holds no execution evidence; run EXECUTE or ALL.',id);
+end
 if ~st_same_path(manifest.SourceBefore.Model.Path,cfg.ModelFile) || ...
         ~st_same_path(manifest.SourceBefore.ManagementExcel.Path,cfg.ManagementExcel)
     error('simtest:RestartProfileMismatch','Select the profile associated with SourcePipelineId.');

@@ -5,7 +5,7 @@
   {
     "inputs":
     [
-      {"name":"Action", "kind":"namevalue", "type":["choices={'ALL','EXECUTE','PACKAGE','SUMMARY'}"], "purpose":"어느 단계를 수행할지"},
+      {"name":"Action", "kind":"namevalue", "type":["choices={'ALL','PREPARE','EXECUTE','PACKAGE','SUMMARY'}"], "purpose":"어느 단계를 수행할지. PREPARE는 실행 없이 standalone용 Test File만 만든다"},
       {"name":"PipelineId", "kind":"namevalue", "type":["char"], "purpose":"재개할 PipelineId 또는 LATEST"},
       {"name":"OutputRoot", "kind":"namevalue", "type":["folder"], "purpose":"결과 루트. 비우면 cfg 기본값"},
       {"name":"SaveTestResult", "kind":"namevalue", "type":["logical","scalar"], "purpose":"true면 Result를 저장해 PACKAGE 재개 가능"},

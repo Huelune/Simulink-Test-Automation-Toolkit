@@ -4,6 +4,15 @@ function info = st_run_standalone_coverage_pipeline(varargin)
 %   info = st_run_standalone_coverage_pipeline() runs ALL actions:
 %   EXECUTE -> PACKAGE -> SUMMARY. Existing Harness/Test Case/Expected
 %   preparation remains the responsibility of st_run_from_harness.
+%
+%   info = st_run_standalone_coverage_pipeline('Action', 'PREPARE') stops
+%   before any execution. It exports the standalone models, rewires every
+%   Test Case of the copied Test File to its standalone model, saves that
+%   Test File and copies it to <PipelineRoot>/TestManager/<TopModel>.mldatx
+%   (info.TestManagerFile). Nothing runs, so there is no coverage, CVF, or
+%   summary: PACKAGE and SUMMARY refuse a PREPARE pipeline, it never becomes
+%   LATEST, and st_check_standalone_coverage reports it as FAIL. Use it when
+%   only a Test Manager file that points at the standalone models is needed.
 
 p = inputParser;
 p.FunctionName = mfilename;
@@ -25,9 +34,9 @@ parse(p, varargin{:});
 
 reject_removed_options(p.Results);
 action = upper(strtrim(char(string(p.Results.Action))));
-if ~ismember(action, {'EXECUTE','PACKAGE','SUMMARY','ALL'})
+if ~ismember(action, {'PREPARE','EXECUTE','PACKAGE','SUMMARY','ALL'})
     error('simtest:StandalonePipelineActionInvalid', ...
-        'Action must be EXECUTE, PACKAGE, SUMMARY, or ALL.');
+        'Action must be PREPARE, EXECUTE, PACKAGE, SUMMARY, or ALL.');
 end
 saveTestResult = resolve_save_policy(action, p.Results.SaveTestResult);
 
@@ -42,6 +51,10 @@ st_log(cfg, 'INFO', ...
     action, char(string(p.Results.PipelineId)));
 try
     switch action
+        case 'PREPARE'
+            pipelineId = resolve_new_pipeline_id( ...
+                p.Results.PipelineId, outputRoot);
+            manifest = run_prepare(outputRoot, pipelineId, p.Results, cfg);
         case {'EXECUTE','ALL'}
             pipelineId = resolve_new_pipeline_id( ...
                 p.Results.PipelineId, outputRoot);
@@ -64,6 +77,7 @@ try
         case 'PACKAGE'
             [manifest, ~] = st_load_standalone_pipeline_manifest( ...
                 outputRoot, p.Results.PipelineId);
+            assert_executed_pipeline(manifest, action);
             manifest.Action = 'PACKAGE';
             manifest = invoke_package_action( ...
                 outputRoot, manifest, struct(), cfg);
@@ -74,6 +88,7 @@ try
         case 'SUMMARY'
             [manifest, ~] = st_load_standalone_pipeline_manifest( ...
                 outputRoot, p.Results.PipelineId);
+            assert_executed_pipeline(manifest, action);
             manifest.Action = 'SUMMARY';
             manifest = st_export_standalone_coverage_summary( ...
                 outputRoot, manifest);
@@ -165,7 +180,7 @@ end
 end
 
 function value = resolve_save_policy(action, requested)
-if ismember(action, {'PACKAGE','SUMMARY'})
+if ismember(action, {'PREPARE','PACKAGE','SUMMARY'})
     if ~isempty(requested)
         error('simtest:StandalonePipelineSaveResultNotAllowed', ...
             'SaveTestResult is valid only for EXECUTE and ALL.');
@@ -176,6 +191,121 @@ elseif isempty(requested)
 else
     value = logical(requested);
 end
+end
+
+function assert_executed_pipeline(manifest, action)
+%ASSERT_EXECUTED_PIPELINE PACKAGE/SUMMARY need EXECUTE evidence.
+% A PREPARE pipeline holds only a rewired Test File. Fail before touching
+% its manifest so the missing-evidence errors of the helpers never appear.
+if strcmpi(optional_field_text(manifest, 'Action'), 'PREPARE') || ...
+        ~isfield(manifest.Actions, 'EXECUTE')
+    error('simtest:StandalonePipelinePrepareOnly', ...
+        ['Pipeline %s was created by Action=PREPARE and holds only a ' ...
+         'rewired Test File. There is no execution evidence to %s. ' ...
+         'Run Action=EXECUTE or ALL to collect coverage.'], ...
+        char(string(manifest.PipelineId)), action);
+end
+end
+
+function manifest = run_prepare(outputRoot, pipelineId, options, cfg)
+%RUN_PREPARE Export standalone models and save the rewired Test File only.
+timerValue = tic;
+pipelineRoot = fullfile(outputRoot, pipelineId);
+mkdir(pipelineRoot);
+mkdir(fullfile(pipelineRoot, 'logs'));
+workRoot = fullfile(pipelineRoot, '.work');
+mkdir(workRoot);
+
+st_log(cfg, 'INFO', ...
+    'Standalone coverage PREPARE start | PipelineId=%s', pipelineId);
+targets = st_load_targets(cfg.OnlyEnabled);
+validate_pipeline_filter_policy(targets);
+assert_pipeline_source_unloaded(cfg, 'before standalone export');
+source = source_snapshot(cfg);
+manifest = initial_manifest(pipelineId, pipelineRoot, source, options, false);
+manifest.Action = 'PREPARE';
+manifest.Actions = struct( ...
+    'PREPARE', action_state('RUNNING', 'Standalone export started'));
+% Nothing here can be checked, packaged, or reopened as a submission, so a
+% PREPARE pipeline must never become LATEST for those commands.
+manifest.PublishLatest = false;
+st_write_standalone_pipeline_manifest(outputRoot, manifest);
+
+try
+    bundle = st_export_test_bundle( ...
+        'Destination', workRoot, ...
+        'Profile', 'REPRODUCIBLE', ...
+        'ExecutionModelMode', 'STANDALONE_HARNESS', ...
+        'CreateArchive', false, ...
+        'AnalyzeProducts', false, ...
+        'IncludeReferenceReport', false);
+    assert_pipeline_source_unloaded(cfg, 'before bundle runner');
+    manifest.BundleDirectory = bundle.BundleDirectory;
+    manifest.BundleManifest = bundle.Manifest;
+    manifest.Actions.PREPARE = action_state('RUNNING', ...
+        'Standalone bundle exported; rewiring copied Test File');
+    st_write_standalone_pipeline_manifest(outputRoot, manifest);
+
+    [execution, runtimeContext] = invoke_bundle_runner( ...
+        bundle.BundleDirectory, options, false, '', cfg, true);
+    assert_pipeline_source_unloaded(cfg, 'after bundle runner');
+    manifest.ExecutionDirectory = execution.ExecutionDirectory;
+    manifest.Workspace = execution.Workspace;
+    manifest.TestManagerWorkFile = execution.TestFile;
+    manifest.Targets = build_prepared_target_state( ...
+        bundle.Manifest, execution);
+    manifest.BundleSessionCleanup = execution.SessionCleanup;
+    manifest.RunnerEnvironmentCleanupStatus = ...
+        runtimeContext.RunnerEnvironmentCleanupStatus;
+    manifest = copy_prepared_test_file(manifest, pipelineRoot, cfg);
+    manifest.SourceAfter = assert_source_unchanged(cfg, source);
+    manifest.Actions.PREPARE = action_state('OK', ...
+        'Test Cases rewired to standalone models and Test File saved; nothing executed');
+    manifest.Status = pipeline_status(manifest);
+    manifest.UpdatedAt = timestamp_text();
+    st_write_standalone_pipeline_manifest(outputRoot, manifest);
+    st_log(cfg, 'INFO', ...
+        ['Standalone coverage PREPARE complete | PipelineId=%s | ' ...
+         'Targets=%d | TestFile=%s | elapsed=%.3f sec'], ...
+        pipelineId, numel(manifest.Targets), manifest.TestManagerFile, ...
+        toc(timerValue));
+    fprintf('\nStandalone Test File prepared (nothing executed)\n');
+    fprintf('Test File : %s\n', manifest.TestManagerFile);
+    fprintf('Models    : %s\n', ...
+        fullfile(manifest.Workspace, 'standalone'));
+catch ME
+    manifest.Actions.PREPARE = action_state('FAIL', ...
+        sprintf('%s: %s', ME.identifier, ME.message));
+    manifest.Status = 'FAIL';
+    manifest.UpdatedAt = timestamp_text();
+    st_write_standalone_pipeline_manifest(outputRoot, manifest);
+    st_log(cfg, 'ERROR', ...
+        'Standalone coverage PREPARE failed | %s: %s', ...
+        ME.identifier, ME.message);
+    rethrow(ME);
+end
+end
+
+function manifest = copy_prepared_test_file(manifest, pipelineRoot, cfg)
+%COPY_PREPARED_TEST_FILE Put the saved Test File where PACKAGE would.
+if ~isfile(manifest.TestManagerWorkFile)
+    error('simtest:StandalonePipelineTestFileMissing', ...
+        'Rewired working Test File is missing: %s', ...
+        char(string(manifest.TestManagerWorkFile)));
+end
+testManagerDirectory = fullfile(pipelineRoot, 'TestManager');
+if ~isfolder(testManagerDirectory), mkdir(testManagerDirectory); end
+[~, name, extension] = fileparts(manifest.TestManagerWorkFile);
+destination = fullfile(testManagerDirectory, [name extension]);
+[ok, message] = copyfile(manifest.TestManagerWorkFile, destination, 'f');
+if ~ok
+    error('simtest:StandalonePipelineTestFileCopyFailed', ...
+        'Cannot copy the rewired Test File to %s: %s', destination, message);
+end
+manifest.TestManagerFile = destination;
+manifest.TestManagerSHA256 = st_file_signature(destination).SHA256;
+st_log(cfg, 'INFO', ...
+    'PREPARE Test File copy complete | TestFile=%s', destination);
 end
 
 function [manifest, runtimeContext] = run_execute( ...
@@ -229,7 +359,8 @@ try
             'StandaloneCoverageResults.mldatx');
     end
     [execution, runtimeContext] = invoke_bundle_runner( ...
-        bundle.BundleDirectory, options, saveTestResult, resultPath, cfg);
+        bundle.BundleDirectory, options, saveTestResult, resultPath, ...
+        cfg, false);
     assert_pipeline_source_unloaded(cfg, 'after bundle runner');
     manifest.ExecutionDirectory = execution.ExecutionDirectory;
     manifest.Workspace = execution.Workspace;
@@ -285,7 +416,8 @@ end
 end
 
 function [execution, runtimeContext] = invoke_bundle_runner( ...
-        bundleDirectory, options, saveTestResult, resultPath, cfg)
+        bundleDirectory, options, saveTestResult, resultPath, cfg, ...
+        prepareOnly)
 previousDirectory = pwd;
 previousPath = path;
 cleanup = onCleanup(@() restore_runner_environment( ...
@@ -300,7 +432,8 @@ clear run_exported_tests;
     'CapturePackageEvidence', true, ...
     'SaveTestResult', saveTestResult, ...
     'ResultFile', resultPath, ...
-    'BuildCacheFolder', cfg.StandaloneBuildCacheDir);
+    'BuildCacheFolder', cfg.StandaloneBuildCacheDir, ...
+    'PrepareOnly', prepareOnly);
 clear run_exported_tests;
 clear cleanup;
 if ~strcmp(pwd, previousDirectory) || ~strcmp(path, previousPath)
@@ -344,41 +477,8 @@ for i = 1:n
             double(source.No), char(string(source.TestCaseName)));
     end
     row = reportTargets(match,:);
-    preparationMatch = find([execution.Preparation.No] == double(source.No));
-    if numel(preparationMatch) ~= 1
-        error('simtest:StandalonePipelinePreparationMappingFailed', ...
-            'Cannot map standalone preparation readback for No=%g.', ...
-            double(source.No));
-    end
-    preparation = execution.Preparation(preparationMatch);
-    item = empty_target_state();
-    item.Order = i;
-    item.No = double(source.No);
-    item.CUTName = char(string(source.CUTName));
-    item.CUTPath = char(string(source.CUTPath));
-    item.HarnessName = char(string(source.HarnessName));
-    item.TestCaseName = char(string(source.TestCaseName));
-    item.SourceExpectedUpdateMode = char(string(source.ExpectedUpdateMode));
-    item.ExpectedUpdateMode = 'OFF';
-    item.CoverageFilterMode = char(string(source.CoverageFilterMode));
-    item.CoverageBoundaryMode = char(string(source.CoverageBoundaryMode));
-    item.CoverageFilterAction = char(string(source.CoverageFilterAction));
-    item.CoverageFilterRationale = ...
-        char(string(source.CoverageFilterRationale));
-    item.StandaloneModel = char(string(source.StandaloneModel));
-    item.StandaloneCUTPath = char(string(source.StandaloneCUTPath));
-    item.StandaloneModelFile = bundle_work_path( ...
-        execution.Workspace, source.StandaloneModelFile);
-    item.SignalEditorInput = bundle_work_path( ...
-        execution.Workspace, source.SignalEditorInput);
-    item.AssessmentBlock = char(string(preparation.AssessmentBlock));
-    item.IterationSignature = char(string(preparation.IterationSignature));
-    item.SUTReadbackStatus = char(string(preparation.SUTReadbackStatus));
-    item.IterationIntegrityStatus = ...
-        char(string(preparation.IterationIntegrityStatus));
-    item.InputReadbackStatus = char(string(preparation.InputReadbackStatus));
-    item.AssessmentReadbackStatus = ...
-        char(string(preparation.AssessmentReadbackStatus));
+    preparation = find_preparation(execution.Preparation, source);
+    item = prepared_target_state(i, source, preparation, execution.Workspace);
     item.PerCutTargetDirectory = fileparts(char(row.TargetManifest));
     item.CVFPath = char(string(row.CVFPath));
     item.ExecutionCVFPath = item.CVFPath;
@@ -419,6 +519,66 @@ for i = 1:n
     end
     targets(i) = item;
 end
+end
+
+function targets = build_prepared_target_state(bundleManifestPath, execution)
+%BUILD_PREPARED_TARGET_STATE Target rows for a PREPARE pipeline.
+% Only the rewiring readback exists; every execution field keeps its
+% NOT_RUN default so the manifest cannot be mistaken for a run.
+bundleManifest = jsondecode(fileread(bundleManifestPath));
+n = numel(bundleManifest.Targets);
+targets = repmat(empty_target_state(), n, 1);
+for i = 1:n
+    source = bundleManifest.Targets(i);
+    preparation = find_preparation(execution.Preparation, source);
+    item = prepared_target_state(i, source, preparation, execution.Workspace);
+    item.ExecutionStatus = 'NOT_RUN';
+    item.Message = ...
+        'Test Case rewired to its standalone model; not executed (Action=PREPARE)';
+    targets(i) = item;
+end
+end
+
+function preparation = find_preparation(preparations, source)
+match = find([preparations.No] == double(source.No));
+if numel(match) ~= 1
+    error('simtest:StandalonePipelinePreparationMappingFailed', ...
+        'Cannot map standalone preparation readback for No=%g.', ...
+        double(source.No));
+end
+preparation = preparations(match);
+end
+
+function item = prepared_target_state(index, source, preparation, workspace)
+%PREPARED_TARGET_STATE Fields known once the Test Case is rewired.
+item = empty_target_state();
+item.Order = index;
+item.No = double(source.No);
+item.CUTName = char(string(source.CUTName));
+item.CUTPath = char(string(source.CUTPath));
+item.HarnessName = char(string(source.HarnessName));
+item.TestCaseName = char(string(source.TestCaseName));
+item.SourceExpectedUpdateMode = char(string(source.ExpectedUpdateMode));
+item.ExpectedUpdateMode = 'OFF';
+item.CoverageFilterMode = char(string(source.CoverageFilterMode));
+item.CoverageBoundaryMode = char(string(source.CoverageBoundaryMode));
+item.CoverageFilterAction = char(string(source.CoverageFilterAction));
+item.CoverageFilterRationale = ...
+    char(string(source.CoverageFilterRationale));
+item.StandaloneModel = char(string(source.StandaloneModel));
+item.StandaloneCUTPath = char(string(source.StandaloneCUTPath));
+item.StandaloneModelFile = bundle_work_path( ...
+    workspace, source.StandaloneModelFile);
+item.SignalEditorInput = bundle_work_path( ...
+    workspace, source.SignalEditorInput);
+item.AssessmentBlock = char(string(preparation.AssessmentBlock));
+item.IterationSignature = char(string(preparation.IterationSignature));
+item.SUTReadbackStatus = char(string(preparation.SUTReadbackStatus));
+item.IterationIntegrityStatus = ...
+    char(string(preparation.IterationIntegrityStatus));
+item.InputReadbackStatus = char(string(preparation.InputReadbackStatus));
+item.AssessmentReadbackStatus = ...
+    char(string(preparation.AssessmentReadbackStatus));
 end
 
 function value = bundle_work_path(workspace, bundlePath)
@@ -755,9 +915,10 @@ value = struct('Identifier', '', 'Message', '');
 end
 
 function manifest = record_active_action_failure(manifest, exception)
-names = {'SUMMARY','PACKAGE','EXECUTE'};
+names = {'SUMMARY','PACKAGE','EXECUTE','PREPARE'};
 for i = 1:numel(names)
     name = names{i};
+    if ~isfield(manifest.Actions, name), continue; end
     if strcmpi(manifest.Actions.(name).Status, 'RUNNING')
         manifest.Actions.(name) = action_state('FAIL', ...
             sprintf('%s: %s', exception.identifier, exception.message));

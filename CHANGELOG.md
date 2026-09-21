@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **standalone 파이프라인에 실행 없이 Test File만 만드는 `Action='PREPARE'`를
+  추가했습니다.** standalone 모델·Input·CVF가 이미 있고 그 모델들을 가리키는
+  Test Manager 파일만 새로 필요할 때, 지금까지는 `EXECUTE`로 전체 시뮬레이션을
+  다시 돌려야 했습니다. 재배선된 Test File은 번들 러너가 실행 직전에 만들어
+  실행 workspace에만 남겼기 때문입니다. `PREPARE`는 `EXECUTE`와 같은 export와
+  재배선을 거친 뒤 실행을 건너뛰고, 저장된 Test File을
+  `<PipelineId>/TestManager/<TopModel>.mldatx`로 복사해 `info.TestManagerFile`로
+  돌려줍니다.
+  - 번들 러너 `run_exported_tests`에 `PrepareOnly` 옵션이 생겼습니다.
+    STANDALONE_HARNESS 번들에서만 쓸 수 있고 `SaveTestResult`와 함께 쓸 수
+    없습니다.
+  - 실행 증거가 없으므로 같은 PipelineId의 `PACKAGE`/`SUMMARY`는
+    `StandalonePipelinePrepareOnly`로 멈추고, `latest.json`을 갱신하지 않아
+    `LATEST`가 되지 않습니다. `st_check_standalone_coverage`에 넘기면 `FAIL`입니다.
+  - `SaveTestResult`는 지정할 수 없습니다.
+
 - **standalone 제출물을 Test Manager에서 여는 `st_open_standalone_test_manager`를
   추가했습니다.** `open-results.md`의 수동 절차(manifest 읽기 → 대상 CUT 폴더 전부
   `addpath` → `sltest.testmanager.TestFile(TestManagerFile)` →
