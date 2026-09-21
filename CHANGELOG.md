@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **SLDV manifest에 행이 없을 때 어느 행과 어떻게 다른지, 어떻게 고치는지 알려 줍니다.**
+  `st_get_sldv_profile`은 지금까지 "No matching target row exists in the SLDV
+  manifest."만 냈습니다. 이제 `SldvManifestRowMissing` 오류가 대상 행(No, CUT,
+  Harness, Test Case, SldvMode)과 manifest 경로를 적고, 같은 No·CUT/Harness·Test Case를
+  가진 가장 가까운 manifest 행과 다른 필드를 최대 3개까지 나열합니다. 닮은 행이 없으면
+  "never prepared"(준비 당시 `Enabled=false`였던 행)로 표시하고 `st_prepare_sldv_targets`
+  재실행을 안내합니다.
+
 - **standalone 파이프라인에 실행 없이 Test File만 만드는 `Action='PREPARE'`를
   추가했습니다.** standalone 모델·Input·CVF가 이미 있고 그 모델들을 가리키는
   Test Manager 파일만 새로 필요할 때, 지금까지는 `EXECUTE`로 전체 시뮬레이션을

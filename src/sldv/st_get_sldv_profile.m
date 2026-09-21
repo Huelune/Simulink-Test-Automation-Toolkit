@@ -83,7 +83,18 @@ for i = 1:numel(profiles)
 end
 
 if ~matched
-    error('No matching target row exists in the SLDV manifest.');
+    target = struct( ...
+        'No', double(targetRow.No), ...
+        'CUTName', char(targetRow.CUTName), ...
+        'CUTPath', ownerPath, ...
+        'HarnessName', char(targetRow.HarnessName), ...
+        'TestCaseName', char(targetRow.TestCaseName), ...
+        'Mode', mode, ...
+        'DataFileFormat', dataFileFormat, ...
+        'MatVariableName', matVariableName, ...
+        'RequestedDataFile', char(targetRow.SldvDataFile));
+    error('simtest:SldvManifestRowMissing', '%s', ...
+        describe_missing_profile(target, profiles, cfg.SldvManifestFile));
 end
 profile = st_normalize_sldv_profile_schema(profile);
 % Older incremental runs could persist the reporting-only CACHED state in
@@ -109,6 +120,65 @@ if ismember(field, row.Properties.VariableNames)
         value = char(strtrim(candidate));
     end
 end
+end
+
+
+function text = describe_missing_profile(target, profiles, manifestFile)
+%DESCRIBE_MISSING_PROFILE Name the nearest manifest rows and how they differ.
+% A bare "no matching row" leaves the operator guessing whether the Excel
+% row was renamed, renumbered, switched mode, or simply never prepared
+% (for example it was Enabled=false when st_prepare_sldv_targets last ran).
+lines = {sprintf(['No matching target row exists in the SLDV manifest. ' ...
+    'Target: No=%g | CUT=%s | Harness=%s | TestCase=%s | SldvMode=%s'], ...
+    target.No, target.CUTName, target.HarnessName, ...
+    target.TestCaseName, target.Mode)};
+lines{end+1} = sprintf('Manifest: %s (%d rows)', ...
+    manifestFile, numel(profiles));
+compared = {'CUTName','CUTPath','HarnessName','TestCaseName','Mode'};
+if strcmp(target.Mode, 'FILE')
+    compared = [compared, ...
+        {'RequestedDataFile','DataFileFormat','MatVariableName'}];
+end
+shown = 0;
+for i = 1:numel(profiles)
+    candidate = profiles(i);
+    sameNo = double(candidate.No) == target.No;
+    sameHarness = strcmp(profile_text(candidate, 'CUTName', ''), ...
+        target.CUTName) && strcmp( ...
+        profile_text(candidate, 'HarnessName', ''), target.HarnessName);
+    sameCase = strcmp(profile_text(candidate, 'TestCaseName', ''), ...
+        target.TestCaseName);
+    if ~(sameNo || sameHarness || sameCase), continue; end
+    differences = {};
+    if ~sameNo
+        differences{end+1} = sprintf('No: manifest=%g, Excel=%g', ...
+            double(candidate.No), target.No); %#ok<AGROW>
+    end
+    for k = 1:numel(compared)
+        name = compared{k};
+        value = profile_text(candidate, name, '');
+        if ~strcmp(value, target.(name))
+            differences{end+1} = sprintf('%s: manifest=%s, Excel=%s', ...
+                name, value, target.(name)); %#ok<AGROW>
+        end
+    end
+    if isempty(differences)
+        differences = {'no compared field differs (manifest row malformed)'};
+    end
+    lines{end+1} = sprintf('  Closest manifest row %d: %s', ...
+        i, strjoin(differences, ' | ')); %#ok<AGROW>
+    shown = shown + 1;
+    if shown == 3, break; end
+end
+if shown == 0
+    lines{end+1} = ['  No manifest row shares this No, CUT/Harness, or ' ...
+        'Test Case: the row was never prepared (it was probably ' ...
+        'Enabled=false when the manifest was written).'];
+end
+lines{end+1} = ['Fix: run st_prepare_sldv_targets with this row enabled ' ...
+    '(or st_run_from_harness(''PreparationMode'',''FORCE'',' ...
+    '''FromStage'',''SLDV'')) so sldv_manifest.mat covers it, then retry.'];
+text = strjoin(lines, newline);
 end
 
 
