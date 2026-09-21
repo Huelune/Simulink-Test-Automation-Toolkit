@@ -237,6 +237,46 @@
 - README, `docs/README.md`, `docs/manual/README.md`, `getting-started.md`에서
   이 문서를 가장 먼저 가리키도록 했다.
 
+## 2026-09-18 최종 문서 추출
+
+- `st_export_final_document` 신설. 명세서 Excel, 결과 정리 산출물,
+  `CoverageSummary.xlsx`를 고객 양식 시트 2장 + 진단 시트 3장짜리 Excel 하나로
+  모은다. 읽기 전용이며 `.mldatx`를 열지 않는다.
+- 이미 만든 명세서 xlsx를 파싱하지 않는다. `st_collect_specification_rows`로
+  저장된 모델에서 다시 추출하고 판정과 커버리지만 결과 파일에서 읽는다.
+- **코드를 읽어 확인한 사실 세 가지.** 설계 초안이 틀렸던 부분이다.
+  1. PER_CUT `manifest.json`의 `Targets[].FinalReport`와 `InitialReport`는
+     기본값인 `PerCutResultCollection='DEFERRED'`에서 **항상 빈 문자열**이다.
+     `generateResultArtifacts=false`라 채우는 분기가 실행되지 않고
+     `st_collect_per_cut_results`도 run 수준 manifest를 다시 쓰지 않는다.
+     `TargetManifest`의 상위 폴더로 target 디렉터리를 찾고, 없으면
+     `st_per_cut_target_directory`로 다시 계산한다
+     (`st_check_per_cut_cvf.m:206-219`와 같은 방식).
+  2. PER_CUT target 워크북의 `Iterations` 시트는 자기 단계 행만 갖는다.
+     `initial/`에는 `INITIAL`만, `final/`에는 `FINAL`만 있다. BATCH 워크북만
+     두 단계를 모두 갖는다. PER_CUT run 수준 워크북에는 `Iterations` 시트가
+     아예 없다.
+  3. `tests/unit/test_export_test_specification.m`의 정적 스캔이 `6e78b0b`
+     이후 계속 실패하고 있었다. 사용법 탭의 문자열
+     `"st_run_from_harness('ExecutionMode','PER_CUT')"`를 금지 패턴
+     `\bst_run_\w*\s*\(`가 잡는다. 주석과 문자열을 지운 뒤 검사하도록 고쳤다
+     (`tests/fixtures/st_executable_source.m`).
+- 커버리지 `%`는 내장 `numFmtId="10"`과 함께 실제 Excel 수식으로 주입하고
+  **계산된 값도 함께 저장한다.** LibreOffice는 xlsx를 열 때 기본으로 재계산하지
+  않아 캐시값이 없으면 빈칸으로 보인다. 저장소에서 `numFmt`와 `<f>`를 쓰는 것은
+  이것이 처음이다.
+- 공용 helper 3개를 먼저 추출했다: `st_collect_specification_rows`,
+  `st_split_workbook_overflow`, `st_apply_workbook_wrap_styles`. 오류 식별자와
+  메시지는 그대로다. 의도한 동작 변화는 overflow WARN 줄의 머리말을
+  `Specification`에서 `Workbook`으로 바꾼 것 하나뿐이다.
+- **MATLAB R2025b 실행 검증은 미수행이다.** 이 PC에 MATLAB이 없어 MISS_HIT 구문
+  검사와 정적 대조까지만 했다. 확인해야 할 것:
+  `runtests('tests/unit/test_export_final_document.m')`와
+  `test_export_test_specification.m`, 실제 모델로 PER_CUT과 BATCH 양쪽,
+  `writecell`과 `writetable`을 섞은 워크북의 시트 순서,
+  `Pre Condition` 숫자 왕복, Excel과 LibreOffice에서 수식 표시와 복구 대화상자
+  미발생. 자세한 목록은 `docs/final-document.md` 11장에 있다.
+
 ## 변경 불가 핵심 결정
 
 CoverageFilterMode이 활성화된 CUT의 content rule은 CUT 자기 자신을 선택하면

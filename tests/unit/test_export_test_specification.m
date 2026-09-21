@@ -268,10 +268,17 @@ end
 
 function testExporterHasNoSimulationOrSourceMutationCalls(testCase)
 folder = fullfile(st_project_root(), 'src', 'exporting');
+originalPath = path;
+restorePath = onCleanup(@() path(originalPath)); %#ok<NASGU>
+addpath(fullfile(st_project_root(), 'tests', 'fixtures'));
 files = [dir(fullfile(folder, 'st_*specification*.m')); ...
-    dir(fullfile(folder, 'st_specification_*.m'))];
+    dir(fullfile(folder, 'st_specification_*.m')); ...
+    dir(fullfile(folder, 'st_*workbook*.m'))];
 for i = 1:numel(files)
-    source = fileread(fullfile(files(i).folder, files(i).name));
+    % A forbidden name spelled inside a comment or a documentation string
+    % is not a call, so scan the executable text only.
+    source = st_executable_source( ...
+        fileread(fullfile(files(i).folder, files(i).name)));
     forbidden = {'\bsim\s*\(', 'sltest\.testmanager\.run\s*\(', ...
         '\bsave_system\s*\(', '\bsaveToFile\s*\(', ...
         'sltest\.testsequence\.(activateScenario|editStep|addScenario)\s*\(', ...
@@ -280,6 +287,22 @@ for i = 1:numel(files)
         verifyEmpty(testCase, regexp(source, forbidden{j}, 'once'), files(i).name);
     end
 end
+end
+
+function testStaticScanIgnoresCommentsAndDocumentationStrings(testCase)
+originalPath = path;
+restorePath = onCleanup(@() path(originalPath)); %#ok<NASGU>
+addpath(fullfile(st_project_root(), 'tests', 'fixtures'));
+probe = [ ...
+    'function value = probe()' newline ...
+    '% st_run_from_harness(''ExecutionMode'',''PER_CUT'')' newline ...
+    'usage = "st_run_after_harness(''ExecutionMode'',''BATCH'')";' newline ...
+    'value = st_run_tests_per_cut();' newline ...
+    'end' newline];
+code = st_executable_source(probe);
+verifyEqual(testCase, numel(code), numel(probe));
+verifyEqual(testCase, regexp(code, '\bst_run_\w*\s*\(', 'match'), ...
+    {'st_run_tests_per_cut('});
 end
 
 function testDirtyModelRejectionDoesNotWarnOrCloseUserModel(testCase)

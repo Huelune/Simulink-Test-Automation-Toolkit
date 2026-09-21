@@ -125,6 +125,11 @@ st_run_from_harness('ExecuteTests', false);
 
 ```matlab
 cfg = st_config();
+% PER_CUT(기본): 실행 디렉터리 안의 원본을 엽니다
+latest = jsondecode(fileread(cfg.PerCutLatestPointer));
+winopen(latest.Summary)
+
+% BATCH: 복사본이 result/TestSummary.xlsx 로 갱신됩니다
 winopen(cfg.LatestSummaryFile)
 ```
 
