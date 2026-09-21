@@ -35,8 +35,13 @@ st_run_from_harness('AutoCollect', true)
 ```
 
 정리를 건너뛰어도 오류로 막지는 않습니다. 판정이 빈 칸이 되고 `TestResults`
-시트에 `NOT_COLLECTED` 또는 `NOT_REPORTED`와 부를 명령이 적힙니다. 빈 판정을
+시트의 모든 행에 `NOT_COLLECTED` 또는 `NOT_REPORTED`가 적힙니다. 빈 판정을
 아예 허용하지 않으려면 `RequireTestResults`를 켜십시오.
+
+> **정리한 뒤에 테스트를 또 돌리면 처음으로 돌아갑니다.**
+> `result/per_cut_latest.json`은 *실행*이 쓰고 수집은 쓰지 않습니다. 새로
+> 실행하면 포인터가 아직 정리되지 않은 새 실행을 가리키므로 판정이 다시 전부
+> 빈 칸이 됩니다. 실행할 때마다 정리도 같이 하시는 편이 안전합니다.
 
 커버리지 시트까지 채우려면 standalone 산출물도 있어야 합니다.
 

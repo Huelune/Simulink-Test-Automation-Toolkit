@@ -118,6 +118,33 @@ verifyTrue(testCase, contains(document.Results.('확인 사유')(1), ...
     "NO_MATCHING_TEST_RESULT"));
 end
 
+function testNothingCollectedNamesTheCauseOnEveryRow(testCase)
+% Reporting NO_MATCHING_TEST_RESULT on every row would bury the one thing
+% the reader has to act on.
+specification = sample_specification();
+outcomes = empty_outcomes();
+outcomes.Notes = table(1, "Controller", "NOT_COLLECTED", ...
+    "Run st_collect_per_cut_results to write this target workbook.", ...
+    'VariableNames', {'No','TestCaseName','Reason','Message'});
+document = st_final_document_table(base_config(), specification, ...
+    outcomes, empty_source());
+verifyEqual(testCase, document.Results.('확인 사유')(1), "NOT_COLLECTED");
+verifyFalse(testCase, contains(document.Results.('확인 사유')(1), ...
+    "NO_MATCHING_TEST_RESULT"));
+end
+
+function testAPartialCollectionStillReportsPerRowMatchFailures(testCase)
+% Some verdicts were read, so a row that does not match really is a match
+% failure and must not be relabelled as a missing collection.
+specification = sample_specification();
+outcomes = outcomes_with("SomeOtherCase", "Iteration 1", "Passed", "");
+outcomes.Notes = table(1, "Limiter", "NOT_COLLECTED", "...", ...
+    'VariableNames', {'No','TestCaseName','Reason','Message'});
+document = st_final_document_table(base_config(), specification, ...
+    outcomes, empty_source());
+verifyEqual(testCase, document.Results.('확인 사유')(1), "NO_MATCHING_TEST_RESULT");
+end
+
 function testIterationWithoutAUsableNameFallsBackToTheTestCase(testCase)
 specification = sample_specification();
 specification.("Iteration명")(1) = "<기본 설정>";

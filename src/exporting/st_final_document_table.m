@@ -149,10 +149,14 @@ location = repmat("", count, 1);
 reasons = repmat("", count, 1);
 needsReview = repmat("", count, 1);
 duplicate = duplicate_identifiers(identifier);
+blanket = blanket_reason(outcomes);
 
 for i = 1:count
     [verdict, resultSet, reason] = lookup_verdict(outcomes, ...
         testCaseName(i), iterationName(i));
+    if reason == "NO_MATCHING_TEST_RESULT" && strlength(blanket) > 0
+        reason = blanket;
+    end
     judgement(i) = verdict;
     location(i) = resultSet;
     reasons(i) = join_reasons(idReasons(i), reason);
@@ -185,6 +189,25 @@ results = table((2:count+1)', identifier, testCaseName, iterationName, ...
     judgement, needsReview, reasons, location, extractStatus, ...
     'VariableNames', {'RowNumber','Test Case ID','TestCaseName','Iteration명', ...
     '판정 결과','확인 필요','확인 사유','확인 위치','추출상태'});
+end
+
+
+function reason = blanket_reason(outcomes)
+% When not one verdict was read, every row failing to match is a symptom.
+% Reporting NO_MATCHING_TEST_RESULT on all of them buries the one thing
+% the reader has to act on, so name the cause the run source already found.
+reason = "";
+if height(outcomes.Iterations) > 0 || height(outcomes.Cases) > 0
+    return;
+end
+priority = ["NO_RESULT_RUN", "NOT_REPORTED", "NOT_COLLECTED", ...
+    "PER_CUT_EXCEL_NOT_WRITTEN", "RESULT_WORKBOOK_SHAPE_UNEXPECTED"];
+for i = 1:numel(priority)
+    if any(outcomes.Notes.Reason == priority(i))
+        reason = priority(i);
+        return;
+    end
+end
 end
 
 
