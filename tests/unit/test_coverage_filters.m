@@ -244,3 +244,38 @@ verifyNotEmpty(testCase, regexp(resolver, ...
     ['function files = resolve_filter_files\(values\)\s*\n\s*' ...
      'files = filter_string_column'], 'once'));
 end
+
+function testCoverageObjectPathFollowsTheStandaloneRename(testCase)
+% A standalone bundle renames the CUT, so coverage answers to the
+% standalone path there and to the ordinary CUT path everywhere else.
+row = table("TOP/Controller", "standalone_Controller/Controller", ...
+    'VariableNames', {'CUTPath','StandaloneCUTPath'});
+verifyEqual(testCase, st_coverage_object_path(row), ...
+    'standalone_Controller/Controller');
+end
+
+function testCoverageObjectPathFallsBackToTheCutPath(testCase)
+row = table("TOP/Controller", "", ...
+    'VariableNames', {'CUTPath','StandaloneCUTPath'});
+verifyEqual(testCase, st_coverage_object_path(row), 'TOP/Controller');
+row = table("TOP/Controller", 'VariableNames', {'CUTPath'});
+verifyEqual(testCase, st_coverage_object_path(row), 'TOP/Controller');
+end
+
+function testDecisionPointScanReturnsAnEmptyTableWithoutARoot(testCase)
+points = st_collect_decision_points([], '', []);
+verifyEqual(testCase, height(points), 0);
+verifyEqual(testCase, points.Properties.VariableNames, ...
+    {'BlockPath','BlockType','ObjectiveCount'});
+end
+
+function testDecisionPointScanSkipsAggregatingContainers(testCase)
+% decisioninfo on a Subsystem returns the total of everything inside it,
+% so keeping containers would report every ancestor as a decision block.
+source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
+    'st_collect_decision_points.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "is_container\(blockType\)", 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "'SubSystem', 'ModelReference'", 'once'));
+end

@@ -191,11 +191,14 @@ catch ME
         ME.identifier, ME.message);
 end
 
+decisionPoints = collect_decision_points(resultObj, targetConfig, logConfig);
+
 summaryPath = fullfile(outputDirectory, 'TestSummary.xlsx');
 stepTimer = report_step_start(6, 6, 'Write Test Summary Excel');
 try
     write_summary(summaryPath, resultName, ...
-        targets, iterations, coverage, artifacts, coverageReportMode);
+        targets, iterations, coverage, artifacts, coverageReportMode, ...
+        decisionPoints);
     artifacts = record_artifact(artifacts, 'EXCEL', summaryPath, ...
         'OK', 'Selected ResultSet workbook created');
     report_step_finish(6, 6, 'Write Test Summary Excel', ...
@@ -479,7 +482,7 @@ fprintf('[ResultReport %d/%d] %s | %d/%d\n', ...
 end
 
 function write_summary(path, resultName, targets, iterations, coverage, ...
-        artifacts, coverageReportMode)
+        artifacts, coverageReportMode, decisionPoints)
 if isfile(path), delete(path); end
 overview = { ...
     'Metric','Value'; ...
@@ -496,6 +499,7 @@ writecell(overview, path, 'Sheet', 'Overview');
 writetable(targets, path, 'Sheet', 'Targets');
 writetable(iterations, path, 'Sheet', 'Iterations');
 writetable(coverage, path, 'Sheet', 'Coverage');
+writetable(decisionPoints, path, 'Sheet', 'DecisionPoints');
 Key = ["ResultName";"MATLABRelease";"MATLABVersion"; ...
     "CoverageDetail";"CoverageReportMode"];
 Value = [string(resultName);string(version('-release'));string(version()); ...
@@ -588,4 +592,56 @@ T = table(strings(0,1), strings(0,1), zeros(0,1), strings(0,1), ...
     {'Run','Level','No','CUTName','TestCaseName','IterationName', ...
      'CoverageRoot','SourceCoverageRoot','Checksum','Metric','Covered', ...
      'Total','Justified','Percentage','PercentageText','Status','Message'});
+end
+
+
+function points = collect_decision_points(resultObj, targetConfig, logConfig)
+%COLLECT_DECISION_POINTS Ask coverage which blocks are decision points.
+% The static scan in the specification export infers this from saved block
+% parameters. This records what Simulink Coverage actually recognised in
+% this run, so the final document can describe the real decisions.
+%
+% The block set is a property of the model rather than of the run, so the
+% first coverage object that answers for this CUT is enough. Walking every
+% object would repeat the same scan and decisioninfo walks are the slowest
+% part of reporting.
+points = empty_decision_points();
+root = st_coverage_object_path(targetConfig);
+if isempty(root)
+    return;
+end
+objects = st_collect_result_coverage_objects(resultObj);
+for i = 1:numel(objects)
+    cvd = objects{i};
+    if ~answers_for_path(cvd, root)
+        continue;
+    end
+    found = st_collect_decision_points(cvd, root, logConfig);
+    if height(found) == 0
+        return;
+    end
+    count = height(found);
+    points = [table(repmat(string(targetConfig.CUTName), count, 1), ...
+        repmat(string(root), count, 1), 'VariableNames', {'CUTName','CUTPath'}), ...
+        found];
+    return;
+end
+st_log(logConfig, 'WARN', ...
+    'Decision point scan found no coverage object for the CUT | Path=%s', root);
+end
+
+
+function T = empty_decision_points()
+T = table(strings(0,1), strings(0,1), strings(0,1), strings(0,1), zeros(0,1), ...
+    'VariableNames', {'CUTName','CUTPath','BlockPath','BlockType','ObjectiveCount'});
+end
+
+
+function tf = answers_for_path(cvd, root)
+tf = false;
+try
+    tf = ~isempty(decisioninfo(cvd, root));
+catch
+    % A coverage object for a different model simply does not answer.
+end
 end
