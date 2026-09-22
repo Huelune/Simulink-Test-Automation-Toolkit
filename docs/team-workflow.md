@@ -470,6 +470,7 @@ winopen(finalFile)
 | 경로가 너무 길다 | `st_set_standalone_coverage_root('D:\st_out')` |
 | 재배치 스크립트가 종료 코드 `2` | 입력 폴더가 파이프라인 루트가 아니거나 출력 폴더가 이미 있습니다. `--overwrite` |
 | 명세서나 최종 문서가 `SpecificationUnsaved`로 저장하라고 한다 | 예전 결과 정리가 Harness를 미저장으로 남긴 경우입니다. 지금은 결과 정리가 자기가 올린 표시를 되돌리므로, 여전히 나오면 정말 손으로 고친 변경입니다. 열어 보고 저장하거나 닫기 |
+| 파이프라인이 `StandalonePipelineHarnessFileMissing`으로 멈춘다 | Harness가 외부 파일 저장으로 표시됐는데 `.slx`가 없습니다. 오류 메시지의 `sltest.harness.set(..., 'SaveExternally', false)`로 모델 안에 넣고 저장 |
 | `Metadata`의 `ResultRunId`가 옛 실행이다 | 1단계 뒤 결과 정리를 다시 하고 최종 문서를 다시 만듭니다 |
 
 오류 식별자별 대처는 [문제 해결](troubleshooting.md)에, 명령별 옵션은

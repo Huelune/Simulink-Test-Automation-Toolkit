@@ -256,6 +256,32 @@ Harness와 Input이 만들어지기 **전에** 실패한 경우에는 보존을 
 **대처:** 다시 만들려면 `st_run_from_stage`를 쓰십시오. 저장된 증거를 검증한 뒤
 **새 PipelineId**로 재생성합니다. [재시작](manual/restart.md)에 절차가 있습니다.
 
+### `StandalonePipelineHarnessFileMissing`
+
+**뜻:** `sltest.harness.find`가 그 Harness를 외부 파일 저장(`saveExternally`)으로
+보고했는데, 파일 경로가 비어 있거나 그 자리에 `.slx`가 없습니다. 파이프라인은
+원본 파일의 SHA-256을 전후 비교하므로 파일 없이는 진행하지 않습니다.
+
+**왜 생기는가:** 이 툴킷은 Harness를 모델 안에(`SaveExternally=false`) 만듭니다.
+손으로 만든 Harness가 외부 저장이거나, 외부 저장으로 바꾸고 저장하지 않았거나,
+`.slx`를 옮겼거나 지운 경우입니다. 모델 폴더에 `<Harness 이름>.slx`가 있으면
+파이프라인이 그 파일을 쓰고 WARN만 남깁니다.
+
+**대처:** 상태를 먼저 확인합니다.
+
+```matlab
+h = sltest.harness.find('<TopModel>');
+T = struct2table(h, 'AsArray', true);
+T(:, {'name', 'ownerFullPath', 'saveExternally', 'harnessFilePath'})
+```
+
+외부 파일이 필요 없으면 오류 메시지에 적힌 명령으로 모델 안에 넣고 저장합니다.
+
+```matlab
+sltest.harness.set('<owner 블록 경로>', '<Harness 이름>', 'SaveExternally', false);
+save_system('<TopModel>')
+```
+
 ### `.work` 폴더를 지웠는데 PACKAGE를 다시 만들고 싶다
 
 불가능합니다. PACKAGE 재생성은 실행 당시 캡처한 증거를 필요로 합니다. `EXECUTE`부터

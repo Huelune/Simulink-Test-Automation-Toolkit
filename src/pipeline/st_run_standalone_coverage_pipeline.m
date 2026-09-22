@@ -731,14 +731,7 @@ for i = 1:numel(items)
     external = isfield(items, 'saveExternally') && ...
         logical_value(items(i).saveExternally);
     if external
-        if ~isfield(items, 'harnessFilePath') || ...
-                isempty(char(string(items(i).harnessFilePath)))
-            error('simtest:StandalonePipelineHarnessFileMissing', ...
-                'External Harness file path is unavailable: %s', ...
-                inventory(i).Name);
-        end
-        path = st_resolve_data_file( ...
-            items(i).harnessFilePath, cfg.TopModel);
+        path = external_harness_file(items(i), cfg);
         signature = st_file_signature(path);
         inventory(i).Storage = 'EXTERNAL';
         inventory(i).Path = signature.Path;
@@ -752,6 +745,51 @@ end
 [~, order] = sort(string({inventory.Owner}) + "|" + ...
     string({inventory.Name}));
 inventory = inventory(order);
+end
+
+function path = external_harness_file(item, cfg)
+%EXTERNAL_HARNESS_FILE Locate the .slx of a harness stored outside the model.
+%
+% sltest.harness.find reports harnessFilePath for an external harness, but
+% leaves it empty when the file is not where the model expects it: the
+% harness was switched to external storage and never saved, the .slx was
+% moved or deleted, or the model folder changed. The one place worth
+% looking then is next to the model. Anything else would hash a file that
+% is not what the pipeline is about to export.
+name = char(string(item.name));
+owner = char(string(item.ownerFullPath));
+reported = '';
+if isfield(item, 'harnessFilePath')
+    reported = char(string(item.harnessFilePath));
+end
+if ~isempty(reported)
+    try
+        path = st_resolve_data_file(reported, cfg.TopModel);
+        if isfile(path), return; end
+    catch
+        % Not found anywhere st_resolve_data_file looks; try the fallback.
+    end
+end
+candidate = fullfile(fileparts(cfg.ModelFile), [name '.slx']);
+if isfile(candidate)
+    st_log(cfg, 'WARN', ...
+        ['External Harness file path was empty; using the file next to ' ...
+         'the model | Harness=%s | Path=%s'], name, candidate);
+    path = candidate;
+    return;
+end
+if isempty(reported)
+    detail = 'sltest.harness.find reports no harnessFilePath';
+else
+    detail = sprintf('the reported file does not exist: %s', reported);
+end
+error('simtest:StandalonePipelineHarnessFileMissing', ...
+    ['External Harness file path is unavailable: %s | Owner=%s | %s, ' ...
+     'and %s was not found. Either put the Harness .slx back where the ' ...
+     'model expects it, or store the Harness inside the model as this ' ...
+     'toolkit creates them: sltest.harness.set(''%s'', ''%s'', ' ...
+     '''SaveExternally'', false); save_system(''%s'')'], ...
+    name, owner, detail, candidate, owner, name, cfg.TopModel);
 end
 
 function inventory = input_inventory(cfg)

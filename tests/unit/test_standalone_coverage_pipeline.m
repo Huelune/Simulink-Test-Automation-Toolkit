@@ -79,6 +79,25 @@ verifyError(testCase, @() st_run_standalone_coverage_pipeline( ...
     'MATLAB:InputParser:ArgumentFailedValidation');
 end
 
+function testExternalHarnessWithoutPathFallsBackThenNamesTheFix(testCase)
+% sltest.harness.find can flag a harness external and still report no file.
+% The inventory then looks next to the model, and when nothing is there the
+% error carries the owner and the command that stores the harness inside
+% the model again, instead of a bare harness name.
+text = source('pipeline', 'st_run_standalone_coverage_pipeline.m');
+verifyTrue(testCase, contains(text, ...
+    'path = external_harness_file(items(i), cfg);'));
+verifyTrue(testCase, contains(text, ...
+    "candidate = fullfile(fileparts(cfg.ModelFile), [name '.slx']);"));
+verifyTrue(testCase, contains(text, ...
+    'simtest:StandalonePipelineHarnessFileMissing'));
+verifyTrue(testCase, contains(text, ...
+    "sltest.harness.set(''%s'', ''%s'', ' ..."));
+verifyTrue(testCase, contains(text, "'''SaveExternally'', false); save_system(''%s'')'"));
+% A file is only ever accepted when it exists; nothing is hashed blindly.
+verifyEqual(testCase, numel(strfind(text, 'if isfile(candidate)')), 1);
+end
+
 function testRemovedOptionsReturnMigrationErrorsBeforeRuntime(testCase)
 verifyError(testCase, @() st_run_standalone_coverage_pipeline( ...
     'RunMode', 'STEP234'), ...
