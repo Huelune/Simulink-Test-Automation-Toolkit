@@ -6,8 +6,14 @@
 
 ## 현재 기준
 
-- 기준일: 2026-09-15
-- 활성 개발 브랜치: feat/harness-workflow-v2
+- 기준일: 2026-09-22
+- 활성 개발 브랜치: develop (main에서 분기). feat/harness-workflow-v2는
+  2026-09-22에 54ae3ca에서 main으로 fast-forward 통합한 뒤 삭제했다.
+- main 통합 상태: 2026-09-15 R2025b 확인은 standalone export → EXECUTE →
+  PACKAGE → SUMMARY → checker 경로에 한정된다. PER_CUT 결과 정리
+  (`st_collect_per_cut_results`), 최종 문서 추출, `CloseSourceModel` 자동
+  저장·닫기 등 그 뒤에 들어온 기능은 **main에 있지만 실물 미검증**이다.
+  main에 있다는 것이 검증됐다는 뜻이 아니다.
 - Standalone Action 단순화 작업 시작 기준: 3e5ed63
 - 필수 기능 기준: feat/per-cut-filtered-execution의 7f0825e
 - 필수 handoff 기준: 2b3ba09 이후
@@ -303,19 +309,29 @@ f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사
 
 ## 활성 브랜치 지도
 
+2026-09-22 기준 원격에는 아래 두 브랜치만 있다.
+
 | 브랜치 | 기준 커밋 | 역할과 처리 방침 |
 | --- | --- | --- |
-| backup/harness-full-copy | b6d30a8 | 완전 복사/Import 구현 보존. 수정하지 않는다. |
-| feat/harness-content-import | b6d30a8 | 기존 Import 브랜치. clone 개발을 이어가지 않는다. |
-| feat/harness-template-clone | b6d30a8 기반 | Import만 선별 제거한 Template clone 개발. MATLAB 검증 전 통합하지 않는다. |
-| feat/harness-workflow-v2 | 53c7e410 기반 | 입력 시나리오, standalone 재실행, CUT 경계 필터 통합 개발. MATLAB 검증 전 main에 통합하지 않는다. |
-| main | 0a0ace5 | 파일 구조 정리까지만 반영된 안정 기준. R2025b 검증 전 기능을 임의 backport하지 않는다. |
-| feat/per-cut-filtered-execution | d109472 이후 | v2의 선행 Coverage 기준. 신규 v2 작업의 활성 브랜치는 아니다. |
+| main | 54ae3ca | Harness Workflow v2 전체가 fast-forward로 들어온 기준. 사용자의 MATLAB 클론은 이 브랜치를 `git pull`한다. 직접 커밋하지 않고 develop에서 ff 통합한다. |
+| develop | main에서 분기 | 이후 모든 개발의 활성 브랜치. 검증된 묶음 단위로 main에 fast-forward 통합한다. |
 
 ## 정리된 과거 브랜치
 
 다음 브랜치는 현재 활성 브랜치에 포함되었거나 필요한 변경을 선별 반영한 뒤
-2026-09-03에 로컬 또는 원격에서 정리했다. 동일 이름으로 작업을 재개하지 않는다.
+로컬과 원격에서 정리했다. 동일 이름으로 작업을 재개하지 않는다.
+
+2026-09-22 정리:
+
+| 과거 브랜치 | 마지막 기준 | 정리 근거 |
+| --- | --- | --- |
+| feat/harness-workflow-v2 | 54ae3ca | main으로 fast-forward 통합됨. 이후 작업은 develop |
+| feat/final-document | ec3e218 | v2에 병합되어 전부 포함됨 |
+| worktree-open-standalone-test-manager | 0575920 | 로컬 worktree 브랜치. v2에 전부 포함됨 |
+| feat/per-cut-collect-skip | 232b482 | `st_collect_per_cut_results`의 `OnlyPassed` 옵션 1커밋. **채택하지 않고 폐기**했다. 실패한 CUT의 보고서를 증거로 남기는 기본 동작을 유지한다 |
+| backup/harness-full-copy, feat/harness-content-import, feat/harness-template-clone, feat/per-cut-filtered-execution | b6d30a8 / d109472 | 이 표의 이전 판에 활성으로 적혀 있었으나 2026-09-22 기준 원격과 로컬에 이미 없다. 커밋 해시는 이력 참고용으로만 남긴다 |
+
+2026-09-03 정리:
 
 | 과거 브랜치 | 마지막 기준 | 정리 근거 |
 | --- | --- | --- |
@@ -328,8 +344,8 @@ f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사
 | feat/reproducible-test-bundle-export | 0812582 | 현재 활성 브랜치에 포함됨 |
 | handoff/r2025b-cross-machine | 96926cf | 현재 handoff 문서와 활성 브랜치가 대체함 |
 
-과거 커밋 해시는 추적 근거로만 유지한다. Harness Workflow v2 후속 수정은
-main이나 과거 Coverage 브랜치가 아니라 `feat/harness-workflow-v2`에서 이어간다.
+과거 커밋 해시는 추적 근거로만 유지한다. 후속 수정은 `develop`에서 이어가고,
+main에는 fast-forward로만 통합한다.
 
 ## 실제 시스템 CVF 점검
 
@@ -441,7 +457,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 ## 다른 Codex의 시작 절차
 
 1. git fetch --prune origin을 실행한다.
-2. 원격 feat/harness-workflow-v2의 최신 커밋을 확인한다.
+2. 원격 develop의 최신 커밋을 확인한다. main은 develop을 ff 통합한 결과다.
 3. 작업 트리가 깨끗할 때만 fast-forward한다.
 4. 이 문서의 브랜치 지도와 변경 불가 핵심 결정을 읽는다.
 5. st_setup 후 st_check_actual_system을 실행한다. E6이 주요 st 함수 중복을
