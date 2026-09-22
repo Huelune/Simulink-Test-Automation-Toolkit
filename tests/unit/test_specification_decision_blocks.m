@@ -667,9 +667,15 @@ function testStaticScanCrossesMaskAndLinkBoundaries(testCase)
 source = fileread(fullfile(st_project_root(), 'src', 'exporting', ...
     'st_specification_decision_blocks.m'));
 verifyNotEmpty(testCase, regexp(source, ...
-    "args = \[args, \{'LookUnderMasks', 'all'\}\];", 'once'));
+    "options = \[options, \{'LookUnderMasks', 'all'\}\];", 'once'));
 verifyNotEmpty(testCase, regexp(source, ...
-    "args = \[args, \{'FollowLinks', 'on'\}\];", 'once'));
+    "options = \[options, \{'FollowLinks', 'on'\}\];", 'once'));
+% The options must go in front. find_system reads anything after the first
+% search constraint as another block parameter to match, and no block has a
+% LookUnderMasks parameter, so appending them returns nothing at all.
+verifyNotEmpty(testCase, regexp(source, ...
+    "args = \[options, args\];", 'once'));
+verifyEmpty(testCase, regexp(source, "args = \[args, \{", 'once'));
 % A caller that already set one keeps its own value.
 verifyNotEmpty(testCase, regexp(source, ...
     "if ~any\(strcmp\(args, 'LookUnderMasks'\)\)", 'once'));

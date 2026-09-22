@@ -193,12 +193,19 @@ function args = with_link_options(args)
 % A CUT can be masked, or can sit inside a library link. find_system stops
 % at either boundary by default and then reports no children at all, which
 % is how a linked CUT once came to look as though it had no ports. The
-% conditional subsystem scan and the coverage side already pass these, so
-% this is also what makes the three scans agree.
+% conditional CUT scan and the coverage side already pass these, so this is
+% also what makes the three scans agree.
+%
+% The options go in front. find_system wants its search options before the
+% search constraints, and reads anything after the first constraint as
+% another block parameter to match. No block has a LookUnderMasks
+% parameter, so appending them instead returns nothing at all.
+options = {};
 if ~any(strcmp(args, 'LookUnderMasks'))
-    args = [args, {'LookUnderMasks', 'all'}];
+    options = [options, {'LookUnderMasks', 'all'}];
 end
 if ~any(strcmp(args, 'FollowLinks'))
-    args = [args, {'FollowLinks', 'on'}];
+    options = [options, {'FollowLinks', 'on'}];
 end
+args = [options, args];
 end
