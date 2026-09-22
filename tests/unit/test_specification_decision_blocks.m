@@ -631,3 +631,25 @@ verifyNotEmpty(testCase, regexp(source, "paths\{end\+1,1\} = child;", 'once'));
 % find_system reports the root itself when the root is a Subsystem.
 verifyNotEmpty(testCase, regexp(source, 'if strcmp\(child, root\)', 'once'));
 end
+
+function testConditionalScanTestsTheCutItselfNotOnlyItsChildren(testCase)
+% A CUT can be an Enabled Subsystem itself. Skipping the root, as an
+% earlier version did, lost that enable entirely: it is not on a child, so
+% nothing else would ever report it.
+source = fileread(fullfile(st_project_root(), 'src', 'exporting', ...
+    'st_conditional_subsystems.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'candidates = \[\{root\}; children\(:\)\];', 'once'));
+verifyEmpty(testCase, regexp(source, 'if strcmp\(child, root\)', 'once'));
+% find_system also reports the root, so the list is de-duplicated.
+verifyNotEmpty(testCase, regexp(source, 'any\(seen == string\(candidate\)\)', 'once'));
+end
+
+function testPortBlocksAreNotRecordedOnTheirOwn(testCase)
+% The port is a direct child of the subsystem that owns it, so a depth 1
+% walk sees both. Recording both would list the same branch twice.
+source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
+    'st_collect_decision_points.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "if any\(strcmp\(blockType, \{'EnablePort', 'TriggerPort'\}\)\)", 'once'));
+end

@@ -98,6 +98,12 @@ function [blockType, objectPath] = classify_block(blockPath)
 % coverage about, or an empty type when the block is not a decision at all.
 objectPath = blockPath;
 blockType = read_block_type(blockPath);
+% A port block is reported through the subsystem that owns it, so seeing
+% it on its own would record the same branch twice.
+if any(strcmp(blockType, {'EnablePort', 'TriggerPort'}))
+    blockType = '';
+    return;
+end
 if ~any(strcmp(blockType, {'SubSystem', 'ModelReference', ''}))
     return;
 end
