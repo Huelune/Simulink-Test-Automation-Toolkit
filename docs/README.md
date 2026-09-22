@@ -20,10 +20,11 @@ st_run_standalone_coverage_pipeline( ...
 
 | 순서 | 문서 | 내용 |
 | --- | --- | --- |
-| 1 | [처음 시작하기](getting-started.md) | 설치부터 제출물까지 전체 흐름. MATLAB을 모른다는 전제로 씁니다 |
-| 2 | [용어집](glossary.md) | CUT, Harness, Assessment, CVF, SLDV가 각각 무엇인지 |
-| 3 | [관리 Excel 열 사전](workbook-reference.md) | Excel에 무엇을 적어야 하는지 |
-| 4 | [수동 실행 안내](manual/README.md) | 복사해서 바로 쓸 코드 |
+| 1 | [팀 작업 절차](team-workflow.md) | Harness 생성부터 최종 문서까지 단계별 순서와 완료 확인 방법 |
+| 2 | [처음 시작하기](getting-started.md) | 설치부터 제출물까지 전체 흐름. MATLAB을 모른다는 전제로 씁니다 |
+| 3 | [용어집](glossary.md) | CUT, Harness, Assessment, CVF, SLDV가 각각 무엇인지 |
+| 4 | [관리 Excel 열 사전](workbook-reference.md) | Excel에 무엇을 적어야 하는지 |
+| 5 | [수동 실행 안내](manual/README.md) | 복사해서 바로 쓸 코드 |
 
 ## 파라미터를 찾을 때
 
