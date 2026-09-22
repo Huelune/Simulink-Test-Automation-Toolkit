@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **standalone 파이프라인이 원본 Top Model을 스스로 저장하고 닫습니다.**
+  지금까지는 Top Model이나 Harness가 열려 있으면
+  `StandaloneModelStillLoadedBeforeRun`으로 멈춰 사용자가 손으로 저장하고
+  닫아야 했습니다. 새 옵션 `CloseSourceModel`(기본 `true`)이 미저장 변경을
+  저장하고, 열린 Harness 창과 Top Model을 닫고, 원본 Test File이 Test Manager에
+  미저장으로 열려 있으면 그것도 저장한 뒤 export로 넘어갑니다.
+  - 변경을 **폐기하지는 않습니다.** 저장에 실패하면
+    `StandalonePipelineSourceSaveFailed`로 멈춥니다.
+  - 저장과 닫기는 원본 snapshot을 뜨기 전에 끝나므로 불변 검사(B9)의 기준은
+    저장된 파일입니다.
+  - `'CloseSourceModel', false`를 주면 예전처럼 열려 있을 때 중단합니다.
+  - R2025b 실물 확인이 남아 있습니다.
+
 - **Excel `SldvTestCases` 열로 SLDV TestCase를 번호로 고릅니다.** 지금까지
   `GENERATE`와 `FILE`+`SLDV`는 `sldvData.TestCases`를 전부 Scenario로 만들었고,
   일부만 쓰려면 MAT를 손으로 잘라야 했습니다. 이제 `1,3,5`나 `2-4`처럼 적으면

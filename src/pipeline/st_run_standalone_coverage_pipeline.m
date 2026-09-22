@@ -13,6 +13,12 @@ function info = st_run_standalone_coverage_pipeline(varargin)
 %   summary: PACKAGE and SUMMARY refuse a PREPARE pipeline, it never becomes
 %   LATEST, and st_check_standalone_coverage reports it as FAIL. Use it when
 %   only a Test Manager file that points at the standalone models is needed.
+%
+%   'CloseSourceModel' (default true) saves and closes the source Top Model
+%   (with its open harnesses) and saves the source Test File before the
+%   export, because the exported bundle loads its own copy under the same
+%   model name. With false the pipeline keeps the older contract: a loaded
+%   source model stops it with StandaloneModelStillLoadedBeforeRun.
 
 p = inputParser;
 p.FunctionName = mfilename;
@@ -24,6 +30,8 @@ addParameter(p, 'SaveTestResult', [], ...
 addParameter(p, 'ContinueOnFailure', true, ...
     @(x) islogical(x) && isscalar(x));
 addParameter(p, 'FailOnNonPass', false, ...
+    @(x) islogical(x) && isscalar(x));
+addParameter(p, 'CloseSourceModel', true, ...
     @(x) islogical(x) && isscalar(x));
 % Parse removed options only to return an actionable migration error.
 addParameter(p, 'RunMode', '', @(x) ischar(x) || isstring(x));
@@ -220,6 +228,7 @@ st_log(cfg, 'INFO', ...
     'Standalone coverage PREPARE start | PipelineId=%s', pipelineId);
 targets = st_load_targets(cfg.OnlyEnabled);
 validate_pipeline_filter_policy(targets);
+release_source_model(cfg, options);
 assert_pipeline_source_unloaded(cfg, 'before standalone export');
 source = source_snapshot(cfg);
 manifest = initial_manifest(pipelineId, pipelineRoot, source, options, false);
@@ -327,6 +336,7 @@ if ~strcmp(st_coverage_filter_existing_policy( ...
         ['The pipeline must collect coverage without inherited filters. ' ...
          'Set cfg.CoverageFilterExistingPolicy to REPLACE.']);
 end
+release_source_model(cfg, options);
 assert_pipeline_source_unloaded(cfg, 'before standalone export');
 source = source_snapshot(cfg);
 manifest = initial_manifest( ...
@@ -971,6 +981,86 @@ if ~strcmp(id, st_export_safe_name(id)) || isfolder(fullfile(outputRoot, id))
 end
 end
 
+function release_source_model(cfg, options)
+%RELEASE_SOURCE_MODEL Save and close the source model and Test File.
+% The exported bundle loads its own copy under the same model name, so the
+% source Top Model must be unloaded before the export. With
+% CloseSourceModel=true the pipeline does that itself: unsaved changes are
+% saved (never discarded), open harnesses are closed, then the model.
+% Everything happens before source_snapshot so the saved files are what
+% the unchanged-source checks compare against. With false the caller keeps
+% the model, and assert_pipeline_source_unloaded stops the pipeline.
+if ~logical(options.CloseSourceModel), return; end
+save_dirty_test_file(cfg);
+if ~bdIsLoaded(cfg.TopModel), return; end
+model = cfg.TopModel;
+if strcmp(get_param(model, 'Dirty'), 'on')
+    st_log(cfg, 'INFO', ...
+        'Saving source model before standalone export | Model=%s', model);
+    try
+        save_system(model);
+    catch saveError
+        error('simtest:StandalonePipelineSourceSaveFailed', ...
+            ['Cannot save %s before the standalone export: %s. ' ...
+             'Save or discard its changes, then run the pipeline again.'], ...
+            model, saveError.message);
+    end
+end
+close_open_harnesses(cfg, model);
+st_log(cfg, 'INFO', ...
+    'Closing source model before standalone export | Model=%s', model);
+close_system(model, 0);
+end
+
+function close_open_harnesses(cfg, model)
+%CLOSE_OPEN_HARNESSES Close harness windows so the owner model can close.
+% Internal harnesses were saved with the model just before; an open
+% harness window would otherwise keep the model loaded.
+try
+    harnesses = sltest.harness.find(model);
+catch
+    return;
+end
+for i = 1:numel(harnesses)
+    if ~isfield(harnesses(i), 'isOpen') || ~logical(harnesses(i).isOpen)
+        continue;
+    end
+    try
+        sltest.harness.close(harnesses(i).ownerFullPath, harnesses(i).name);
+        st_log(cfg, 'INFO', ...
+            'Closed open harness before standalone export | Harness=%s', ...
+            harnesses(i).name);
+    catch closeError
+        st_log(cfg, 'WARN', ...
+            'Could not close harness %s: %s', harnesses(i).name, ...
+            closeError.message);
+    end
+end
+end
+
+function save_dirty_test_file(cfg)
+%SAVE_DIRTY_TEST_FILE Save the source Test File if it is open and dirty.
+% A Test File that is not open in Test Manager has nothing unsaved.
+try
+    openFiles = sltest.testmanager.getTestFiles;
+catch
+    return;
+end
+for i = 1:numel(openFiles)
+    try
+        if ~same_file_path(openFiles(i).FilePath, cfg.TestFile), continue; end
+        if isprop(openFiles(i), 'Dirty') && logical(openFiles(i).Dirty)
+            st_log(cfg, 'INFO', ...
+                'Saving source Test File before standalone export | File=%s', ...
+                cfg.TestFile);
+            saveToFile(openFiles(i));
+        end
+        return;
+    catch
+    end
+end
+end
+
 function assert_pipeline_source_unloaded(cfg, context)
 if ~bdIsLoaded(cfg.TopModel), return; end
 dirtyText = '';
@@ -979,7 +1069,8 @@ if strcmp(get_param(cfg.TopModel, 'Dirty'), 'on')
 end
 error('simtest:StandaloneModelStillLoadedBeforeRun', ...
     ['%s must be unloaded %s because the exported bundle loads its own ' ...
-     'copy under the same model name.%s'], ...
+     'copy under the same model name.%s Leave CloseSourceModel at true ' ...
+     'to let the pipeline save and close it.'], ...
     cfg.TopModel, context, dirtyText);
 end
 

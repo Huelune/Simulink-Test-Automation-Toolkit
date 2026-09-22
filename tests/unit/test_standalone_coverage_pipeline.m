@@ -48,6 +48,37 @@ verifyTrue(testCase, contains(text, ...
     'Contract=CAPTURED_EVIDENCE_V1'));
 end
 
+function testCloseSourceModelSavesThenClosesBeforeSnapshot(testCase)
+% The source model is saved (never discarded) and closed before the export,
+% and before source_snapshot so the saved file is the compared baseline.
+text = source('pipeline', 'st_run_standalone_coverage_pipeline.m');
+verifyTrue(testCase, contains(text, ...
+    "addParameter(p, 'CloseSourceModel', true"));
+releaseAt = strfind(text, 'release_source_model(cfg, options);');
+assertAt = strfind(text, ...
+    "assert_pipeline_source_unloaded(cfg, 'before standalone export');");
+snapshotAt = strfind(text, 'source = source_snapshot(cfg);');
+verifyEqual(testCase, numel(releaseAt), 2);
+verifyEqual(testCase, numel(assertAt), 2);
+verifyEqual(testCase, numel(snapshotAt), 2);
+for i = 1:2
+    verifyLessThan(testCase, releaseAt(i), assertAt(i));
+    verifyLessThan(testCase, assertAt(i), snapshotAt(i));
+end
+verifyTrue(testCase, contains(text, ...
+    'if ~logical(options.CloseSourceModel), return; end'));
+verifyTrue(testCase, contains(text, 'save_system(model);'));
+verifyTrue(testCase, contains(text, 'close_system(model, 0);'));
+verifyTrue(testCase, contains(text, 'saveToFile(openFiles(i));'));
+verifyTrue(testCase, contains(text, ...
+    'simtest:StandalonePipelineSourceSaveFailed'));
+% Discarding the user's changes is never an option.
+verifyFalse(testCase, contains(text, "'Dirty', 'off'"));
+verifyError(testCase, @() st_run_standalone_coverage_pipeline( ...
+    'CloseSourceModel', 'yes'), ...
+    'MATLAB:InputParser:ArgumentFailedValidation');
+end
+
 function testRemovedOptionsReturnMigrationErrorsBeforeRuntime(testCase)
 verifyError(testCase, @() st_run_standalone_coverage_pipeline( ...
     'RunMode', 'STEP234'), ...

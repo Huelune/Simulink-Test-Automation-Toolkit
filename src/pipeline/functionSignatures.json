@@ -11,6 +11,7 @@
       {"name":"SaveTestResult", "kind":"namevalue", "type":["logical","scalar"], "purpose":"true면 Result를 저장해 PACKAGE 재개 가능"},
       {"name":"ContinueOnFailure", "kind":"namevalue", "type":["logical","scalar"], "purpose":"대상 실패 시 다음 대상 계속"},
       {"name":"FailOnNonPass", "kind":"namevalue", "type":["logical","scalar"], "purpose":"PASS가 아니면 오류로 종료"},
+      {"name":"CloseSourceModel", "kind":"namevalue", "type":["logical","scalar"], "purpose":"true(기본)면 원본 Top Model을 저장하고 닫은 뒤 진행. false면 열려 있을 때 중단"},
       {"name":"PreparationMode", "kind":"namevalue", "type":["choices={'AUTO','FORCE'}"], "purpose":"준비 단계 재사용 정책"},
       {"name":"FromStage", "kind":"namevalue", "type":["choices={'EXECUTE','PACKAGE','SUMMARY'}"], "purpose":"이 단계부터 실행"},
       {"name":"ReportMode", "kind":"namevalue", "type":["choices={'SUMMARY','FULL'}"], "purpose":"보고서 상세도"}
