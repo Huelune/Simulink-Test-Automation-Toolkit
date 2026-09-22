@@ -50,6 +50,32 @@ verifyNotEmpty(testCase, regexp(source, ...
     'No PER_CUT run to collect. Run the tests first', 'once'));
 end
 
+function testCollectRestoresTheCleanStateOfModelsItDidNotOpen(testCase)
+% Coverage access marks loaded models Dirty without changing what is saved.
+% Models the collector found loaded and clean get that flag cleared, models
+% it opened are closed without saving, and a model that was already Dirty
+% is never touched: the flag is only ever cleared, never a save.
+source = fileread(fullfile(st_project_root(), 'src', 'execution', ...
+    'st_collect_per_cut_results.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "openedModels\('clean'\) = strings\(0,1\);", 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "strcmp\(get_param\(model, 'Dirty'\), 'off'\)", 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "set_param\(name, 'Dirty', 'off'\);", 'once'));
+verifyNotEmpty(testCase, regexp(source, 'close_system\(name, 0\);', 'once'));
+verifyEmpty(testCase, regexp(source, 'save_system', 'once'));
+verifyEmpty(testCase, regexp(source, 'close_system\(name, 1\)', 'once'));
+
+report = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
+    'st_generate_test_report.m'));
+verifyNotEmpty(testCase, regexp(report, ...
+    "set_param\(name, 'Dirty', 'off'\);", 'once'));
+verifyNotEmpty(testCase, regexp(report, ...
+    "struct\('Loaded', flipud\(loaded\(:\)\), 'Clean', clean\(:\)\)", 'once'));
+verifyEmpty(testCase, regexp(report, 'save_system', 'once'));
+end
+
 function testDiagnosticAcceptsTheDeferredLifecycle(testCase)
 % Apply and restore are about filtering a live model. A deferred run does
 % neither, so NOT_REQUIRED must not read as a failure.

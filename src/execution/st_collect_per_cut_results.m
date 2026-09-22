@@ -42,11 +42,13 @@ fprintf('Directory : %s\n', runDirectory);
 fprintf('============================================\n');
 
 % The standalone pipeline refuses to run while the Top Model is loaded, so
-% leave the session as this command found it.
-% A handle container, because onCleanup captures its arguments by value and
-% the list only fills as the loop runs.
+% leave the session as this command found it: close what this command
+% opened, and clear the Dirty flag Simulink Coverage raises on models that
+% were already loaded and clean. A handle container, because onCleanup
+% captures its arguments by value and the lists only fill as the loop runs.
 openedModels = containers.Map();
 openedModels('names') = strings(0,1);
+openedModels('clean') = strings(0,1);
 modelCleanup = onCleanup(@() close_opened_models(openedModels, cfg)); %#ok<NASGU>
 Collected = strings(height(targets),1);
 Message = strings(height(targets),1);
@@ -73,8 +75,9 @@ for i = 1:height(targets)
     % A ResultSet read back from a file carries block paths, not handles.
     % Simulink Coverage rebuilds that map on first access, and with the
     % models unloaded the walk does not finish in any useful time.
-    openedModels('names') = [openedModels('names'); ...
-        load_models_for_coverage(row, cfg)];
+    [opened, clean] = load_models_for_coverage(row, cfg, openedModels);
+    openedModels('names') = [openedModels('names'); opened];
+    openedModels('clean') = [openedModels('clean'); clean];
     filterPath = "";
     ruleCount = 0;
     if st_coverage_filter_active(row)
@@ -155,15 +158,26 @@ end
 end
 
 
-function opened = load_models_for_coverage(row, cfg)
+function [opened, clean] = load_models_for_coverage(row, cfg, openedModels)
 %LOAD_MODELS_FOR_COVERAGE Open what the saved coverage data points at.
+%
+% A model that is already loaded is left alone, but its Dirty state is
+% remembered so the cleanup can tell a flag this command raised from a
+% change the operator has not saved yet.
 opened = strings(0,1);
-if ~bdIsLoaded(cfg.TopModel)
+clean = strings(0,1);
+if bdIsLoaded(cfg.TopModel)
+    clean = [clean; clean_if_untracked(cfg.TopModel, openedModels)];
+else
     load_system(cfg.ModelFile);
     opened(end+1,1) = string(cfg.TopModel);
 end
 harness = char(string(row.HarnessName));
-if isempty(harness) || bdIsLoaded(harness)
+if isempty(harness)
+    return;
+end
+if bdIsLoaded(harness)
+    clean = [clean; clean_if_untracked(harness, openedModels)];
     return;
 end
 owner = st_normalize_cut_path(row.CUTPath, cfg.TopModel);
@@ -172,11 +186,30 @@ opened(end+1,1) = string(harness);
 end
 
 
+function clean = clean_if_untracked(model, openedModels)
+%CLEAN_IF_UNTRACKED Name the model if it is clean and not yet on either list.
+clean = strings(0,1);
+tracked = [openedModels('names'); openedModels('clean')];
+if any(tracked == string(model))
+    return;
+end
+if strcmp(get_param(model, 'Dirty'), 'off')
+    clean = string(model);
+end
+end
+
+
 function close_opened_models(openedModels, cfg)
 %CLOSE_OPENED_MODELS Leave the session as this command found it.
 %
 % Harnesses close before their owner, and always without saving: collecting
-% results must never write a model back.
+% results must never write a model back. Attaching a coverage filter and
+% reading coverage marks the models it touches as Dirty without changing
+% what is saved. A model that was loaded and clean when this command
+% started gets that flag cleared again, so the exporters that refuse
+% unsaved models (test specification, final document, standalone pipeline)
+% do not stop on a change nobody made. A model that was already Dirty is
+% left as it was: that change belongs to the operator.
 names = openedModels('names');
 for i = numel(names):-1:1
     name = char(names(i));
@@ -186,6 +219,21 @@ for i = numel(names):-1:1
         end
     catch ME
         st_log(cfg, 'WARN', 'Could not close %s | %s', name, ME.message);
+    end
+end
+clean = openedModels('clean');
+for i = 1:numel(clean)
+    name = char(clean(i));
+    try
+        if bdIsLoaded(name) && strcmp(get_param(name, 'Dirty'), 'on')
+            set_param(name, 'Dirty', 'off');
+            st_log(cfg, 'INFO', ...
+                ['Cleared the Dirty flag raised while collecting | ' ...
+                 'Model=%s | nothing was saved'], name);
+        end
+    catch ME
+        st_log(cfg, 'WARN', ...
+            'Could not clear the Dirty flag of %s | %s', name, ME.message);
     end
 end
 end

@@ -289,9 +289,17 @@ st_set_standalone_coverage_root('D:\st_out')
 
 ### `SpecificationUnsaved`
 
-**뜻:** 모델·Harness·Test File 중 저장되지 않은 것이 있습니다.
+**뜻:** 모델·Harness·Test File 중 저장되지 않은 것이 있습니다. 메시지에 어느
+것인지 적혀 있습니다.
 
-**대처:** 전부 저장하고 실행 중인 모델을 멈춘 뒤 다시 실행하십시오.
+**왜 생기는가:** 결과 정리(`st_collect_per_cut_results`,
+`st_generate_test_report`)가 커버리지를 읽는 동안 Simulink Coverage가 열려 있는
+Harness를 Dirty로 표시하는데, 이전에는 아무도 되돌리지 않았습니다. 지금은 결과
+정리가 시작 시 깨끗했던 모델의 표시를 끝날 때 내리므로, 이 오류가 나면 실제로
+손으로 고친 변경이 있는 경우입니다.
+
+**대처:** 그 모델을 열어 변경을 확인하고 저장하거나 저장하지 않고 닫은 뒤, 실행
+중인 모델을 멈추고 다시 실행하십시오.
 
 ### `SpecificationSourceChanged`
 

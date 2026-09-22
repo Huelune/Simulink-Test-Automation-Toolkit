@@ -38,7 +38,8 @@ step('Loading the models the coverage data refers to');
     artifacts, targetConfig, cfg);
 % The standalone pipeline refuses to run while the Top Model is loaded,
 % because its bundle opens a copy under the same name. Leaving these open
-% would make a report block the next command.
+% would make a report block the next command. Models that were already
+% loaded and clean get the Dirty flag coverage access raises cleared again.
 modelCleanup = onCleanup(@() close_opened_models(openedModels, cfg)); %#ok<NASGU>
 
 step('Generating and attaching coverage filters');
@@ -366,9 +367,15 @@ function close_opened_models(openedModels, cfg)
 %CLOSE_OPENED_MODELS Leave the session as this report found it.
 %
 % Only what this function opened is closed, and always without saving: a
-% report must never write a model back.
-for i = 1:numel(openedModels)
-    name = char(openedModels(i));
+% report must never write a model back. Attaching a coverage filter and
+% reading coverage marks the models it touches as Dirty without changing
+% what is saved. A model that was loaded and clean when the report started
+% gets that flag cleared again, so the exporters that refuse unsaved models
+% do not stop on a change nobody made. A model that was already Dirty is
+% left as it was: that change belongs to the operator.
+loaded = openedModels.Loaded;
+for i = 1:numel(loaded)
+    name = char(loaded(i));
     try
         if bdIsLoaded(name)
             close_system(name, 0);
@@ -378,15 +385,31 @@ for i = 1:numel(openedModels)
             'Report step | Could not close %s | %s', name, ME.message);
     end
 end
-if ~isempty(openedModels)
+if ~isempty(loaded)
     st_log(cfg, 'INFO', ...
         'Report step | Closed %d model(s) this report opened', ...
-        numel(openedModels));
+        numel(loaded));
+end
+clean = openedModels.Clean;
+for i = 1:numel(clean)
+    name = char(clean(i));
+    try
+        if bdIsLoaded(name) && strcmp(get_param(name, 'Dirty'), 'on')
+            set_param(name, 'Dirty', 'off');
+            st_log(cfg, 'INFO', ...
+                ['Report step | Cleared the Dirty flag raised while ' ...
+                 'reporting | Model=%s | nothing was saved'], name);
+        end
+    catch ME
+        st_log(cfg, 'WARN', ...
+            'Report step | Could not clear the Dirty flag of %s | %s', ...
+            name, ME.message);
+    end
 end
 end
 
 
-function [artifacts, loaded] = load_models_for_coverage( ...
+function [artifacts, openedModels] = load_models_for_coverage( ...
         artifacts, targetConfig, cfg)
 %LOAD_MODELS_FOR_COVERAGE Coverage data needs the models it points at.
 %
@@ -396,11 +419,19 @@ function [artifacts, loaded] = load_models_for_coverage( ...
 % does not finish in any useful time. It used to be free because the session
 % that ran the tests still had everything open. Loading them first turns the
 % walk back into a lookup.
+%
+% openedModels.Loaded names what this report opened, harnesses first so
+% they close before their owner. openedModels.Clean names the models that
+% were already loaded and clean, so the cleanup can tell a Dirty flag this
+% report raised from a change the operator has not saved yet.
 
 loaded = strings(0,1);
+clean = strings(0,1);
 failures = strings(0,1);
 try
-    if ~bdIsLoaded(cfg.TopModel)
+    if bdIsLoaded(cfg.TopModel)
+        clean = [clean; clean_model_name(cfg.TopModel)];
+    else
         load_system(cfg.ModelFile);
         loaded(end+1,1) = string(cfg.TopModel);
     end
@@ -411,7 +442,13 @@ end
 for i = 1:height(targetConfig)
     row = targetConfig(i,:);
     harness = char(string(row.HarnessName));
-    if isempty(harness) || bdIsLoaded(harness)
+    if isempty(harness)
+        continue;
+    end
+    if bdIsLoaded(harness)
+        if ~any(clean == string(harness))
+            clean = [clean; clean_model_name(harness)]; %#ok<AGROW>
+        end
         continue;
     end
     try
@@ -430,13 +467,21 @@ st_log(cfg, 'INFO', ...
     numel(loaded), numel(failures));
 % Close the harnesses before their owner, so closing one never pushes a
 % Harness copy back into the CUT.
-loaded = flipud(loaded(:));
+openedModels = struct('Loaded', flipud(loaded(:)), 'Clean', clean(:));
 if isempty(failures)
     artifacts = record_artifact(artifacts, 'MODEL_LOAD', '', 'OK', ...
         sprintf('%d model(s) loaded for coverage access', numel(loaded)));
 else
     artifacts = record_artifact(artifacts, 'MODEL_LOAD', '', 'FAIL', ...
         char(strjoin(failures, ' | ')));
+end
+end
+
+function name = clean_model_name(model)
+%CLEAN_MODEL_NAME The model's name if it has no unsaved changes, else empty.
+name = strings(0,1);
+if strcmp(get_param(model, 'Dirty'), 'off')
+    name = string(model);
 end
 end
 
