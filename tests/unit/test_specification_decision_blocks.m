@@ -632,17 +632,16 @@ verifyNotEmpty(testCase, regexp(source, "paths\{end\+1,1\} = child;", 'once'));
 verifyNotEmpty(testCase, regexp(source, 'if strcmp\(child, root\)', 'once'));
 end
 
-function testConditionalScanTestsTheCutItselfNotOnlyItsChildren(testCase)
-% A CUT can be an Enabled Subsystem itself. Skipping the root, as an
-% earlier version did, lost that enable entirely: it is not on a child, so
-% nothing else would ever report it.
+function testConditionalScanTakesDirectChildrenOnly(testCase)
+% Same depth rule as the ordinary decision blocks. The CUT's own enable
+% belongs to whatever instantiates the CUT, not to the contents this row
+% describes, so the root is not reported.
 source = fileread(fullfile(st_project_root(), 'src', 'exporting', ...
     'st_conditional_subsystems.m'));
-verifyNotEmpty(testCase, regexp(source, ...
-    'candidates = \[\{root\}; children\(:\)\];', 'once'));
-verifyEmpty(testCase, regexp(source, 'if strcmp\(child, root\)', 'once'));
-% find_system also reports the root, so the list is de-duplicated.
-verifyNotEmpty(testCase, regexp(source, 'any\(seen == string\(candidate\)\)', 'once'));
+verifyNotEmpty(testCase, regexp(source, "'SearchDepth', 1", 'once'));
+% find_system reports the root itself when the root is a Subsystem.
+verifyNotEmpty(testCase, regexp(source, 'if strcmp\(child, root\)', 'once'));
+verifyEmpty(testCase, regexp(source, 'candidates = \[\{root\}', 'once'));
 end
 
 function testPortBlocksAreNotRecordedOnTheirOwn(testCase)
