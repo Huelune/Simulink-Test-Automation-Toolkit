@@ -11,6 +11,7 @@ if isempty(mode)
 end
 dataFileFormat = target_text(targetRow, 'DataFileFormat', 'SLDV');
 matVariableName = target_text(targetRow, 'MatVariableName', '');
+sldvTestCases = target_text(targetRow, 'SldvTestCases', '');
 if ~strcmp(mode, 'FILE')
     dataFileFormat = 'SLDV';
     matVariableName = '';
@@ -18,6 +19,13 @@ else
     dataFileFormat = char(st_resolve_data_file_formats( ...
         string(mode), string(dataFileFormat)));
     if ~strcmp(dataFileFormat, 'MAT'), matVariableName = ''; end
+end
+% SldvTestCases only selects out of an sldvData structure. Normalize the
+% text the same way st_load_targets does so a hand-built row still matches.
+if strcmp(mode, 'OFF') || ~strcmp(dataFileFormat, 'SLDV')
+    sldvTestCases = '';
+elseif ~isempty(sldvTestCases)
+    [~, ~, sldvTestCases] = st_select_sldv_test_cases(sldvTestCases);
 end
 
 if strcmp(mode, 'OFF')
@@ -31,6 +39,7 @@ if strcmp(mode, 'OFF')
     profile.Mode = 'OFF';
     profile.DataFileFormat = 'SLDV';
     profile.MatVariableName = '';
+    profile.SldvTestCases = '';
     profile.RequestedDataFile = char(targetRow.SldvDataFile);
     profile.SourceDataFile = char(targetRow.SldvDataFile);
     profile.ScenarioNames = {st_scenario_name(targetRow.CUTName, 1)};
@@ -69,13 +78,17 @@ for i = 1:numel(profiles)
     sourceFormatMatches = ~strcmp(mode, 'FILE') || ...
         (strcmpi(profileFormat, dataFileFormat) && ...
         strcmp(profileVariable, matVariableName));
+    % A manifest prepared for a different TestCase selection must not be
+    % reused silently: its Scenarios would not be the ones the Excel names.
+    testCasesMatch = strcmp( ...
+        profile_text(profiles(i), 'SldvTestCases', ''), sldvTestCases);
     if double(profiles(i).No) == double(targetRow.No) && ...
             strcmp(profiles(i).CUTName, char(targetRow.CUTName)) && ...
             strcmp(profiles(i).CUTPath, ownerPath) && ...
             strcmp(profiles(i).HarnessName, char(targetRow.HarnessName)) && ...
             strcmp(profiles(i).TestCaseName, char(targetRow.TestCaseName)) && ...
             strcmp(profiles(i).Mode, mode) && ...
-            requestedFileMatches && sourceFormatMatches
+            requestedFileMatches && sourceFormatMatches && testCasesMatch
         profile = profiles(i);
         matched = true;
         break;
@@ -92,6 +105,7 @@ if ~matched
         'Mode', mode, ...
         'DataFileFormat', dataFileFormat, ...
         'MatVariableName', matVariableName, ...
+        'SldvTestCases', sldvTestCases, ...
         'RequestedDataFile', char(targetRow.SldvDataFile));
     error('simtest:SldvManifestRowMissing', '%s', ...
         describe_missing_profile(target, profiles, cfg.SldvManifestFile));
@@ -138,6 +152,9 @@ compared = {'CUTName','CUTPath','HarnessName','TestCaseName','Mode'};
 if strcmp(target.Mode, 'FILE')
     compared = [compared, ...
         {'RequestedDataFile','DataFileFormat','MatVariableName'}];
+end
+if ~strcmp(target.Mode, 'OFF')
+    compared{end+1} = 'SldvTestCases';
 end
 shown = 0;
 for i = 1:numel(profiles)

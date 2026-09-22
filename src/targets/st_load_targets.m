@@ -5,7 +5,7 @@ function T = st_load_targets(onlyEnabled)
 %   CUTName, CUTPath, HarnessName, TestCaseName
 % Optional:
 %   No, Enabled, SldvMode, SldvDataFile, DataFileFormat,
-%   MatVariableName, ExpectedUpdateMode,
+%   MatVariableName, SldvTestCases, ExpectedUpdateMode,
 %   CoverageFilterMode, CoverageFilterAction, CoverageFilterRationale,
 %   CoverageBoundaryMode,
 %   PreparationMode, PreparationFromStage
@@ -69,6 +69,9 @@ idxDataFileFormat = find_column_optional(names, ...
 
 idxMatVariableName = find_column_optional(names, ...
     {'MatVariableName','MATVariableName','MAT Variable Name','MAT변수명'});
+
+idxSldvTestCases = find_column_optional(names, ...
+    {'SldvTestCases','SLDVTestCases','SLDV Test Cases','SLDV테스트케이스'});
 
 idxExpectedUpdateMode = find_column_optional(names, ...
     {'ExpectedUpdateMode','Expected Update Mode','기대값갱신모드'});
@@ -156,6 +159,20 @@ if ~isempty(idxMatVariableName)
     MatVariableName = strtrim(string(raw{:, idxMatVariableName}));
     MatVariableName(ismissing(MatVariableName)) = "";
 end
+% A cell holding one number is read as double by readtable, so an all-numeric
+% column arrives as NaN for empty cells. Empty and NaN both mean "every
+% TestCase"; the text is validated and normalized once the modes are known.
+SldvTestCases = strings(n,1);
+if ~isempty(idxSldvTestCases)
+    temp = raw{:, idxSldvTestCases};
+    if isnumeric(temp)
+        valid = ~isnan(temp);
+        SldvTestCases(valid) = string(temp(valid));
+    else
+        SldvTestCases = strtrim(string(temp));
+        SldvTestCases(ismissing(SldvTestCases)) = "";
+    end
+end
 if ~isempty(idxCoverageBoundaryMode)
     CoverageBoundaryMode = string(raw{:, idxCoverageBoundaryMode});
 end
@@ -236,6 +253,7 @@ SldvMode = SldvMode(keep);
 SldvDataFile = SldvDataFile(keep);
 DataFileFormat = DataFileFormat(keep);
 MatVariableName = MatVariableName(keep);
+SldvTestCases = SldvTestCases(keep);
 ExpectedUpdateMode = ExpectedUpdateMode(keep);
 CoverageFilterMode = CoverageFilterMode(keep);
 CoverageFilterAction = CoverageFilterAction(keep);
@@ -251,6 +269,25 @@ CUTPath = st_escape_cut_name_in_path(CUTPath, CUTName);
 
 DataFileFormat = st_resolve_data_file_formats(SldvMode, DataFileFormat);
 MatVariableName(~(SldvMode == "FILE" & DataFileFormat == "MAT")) = "";
+
+% SldvTestCases picks TestCases out of an sldvData structure, so it only
+% means something for GENERATE and FILE+SLDV rows. It is inert elsewhere,
+% like MatVariableName. Normalize the text here so that "3, 1" and "1,3"
+% fingerprint and match the manifest identically.
+SldvTestCases(~(ismember(SldvMode, ["FILE", "GENERATE"]) & ...
+    DataFileFormat == "SLDV")) = "";
+for i = 1:numel(SldvTestCases)
+    if strlength(SldvTestCases(i)) == 0
+        continue;
+    end
+    try
+        [~, ~, normalized] = st_select_sldv_test_cases(SldvTestCases(i));
+    catch ME
+        error(ME.identifier, ...
+            'Row No=%g (%s): %s', No(i), char(CUTName(i)), ME.message);
+    end
+    SldvTestCases(i) = string(normalized);
+end
 
 [CoverageFilterMode, CoverageFilterAction, CoverageFilterRationale] = ...
     st_resolve_coverage_filter_settings( ...
@@ -302,6 +339,7 @@ T = table( ...
     SldvDataFile, ...
     DataFileFormat, ...
     MatVariableName, ...
+    SldvTestCases, ...
     ExpectedUpdateMode, ...
     CoverageFilterMode, ...
     CoverageFilterAction, ...

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **Excel `SldvTestCases` 열로 SLDV TestCase를 번호로 고릅니다.** 지금까지
+  `GENERATE`와 `FILE`+`SLDV`는 `sldvData.TestCases`를 전부 Scenario로 만들었고,
+  일부만 쓰려면 MAT를 손으로 잘라야 했습니다. 이제 `1,3,5`나 `2-4`처럼 적으면
+  그 TestCase만 Scenario가 됩니다. 열이 없거나 비어 있으면 전부 쓰므로 기존
+  Excel의 동작은 바뀌지 않습니다.
+  - 번호는 `sldvData.TestCases`의 1부터 시작하는 위치입니다. 데이터에 없는
+    번호는 `simtest:SldvTestCaseOutOfRange`로 그 행이 실패합니다. 고른 것 중
+    `dataNoEffect`인 TestCase는 여전히 빠지며 WARN으로 알립니다.
+  - 선택은 파일을 **읽을 때** 적용됩니다. `latest_sldvdata.mat`은 그대로 전부
+    담으므로, 나중에 `FILE`로 재사용하며 선택만 바꿀 수 있습니다.
+  - 선택 텍스트는 `SLDV` 단계 지문에 들어가고, manifest 조회도 같은 선택인
+    프로필만 받습니다. 다른 선택으로 준비된 manifest를 조용히 재사용하지
+    않습니다. `SldvGenerationResult`에 `SldvTestCases`와
+    `AvailableTestCaseCount` 열이 늘어납니다.
+
 - **분기 블록 스캔이 마스크와 라이브러리 링크 경계를 넘습니다.** 지금까지
   `st_specification_decision_blocks`의 기본 탐색만 `LookUnderMasks`와
   `FollowLinks` 없이 `find_system`을 불렀습니다. 그 경계에서 멈추면 마스크된

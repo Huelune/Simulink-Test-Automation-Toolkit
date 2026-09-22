@@ -32,6 +32,7 @@ CUT 하나이고, 그 행에 적은 값이 그 CUT을 어떻게 준비하고 실
 | `SldvDataFile` | `SLDVDataFile`, `SLDV Data File` |
 | `DataFileFormat` | `Data File Format`, `데이터파일형식` |
 | `MatVariableName` | `MATVariableName`, `MAT Variable Name`, `MAT변수명` |
+| `SldvTestCases` | `SLDVTestCases`, `SLDV Test Cases`, `SLDV테스트케이스` |
 | `ExpectedUpdateMode` | `Expected Update Mode`, `기대값갱신모드` |
 | `CoverageFilterMode` | `Coverage Filter Mode`, `커버리지필터모드` |
 | `CoverageFilterAction` | `Coverage Filter Action`, `커버리지필터동작` |
@@ -54,6 +55,7 @@ CUT 하나이고, 그 행에 적은 값이 그 CUT을 어떻게 준비하고 실
 | [`SldvDataFile`](#sldvdatafile) | 조건부 | 빈 값 | 입력 파일 경로 |
 | [`DataFileFormat`](#datafileformat) | 아니요 | `SLDV` | 그 입력 파일의 형식 |
 | [`MatVariableName`](#matvariablename) | 아니요 | 빈 값 | MAT 안에서 쓸 변수 하나 |
+| [`SldvTestCases`](#sldvtestcases) | 아니요 | 빈 값 | SLDV TestCase 중 쓸 번호 |
 | [`ExpectedUpdateMode`](#expectedupdatemode) | 아니요 | `DEFAULT` | 실패 시 기대값을 고칠지 |
 | [`CoverageFilterMode`](#coveragefiltermode) | 아니요 | `OFF` | CUT 내부를 커버리지에서 뺄지 |
 | [`CoverageBoundaryMode`](#coverageboundarymode) | 아니요 | `OFF` | CUT 바깥을 커버리지에서 뺄지 |
@@ -207,6 +209,37 @@ Harness의 Signal Editor ActiveScenario와도 정확히 일치해야 합니다.
 
 최종 Scenario 이름은 항상 `UT_REQ_{CUTName}_{번호}`가 되고, 원래 MAT 변수 이름은
 manifest의 `OriginalNames`에 남습니다.
+
+### `SldvTestCases`
+
+SLDV 결과(`sldvData.TestCases`) 가운데 **어느 TestCase만** Scenario로 만들지
+번호로 고릅니다. `GENERATE`와 `FILE`+`SLDV`에서만 의미가 있고, `OFF`와
+`FILE`+`MAT`에서는 무시됩니다.
+
+| 값 | 동작 |
+| --- | --- |
+| 빈 값 (기본) | 효과 있는 TestCase를 **전부** 씁니다. 지금까지와 같습니다 |
+| `1,3,5` | 그 번호의 TestCase만 씁니다. 구분자는 `,` `;` 공백 모두 됩니다 |
+| `2-4` | 2, 3, 4번. 목록과 섞어 `1,3-5`처럼 쓸 수 있습니다 |
+
+번호는 Design Verifier 보고서와 `sldvData.TestCases`의 순서 그대로인 **1부터
+시작하는 위치**입니다. 순서와 중복은 정리되어 `3,1,3`과 `1,3`은 같은 선택입니다.
+
+- 데이터에 없는 번호를 적으면 그 행은 `SldvTestCaseOutOfRange`로 실패합니다.
+  `GENERATE`는 분석마다 TestCase 수가 달라질 수 있으니 결과를 한 번 확인한 뒤
+  고르십시오.
+- 고른 TestCase 중 SLDV가 `dataNoEffect`로 표시한 것은 여전히 빠집니다. 이때
+  로그에 WARN이 남고, 고른 것이 전부 그렇다면 실패합니다.
+- Scenario 이름 `UT_REQ_{CUTName}_{번호}`는 고른 것만 1부터 다시 매깁니다. 원래
+  TestCase 번호는 `SldvScenarioResult`의 `SourceIndex`와 manifest의
+  `SourceIndices`에 남습니다.
+- 이 열을 바꾸면 `SLDV` 단계 지문이 달라져 그 행의 준비가 다시 돌아갑니다.
+  `GENERATE` 행이라면 Design Verifier 분석도 다시 돕니다. 선택만 바꿔 보려면
+  `result/sldv/{No}_{CUTName}/latest_sldvdata.mat`을 `FILE`로 지정하십시오. 그
+  파일은 고르기 전 TestCase를 전부 담고 있습니다.
+
+`SldvGenerationResult`의 `SldvTestCases` 열에 적용된 선택이, `AvailableTestCaseCount`
+열에 데이터에 있던 TestCase 수가 기록됩니다.
 
 ## 5. 기대값 갱신
 

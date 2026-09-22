@@ -231,6 +231,7 @@ sldv.SldvMode = char(row.SldvMode);
 sldv.SldvDataFile = char(row.SldvDataFile);
 sldv.DataFileFormat = effective_data_file_format(row);
 sldv.MatVariableName = effective_mat_variable_name(row);
+sldv.SldvTestCases = effective_sldv_test_cases(row);
 sldv.SldvDataSignature = sldv_source_signature(row, cfg);
 sldv.TmaxResolution = cfg.SldvTmaxResolution;
 sldv.AutoConvertAtomic = cfg.AutoConvertSldvTargetsToAtomic;
@@ -300,6 +301,20 @@ if row.SldvMode == "FILE" && ...
         strcmp(effective_data_file_format(row), 'MAT') && ...
         ismember('MatVariableName', row.Properties.VariableNames)
     candidate = strtrim(string(row.MatVariableName));
+    if isscalar(candidate) && ~ismissing(candidate)
+        value = char(candidate);
+    end
+end
+end
+
+function value = effective_sldv_test_cases(row)
+% st_load_targets already blanked the cell for rows it does not apply to
+% and normalized the rest; hand-built rows may lack the column entirely.
+value = '';
+if ismember(row.SldvMode, ["FILE", "GENERATE"]) && ...
+        strcmp(effective_data_file_format(row), 'SLDV') && ...
+        ismember('SldvTestCases', row.Properties.VariableNames)
+    candidate = strtrim(string(row.SldvTestCases));
     if isscalar(candidate) && ~ismissing(candidate)
         value = char(candidate);
     end

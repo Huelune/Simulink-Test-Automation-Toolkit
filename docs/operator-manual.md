@@ -167,6 +167,11 @@ Top Model의 현재 Design Verifier 설정을 복사해 CUT에 TestGeneration을
 result/sldv/{No}_{CUTName}/latest_sldvdata.mat
 ```
 
+이 파일은 생성된 TestCase를 전부 담습니다. 그중 일부만 쓰려면 Excel의
+`SldvTestCases` 열에 번호를 적습니다(`1,3,5` 또는 `2-4`). 빈 값이면 전부 씁니다.
+선택은 파일을 읽을 때 적용되므로, `FILE`로 재사용하면서 선택만 바꿀 수 있습니다.
+자세한 규칙은 `docs/workbook-reference.md`의 `SldvTestCases`를 보십시오.
+
 #### Atomic Subsystem 요구
 
 `FILE+SLDV`와 `GENERATE` 대상은 Atomic이어야 합니다. 기본 설정은 라이브러리 링크가
