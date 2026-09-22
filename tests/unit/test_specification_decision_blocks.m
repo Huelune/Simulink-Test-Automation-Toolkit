@@ -632,18 +632,17 @@ verifyNotEmpty(testCase, regexp(source, "paths\{end\+1,1\} = child;", 'once'));
 verifyNotEmpty(testCase, regexp(source, 'if strcmp\(child, root\)', 'once'));
 end
 
-function testConditionalScanCoversTheCutItselfAndItsDirectChildren(testCase)
-% A CUT is very often the Enabled Subsystem. That enable is not on a child,
-% so a children-only scan loses it and nothing else reports it. Nesting
-% below a direct child stays excluded.
+function testConditionalScanReportsOnlyTheCutItself(testCase)
+% The Description column describes one CUT. A child subsystem's enable
+% belongs to that child, so it is out of scope exactly as a nested one is.
+% The CUT's own enable is in scope and nothing else can report it: it sits
+% on a port block one level in, which a depth 1 search from above misses.
 source = fileread(fullfile(st_project_root(), 'src', 'exporting', ...
-    'st_conditional_subsystems.m'));
-verifyNotEmpty(testCase, regexp(source, ...
-    'candidates = \[\{root\}; children\(:\)\];', 'once'));
+    'st_conditional_cut.m'));
+verifyNotEmpty(testCase, regexp(source, "paths = \{root\};", 'once'));
 verifyNotEmpty(testCase, regexp(source, "'SearchDepth', 1", 'once'));
-% find_system also returns the root, so the list is de-duplicated.
-verifyNotEmpty(testCase, regexp(source, ...
-    'any\(seen == string\(candidate\)\)', 'once'));
+% No walk over children at all.
+verifyEmpty(testCase, regexp(source, 'children', 'once'));
 end
 
 function testPortBlocksAreNotRecordedOnTheirOwn(testCase)

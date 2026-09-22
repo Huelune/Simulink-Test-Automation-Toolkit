@@ -29,7 +29,7 @@ blockType = char(string(args{index + 1}));
 % whenever the list was written before this was supported, or whenever
 % coverage attributed the branch somewhere this scan did not look.
 if any(strcmp(blockType, {'EnablePort', 'TriggerPort'}))
-    paths = st_conditional_subsystems(root, blockType);
+    paths = st_conditional_cut(root, blockType);
     return;
 end
 keep = entries.BlockType == string(blockType) & ...

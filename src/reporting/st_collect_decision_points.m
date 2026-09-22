@@ -44,7 +44,7 @@ blocks = string(blocks(:));
 skipped = 0;
 for i = 1:numel(blocks)
     blockPath = char(blocks(i));
-    [blockType, objectPath] = classify_block(blockPath);
+    [blockType, objectPath] = classify_block(blockPath, root);
     if isempty(blockType), continue; end
     [total, justified] = decision_objectives(cvd, objectPath);
     if total <= 0
@@ -93,7 +93,7 @@ end
 end
 
 
-function [blockType, objectPath] = classify_block(blockPath)
+function [blockType, objectPath] = classify_block(blockPath, root)
 % Returns the catalog type this block stands for and the path to ask
 % coverage about, or an empty type when the block is not a decision at all.
 objectPath = blockPath;
@@ -107,7 +107,9 @@ end
 if ~any(strcmp(blockType, {'SubSystem', 'ModelReference', ''}))
     return;
 end
-if ~strcmp(blockType, 'SubSystem')
+% Only the CUT itself counts as conditional. A child subsystem's enable
+% belongs to that child, the same reason a nested branch is out of scope.
+if ~strcmp(blockType, 'SubSystem') || ~strcmp(blockPath, root)
     blockType = '';
     return;
 end

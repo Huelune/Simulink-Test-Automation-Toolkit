@@ -185,7 +185,7 @@ if ~any(strcmp(blockType, {'EnablePort', 'TriggerPort'}))
     paths = find_system(root, args{:});
     return;
 end
-paths = st_conditional_subsystems(root, blockType);
+paths = st_conditional_cut(root, blockType);
 end
 
 
