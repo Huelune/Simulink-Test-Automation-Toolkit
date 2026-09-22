@@ -340,6 +340,30 @@ result/standalone_coverage/{TopModel}/
 | 3단계 제출물이 있다 | `Coverage` 시트가 전부 `N/A`, `NO_COVERAGE_SOURCE` |
 | 모델·Harness·Test File이 저장되어 있다 | `simtest:SpecificationUnsaved`로 중단 |
 
+#### 결과 정리(collect)는 반드시 먼저
+
+최종 문서는 결과 정리 산출물에서 판정을 **읽기만** 하고, 스스로 정리하지
+않습니다. 1단계를 `AutoCollect`로 돌렸으면 이미 끝난 것이니 바로 부르면 됩니다.
+`AutoCollect` 없이 돌렸다면 사이에 한 줄이 필요합니다.
+
+```matlab
+st_collect_per_cut_results      % PER_CUT(기본)일 때. BATCH로 돌렸으면 st_generate_test_report
+[T, finalFile] = st_export_final_document();
+```
+
+정리를 빼먹으면 이렇게 됩니다.
+
+- 문서는 만들어지지만 `판정 결과`가 전부 빈 칸이고, `TestResults` 시트 모든
+  행에 `NOT_COLLECTED`(BATCH면 `NOT_REPORTED`)가 적힙니다. 오류로 막지 않습니다.
+- `Description` 열이 커버리지가 잡은 분기 블록 대신 정적 스캔 결과로 채워집니다.
+  결과 정리가 `DecisionPoints` 시트에 남기는 목록을 최종 문서가 쓰기 때문입니다.
+- 정리한 **뒤에** 테스트를 다시 돌렸다면 다시 정리해야 합니다. 새 실행이
+  `result/per_cut_latest.json` 포인터를 새 실행으로 옮겨 판정이 다시 빈 칸이 됩니다.
+
+빈 판정을 아예 허용하지 않으려면 `'RequireTestResults', true`를 붙이십시오.
+정리가 안 된 상태면 파일을 만들지 않고 `simtest:FinalDocumentTestResultsRequired`로
+중단합니다.
+
 > 결과 정리 명령은 커버리지를 읽으려고 모델을 여는데, 그 과정에서 원래 열려 있던
 > 모델이 **미저장 상태**가 될 수 있습니다. "방금 정리했는데 저장하라고 한다"가
 > 실제로 일어납니다. 오류 메시지에 적힌 모델을 저장하고 다시 부르십시오.
