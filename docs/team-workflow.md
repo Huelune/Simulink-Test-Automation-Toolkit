@@ -13,8 +13,11 @@ MATLAB이 처음이면 [처음 시작하기](getting-started.md)를 옆에 두�
 ```text
  준비        TestManagement.xlsx 작성 → st_pre_validate_targets
    │
- 1단계       st_run_from_harness('AutoCollect', true)
-   │         Harness 생성 → 입력 → verify → Test Case → 실행 → 결과 정리
+ 1단계       st_run_from_harness
+   │         Harness 생성 → 입력 → verify → Test Case → 실행
+   │
+ 1-2단계     st_collect_per_cut_results               결과 정리 (필수)
+   │         빼면 5단계 판정이 빈 칸
    │
  2단계       (선택) st_export_test_specification      명세서 Excel
    │
@@ -30,7 +33,8 @@ MATLAB이 처음이면 [처음 시작하기](getting-started.md)를 옆에 두�
 | 단계 | 명령 | 만들어지는 것 | 끝났다는 증거 |
 | --- | --- | --- | --- |
 | 준비 | `st_pre_validate_targets` | `result/reports/PreValidationResult.ini` | 모든 행이 통과 |
-| 1 | `st_run_from_harness('AutoCollect', true)` | Harness, Test File, `result/run_records/`, `result/per_cut_runs/` | 마지막 로그가 `EXECUTE` 완료, 결과 요약 Excel이 열림 |
+| 1 | `st_run_from_harness` | Harness, Test File, `result/run_records/` | 마지막 로그가 `EXECUTE` 완료 |
+| 1-2 (필수) | `st_collect_per_cut_results` | `result/per_cut_runs/`, CVF, CUT별 보고서 | `latest.Status = PASS`, 결과 요약 Excel이 열림 |
 | 2 | `st_export_test_specification` | `result/test_specification_<시각>.xlsx` | 파일이 열리고 행 수가 시나리오 수와 같음 |
 | 3 | `st_run_standalone_coverage_pipeline` + `st_check_standalone_coverage` | `result/standalone_coverage/<PipelineId>/` | 검사 코드 `1111111111`, `Status = PASS` |
 | 4 | `classify_standalone_results.py` | `result/standalone_coverage/<TopModel>/` 세 갈래 | 건너뛴 목록에 `.slx`·`.cvf`·`.cvt`·`.html`·`.mat`이 없음 |
@@ -119,13 +123,17 @@ disp(R)
 
 Excel을 고칠 때마다 다시 실행합니다.
 
-## 2. 1단계 — Harness 생성부터 실행과 결과 정리까지
+## 2. 1단계 — Harness 생성부터 실행까지, 그리고 결과 정리(필수)
+
+1단계는 **명령 두 개**입니다. 실행이 끝나도 결과 정리를 부르지 않으면 1단계는
+끝난 것이 아닙니다.
 
 ```matlab
-st_run_from_harness('AutoCollect', true)
+st_run_from_harness            % (1) Harness 생성 → 준비 → 실행
+st_collect_per_cut_results     % (2) 결과 정리 — 필수
 ```
 
-이 한 줄이 아래를 순서대로 합니다.
+첫 줄이 아래를 순서대로 합니다.
 
 | 단계 | 하는 일 | 바뀌는 것 |
 | --- | --- | --- |
@@ -137,24 +145,38 @@ st_run_from_harness('AutoCollect', true)
 | `TEST_MANAGER` | Test File, Test Case, Iteration 구성 | Test File |
 | `ALIGNMENT` | 네 곳의 Scenario 이름이 일치하는지 검사만 | 없음 |
 | `EXECUTE` | 실행 → 실패 시 기대값 갱신 → 재실행 → 실행 기록 저장 | Harness, `result/run_records/` |
-| 결과 정리 | `st_collect_per_cut_results`를 이어서 실행 | `result/per_cut_runs/` |
 
-Harness가 **이미 전부 있으면** `st_run_after_harness('AutoCollect', true)`를
-써도 됩니다. `HARNESS` 단계 하나만 빠지고 나머지는 같습니다.
+Harness가 **이미 전부 있으면** `st_run_after_harness`를 써도 됩니다. `HARNESS`
+단계 하나만 빠지고 나머지는 같습니다. 결과 정리는 똑같이 필수입니다.
 
-### 2.1 왜 `AutoCollect`를 켜는가
+### 2.1 결과 정리 `st_collect_per_cut_results` — 필수
 
-실행은 **기록만 남기고 끝납니다.** 판정과 커버리지를 파일로 정리하는 것은 결과
-정리 단계이고, 기본 설정에서는 자동으로 돌지 않습니다. 결과 정리를 빼먹으면
+```matlab
+st_collect_per_cut_results
+```
 
-- 5단계 최종 문서의 `판정 결과`가 전부 빈 칸이 되고,
+실행은 **기록만 남기고 끝납니다.** `result/run_records/`에 ResultSet을 저장할
+뿐, 판정 표·커버리지 필터(CVF)·CUT별 보고서는 이 명령이 만듭니다. 기본 설정에서
+자동으로 돌지 않으므로 **실행이 끝나면 반드시 이어서 부릅니다.**
+
+빼먹으면 이렇게 됩니다.
+
+- 5단계 최종 문서의 `판정 결과`가 전부 빈 칸이 되고 `TestResults` 시트에
+  `NOT_COLLECTED`가 적힙니다.
 - `Description` 열이 커버리지가 잡은 분기 대신 정적 스캔 결과로 채워집니다.
+- 커버리지 필터(CVF)가 만들어지지 않습니다. 실행은 필터 없이 수집만 합니다.
 
-그래서 실행할 때마다 정리까지 한 번에 하는 것을 표준으로 합니다. 따로 하려면
-실행 뒤 `st_collect_per_cut_results`를 부르면 됩니다.
+두 명령을 한 줄로 합치려면 `st_run_from_harness('AutoCollect', true)`입니다.
+실행이 끝난 뒤 같은 세션에서 `st_collect_per_cut_results`를 이어서 부르는 것과
+같습니다. 어느 쪽이든 **결과 정리가 돌았는지는 2.3절에서 확인**하십시오.
 
 > **정리한 뒤 테스트를 다시 돌리면 정리 결과가 무효가 됩니다.** 새 실행이
-> 포인터를 새 실행으로 옮기기 때문입니다. 다시 돌렸으면 다시 정리하십시오.
+> `result/per_cut_latest.json` 포인터를 새 실행으로 옮기기 때문입니다.
+> **다시 돌렸으면 다시 정리하십시오.** 정리 여부가 헷갈리면 한 번 더 불러도
+> 됩니다. 저장된 ResultSet에서 산출물을 다시 만들 뿐입니다.
+
+`BATCH`로 돌렸을 때만 결과 정리 명령이 `st_generate_test_report`입니다. 기본
+`PER_CUT`에서는 언제나 `st_collect_per_cut_results`입니다.
 
 ### 2.2 실행 중 볼 것
 
@@ -163,7 +185,10 @@ Harness가 **이미 전부 있으면** `st_run_after_harness('AutoCollect', true
 - 기본 실행 방식은 `PER_CUT`입니다. Test Case를 하나씩 돌리고, 한 CUT이 터져도
   기록하고 다음 CUT으로 넘어갑니다(`ContinueOnFailure` 기본 `true`).
 
-### 2.3 끝났는지 확인
+### 2.3 끝났는지 확인 — 결과 정리까지 돌았는가
+
+`st_collect_per_cut_results`가 끝나야 아래 포인터와 요약 Excel이 생깁니다.
+포인터가 없거나 `Status`가 비어 있으면 결과 정리를 안 한 것입니다.
 
 ```matlab
 cfg = st_config();
@@ -192,12 +217,14 @@ verify 자체를 봐야 합니다.
 
 | 무엇을 고쳤나 | 명령 |
 | --- | --- |
-| Excel의 CUT 목록 (행 추가·삭제) | `st_pre_validate_targets` → `st_run_from_harness('AutoCollect', true)` |
-| 입력 MAT, `SldvMode` | `st_run_from_harness('PreparationMode','FORCE','FromStage','SLDV','AutoCollect',true)` |
+| Excel의 CUT 목록 (행 추가·삭제) | `st_pre_validate_targets` → `st_run_from_harness` |
+| 입력 MAT, `SldvMode` | `st_run_from_harness('PreparationMode','FORCE','FromStage','SLDV')` |
 | verify 대상, Assessment | `... 'FromStage','ASSESSMENT' ...` |
 | Test Case 이름, Iteration | `... 'FromStage','TEST_MANAGER' ...` |
 | `Coverage*` 네 열만 | **다시 돌리지 않습니다.** `st_collect_per_cut_results`만 다시 하면 됩니다 |
-| 전부 처음부터 | `st_run_from_harness('PreparationMode','FORCE','AutoCollect',true)` |
+| 전부 처음부터 | `st_run_from_harness('PreparationMode','FORCE')` |
+
+**어느 경우든 실행이 다시 돌았으면 `st_collect_per_cut_results`를 다시 부릅니다.**
 
 특정 CUT만 다시 돌리려면 나머지 행의 `Enabled`를 `FALSE`로 내리는 것이 가장
 간단합니다.
@@ -344,8 +371,8 @@ result/standalone_coverage/{TopModel}/
 #### 결과 정리(collect)는 반드시 먼저
 
 최종 문서는 결과 정리 산출물에서 판정을 **읽기만** 하고, 스스로 정리하지
-않습니다. 1단계를 `AutoCollect`로 돌렸으면 이미 끝난 것이니 바로 부르면 됩니다.
-`AutoCollect` 없이 돌렸다면 사이에 한 줄이 필요합니다.
+않습니다. 1단계의 `st_collect_per_cut_results`(1-2단계)가 끝났고 그 뒤 테스트를
+다시 돌리지 않았다면 바로 부르면 됩니다. 확실하지 않으면 한 줄 더 넣으십시오.
 
 ```matlab
 st_collect_per_cut_results      % PER_CUT(기본)일 때. BATCH로 돌렸으면 st_generate_test_report
@@ -423,9 +450,12 @@ st_select_target_model          % 처음 1회, 또는 모델을 바꿀 때만
 R = st_pre_validate_targets();  % Excel을 고칠 때마다
 disp(R)
 
-%% 1단계 — Harness 생성 → 실행 → 결과 정리
-st_run_from_harness('AutoCollect', true)
-% Harness가 이미 전부 있으면: st_run_after_harness('AutoCollect', true)
+%% 1단계 — Harness 생성 → 실행
+st_run_from_harness
+% Harness가 이미 전부 있으면: st_run_after_harness
+
+%% 1-2단계 — 결과 정리 (필수. 빼면 5단계 판정이 빈 칸)
+st_collect_per_cut_results
 
 cfg = st_config();
 latest = jsondecode(fileread(cfg.PerCutLatestPointer));
