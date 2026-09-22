@@ -301,6 +301,10 @@ trigger 자체가 분기이기 때문입니다. 조건을 대화상자에 적는
 적힙니다. port 블록 이름은 어느 모델에서나 `Enable`이라 그것을 적으면 어느
 서브시스템인지 알 수 없습니다.
 
+**CUT 자신이 Enabled/Triggered Subsystem인 경우도 포함합니다.** CUT 자체가
+조건부인 경우가 흔하고, 그 enable은 자식에 있는 것이 아니라서 자식만 보면
+어디에서도 보고되지 않습니다.
+
 ### 탐색 범위
 
 CUT의 **직계 자식만** 포함합니다. `CUT/Subsystem/Switch`처럼 하위 Subsystem 안에
