@@ -18,7 +18,11 @@ function catalog = st_specification_decision_catalog(scope)
 %                    branch sits on a port block one level inside an
 %                    Enabled or Triggered Subsystem, but it belongs to the
 %                    subsystem the CUT owns, so the scan reports the
-%                    subsystem and uses the port type as the key.
+%                    subsystem and uses the port type as the key. Their
+%                    DisplayType therefore names the kind of branch rather
+%                    than a block type: the row points at the subsystem,
+%                    whose own BlockType is SubSystem, so printing either
+%                    port name would label the wrong block.
 % Outcome            Branch kind recorded in the DecisionBlockDetails Outcome
 %                    column and in the JSON object. Also the fallback outcome
 %                    when the expression read fails. The main specification
@@ -84,7 +88,7 @@ DisplayType = [ ...
     "Lookup_n-D"; "Interpolation_n-D"; "PreLookup"; ...
     "Integrator"; "DiscreteIntegrator"; ...
     "ForIterator"; "WhileIterator"; "Logic"; ...
-    "EnabledSubsystem"; "TriggeredSubsystem"];
+    "Enable"; "Trigger"];
 
 Formatter = [ ...
     "CUSTOM"; "CUSTOM"; "CUSTOM"; "CUSTOM"; "CUSTOM"; ...

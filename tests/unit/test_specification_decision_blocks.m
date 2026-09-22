@@ -601,7 +601,12 @@ catalog = st_specification_decision_catalog('ALL');
 verifyTrue(testCase, any(catalog.BlockType == "EnablePort"));
 verifyTrue(testCase, any(catalog.BlockType == "TriggerPort"));
 enable = catalog(catalog.BlockType == "EnablePort", :);
-verifyEqual(testCase, enable.DisplayType, "EnabledSubsystem");
+% The row points at the subsystem, whose own BlockType is SubSystem, so
+% the cell names the kind of branch instead of a block type that would
+% label the wrong block.
+verifyEqual(testCase, enable.DisplayType, "Enable");
+trigger = catalog(catalog.BlockType == "TriggerPort", :);
+verifyEqual(testCase, trigger.DisplayType, "Trigger");
 verifyEqual(testCase, enable.Outcome, "ON/OFF");
 % No dialog parameter is read: the reported path is the subsystem, not the
 % port block, so a parameter lookup would be aimed at the wrong block.

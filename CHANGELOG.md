@@ -64,8 +64,10 @@
     커버리지 목록은 정적 스캔을 통째로 대체하므로, 목록이 이 종류를 담기 전에
     쓰인 시트가 있으면 Enable이 그냥 사라집니다. 나머지 종류는 그대로 커버리지
     목록이 정합니다.
-  - 대화상자 조건이 없으므로 메인 셀에는 종류만 찍습니다
-    (`D1 [ON/OFF]EnabledSubsystem`). 그대로 두면 빈 괄호 `()`가 붙습니다.
+  - 대화상자 조건이 없으므로 메인 셀에는 분기 종류만 찍습니다
+    (`D1 [ON/OFF]Enable`). 그대로 두면 빈 괄호 `()`가 붙습니다. 카탈로그 키는
+    port를 찾는 데 쓰는 실제 `BlockType`이지만, 행이 가리키는 블록은
+    Subsystem이라 셀에 그 키를 쓰면 다른 블록을 이름 붙이게 됩니다.
   - 조건을 대화상자에 적는 블록이 아니므로 `Kind`는 `IMPLICIT`입니다. 명세서는
     `st_export_test_specification('DecisionBlockScope','ALL')`로 봐야 나옵니다.
   - **최종 문서의 `DecisionBlockScope` 기본값을 `'ALL'`로 바꾸고
