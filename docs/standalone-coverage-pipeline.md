@@ -18,8 +18,11 @@ st_run_from_harness('PreparationMode','FORCE','ExecuteTests', false);
 
 실행 직전에 다음을 확인합니다.
 
-- 원본 Top Model과 Test File을 저장했는가
-- **Top Model을 닫았는가** — 복사된 작업 공간의 모델과 이름이 충돌합니다
+- 원본 Top Model과 Test File의 미저장 변경을 저장하고 Top Model을 닫습니다
+  (`CloseSourceModel` 기본 `true`). 복사된 작업 공간의 모델과 이름이 충돌하기
+  때문입니다. 변경을 폐기하지는 않으며, 저장에 실패하면
+  `StandalonePipelineSourceSaveFailed`로 멈춥니다. `false`면 열려 있을 때
+  `StandaloneModelStillLoadedBeforeRun`으로 멈춥니다
 - 각 활성 행이 아래 조합을 갖추었는가
 
 ```text

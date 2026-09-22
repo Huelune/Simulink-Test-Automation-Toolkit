@@ -433,6 +433,7 @@ info = st_run_standalone_coverage_pipeline('Action','EXECUTE');
 | `SaveTestResult` | `ALL=false`, `EXECUTE=true` | aggregate Result를 저장할지. `PACKAGE`/`SUMMARY`에는 지정할 수 없습니다 |
 | `ContinueOnFailure` | `true` | 한 대상이 실패해도 다음을 계속할지 |
 | `FailOnNonPass` | `false` | 통과 실패를 MATLAB 오류로 전달할지 |
+| `CloseSourceModel` | `true` | 원본 Top Model의 미저장 변경을 저장하고(폐기하지 않음) 열린 Harness와 함께 닫은 뒤 진행할지. `false`면 열려 있을 때 `StandaloneModelStillLoadedBeforeRun`으로 중단 |
 
 Action의 역할:
 

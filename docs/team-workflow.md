@@ -18,8 +18,8 @@ MATLAB이 처음이면 [처음 시작하기](getting-started.md)를 옆에 두�
    │
  2단계       (선택) st_export_test_specification      명세서 Excel
    │
- 3단계       Top Model·Harness 저장 후 닫기
-   │         st_run_standalone_coverage_pipeline('Action','ALL', ...)
+ 3단계       st_run_standalone_coverage_pipeline('Action','ALL', ...)
+   │         (원본 Top Model·Harness 저장과 닫기는 자동)
    │         st_check_standalone_coverage   →  1111111111 PASS
    │
  4단계       python classify_standalone_results.py    팀 제출 트리
@@ -224,11 +224,12 @@ Harness를 원본 모델 없이도 열리는 **독립 모델**로 떼어내 실�
 
 ### 4.1 실행 전 — 반드시
 
-1. 원본 Top Model, Harness, Test File을 **저장**합니다.
-2. Top Model과 열려 있는 Harness를 **닫습니다.** 복사본과 이름이 충돌하기
-   때문이고, 이 명령은 사용자 모델을 강제로 닫지 않습니다. 확실하게 하려면
-   MATLAB을 재시작하고 `st_setup`부터 다시 합니다.
-3. Excel의 활성 행마다 `Coverage*` 네 열이 [1.3절](#13-testmanagementxlsx-작성)의
+1. 원본 Top Model, Harness, Test File은 **파이프라인이 저장하고 닫습니다.**
+   기본 옵션 `CloseSourceModel = true`가 미저장 변경을 저장하고(폐기하지 않음),
+   열린 Harness 창과 Top Model을 닫은 뒤 진행합니다. 내보낸 복사본이 같은 모델
+   이름을 쓰기 때문입니다. **저장하면 안 되는 변경이 있으면 먼저 되돌리십시오.**
+   예전처럼 열려 있을 때 멈추게 하려면 `'CloseSourceModel', false`를 줍니다.
+2. Excel의 활성 행마다 `Coverage*` 네 열이 [1.3절](#13-testmanagementxlsx-작성)의
    조합인지 확인합니다. `CoverageFilterRationale`이 비면 시작하지 않습니다.
 
 ### 4.2 실행
@@ -412,8 +413,8 @@ PASS/FAIL이 다를 수 있으므로 판정은 1단계에서, 커버리지만 3�
 
 ## 8. 복사용 전체 코드
 
-처음부터 끝까지 한 세션에서 하는 경우입니다. 3단계 앞에서 **모델을 저장하고 닫는
-것**만 손으로 합니다.
+처음부터 끝까지 한 세션에서 하는 경우입니다. 3단계의 모델 저장과 닫기는
+파이프라인이 하므로, 손으로 할 것은 4단계의 명령 프롬프트 한 줄뿐입니다.
 
 ```matlab
 %% 준비 — MATLAB을 켤 때마다
@@ -435,7 +436,7 @@ winopen(latest.Summary)
 [T, specFile] = st_export_test_specification();
 disp(specFile)
 
-%% 3단계 — 원본 Top Model과 Harness를 저장하고 닫은 뒤
+%% 3단계 — 원본 Top Model과 Harness는 파이프라인이 저장하고 닫습니다
 info = st_run_standalone_coverage_pipeline( ...
     'Action', 'ALL', ...
     'ContinueOnFailure', true, ...
@@ -464,7 +465,7 @@ winopen(finalFile)
 | 기대값이 마음대로 바뀌었다 | `ExpectedUpdateMode`가 비어 있으면 `APPLY`입니다. `OFF`로 내리십시오 |
 | 실행은 끝났는데 판정이 빈 칸 | 결과 정리를 안 했거나, 정리 뒤 다시 돌렸습니다. `st_collect_per_cut_results` |
 | 필터 사유가 없다고 중단 | `CoverageFilterRationale`을 채우십시오 |
-| 같은 이름의 모델이 열려 있다 | 저장하고 닫으십시오. 확실하게는 MATLAB 재시작 |
+| 같은 이름의 모델이 열려 있다고 멈춘다 | `CloseSourceModel`을 `false`로 줬거나 저장에 실패한 경우입니다. 저장하고 닫거나 MATLAB 재시작 |
 | 검사 코드에 `0`이 있다 | `details` 표에서 그 CUT의 원인을 보고 3단계를 다시 |
 | 경로가 너무 길다 | `st_set_standalone_coverage_root('D:\st_out')` |
 | 재배치 스크립트가 종료 코드 `2` | 입력 폴더가 파이프라인 루트가 아니거나 출력 폴더가 이미 있습니다. `--overwrite` |

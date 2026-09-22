@@ -8,9 +8,11 @@ Harness를 **독립 실행 가능한 모델**로 떼어내 실행하고, 커버�
 먼저 [준비 및 실행](prepare.md)을 끝내야 합니다. 이 명령은 준비된 자산을 복사해서
 실행할 뿐 Harness나 Test Case를 새로 만들지 않습니다.
 
-- 원본 Top Model과 Test File을 **저장**합니다.
-- 열린 Harness와 Top Model을 **직접 닫습니다.** 복사된 작업 공간의 모델과 이름이
-  충돌합니다. 이 명령은 사용자 모델을 강제로 닫지 않습니다.
+- 원본 Top Model·Harness·Test File은 **이 명령이 저장하고 닫습니다**
+  (`CloseSourceModel` 기본 `true`). 복사된 작업 공간의 모델과 이름이 충돌하기
+  때문입니다. 미저장 변경은 저장하지 폐기하지 않으므로, 저장하면 안 되는 변경은
+  먼저 되돌립니다.
+- 예전처럼 열려 있을 때 멈추게 하려면 `'CloseSourceModel', false`를 줍니다.
 - 관리 Excel의 각 활성 행이 다음 조합을 갖추어야 합니다.
 
 ```text
@@ -144,8 +146,8 @@ info = st_run_standalone_coverage_pipeline('Action', 'PREPARE');
 disp(info.TestManagerFile)
 ```
 
-전제 조건은 1절과 같습니다. 원본 Top Model과 Test File을 저장하고 닫아 두어야
-합니다.
+전제 조건은 1절과 같습니다. 원본 Top Model은 여기서도 파이프라인이 저장하고
+닫습니다.
 
 하는 일은 `EXECUTE`의 앞부분과 같습니다. standalone 모델을 export하고, 복사한
 Test File의 모든 Test Case를 **Harness SUT에서 standalone 모델 SUT로 다시

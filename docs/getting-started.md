@@ -306,9 +306,9 @@ winopen(cfg.LatestSummaryFile)
 
 ### 실행 전 확인
 
-- 원본 Top Model과 Test File을 저장했는가
-- **Top Model과 열린 Harness를 닫았는가** — 복사된 작업 공간의 모델과 이름이
-  충돌합니다
+- 원본 Top Model과 Test File은 **이 명령이 저장하고 닫습니다.** 복사된 작업
+  공간의 모델과 이름이 충돌하기 때문입니다. 저장하면 안 되는 변경이 있으면
+  먼저 되돌리십시오
 
 ### 실행
 

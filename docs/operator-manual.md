@@ -44,8 +44,10 @@
 
 ### 2.2 같은 이름의 모델
 
-MATLAB은 같은 이름의 모델을 두 개 로드할 수 없습니다. 이 도구는 사용자가 연 모델을
-강제로 닫지 않습니다. 충돌이 예상되면 미리 닫거나 MATLAB을 새로 시작하십시오.
+MATLAB은 같은 이름의 모델을 두 개 로드할 수 없습니다. standalone 파이프라인만 원본
+Top Model을 저장하고 닫은 뒤 시작하며(`CloseSourceModel` 기본 `true`), 그 밖의
+명령은 사용자가 연 모델을 강제로 닫지 않습니다. 충돌이 예상되면 미리 닫거나
+MATLAB을 새로 시작하십시오.
 
 ### 2.3 상대 경로의 기준
 
@@ -496,7 +498,8 @@ st_run_standalone_coverage_pipeline( ...
 [code, summary, details] = st_check_standalone_coverage();
 ```
 
-원본 Top Model과 열린 Harness를 먼저 저장하고 닫아야 합니다.
+원본 Top Model과 열린 Harness는 파이프라인이 저장하고 닫습니다
+(`CloseSourceModel` 기본 `true`).
 
 ### 실행 후 빠른 점검
 
@@ -519,7 +522,8 @@ st_run_from_stage('Workflow','AFTER_HARNESS','FromStage','ASSESSMENT');
 - 기존 Harness를 지우고 다시 만들지 않습니다.
 - 기존 Test Case를 기본 설정에서 덮어쓰지 않습니다.
 - 라이브러리 링크된 CUT을 자동으로 수정하지 않습니다.
-- 사용자가 연 모델을 강제로 닫지 않습니다.
+- 사용자가 연 모델을 강제로 닫지 않습니다. 예외는 standalone 파이프라인의 원본
+  Top Model이며, 저장한 뒤에만 닫고 변경을 폐기하지 않습니다.
 - 다른 열린 Test Manager 파일을 전역으로 제거하지 않습니다.
 - 사람이 건 수동 Coverage Filter를 지우지 않습니다.
 - `result/` 밖의 사용자 파일을 정리 대상으로 선택하지 않습니다.

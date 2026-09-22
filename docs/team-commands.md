@@ -82,7 +82,7 @@ st_generate_test_report                  보고서가 필요할 때
     │
 st_export_test_specification             명세서 Excel이 필요할 때
     │
-    │   ← 원본 Top Model과 Harness를 저장하고 닫기
+    │   ← 원본 Top Model과 Harness는 파이프라인이 저장하고 닫음
     │
 st_run_standalone_coverage_pipeline      제출물 생성
     │
@@ -96,8 +96,8 @@ st_export_final_document                 고객 제출용 최종 문서
 `st_generate_test_report`와 standalone은 **형제 갈래입니다.** 순서 관계가 아니고,
 필요한 쪽만 부르면 됩니다. standalone은 통합 보고서를 읽지 않습니다.
 
-> 둘 다 하실 거면 **보고서를 먼저** 하십시오. standalone은 Top Model이 닫혀
-> 있어야 시작합니다.
+> 둘 다 하실 거면 **보고서를 먼저** 하십시오. standalone은 시작할 때 Top Model을
+> 저장하고 닫습니다.
 
 ## 2. 복사용 전체 코드
 
@@ -125,7 +125,7 @@ st_collect_per_cut_results              % 기본 PER_CUT으로 돌렸을 때
 [T, specFile] = st_export_test_specification();
 disp(specFile)
 
-%% 6. 제출물 생성 — 원본 Top Model과 Harness를 먼저 저장하고 닫습니다
+%% 6. 제출물 생성 — 원본 Top Model과 Harness는 자동으로 저장하고 닫습니다
 info = st_run_standalone_coverage_pipeline( ...
     'Action', 'ALL', ...
     'ContinueOnFailure', true, ...
@@ -423,15 +423,17 @@ Harness를 **독립 실행 가능한 모델**로 떼어내 실행하고, 커버�
 | `'Action','ALL'` | EXECUTE → PACKAGE → SUMMARY를 한 번에 |
 | `'ContinueOnFailure', true` | 한 CUT이 실패해도 나머지를 계속 처리 |
 | `'FailOnNonPass', false` | 실패해도 MATLAB 오류를 내지 않고 결과 표로 판정 |
+| `'CloseSourceModel', true` (기본, 생략 가능) | 원본 Top Model을 저장하고 닫은 뒤 진행. `false`면 열려 있을 때 중단 |
 
 #### 실행 전 조건
 
 준비가 끝난 Harness와 Test Case를 입력으로 씁니다. **먼저
 `st_run_from_harness`를 끝내십시오.**
 
-- 원본 Top Model과 Test File을 **저장**했는가
-- **Top Model과 열린 Harness를 닫았는가** — 복사본과 모델 이름이 충돌합니다.
-  이 명령은 사용자 모델을 강제로 닫지 않습니다
+- 원본 Top Model·Harness·Test File은 **파이프라인이 저장하고 닫습니다**
+  (`CloseSourceModel` 기본 `true`). 복사본과 모델 이름이 충돌하기 때문입니다.
+  미저장 변경은 저장하지 폐기하지 않으므로, 저장하면 안 되는 변경은 먼저
+  되돌리십시오. 예전처럼 열려 있을 때 멈추려면 `'CloseSourceModel', false`
 - Excel의 각 활성 행이 아래 조합을 갖추었는가
 
 ```text
@@ -598,7 +600,7 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 | 보고서를 보고 싶다 (PER_CUT으로 돌림) | `st_collect_per_cut_results` |
 | Coverage 필터 설정만 바꿨다 | 준비는 그대로. 결과 정리만 다시 하면 됩니다 |
 | 명세서 Excel이 필요하다 | `st_export_test_specification` |
-| 제출물을 만든다 | Top Model 닫고 → `st_run_standalone_coverage_pipeline('Action','ALL',...)` |
+| 제출물을 만든다 | `st_run_standalone_coverage_pipeline('Action','ALL',...)` (원본 모델은 자동으로 저장·닫음) |
 | 제출물이 맞는지 본다 | `st_check_standalone_coverage` |
 | 제출물을 Test Manager에서 연다 | `st_open_standalone_test_manager` |
 | 제출물의 Results까지 본다 | 파이프라인을 `'SaveTestResult', true`로 돌린 뒤 `st_open_standalone_test_manager('ImportResults', true)` |
@@ -611,7 +613,7 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 | `st_setup` 후 명령을 못 찾는다 | Current Folder가 저장소 루트가 아닙니다 |
 | `CUTPath`를 찾을 수 없다 | 모델 이름부터 시작하는 전체 경로여야 합니다 |
 | SLDV MAT을 찾을 수 없다 | `SldvDataFile` 상대 경로 기준은 **Excel 파일이 있는 폴더**입니다 (Current Folder 아님) |
-| 같은 이름의 모델이 열려 있다 | 저장하고 닫으십시오. 확실하게 하려면 MATLAB 재시작 |
+| 같은 이름의 모델이 열려 있다 | standalone은 기본으로 저장하고 닫습니다. 그래도 나면(`CloseSourceModel=false`, 저장 실패) 저장하고 닫거나 MATLAB 재시작 |
 | 기대값이 마음대로 바뀌었다 | `ExpectedUpdateMode`가 비어 있으면 `APPLY`입니다. `OFF`로 내리십시오 |
 | 필터 사유가 없다고 중단 | `CoverageFilterRationale`은 필터를 켜면 필수입니다 |
 | Atomic이 아니라고 중단 | `FILE+SLDV`/`GENERATE`는 Atomic Subsystem이 필요합니다. 라이브러리 링크된 CUT은 원본 라이브러리에서 고쳐야 합니다 |
@@ -637,7 +639,8 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 - 실행이 끝나도 보고서는 **자동으로 만들어지지 않습니다.** 결과 정리 명령을
   부르거나 standalone 제출물을 만드십시오.
 - 기대값 기본 정책은 `APPLY`입니다. 승인된 기준값이 있으면 먼저 `OFF`로 내리십시오.
-- standalone pipeline 전에 **원본 Top Model과 열린 Harness를 닫으십시오.**
+- standalone pipeline은 **원본 Top Model을 저장하고 닫은 뒤 시작합니다.** 저장하면
+  안 되는 변경은 먼저 되돌리십시오.
 - 제출물은 폴더 전체를 복사해 전달하십시오.
 - 실제 모델·Excel·MAT·MLDATX와 `result/`는 **Git에 올리지 않습니다.**
 

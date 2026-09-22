@@ -188,11 +188,14 @@ rule의 rationale이 `none`으로 보이는 것도 의도된 값입니다. 규�
 
 ### 같은 이름의 모델이 이미 열려 있다
 
-MATLAB은 같은 이름의 모델을 두 개 로드할 수 없습니다. 이 도구는 사용자가 연 모델을
-강제로 닫지 않습니다.
+MATLAB은 같은 이름의 모델을 두 개 로드할 수 없습니다. standalone 파이프라인은
+기본(`CloseSourceModel=true`)으로 원본 Top Model을 저장하고 닫은 뒤 시작합니다.
+그 밖의 명령은 사용자가 연 모델을 강제로 닫지 않습니다.
 
-**대처:** 이미 열려 있는 모델을 저장하고 닫은 뒤 다시 실행하십시오. 확실하게 하려면
-MATLAB을 새로 시작하는 것이 가장 빠릅니다.
+**대처:** standalone에서 났다면 `'CloseSourceModel', false`를 줬거나 저장이
+실패(`StandalonePipelineSourceSaveFailed`)한 경우입니다. 이미 열려 있는 모델을
+저장하고 닫은 뒤 다시 실행하십시오. 확실하게 하려면 MATLAB을 새로 시작하는 것이
+가장 빠릅니다.
 
 ### Test Case가 중복으로 생겼다
 
