@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **분기 블록 스캔이 마스크와 라이브러리 링크 경계를 넘습니다.** 지금까지
+  `st_specification_decision_blocks`의 기본 탐색만 `LookUnderMasks`와
+  `FollowLinks` 없이 `find_system`을 불렀습니다. 그 경계에서 멈추면 마스크된
+  CUT이나 라이브러리 링크 안의 CUT은 **직계 자식이 하나도 없다고** 보고됩니다.
+  같은 누락으로 링크된 CUT의 포트가 0개로 보이던 사례가 이미 있었습니다
+  (`docs/codex-handoff.md`).
+  - 조건부 서브시스템 탐색과 커버리지 수집기는 이미 두 옵션을 쓰고 있었습니다.
+    이제 세 탐색이 같은 경계를 봅니다.
+  - **명세서 출력이 달라질 수 있습니다.** 마스크되었거나 링크된 CUT에서
+    지금까지 비어 있던 `DecisionBlocks`에 블록이 생깁니다. 그런 CUT이 없으면
+    달라지는 것이 없습니다.
+  - 마스크 Subsystem으로 구현된 블록(`Saturation Dynamic` 등)은 여전히
+    제외됩니다. 경계를 넘는 것과 그 안쪽을 직계로 세는 것은 다르고, 안쪽
+    블록은 깊이 2입니다.
+
 - **Enabled / Triggered Subsystem도 분기 블록으로 셉니다.** enable과 trigger
   자체가 CUT이 가진 분기인데 지금까지 어느 목록에도 없었습니다.
   `st_specification_decision_catalog`에 `EnablePort`와 `TriggerPort`를 넣어

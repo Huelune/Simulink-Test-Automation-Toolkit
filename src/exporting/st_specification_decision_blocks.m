@@ -181,8 +181,24 @@ if ~isempty(index) && index < numel(varargin)
     blockType = char(string(varargin{index + 1}));
 end
 if ~any(strcmp(blockType, {'EnablePort', 'TriggerPort'}))
-    paths = find_system(root, varargin{:});
+    args = with_link_options(varargin);
+    paths = find_system(root, args{:});
     return;
 end
 paths = st_conditional_subsystems(root, blockType);
+end
+
+
+function args = with_link_options(args)
+% A CUT can be masked, or can sit inside a library link. find_system stops
+% at either boundary by default and then reports no children at all, which
+% is how a linked CUT once came to look as though it had no ports. The
+% conditional subsystem scan and the coverage side already pass these, so
+% this is also what makes the three scans agree.
+if ~any(strcmp(args, 'LookUnderMasks'))
+    args = [args, {'LookUnderMasks', 'all'}];
+end
+if ~any(strcmp(args, 'FollowLinks'))
+    args = [args, {'FollowLinks', 'on'}];
+end
 end

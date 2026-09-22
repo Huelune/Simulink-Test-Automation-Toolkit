@@ -652,3 +652,19 @@ source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
 verifyNotEmpty(testCase, regexp(source, ...
     "if any\(strcmp\(blockType, \{'EnablePort', 'TriggerPort'\}\)\)", 'once'));
 end
+
+function testStaticScanCrossesMaskAndLinkBoundaries(testCase)
+% find_system stops at a mask or a library link by default and then reports
+% no children at all. The conditional subsystem scan and the coverage side
+% already pass these, so without them the three scans disagree on the same
+% CUT.
+source = fileread(fullfile(st_project_root(), 'src', 'exporting', ...
+    'st_specification_decision_blocks.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "args = \[args, \{'LookUnderMasks', 'all'\}\];", 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "args = \[args, \{'FollowLinks', 'on'\}\];", 'once'));
+% A caller that already set one keeps its own value.
+verifyNotEmpty(testCase, regexp(source, ...
+    "if ~any\(strcmp\(args, 'LookUnderMasks'\)\)", 'once'));
+end

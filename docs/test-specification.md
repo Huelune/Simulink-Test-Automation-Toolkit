@@ -303,19 +303,27 @@ trigger 자체가 분기이기 때문입니다. 조건을 대화상자에 적는
 
 ### 탐색 범위
 
-CUT의 **직계 자식만** 포함합니다. `CUT/Subsystem/Switch`처럼 하위 Subsystem 안에 있는
-블록은 포함하지 않습니다. 마스크, 라이브러리 링크, Variant, 참조 모델 내부로
-내려가지 않습니다.
+CUT의 **직계 자식만** 포함합니다. `CUT/Subsystem/Switch`처럼 하위 Subsystem 안에
+있는 블록은 포함하지 않습니다. Variant와 참조 모델 내부로도 내려가지 않습니다.
 
-따라서 다음은 **의도적으로 제외**합니다.
+마스크와 라이브러리 링크 경계는 **넘습니다**(`LookUnderMasks='all'`,
+`FollowLinks='on'`). 이것이 없으면 마스크된 CUT이나 라이브러리 링크 안의 CUT은
+직계 자식이 하나도 없다고 보고됩니다. 같은 누락으로 링크된 CUT의 포트가 0개로
+보이던 사례가 있었습니다.
 
-1. 자식 Enabled/Triggered Subsystem의 Enable/Trigger 분기. 블록 자체는 `BlockType`이
-   `SubSystem`이고 `EnablePort`는 `SearchDepth=1` 밖에 있습니다. 포트를 행으로 올리면
-   `DecisionBlockDetails`의 `Path`가 그 행이 설명하는 블록을 가리키지 않게 됩니다.
-2. `Saturation Dynamic`, `Dead Zone Dynamic`, `Unit Delay Enabled`,
+Enabled/Triggered Subsystem은 **포함합니다.** 자세한 것은 위
+[Enabled / Triggered Subsystem](#enabled--triggered-subsystem) 절에 있습니다.
+목록에 오르는 것은 port가 아니라 Subsystem이므로 `DecisionBlockDetails`의
+`Path`는 그 행이 설명하는 블록을 그대로 가리킵니다.
+
+다음은 **여전히 제외**합니다.
+
+1. `Saturation Dynamic`, `Dead Zone Dynamic`, `Unit Delay Enabled`,
    `Unit Delay Resettable`처럼 마스크 Subsystem으로 구현된 블록. `BlockType`이
    `SubSystem`이라 BlockType 필터로 일반 Subsystem과 구분할 수 없습니다.
-3. Stateflow와 MATLAB Function 블록 내부 분기.
+   (`LookUnderMasks`는 경계를 넘게 할 뿐이고, 그 안쪽 블록은 깊이 2라 직계
+   범위 밖입니다.)
+2. Stateflow와 MATLAB Function 블록 내부 분기.
 
 ## 7. `OverflowDetails` 시트
 
