@@ -155,6 +155,21 @@ cfg.SldvTmaxResolution = 0.01;
 cfg.AutoConvertSldvTargetsToAtomic = true;
 
 % false (default):
+%   Never touch the library link of a FILE+SLDV/GENERATE target. A
+%   non-atomic library-linked CUT fails with SldvLinkedCUTRequiresAtomic so
+%   the source library can be made atomic instead.
+%
+% true:
+%   Disable the library link of the model-side instance
+%   (LinkStatus=inactive) and then convert it with TreatAsAtomicUnit=on.
+%   The library file itself is never modified, but that instance stops
+%   following library updates until someone restores the link, and
+%   restoring the link also reverts the atomic conversion. The change is
+%   kept in the model like an ordinary atomic conversion. It only applies
+%   when AutoConvertSldvTargetsToAtomic is also true.
+cfg.DisableLibraryLinkForSldvTargets = false;
+
+% false (default):
 %   Fail when an SLDV Dataset contains input signals that are not present
 %   in the target Harness Signal Editor ActiveScenario.
 %

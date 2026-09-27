@@ -235,6 +235,7 @@ sldv.SldvTestCases = effective_sldv_test_cases(row);
 sldv.SldvDataSignature = sldv_source_signature(row, cfg);
 sldv.TmaxResolution = cfg.SldvTmaxResolution;
 sldv.AutoConvertAtomic = cfg.AutoConvertSldvTargetsToAtomic;
+sldv.DisableLibraryLink = cfg.DisableLibraryLinkForSldvTargets;
 sldv.IgnoreUnexpectedInputs = cfg.IgnoreUnexpectedSldvInputs;
 sldv.AllowSubsystemPathMismatch = cfg.AllowSldvSubsystemPathMismatch;
 signatures.SLDV = st_hash_value(sldv);

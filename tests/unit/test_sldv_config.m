@@ -10,6 +10,13 @@ verifyTrue(testCase, cfg.AutoConvertSldvTargetsToAtomic);
 end
 
 
+function testLibraryLinkIsNeverDisabledByDefault(testCase)
+cfg = st_config();
+
+verifyFalse(testCase, cfg.DisableLibraryLinkForSldvTargets);
+end
+
+
 function testSharedSignalEditorDataFileCheckIsDisabledByDefault(testCase)
 cfg = st_config();
 
