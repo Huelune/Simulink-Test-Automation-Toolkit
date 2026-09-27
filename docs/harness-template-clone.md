@@ -72,7 +72,10 @@ Template close, clone, 대상의 첫 close, 최종 update/close 전후로
 
 `FILE+SLDV` 또는 `GENERATE`가 비-Atomic linked CUT을 대상으로 하면
 `TreatAsAtomicUnit`을 자동으로 바꾸지 않습니다. 원본 library block을 Atomic으로 만든
-뒤 instance link를 갱신해야 합니다. `FILE+MAT`는 Atomic 변환이 필요 없습니다.
+뒤 instance link를 갱신해야 합니다. 예외는 `cfg.DisableLibraryLinkForSldvTargets=true`
+일 때만이며, 그때는 instance link를 `inactive`로 끊고 Atomic으로 바꿉니다. 끊긴
+링크도 `ReferenceBlock`이 남아 있으므로 Harness는 여전히 SyncOnOpen으로 보호합니다.
+`FILE+MAT`는 Atomic 변환이 필요 없습니다.
 
 ## 5. 실패와 복구
 

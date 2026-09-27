@@ -268,7 +268,29 @@ verify를 언제 수행할지 정합니다.
 
 라이브러리 링크된 CUT은 `true`여도 자동 변경하지 않습니다. 원본 라이브러리를
 훼손할 수 있기 때문입니다. 이때는 원본 라이브러리 블록을 Atomic으로 만들고 링크를
-갱신해야 합니다.
+갱신하거나, 아래 `DisableLibraryLinkForSldvTargets`를 켜서 모델 쪽 인스턴스의
+링크를 끊습니다.
+
+### `DisableLibraryLinkForSldvTargets` — 기본 `false`
+
+라이브러리 링크된 비-Atomic CUT을 `FILE+SLDV`나 `GENERATE`로 돌려야 하는데 원본
+라이브러리를 고칠 수 없을 때 쓰는 opt-in입니다.
+
+| 값 | 동작 |
+| --- | --- |
+| `false` (기본) | 링크된 비-Atomic CUT은 `SldvLinkedCUTRequiresAtomic`으로 실패합니다 |
+| `true` | 모델 쪽 인스턴스의 링크를 `LinkStatus=inactive`로 끊은 뒤 `TreatAsAtomicUnit=on`으로 바꿉니다. `AtomicAction=LINK_DISABLED_CONVERTED`로 기록합니다 |
+
+`true`여도 라이브러리 파일은 열거나 저장하지 않습니다. 대신 다음을 감수해야 합니다.
+
+- 그 인스턴스는 더 이상 라이브러리 업데이트를 따라가지 않습니다.
+- 나중에 링크를 복원하면 Atomic 변환도 함께 사라져 다시 실패합니다.
+- 모델 파일이 바뀌므로 형상관리에 반영할지 팀과 합의해야 합니다.
+
+`AutoConvertSldvTargetsToAtomic=false`이면 이 옵션은 무시되고 변환 자체가 거부됩니다.
+링크 해제 뒤 `StaticLinkStatus`가 `inactive`로 읽히지 않으면
+`SldvLibraryLinkDisableFailed`로 중단하며, 이때는 모델을 저장하지 말고 닫아야 합니다.
+값을 바꾸면 `SLDV` 단계 지문이 달라져 그 단계부터 다시 준비합니다.
 
 ### `IgnoreUnexpectedSldvInputs` — 기본 `false`
 

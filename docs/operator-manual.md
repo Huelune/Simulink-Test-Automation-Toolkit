@@ -178,8 +178,10 @@ result/sldv/{No}_{CUTName}/latest_sldvdata.mat
 
 `FILE+SLDV`와 `GENERATE` 대상은 Atomic이어야 합니다. 기본 설정은 라이브러리 링크가
 없는 CUT만 자동으로 바꿔 줍니다. 링크된 CUT은 원본 훼손을 막기 위해
-`SldvLinkedCUTRequiresAtomic`으로 중단합니다. 일반 `FILE+MAT`에는 이 제약이 없으며
-`AtomicAction=NOT_REQUIRED_MAT`로 기록됩니다.
+`SldvLinkedCUTRequiresAtomic`으로 중단합니다. 원본 라이브러리를 고칠 수 없으면
+`cfg.DisableLibraryLinkForSldvTargets=true`로 모델 쪽 인스턴스의 링크만 끊고
+Atomic으로 바꿀 수 있으며, 이때는 `AtomicAction=LINK_DISABLED_CONVERTED`로 기록됩니다.
+일반 `FILE+MAT`에는 이 제약이 없으며 `AtomicAction=NOT_REQUIRED_MAT`로 기록됩니다.
 
 #### Tmax
 

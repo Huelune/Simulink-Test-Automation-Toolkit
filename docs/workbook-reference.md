@@ -161,7 +161,8 @@ CUT에 넣을 입력 신호를 **어디서 가져올지** 정합니다. 이 도�
 > 합니다. 기본 설정(`cfg.AutoConvertSldvTargetsToAtomic=true`)은 라이브러리 링크가
 > 없는 CUT만 자동으로 `TreatAsAtomicUnit=on`으로 바꿔 줍니다. 링크된 CUT은 원본
 > 라이브러리 훼손을 막기 위해 자동 변경하지 않고 오류로 중단합니다. 이때는 원본
-> 라이브러리 블록을 Atomic으로 만들고 링크를 갱신해야 합니다.
+> 라이브러리 블록을 Atomic으로 만들고 링크를 갱신하거나,
+> `cfg.DisableLibraryLinkForSldvTargets=true`로 모델 쪽 인스턴스의 링크만 끊습니다.
 > 일반 `FILE`+`MAT`에는 이 제약이 없습니다.
 
 ### `SldvDataFile`

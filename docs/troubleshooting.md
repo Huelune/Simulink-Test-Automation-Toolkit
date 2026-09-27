@@ -58,12 +58,25 @@ summary = st_check_actual_system();
 **왜 자동으로 안 바꾸는가:** 링크된 블록을 고치면 그 변경이 원본 라이브러리로 퍼져
 같은 라이브러리를 쓰는 다른 모델까지 바뀝니다.
 
-**대처:**
-1. 원본 라이브러리 블록을 열어 `TreatAsAtomicUnit`을 `on`으로 바꿉니다.
-2. 모델에서 링크를 갱신합니다.
-3. 다시 실행합니다.
+**대처:** 셋 중 하나를 고릅니다.
 
-일반 `FILE+MAT` 입력은 Atomic이 아니어도 됩니다. SLDV 분석을 돌리지 않기 때문입니다.
+1. **원본 라이브러리를 고칠 수 있으면** 라이브러리 블록의 `TreatAsAtomicUnit`을
+   `on`으로 바꾸고 저장한 뒤, 모델에서 링크를 갱신하고 다시 실행합니다.
+2. **라이브러리를 건드릴 수 없고 SLDV 입력 생성이 필요하면**
+   `cfg.DisableLibraryLinkForSldvTargets = true`로 켜고 `SLDV` 단계부터 다시
+   돌립니다. 모델 쪽 인스턴스의 링크를 `inactive`로 끊고 Atomic으로 바꿉니다.
+   그 인스턴스는 라이브러리 업데이트를 더 이상 따라가지 않으며, 링크를 복원하면
+   변환도 사라집니다. 자세한 조건은 `docs/config-reference.md`를 보십시오.
+3. **SLDV 분석이 꼭 필요하지 않으면** `SldvMode=FILE` + `DataFileFormat=MAT`로
+   바꿉니다. 일반 `FILE+MAT` 입력은 Atomic이 아니어도 됩니다.
+
+### `SldvLibraryLinkDisableFailed`
+
+**뜻:** `DisableLibraryLinkForSldvTargets=true`로 링크를 끊으려 했지만
+`StaticLinkStatus`가 `inactive`로 읽히지 않았습니다.
+
+**대처:** 모델을 저장하지 말고 닫은 뒤 저장된 원본을 다시 엽니다. CUT이 다른 링크된
+서브시스템 안에 있는지 확인하십시오. 그 경우 바깥 링크가 먼저 끊겨야 합니다.
 
 ### `HarnessChangedLibraryLink`
 

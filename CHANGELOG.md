@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **라이브러리 링크된 CUT도 `GENERATE`를 돌릴 수 있는 opt-in을 추가합니다.**
+  지금까지 비-Atomic linked CUT의 `FILE+SLDV`/`GENERATE`는
+  `SldvLinkedCUTRequiresAtomic`으로 실패했고, 원본 라이브러리를 Atomic으로 고치는
+  것이 유일한 해법이었습니다. 새 옵션 `cfg.DisableLibraryLinkForSldvTargets`
+  (기본 `false`)를 켜면 모델 쪽 인스턴스의 링크를 `LinkStatus=inactive`로 끊은 뒤
+  `TreatAsAtomicUnit=on`으로 바꾸고 `AtomicAction=LINK_DISABLED_CONVERTED`로
+  기록합니다.
+  - 라이브러리 파일은 열거나 저장하지 않습니다. 대신 그 인스턴스는 라이브러리
+    업데이트를 따라가지 않고, 링크를 복원하면 Atomic 변환도 사라집니다.
+  - 기본값에서는 동작이 바뀌지 않습니다. `AutoConvertSldvTargetsToAtomic=false`면
+    무시됩니다.
+  - 링크 해제 readback이 실패하면 `SldvLibraryLinkDisableFailed`로 멈춥니다.
+  - 옵션 값은 `SLDV` 단계 지문에 들어가므로 바꾸면 그 단계부터 다시 준비합니다.
+  - R2025b 실물 확인이 남아 있습니다.
+
 - **standalone 파이프라인이 원본 Top Model을 스스로 저장하고 닫습니다.**
   지금까지는 Top Model이나 Harness가 열려 있으면
   `StandaloneModelStillLoadedBeforeRun`으로 멈춰 사용자가 손으로 저장하고

@@ -546,6 +546,11 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   `HarnessChangedLibraryLink`으로 즉시 중단한다.
 - FILE+MAT는 Atomic 변환을 생략한다. FILE+SLDV와 GENERATE의 비-Atomic linked CUT는
   자동 수정하지 않고 `SldvLinkedCUTRequiresAtomic`으로 실패시킨다.
+- 2026-09-28: opt-in `cfg.DisableLibraryLinkForSldvTargets`(기본 false)를 추가했다.
+  true면 instance link를 `inactive`로 끊고 Atomic으로 바꾸며
+  `AtomicAction=LINK_DISABLED_CONVERTED`로 기록한다. library 파일은 열지 않는다.
+  실물 확인은 아직 없다. 링크 해제 뒤 Harness SyncOnOpen 보호와 HARNESS_CONFIG
+  저장이 그대로 동작하는지 19번 증거와 함께 확인해야 한다.
 - R2025b용 실제 library fixture를 추가했지만 현재 PC에는 MATLAB이 없어 실행하지
   못했다. 위 19번 증거 전에는 runtime 해결 완료로 판단하지 않는다.
 
