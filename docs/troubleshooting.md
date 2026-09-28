@@ -83,6 +83,39 @@ CUT이 링크 블록 자체가 아니라 링크된 상위 서브시스템 안에
 블록에서 `get_param(owner,'StaticLinkStatus')`와 `set_param(owner,'LinkStatus','inactive')`
 를 손으로 실행해 어떤 오류가 나는지 확인하십시오.
 
+### `SldvLibraryLinkDisableBlockedByHarness`
+
+**뜻:** `DisableLibraryLinkForSldvTargets=true`로 링크를 끊으려 했지만, 그 링크 블록 안에
+이미 테스트 하네스가 달린 블록이 있어 Simulink가 거부했습니다. Simulink 규칙이라 도구가
+우회할 수 없습니다. 오류 메시지의 `Link owner`가 끊으려 한 블록이고
+`Harnesses inside`가 막고 있는 하네스 목록입니다.
+
+정상 실행에서는 도구가 Harness를 만들기 **전에** 링크를 끊으므로 이 오류가 나지
+않습니다. 이미 Harness가 만들어진 모델에서 옵션을 나중에 켰을 때 납니다.
+
+**대처:** 한 번만 손으로 정리합니다. 도구는 없는 Harness를 다시 만듭니다.
+
+```matlab
+owner = 'MyModel/.../SWC';                    % 오류 메시지의 Link owner
+load_system(bdroot(owner));
+blocks = find_system(owner, 'LookUnderMasks','all', 'FollowLinks','on', ...
+    'BlockType','SubSystem');
+for k = 1:numel(blocks)
+    items = sltest.harness.find(blocks{k}, 'SearchDepth', 0);
+    for j = 1:numel(items)
+        fprintf('delete %s : %s\n', items(j).ownerFullPath, items(j).name);
+        sltest.harness.delete(items(j).ownerFullPath, items(j).name);
+    end
+end
+save_system(bdroot(owner));
+```
+
+그 뒤 처음부터 강제 재실행합니다. 링크 해제 → Harness 재생성 → SLDV 순서로 진행됩니다.
+
+```matlab
+st_run_from_harness('PreparationMode','FORCE')
+```
+
 ### `SldvLibraryLinkOwnerNotFound`
 
 **뜻:** CUT의 `StaticLinkStatus`가 `implicit`인데 모델 루트까지 올라가도 링크를 소유한

@@ -291,6 +291,12 @@ verify를 언제 수행할지 정합니다.
 - 나중에 링크를 복원하면 Atomic 변환도 함께 사라져 다시 실패합니다.
 - 모델 파일이 바뀌므로 형상관리에 반영할지 팀과 합의해야 합니다.
 
+링크 해제는 Harness를 만들기 **전에** 별도 단계(`Disable Library Links For SLDV
+Targets`, 결과 `SldvLibraryLinkDisableResult`)에서 실행됩니다. Simulink는 링크 블록 안에
+테스트 하네스가 있으면 링크를 끊지 못하게 하기 때문입니다. 이미 Harness가 있는 모델에서
+옵션을 나중에 켜면 `SldvLibraryLinkDisableBlockedByHarness`로 멈추며, 그 링크 안의
+Harness를 한 번 지운 뒤 다시 돌려야 합니다. `docs/troubleshooting.md`를 보십시오.
+
 `AutoConvertSldvTargetsToAtomic=false`이면 이 옵션은 무시되고 변환 자체가 거부됩니다.
 링크 해제 뒤 `StaticLinkStatus`가 `inactive`로 읽히지 않으면
 `SldvLibraryLinkDisableFailed`로 중단하며, 이때는 모델을 저장하지 말고 닫아야 합니다.

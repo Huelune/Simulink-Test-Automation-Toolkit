@@ -16,6 +16,11 @@
     떨어지며, 어느 블록인지 WARN 로그의 `Link owner`에 남습니다.
   - 기본값에서는 동작이 바뀌지 않습니다. `AutoConvertSldvTargetsToAtomic=false`면
     무시됩니다.
+  - 링크 해제는 Harness 생성 **전** 단계 `Disable Library Links For SLDV Targets`
+    에서 합니다. Simulink는 링크 안에 하네스가 있으면 링크를 끊지 못하게 하므로,
+    이미 Harness가 있는 모델에서 옵션을 켜면
+    `SldvLibraryLinkDisableBlockedByHarness`로 멈추고 그 링크 안 Harness를 한 번
+    지운 뒤 다시 돌려야 합니다.
   - 링크 해제 readback이 실패하면 `SldvLibraryLinkDisableFailed`로 멈춥니다.
   - 옵션 값은 `SLDV` 단계 지문에 들어가므로 바꾸면 그 단계부터 다시 준비합니다.
   - R2025b 실물 확인이 남아 있습니다.
