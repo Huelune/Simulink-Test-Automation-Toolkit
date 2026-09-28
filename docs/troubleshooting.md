@@ -75,8 +75,20 @@ summary = st_check_actual_system();
 **뜻:** `DisableLibraryLinkForSldvTargets=true`로 링크를 끊으려 했지만
 `StaticLinkStatus`가 `inactive`로 읽히지 않았습니다.
 
-**대처:** 모델을 저장하지 말고 닫은 뒤 저장된 원본을 다시 엽니다. CUT이 다른 링크된
-서브시스템 안에 있는지 확인하십시오. 그 경우 바깥 링크가 먼저 끊겨야 합니다.
+CUT이 링크 블록 자체가 아니라 링크된 상위 서브시스템 안에 든 블록이면
+(`StaticLinkStatus=implicit`) 도구가 링크를 소유한 상위 블록을 찾아 그쪽을 끊습니다.
+오류 메시지의 `Link owner`가 실제로 끊으려 한 블록입니다.
+
+**대처:** 모델을 저장하지 말고 닫은 뒤 저장된 원본을 다시 엽니다. 그 뒤 `Link owner`
+블록에서 `get_param(owner,'StaticLinkStatus')`와 `set_param(owner,'LinkStatus','inactive')`
+를 손으로 실행해 어떤 오류가 나는지 확인하십시오.
+
+### `SldvLibraryLinkOwnerNotFound`
+
+**뜻:** CUT의 `StaticLinkStatus`가 `implicit`인데 모델 루트까지 올라가도 링크를 소유한
+상위 블록이 없습니다. 모델이 비정상 상태일 가능성이 큽니다.
+
+**대처:** 모델을 저장하지 말고 닫은 뒤 다시 열어 CUT의 상위 경로를 확인하십시오.
 
 ### `HarnessChangedLibraryLink`
 

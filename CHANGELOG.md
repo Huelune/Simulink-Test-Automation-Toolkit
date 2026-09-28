@@ -11,6 +11,9 @@
   기록합니다.
   - 라이브러리 파일은 열거나 저장하지 않습니다. 대신 그 인스턴스는 라이브러리
     업데이트를 따라가지 않고, 링크를 복원하면 Atomic 변환도 사라집니다.
+  - CUT이 링크된 상위 서브시스템 안의 블록(`implicit`)이면 링크를 소유한 상위
+    블록을 찾아 그쪽을 끊습니다. 그 링크 인스턴스 전체가 라이브러리에서
+    떨어지며, 어느 블록인지 WARN 로그의 `Link owner`에 남습니다.
   - 기본값에서는 동작이 바뀌지 않습니다. `AutoConvertSldvTargetsToAtomic=false`면
     무시됩니다.
   - 링크 해제 readback이 실패하면 `SldvLibraryLinkDisableFailed`로 멈춥니다.
