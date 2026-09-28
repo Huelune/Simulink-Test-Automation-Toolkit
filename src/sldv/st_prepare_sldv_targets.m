@@ -674,7 +674,10 @@ if ~isfield(cfg, 'AutoConvertSldvTargetsToAtomic') || ...
 end
 
 if linkState.IsLinked
-    disable_sldv_cut_library_link(cfg, ownerPath, linkState);
+    % Normally a no-op: the workflow already disabled the link before the
+    % HARNESS stage. It still runs here for a direct st_prepare_sldv_targets
+    % call on a model that has no Harness inside the link yet.
+    st_disable_cut_library_link(cfg, ownerPath);
 end
 
 set_param( ...
@@ -700,75 +703,6 @@ st_log( ...
     ['[SLDV] Converted target to an atomic Subsystem and kept the change ' ...
      '| CUT=%s | Action=%s'], ...
     ownerPath, action);
-
-end
-
-
-function disable_sldv_cut_library_link(cfg, ownerPath, before)
-% Disable the model-side instance link so the block can be made atomic.
-% The source library file is never opened or saved here.
-%
-% The CUT is often not the linked block itself but a block inside a linked
-% ancestor (StaticLinkStatus=implicit). Only the ancestor that owns the
-% link can be disabled, so walk up to it first. Blocks inside the disabled
-% link stay implicit, so the Harness link protection still treats the CUT
-% as linked and keeps SyncOnOpen.
-
-linkOwner = find_library_link_owner(ownerPath);
-ownerBefore = char(string(get_param(linkOwner, 'StaticLinkStatus')));
-ownerReference = char(string(get_param(linkOwner, 'ReferenceBlock')));
-
-st_log(cfg, 'WARN', ...
-    ['[SLDV] Disabling the library link of a non-atomic CUT because ' ...
-     'cfg.DisableLibraryLinkForSldvTargets=true. The whole linked ' ...
-     'instance will no longer follow library updates and restoring the ' ...
-     'link reverts the atomic conversion | CUT=%s | CUT status=%s | ' ...
-     'Link owner=%s | Owner status=%s | Reference=%s'], ...
-    ownerPath, before.StaticLinkStatus, linkOwner, ownerBefore, ...
-    ownerReference);
-
-if ~strcmpi(ownerBefore, 'inactive')
-    set_param(linkOwner, 'LinkStatus', 'inactive');
-end
-
-ownerAfter = char(string(get_param(linkOwner, 'StaticLinkStatus')));
-if ~strcmpi(ownerAfter, 'inactive')
-    error('simtest:SldvLibraryLinkDisableFailed', ...
-        ['Disabling the library link did not take effect. Do not save ' ...
-         'the model; close it without saving and reopen the saved ' ...
-         'source. CUT=%s | Link owner=%s | Owner status=%s->%s | ' ...
-         'Reference=%s'], ...
-        ownerPath, linkOwner, ownerBefore, ownerAfter, ownerReference);
-end
-
-after = st_cut_library_link_state(ownerPath);
-st_log(cfg, 'INFO', ...
-    ['[SLDV] Library link disabled | CUT=%s | CUT status=%s->%s | ' ...
-     'Link owner=%s | Owner status=%s->%s'], ...
-    ownerPath, before.StaticLinkStatus, after.StaticLinkStatus, ...
-    linkOwner, ownerBefore, ownerAfter);
-
-end
-
-
-function linkOwner = find_library_link_owner(blockPath)
-% Return the nearest ancestor (or the block itself) that owns a library
-% link. A block inside a link reports StaticLinkStatus=implicit and cannot
-% be disabled on its own.
-
-linkOwner = char(string(blockPath));
-modelName = bdroot(linkOwner);
-
-while strcmpi(char(string(get_param(linkOwner, 'StaticLinkStatus'))), ...
-        'implicit')
-    parent = char(string(get_param(linkOwner, 'Parent')));
-    if isempty(parent) || strcmp(parent, modelName)
-        error('simtest:SldvLibraryLinkOwnerNotFound', ...
-            ['The CUT reports an implicit library link but no linked ' ...
-             'ancestor was found: %s'], blockPath);
-    end
-    linkOwner = parent;
-end
 
 end
 
