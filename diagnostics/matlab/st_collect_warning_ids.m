@@ -6,6 +6,12 @@ function ids = st_collect_warning_ids(varargin)
 %   emitted. lastwarn reports only the final warning, so a run that mixes
 %   several kinds cannot be silenced from it.
 %
+%   MathWorks calls the toolkit wraps (st_call_quiet) print into the run
+%   log as [SYS <label>] lines, not to the console the diary records. So
+%   the run logs under <cfg.ResultDir>/logs written while TASK ran (the
+%   .log files, not .console.log) are read as well. The task's own command
+%   finds this diary already on and keeps no .console.log copy.
+%
 %   IDS = ST_COLLECT_WARNING_IDS('LogFile', PATH) parses a diary you already
 %   captured instead of running anything.
 %
@@ -30,8 +36,12 @@ if isempty(task) && isempty(logFile)
         'Pass a function handle to run, or LogFile of a captured diary.');
 end
 
+runLogs = {};
 if isempty(logFile)
     logFile = [tempname(tempdir) '.txt'];
+    % dir() reports modification times to the second. Round the start down
+    % so a run log opened in the same second still counts.
+    taskStart = floor(now * 86400) / 86400;
     previousVerbose = warning('query', 'verbose');
     restoreVerbose = onCleanup(@() warning(previousVerbose)); %#ok<NASGU>
     warning('on', 'verbose');
@@ -45,6 +55,9 @@ if isempty(logFile)
         fprintf('Identifiers emitted before the failure are still listed.\n');
     end
     clear diaryCleanup;
+    runLogs = run_logs_since(taskStart);
+    fprintf('Also reading %d run log(s) written during the task.\n', ...
+        numel(runLogs));
 end
 
 if ~isfile(logFile)
@@ -53,6 +66,9 @@ if ~isfile(logFile)
 end
 
 text = fileread(logFile);
+for k = 1:numel(runLogs)
+    text = [text newline system_lines(runLogs{k})]; %#ok<AGROW>
+end
 tokens = regexp(text, 'warning off ([A-Za-z]\w*(?::\w+)+)', 'tokens');
 if isempty(tokens)
     ids = {};
@@ -72,4 +88,29 @@ for i = 1:numel(ids)
     fprintf('    ''%s'', ...\n', ids{i});
 end
 fprintf('    };\n');
+end
+
+function paths = run_logs_since(startTime)
+%RUN_LOGS_SINCE Run logs under <cfg.ResultDir>/logs modified since startTime.
+paths = {};
+try
+    cfg = st_config();
+    listing = dir(fullfile(char(cfg.ResultDir), 'logs', '*.log'));
+catch ME
+    fprintf('Run logs not read: %s\n', ME.message);
+    return;
+end
+if isempty(listing), return; end
+keep = ~endsWith({listing.name}, '.console.log') & ...
+    [listing.datenum] >= startTime;
+listing = listing(keep);
+if isempty(listing), return; end
+paths = fullfile({listing.folder}, {listing.name});
+end
+
+function text = system_lines(path)
+%SYSTEM_LINES The [SYS <label>] lines of one run log, where wrapped MathWorks
+% output (its warnings included) is kept.
+lines = cellstr(splitlines(string(fileread(path))));
+text = sprintf('%s\n', lines{contains(lines, '[SYS ')});
 end

@@ -504,7 +504,9 @@ ids = st_collect_warning_ids('LogFile', 'run.log');
 
 `lastwarn`은 마지막 경고 하나만 알려 주므로, 여러 종류가 섞인 실행은 이 명령으로
 모아야 전부 확인할 수 있습니다. 출력된 블록을 `cfg.SuppressedWarnings`에 그대로
-붙여 넣으면 됩니다.
+붙여 넣으면 됩니다. 툴킷이 감싼 MathWorks 함수의 경고는 콘솔 사본 `.console.log`가
+아니라 실행 로그 `.log`에 `[SYS <API>]` 줄로 남으므로, 함수 핸들로 부르면 이 명령은
+diary와 함께 작업 동안 `result/logs/`에 쓰인 `.log`도 읽습니다.
 
 ## 11. CUT 경로 찾기 보조
 
