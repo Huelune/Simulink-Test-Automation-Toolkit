@@ -24,6 +24,7 @@ st_log(cfg, 'INFO', 'inner-line');
 clear inner;
 state = st_log_scope('current');
 verifyEqual(testCase, state.Depth, 1);
+st_log_scope('complete');
 clear guard;
 
 files = dir(fullfile(logDir, '*_outer_cmd.log'));
@@ -71,6 +72,48 @@ out = evalc(['guard = st_log_scope(''enter'', ''blocked_cmd'', logDir); ' ...
 verifyEqual(testCase, numel(strfind(out, 'Log file write failed')), 1);
 end
 
+function testWriteFailureWarnsAgainInTheNextCommand(testCase)
+% One failed write must not silence that path for the rest of the session:
+% each new top-level command gets to report it once more.
+blocker = fullfile(testCase.TestData.Dir, 'blocker');
+fileId = fopen(blocker, 'w'); fclose(fileId);
+cfg = struct('ResultDir', blocker, 'ConsoleLogLevel', 'STEP'); %#ok<NASGU>
+logDir = fullfile(testCase.TestData.Dir, 'logs'); %#ok<NASGU>
+out = evalc(['st_log(cfg, ''INFO'', ''a''); ' ...
+    'guard = st_log_scope(''enter'', ''retry_cmd'', logDir); ' ...
+    'st_log_scope(''complete''); clear guard; ' ...
+    'st_log(cfg, ''INFO'', ''b'');']);
+verifyEqual(testCase, numel(strfind(out, 'Log file write failed')), 2);
+end
+
+function testUnmarkedCloseIsInterrupted(testCase)
+% Ctrl+C skips every catch block and runs only onCleanup, so a scope that
+% closes without complete or fail must not claim the command finished.
+logDir = testCase.TestData.Dir;
+guard = st_log_scope('enter', 'cut_short_cmd', logDir); %#ok<NASGU>
+out = evalc('clear guard');
+verifyTrue(testCase, contains(out, 'ERROR <== cut_short_cmd INTERRUPTED'));
+state = st_log_scope('current');
+verifyEqual(testCase, state.Depth, 0);
+verifyEqual(testCase, state.LogPath, '');
+text = log_text(logDir, '*_cut_short_cmd.log');
+verifyTrue(testCase, contains(text, '[ERROR] <== cut_short_cmd INTERRUPTED'));
+verifyFalse(testCase, contains(text, '<== cut_short_cmd done'));
+end
+
+function testOnlyTheOutermostCompleteCounts(testCase)
+% A nested command that returns normally must not mark the outer run done.
+logDir = testCase.TestData.Dir;
+guard = st_log_scope('enter', 'outer_cut_cmd', logDir); %#ok<NASGU>
+st_log_run('inner_ok_cmd', @() fprintf(''), logDir);
+state = st_log_scope('current');
+verifyEqual(testCase, state.Depth, 1);
+verifyFalse(testCase, state.Completed);
+clear guard;
+text = log_text(logDir, '*_outer_cut_cmd.log');
+verifyTrue(testCase, contains(text, '<== outer_cut_cmd INTERRUPTED'));
+end
+
 function testElapsedText(testCase)
 verifyEqual(testCase, st_log_elapsed_text(30.94), '30.9s');
 verifyEqual(testCase, st_log_elapsed_text(758), '12m38s');
@@ -109,4 +152,9 @@ end
 function restore_diary(previousFile)
 diary('off');
 set(0, 'DiaryFile', previousFile);
+end
+
+function text = log_text(logDir, pattern)
+files = dir(fullfile(logDir, pattern));
+text = fileread(fullfile(files(1).folder, files(1).name));
 end

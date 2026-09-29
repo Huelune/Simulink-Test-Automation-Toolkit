@@ -13,6 +13,8 @@
     11개가 각자 로그 파일을 열고, 단계 함수를 직접 부르면 session 로그로 갑니다.
     자세한 위치와 여는 법은 `docs/troubleshooting.md`의 "로그는 어디에 있나"에
     있습니다.
+  - 명령의 끝 줄은 정상이면 `<== <명령> done`, 오류면 `FAILED`, Ctrl+C로 끊었으면
+    `INTERRUPTED`입니다. 끊긴 실행이 `done`으로 기록되지 않습니다.
   - **설정이 바뀝니다.** `cfg.VerboseLogging`이 없어지고 `cfg.ConsoleLogLevel`
     (`'STEP'` 기본, `'INFO'`, `'DEBUG'`, `'TRACE'`)이 대신합니다. 파일에는 값과
     상관없이 모든 레벨이 남습니다. `st_config.m`에 `cfg.VerboseLogging` 줄을 직접

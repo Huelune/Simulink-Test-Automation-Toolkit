@@ -7,6 +7,10 @@ function value = st_log_scope(action, varargin)
 %     (logDir defaults to <cfg.ResultDir>/logs). Nested enters reuse it.
 %     Keep guard for the whole command; clearing it closes the scope.
 % st_log_scope('fail', ME)          outermost command failed with ME
+% st_log_scope('complete')          outermost command returned normally
+%     Closing the scope prints done after complete, FAILED after fail and
+%     INTERRUPTED after neither: Ctrl+C skips catch blocks and runs only
+%     the guard's onCleanup, so an unmarked close is not a success.
 % state = st_log_scope('current')   LogPath is '' outside every command
 % k = st_log_scope('next_stage')    number the next workflow stage
 % first = st_log_scope('mark_write_failed', path)   true once per path
@@ -23,9 +27,12 @@ switch action
             value = onCleanup(@() st_log_scope('leave'));
             return;
         end
-        cfg = safe_config();
+        % A path that failed once (a locked file, a full disk) gets another
+        % chance in each new command instead of staying silent all session.
+        failedPaths = {};
         logDir = '';
         if numel(varargin) >= 2, logDir = char(string(varargin{2})); end
+        cfg = safe_config(isempty(logDir));
         if isempty(logDir), logDir = default_log_dir(cfg); end
         state = open_state(commandName, logDir, cfg);
         value = onCleanup(@() st_log_scope('leave'));
@@ -42,20 +49,21 @@ switch action
         end
         if state.Depth < 1, return; end
         finished = state;
-        elapsed = st_log_elapsed_text(toc(finished.Timer));
-        if isempty(finished.Failure)
-            st_log(finished.Cfg, 'STEP', '<== %s done | %s', ...
-                finished.Command, elapsed);
-        else
-            st_log(finished.Cfg, 'ERROR', '<== %s FAILED | %s | %s: %s', ...
-                finished.Command, elapsed, finished.Failure.identifier, ...
-                finished.Failure.message);
+        % The closing lines are best effort. Whatever happens in them, the
+        % scope must end here, or every later command would nest inside it.
+        try
+            log_closing_lines(finished);
+        catch
         end
-        if ~isempty(finished.LogPath)
-            st_log(finished.Cfg, 'STEP', '    log: %s', finished.LogPath);
+        try
+            stop_diary(finished);
+        catch
         end
-        stop_diary(finished);
         state = idle_state();
+    case 'complete'
+        value = [];
+        % Only the outermost command returning normally ends the run as done.
+        if state.Depth == 1, state.Completed = true; end
     case 'fail'
         value = [];
         % Only the outermost command decides how the run ended; an inner
@@ -83,8 +91,28 @@ end
 function state = idle_state()
 state = struct('Depth', 0, 'Command', '', 'LogPath', '', ...
     'ConsolePath', '', 'Cfg', struct('ConsoleLogLevel', 'STEP'), ...
-    'Timer', uint64(0), 'Failure', [], 'StageIndex', 0, ...
-    'DiaryOwned', false, 'PreviousDiaryFile', '');
+    'Timer', uint64(0), 'Failure', [], 'Completed', false, ...
+    'StageIndex', 0, 'DiaryOwned', false, 'PreviousDiaryFile', '');
+end
+
+function log_closing_lines(finished)
+elapsed = st_log_elapsed_text(toc(finished.Timer));
+if ~isempty(finished.Failure)
+    st_log(finished.Cfg, 'ERROR', '<== %s FAILED | %s | %s: %s', ...
+        finished.Command, elapsed, finished.Failure.identifier, ...
+        finished.Failure.message);
+elseif finished.Completed
+    st_log(finished.Cfg, 'STEP', '<== %s done | %s', ...
+        finished.Command, elapsed);
+else
+    % Neither complete nor fail was called: Ctrl+C, or an error that left
+    % through a path without a catch.
+    st_log(finished.Cfg, 'ERROR', '<== %s INTERRUPTED | %s', ...
+        finished.Command, elapsed);
+end
+if ~isempty(finished.LogPath)
+    st_log(finished.Cfg, 'STEP', '    log: %s', finished.LogPath);
+end
 end
 
 function state = open_state(commandName, logDir, cfg)
@@ -112,11 +140,16 @@ state.LogPath = candidate;
 state.ConsolePath = [candidate(1:end-4) '.console.log'];
 end
 
-function cfg = safe_config()
+function cfg = safe_config(logDirFromConfig)
 try
     cfg = st_config();
-catch
+catch ME
     cfg = struct('ConsoleLogLevel', 'STEP');
+    if logDirFromConfig
+        % No scope or log file exists yet, so only the console can say so.
+        fprintf('[%s] WARN  st_config failed; this run has no log file | %s\n', ...
+            char(datetime('now', 'Format', 'HH:mm:ss')), ME.message);
+    end
 end
 end
 

@@ -66,6 +66,7 @@ try
 catch
     % The outer command handles it, as ContinueOnFailure does.
 end
+st_log_scope('complete');
 clear guard;
 files = dir(fullfile(logDir, '*_outer_ok_cmd.log'));
 text = fileread(fullfile(files(1).folder, files(1).name));
@@ -83,6 +84,19 @@ files = dir(fullfile(logDir, '*_boom_cmd.log'));
 text = fileread(fullfile(files(1).folder, files(1).name));
 verifyTrue(testCase, contains(text, '<== boom_cmd FAILED'));
 verifyTrue(testCase, contains(text, 'simtest:Probe'));
+end
+
+function testRunSuccessIsDone(testCase)
+% st_log_run marks a normal return complete, so the log ends with done.
+logDir = testCase.TestData.Dir;
+st_log_run('fine_cmd', @() fprintf(''), logDir);
+state = st_log_scope('current');
+verifyEqual(testCase, state.Depth, 0);
+files = dir(fullfile(logDir, '*_fine_cmd.log'));
+text = fileread(fullfile(files(1).folder, files(1).name));
+verifyTrue(testCase, contains(text, '[STEP] <== fine_cmd done'));
+verifyFalse(testCase, contains(text, 'INTERRUPTED'));
+verifyFalse(testCase, contains(text, 'FAILED'));
 end
 
 function testRunForwardsOutputs(testCase)

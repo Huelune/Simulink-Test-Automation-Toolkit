@@ -67,6 +67,17 @@ verifyTrue(testCase, contains(text, "st_suppress_warnings(cfg, 'STANDALONE_PIPEL
 failAt = strfind(text, "st_log_scope('fail', ME);");
 rethrowAt = strfind(text, 'rethrow(ME);');
 verifyLessThan(testCase, failAt(1), rethrowAt(end));
+% A normal end is marked inside the main try, so Ctrl+C (which skips the
+% catch) closes the log as INTERRUPTED rather than done. The output root
+% is created inside the same try, so failing to create it is a FAILED run.
+mainTry = regexp(text, '^try\s*$', 'once', 'lineanchors');
+completeAt = strfind(text, "st_log_scope('complete');");
+mkdirAt = strfind(text, 'if ~isfolder(outputRoot), mkdir(outputRoot); end');
+verifyEqual(testCase, numel(completeAt), 1);
+verifyEqual(testCase, numel(mkdirAt), 1);
+verifyGreaterThan(testCase, completeAt(1), mainTry);
+verifyLessThan(testCase, completeAt(1), failAt(1));
+verifyGreaterThan(testCase, mkdirAt(1), mainTry);
 end
 
 function testExportCallIsQuiet(testCase)

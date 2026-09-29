@@ -30,8 +30,13 @@ if ~isempty(warningLines)
     st_log(cfg, 'WARN', '%s system warnings: %d (%d distinct) - see log', ...
         label, numel(warningLines), numel(unique(warningLines)));
 end
-st_log(cfg, 'DEBUG', '[SYS %s] end | lines=%d | %s', ...
+endText = sprintf('[SYS %s] end | lines=%d | %s', ...
     label, numel(lines), st_log_elapsed_text(toc(timerValue)));
+if ~isempty(callError)
+    % The end line alone must tell a failed call from a quiet one.
+    endText = sprintf('%s | FAILED %s', endText, callError.identifier);
+end
+st_log(cfg, 'DEBUG', '%s', endText);
 
 if ~isempty(callError)
     rethrow(callError);

@@ -89,8 +89,13 @@ info  = st_log_scope('current')              % st_log가 조회
   - 마지막 줄에 로그 파일 경로 `    log: <경로>`를 한 번 더 찍는다.
   - `onCleanup`만으로는 정상 종료와 예외를 구분할 수 없다. 그래서 명령 쪽에서
     `st_log_scope('fail', ME)`를 불러 실패를 표시한 뒤 rethrow한다.
+  - 정상 종료도 명령 쪽에서 `st_log_scope('complete')`로 표시한다(깊이 1일 때만
+    유효). Ctrl+C는 catch를 건너뛰고 `onCleanup`만 돌리므로, 둘 다 표시되지 않은 채
+    닫히면 `<== <commandName> INTERRUPTED | <경과 시간>`을 ERROR로 찍는다. 닫는 줄을
+    찍다가 오류가 나도 범위 상태는 반드시 초기화한다.
 - **명령 본문 헬퍼 `st_log_run`:** 위 순서를 명령마다 되풀이하지 않도록 범위를 열고,
-  명령 본문을 실행하고, 실패하면 `fail`을 표시한 뒤 rethrow하는 헬퍼를 둔다.
+  명령 본문을 실행하고, 실패하면 `fail`을 표시한 뒤 rethrow하고, 정상으로 돌아오면
+  `complete`를 표시하는 헬퍼를 둔다.
 
   ```matlab
   [varargout{1:nargout}] = st_log_run(mfilename, @() body(varargin{:}))
@@ -124,7 +129,10 @@ info  = st_log_scope('current')              % st_log가 조회
   Ctrl+C로 끊겨도 핸들이 남지 않게 하려는 것이다. 호출 수가 실행당 수천 건
   수준이라 비용은 문제가 되지 않는다고 본다.
 - 쓰기가 실패하면 처음 한 번만 콘솔에 WARN을 찍고, 그 범위 안에서는 더 시도하지
-  않는다. 예외를 올리지 않는다.
+  않는다. 예외를 올리지 않는다. 최상위 명령이 새로 시작하면 실패 기록을 비워, 한 번의
+  일시적 실패가 MATLAB 세션 내내 그 경로를 조용하게 만들지 않게 한다.
+- `st_config`를 읽지 못해 로그 폴더를 정할 수 없으면, 범위에 들어갈 때 콘솔에
+  `st_config failed; this run has no log file` WARN을 한 번 찍는다.
 - `st_log_stage_result`가 쓰던 `result/reports/WorkflowStageLog.log`는 이 파일로
   흡수하고 없앤다.
 
@@ -151,6 +159,8 @@ varargout = st_call_quiet(cfg, label, fn)
 - 예외가 나기 직전까지의 출력도 잃지 않도록, `evalc` **안에서** try/catch로 예외를
   받는다. 먼저 텍스트를 기록하고, 그다음 원래 예외를 그대로 rethrow한다.
   `st_is_user_interrupt`에 해당하는 사용자 중단도 같은 방식으로 기록한 뒤 올린다.
+  이때 DEBUG 끝 줄 `[SYS <label>] end | lines=N | <경과 시간>`에
+  `| FAILED <오류 식별자>`를 붙여, 끝 줄만 보고도 실패한 호출을 알 수 있게 한다.
 - 받은 텍스트에 `Warning:`(한국어 MATLAB은 `경고:`)으로 시작하는 줄이 있으면 콘솔에
   WARN 한 줄로 요약한다. 형식은 `<label> system warnings: N (K distinct) - see log`
   이다(표시 문구는 ASCII 영어). 경고 원문은 모두 DEBUG로 파일에 있다.

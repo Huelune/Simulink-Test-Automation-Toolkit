@@ -304,9 +304,11 @@
     쓰고 콘솔은 레벨로 거른다. 콘솔 사본은 같은 이름의 `.console.log`(`diary`), 명령
     밖은 `session_<yyyyMMdd>.log`다.
   - 콘솔 기호는 ASCII 영어다. 명령 `==> <명령> start` / `<== <명령> done`(실패는
-    `FAILED`), 단계 `--> [k] <label>` / `<-- [k] <label> | OK=24, FAIL=1 | 12m38s`
-    (전체 단계 수 없음), 대상 `[ i/n] STATUS label elapsed message`. 대상 START 줄은
-    Harness 생성, SLDV, PER_CUT 실행, PER_CUT 결과 정리에만 있다.
+    `FAILED`, `complete`도 `fail`도 표시되지 않은 채 닫히면(Ctrl+C)
+    `INTERRUPTED`), 단계 `--> [k] <label>` /
+    `<-- [k] <label> | OK=24, FAIL=1 | 12m38s`(전체 단계 수 없음), 대상
+    `[ i/n] STATUS label elapsed message`. 대상 START 줄은 Harness 생성, SLDV,
+    PER_CUT 실행, PER_CUT 결과 정리에만 있다.
   - 실행 로그를 여는 명령은 11개다: `st_run_from_harness`, `st_run_after_harness`,
     `st_run_from_stage`, `st_pre_validate_targets`, `st_collect_per_cut_results`,
     `st_run_standalone_coverage_pipeline`, `st_check_standalone_coverage`,

@@ -53,13 +53,15 @@ logScope = st_log_scope('enter', mfilename); %#ok<NASGU>
 warningScope = st_suppress_warnings(cfg, 'STANDALONE_PIPELINE'); %#ok<NASGU>
 outputRoot = strtrim(char(string(p.Results.OutputRoot)));
 if isempty(outputRoot), outputRoot = cfg.StandaloneCoverageRootDir; end
-if ~isfolder(outputRoot), mkdir(outputRoot); end
 
 timerValue = tic;
 st_log(cfg, 'STEP', ...
     'Standalone coverage pipeline start | Action=%s | PipelineId=%s', ...
     action, char(string(p.Results.PipelineId)));
 try
+    % Inside the try so an output root that cannot be created ends the run
+    % log with FAILED and the reason, not with an unmarked exit.
+    if ~isfolder(outputRoot), mkdir(outputRoot); end
     switch action
         case 'PREPARE'
             pipelineId = resolve_new_pipeline_id( ...
@@ -114,6 +116,7 @@ try
         ['Standalone coverage pipeline complete | Action=%s | ' ...
          'PipelineId=%s | elapsed=%.3f sec'], ...
         action, manifest.PipelineId, toc(timerValue));
+    st_log_scope('complete');
 catch ME
     if exist('manifest', 'var') && isstruct(manifest) && ...
             isfield(manifest, 'Actions')

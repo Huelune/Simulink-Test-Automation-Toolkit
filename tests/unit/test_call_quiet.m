@@ -22,6 +22,8 @@ cfg = testCase.TestData.Cfg; %#ok<NASGU>
 out = evalc('st_call_quiet(cfg, ''probe'', @() fprintf(''system-chatter\n''));');
 verifyFalse(testCase, contains(out, 'system-chatter'));
 verifyTrue(testCase, contains(log_text(), '[SYS probe] system-chatter'));
+verifyTrue(testCase, contains(log_text(), '[SYS probe] end | lines=1 | '));
+verifyFalse(testCase, contains(log_text(), 'FAILED'));
 end
 
 function testReturnsEveryOutput(testCase)
@@ -52,6 +54,9 @@ function testErrorKeepsOutputAndRethrows(testCase)
 verifyError(testCase, @() st_call_quiet(testCase.TestData.Cfg, ...
     'probe', @emit_then_fail), 'simtest:QuietProbeFailed');
 verifyTrue(testCase, contains(log_text(), '[SYS probe] before-failure'));
+% The end line alone tells a failed call from a quiet one.
+verifyNotEmpty(testCase, regexp(log_text(), ...
+    '\[SYS probe\] end \| lines=1 \| [^|\r\n]+ \| FAILED simtest:QuietProbeFailed', 'once'));
 end
 
 function emit_then_fail()
