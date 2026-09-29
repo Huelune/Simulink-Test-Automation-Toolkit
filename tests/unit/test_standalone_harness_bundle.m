@@ -212,12 +212,22 @@ end
 function testStandaloneExportReportsPerTargetProgress(testCase)
 % One target re-saves the whole source copy and runs a Harness export, both
 % minutes long on a large model. The loop printed nothing until it finished.
+% Each target now has the shared progress lines: START before the wait and
+% one OK or REUSE result, named by Harness with the CUT path as Detail.
 root = st_project_root();
 source = fileread(fullfile(root, 'src', 'exporting', ...
     'st_export_standalone_harnesses.m'));
-verifyTrue(testCase, contains(source, "'[%d/%d] START %s | Harness=%s"));
-verifyTrue(testCase, contains(source, "'[%d/%d] DONE  %s | %.1f sec"));
-verifyTrue(testCase, contains(source, "'[%d/%d] REUSE %s | Harness=%s"));
+verifyTrue(testCase, contains(source, ...
+    "st_log_progress(cfg, i, height(targets), 'START', harnessName, ..."));
+verifyTrue(testCase, contains(source, ...
+    "st_log_progress(cfg, i, height(targets), 'OK', harnessName, ..."));
+verifyTrue(testCase, contains(source, ...
+    "st_log_progress(cfg, i, height(targets), 'REUSE', harnessName, ..."));
+verifyEqual(testCase, numel(strfind(source, "'Detail', sourceOwner")), 3);
+verifyEqual(testCase, numel(strfind(source, "'Elapsed', toc(targetTimer)")), 2);
+% The raw per-target block is gone from the console.
+verifyFalse(testCase, contains(source, "fprintf('[%d/%d]"));
+verifyFalse(testCase, contains(source, "fprintf('       %-22s"));
 verifyTrue(testCase, contains(source, ...
     "report_step(cfg, 'save source copy', stepTimer)"));
 verifyTrue(testCase, contains(source, ...

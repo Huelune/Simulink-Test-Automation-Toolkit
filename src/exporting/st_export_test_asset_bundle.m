@@ -125,7 +125,8 @@ try
     stageTimer = start_step(cfg, currentStage);
     standalonePaths = st_export_standalone_harnesses( ...
         cfg.ModelFile, cfg.TopModel, selectedTargets, ...
-        fullfile(stagingDirectory, 'harnesses'), stagingDirectory);
+        fullfile(stagingDirectory, 'harnesses'), stagingDirectory, ...
+        'LogConfig', cfg);
     for i = 1:numel(targetInventory)
         targetInventory(i).StandaloneHarness = char(standalonePaths(i));
     end

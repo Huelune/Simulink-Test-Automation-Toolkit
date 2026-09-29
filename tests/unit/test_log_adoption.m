@@ -113,6 +113,14 @@ end
 function testExportCallIsQuiet(testCase)
 verifyTrue(testCase, contains(src('exporting/st_export_standalone_harnesses.m'), ...
     "st_call_quiet(cfg, 'sltest.harness.export'"));
+% Both callers hand over their cfg, so the export's own st_log lines reach
+% the run log instead of being dropped by log_message's empty-cfg guard.
+for file = {'exporting/st_export_test_asset_bundle.m', ...
+        'exporting/st_export_test_bundle.m'}
+    verifyNotEmpty(testCase, regexp(src(file{1}), ...
+        "st_export_standalone_harnesses\([^;]*'LogConfig', cfg\);", 'once'), ...
+        file{1});
+end
 end
 
 function testPublicCommandsOpenALogScope(testCase)
