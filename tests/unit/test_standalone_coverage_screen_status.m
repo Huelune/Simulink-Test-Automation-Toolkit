@@ -26,7 +26,8 @@ verifyTrue(testCase, isscalar(summary));
 verifyEqual(testCase, summary.Status, 'PASS');
 verifyEqual(testCase, numel(summary.Bits), 10);
 verifyEqual(testCase, height(details), 2);
-verifyLessThanOrEqual(testCase, numel(splitlines(string(output))), 20);
+verifyLessThanOrEqual(testCase, ...
+    count_screen_lines(splitlines(string(output))), 20);
 end
 
 function testPackageFailureAppearsInDetails(testCase)
@@ -169,7 +170,8 @@ manifest.Targets(12).RunCount = 2;
 st_write_standalone_pipeline_manifest(root, manifest);
 output = evalc('[~, ~, details] = st_check_standalone_coverage(''OutputRoot'', root);');
 verifyEqual(testCase, height(details), 12);
-verifyLessThanOrEqual(testCase, numel(splitlines(strtrim(string(output)))), 20);
+verifyLessThanOrEqual(testCase, ...
+    count_screen_lines(splitlines(strtrim(string(output)))), 20);
 verifyTrue(testCase, contains(output, 'additional targets; inspect details'));
 end
 
@@ -392,6 +394,15 @@ value = struct( ...
     'ExecutionPercentage', NaN, ...
     'DecisionMetricStatus', '', 'ExecutionMetricStatus', '', ...
     'DecisionPercentageText', 'N/A', 'ExecutionPercentageText', 'N/A');
+end
+
+function count = count_screen_lines(lines)
+% The checker's own block must fit one screen. The four run-log scope lines
+% (==> start, <== done and the two "log:" path lines) come from the command's
+% log scope, not from the checker, so they are not part of that block.
+scopeLine = ~cellfun(@isempty, regexp(cellstr(lines), ...
+    '^\[\d{2}:\d{2}:\d{2}\]\s+(ERROR\s+)?(==>|<==|log:)', 'once'));
+count = sum(~scopeLine);
 end
 
 function append_event(path, order, event)

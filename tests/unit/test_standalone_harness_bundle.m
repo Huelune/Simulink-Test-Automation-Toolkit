@@ -219,11 +219,11 @@ verifyTrue(testCase, contains(source, "'[%d/%d] START %s | Harness=%s"));
 verifyTrue(testCase, contains(source, "'[%d/%d] DONE  %s | %.1f sec"));
 verifyTrue(testCase, contains(source, "'[%d/%d] REUSE %s | Harness=%s"));
 verifyTrue(testCase, contains(source, ...
-    "report_step(logConfig, 'save source copy', stepTimer)"));
+    "report_step(cfg, 'save source copy', stepTimer)"));
 verifyTrue(testCase, contains(source, ...
-    "report_step(logConfig, 'harness export', stepTimer)"));
+    "report_step(cfg, 'harness export', stepTimer)"));
 verifyTrue(testCase, contains(source, ...
-    "report_step(logConfig, 'save standalone model', stepTimer)"));
+    "report_step(cfg, 'save standalone model', stepTimer)"));
 verifyTrue(testCase, contains(source, ...
     'Standalone Harness step | Step=%s | elapsed=%.3f sec'));
 end

@@ -58,12 +58,9 @@ end
 assert_saved_sources(cfg);
 
 totalTimer = tic;
-fprintf('\n============================================\n');
-fprintf('Selected Test Asset Bundle Export\n');
-fprintf('Model       : %s\n', cfg.TopModel);
-fprintf('Destination : %s\n', destination);
-fprintf('Start       : %s\n', timestamp_text());
-fprintf('============================================\n');
+st_log(cfg, 'INFO', ...
+    'Selected Test Asset Bundle Export | Model=%s | Destination=%s', ...
+    cfg.TopModel, destination);
 
 currentStage = 'Resolve Selected Result';
 stageTimer = start_step(cfg, currentStage);
@@ -73,9 +70,9 @@ try
         resultObj, requestedRun, cfg, allTargets);
     selectedTargets = st_select_asset_targets( ...
         allTargets, selection.TestCaseNames);
-    fprintf('Result Source : %s\n', selection.Type);
-    fprintf('Result Name   : %s\n', selection.DisplayName);
-    fprintf('Test Cases    : %d\n', height(selectedTargets));
+    st_log(cfg, 'INFO', ...
+        'Result selected | Source=%s | Name=%s | TestCases=%d', ...
+        selection.Type, selection.DisplayName, height(selectedTargets));
     finish_step(cfg, currentStage, stageTimer);
 
     currentStage = 'Validate Source Harnesses';
@@ -133,7 +130,8 @@ try
         targetInventory(i).StandaloneHarness = char(standalonePaths(i));
     end
     harnessCount = numel(unique(standalonePaths));
-    fprintf('Standalone Harnesses : %d\n', harnessCount);
+    st_log(cfg, 'INFO', ...
+        'Standalone Harnesses exported | Count=%d', harnessCount);
     finish_step(cfg, currentStage, stageTimer);
 
     currentStage = 'Collect Selected Result Report';
@@ -153,7 +151,8 @@ try
     for i = 1:numel(targetInventory)
         targetInventory(i).ResultPath = resultBundlePath;
     end
-    fprintf('Result Status : %s\n', resultInfo.Status);
+    st_log(cfg, 'INFO', 'Result report collected | Status=%s', ...
+        char(string(resultInfo.Status)));
     finish_step(cfg, currentStage, stageTimer);
 
     currentStage = 'Verify Source Unchanged';
@@ -241,7 +240,7 @@ try
         zip(archivePath, bundleId, destination);
         finish_step(cfg, currentStage, stageTimer);
     else
-        fprintf('\nCreate ZIP Archive: SKIP (CreateArchive=false)\n');
+        st_log(cfg, 'INFO', 'Create ZIP Archive: SKIP (CreateArchive=false)');
     end
 
     info = struct( ...
@@ -258,22 +257,24 @@ try
         'HarnessCount', harnessCount, ...
         'ArtifactFailures', artifactFailures);
 
-    fprintf('\n============================================\n');
-    fprintf('Test Asset Bundle Export Complete\n');
-    fprintf('Status  : %s\n', status);
-    fprintf('Folder  : %s\n', finalDirectory);
-    fprintf('Elapsed : %s\n', elapsed_text(toc(totalTimer)));
-    fprintf('============================================\n');
     st_log(cfg, 'INFO', ...
         '[AssetExport] complete | status=%s | folder=%s | elapsed=%.3f sec', ...
         status, finalDirectory, toc(totalTimer));
+    % The old summary always printed the result status; keep a degraded one
+    % visible on the console.
+    if ~strcmpi(status, 'OK')
+        st_log(cfg, 'WARN', ...
+            'Test Asset Bundle Export finished with Status=%s | ArtifactFailures=%d', ...
+            status, artifactFailures);
+    end
+    st_log(cfg, 'STEP', ...
+        'Test Asset Bundle Export done | Files=%d | Output=%s', ...
+        numel(manifest.Files), finalDirectory);
+    if ~isempty(archivePath)
+        st_log(cfg, 'STEP', '    zip: %s', archivePath);
+    end
 catch ME
     fail_step(cfg, currentStage, stageTimer, ME);
-    fprintf('\n============================================\n');
-    fprintf('Test Asset Bundle Export Failed\n');
-    fprintf('Stage   : %s\n', currentStage);
-    fprintf('Elapsed : %s\n', elapsed_text(toc(totalTimer)));
-    fprintf('============================================\n');
     rethrow(ME);
 end
 end
@@ -739,41 +740,25 @@ value = sprintf('%s_%s', stamp, uuid(1:8));
 end
 
 function timerValue = start_step(cfg, label)
-fprintf('\n============================================\n');
-fprintf('%s\nSTART : %s\n', label, timestamp_text());
-fprintf('============================================\n');
 st_log(cfg, 'INFO', '[AssetExport] stage start | %s', label);
 timerValue = tic;
 end
 
 function finish_step(cfg, label, timerValue)
-fprintf('DONE    : %s\nELAPSED : %s\n', ...
-    label, elapsed_text(toc(timerValue)));
 st_log(cfg, 'INFO', ...
     '[AssetExport] stage done | %s | elapsed=%.3f sec', ...
     label, toc(timerValue));
 end
 
 function fail_step(cfg, label, timerValue, exception)
-fprintf('FAILED  : %s\nERROR   : %s\nELAPSED : %s\n', ...
-    label, exception.message, elapsed_text(toc(timerValue)));
 st_log(cfg, 'ERROR', ...
     '[AssetExport] stage failed | %s | %s: %s | elapsed=%.3f sec', ...
     label, exception.identifier, exception.message, toc(timerValue));
 end
 
-function value = timestamp_text()
-value = char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss'));
-end
-
 function value = iso_timestamp_text()
 value = char(datetime('now', ...
     'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'));
-end
-
-function value = elapsed_text(secondsValue)
-value = sprintf('%02d:%02d:%06.3f', floor(secondsValue / 3600), ...
-    floor(mod(secondsValue, 3600) / 60), mod(secondsValue, 60));
 end
 
 function value = bundle_path(root, path)

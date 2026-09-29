@@ -59,6 +59,37 @@ for k = 1:numel(files)
 end
 end
 
+function testPipelineOwnsItsRunLog(testCase)
+text = src('pipeline/st_run_standalone_coverage_pipeline.m');
+verifyTrue(testCase, contains(text, "logScope = st_log_scope('enter', mfilename);"));
+verifyTrue(testCase, contains(text, "st_log_scope('fail', ME);"));
+verifyTrue(testCase, contains(text, "st_suppress_warnings(cfg, 'STANDALONE_PIPELINE')"));
+failAt = strfind(text, "st_log_scope('fail', ME);");
+rethrowAt = strfind(text, 'rethrow(ME);');
+verifyLessThan(testCase, failAt(1), rethrowAt(end));
+end
+
+function testExportCallIsQuiet(testCase)
+verifyTrue(testCase, contains(src('exporting/st_export_standalone_harnesses.m'), ...
+    "st_call_quiet(cfg, 'sltest.harness.export'"));
+end
+
+function testPublicCommandsOpenALogScope(testCase)
+for file = {'verification/st_check_standalone_coverage.m', ...
+        'exporting/st_export_test_specification.m', ...
+        'exporting/st_export_final_document.m', ...
+        'targets/st_select_target_model.m', ...
+        'pipeline/st_open_standalone_test_manager.m'}
+    verifyTrue(testCase, contains(src(file{1}), 'st_log_run(mfilename'), file{1});
+end
+end
+
+function testExportBundlesHaveNoBanners(testCase)
+for file = {'exporting/st_export_test_bundle.m', 'exporting/st_export_test_asset_bundle.m'}
+    verify_no_banner(testCase, src(file{1}), file{1});
+end
+end
+
 function files = stage_files()
 files = {'harness/st_create_harnesses.m', 'sldv/st_prepare_sldv_targets.m', ...
     'harness/st_configure_harnesses.m', 'signal_editor/st_configure_signal_editors.m', ...

@@ -1,9 +1,19 @@
-function [code, summary, details] = st_check_standalone_coverage(varargin)
+function varargout = st_check_standalone_coverage(varargin)
 %ST_CHECK_STANDALONE_COVERAGE Read-only one-screen pipeline verification.
 %
 %   [code, summary, details] = st_check_standalone_coverage()
 %   returns 1111111111 only when every completed contract check passes.
+%
+%   Called directly it writes its own run log; called from another command
+%   it appends to that command's run log.
 
+% max(nargout, 1) keeps a bare call showing its result as ans.
+[varargout{1:max(nargout, 1)}] = st_log_run(mfilename, ...
+    @() check_body(varargin{:}));
+end
+
+
+function [code, summary, details] = check_body(varargin)
 p = inputParser;
 p.FunctionName = mfilename;
 addParameter(p, 'OutputRoot', '', @(x) ischar(x) || isstring(x));
@@ -21,7 +31,7 @@ end
 % Keep the checker itself within its one-screen contract. WARN/ERROR still
 % use the project logger; routine INFO checkpoints remain non-printing.
 logCfg = cfg;
-logCfg.VerboseLogging = false;
+logCfg.ConsoleLogLevel = 'STEP';
 timerValue = tic;
 st_log(logCfg, 'INFO', ...
     'Standalone coverage checker start | Root=%s | PipelineId=%s', ...

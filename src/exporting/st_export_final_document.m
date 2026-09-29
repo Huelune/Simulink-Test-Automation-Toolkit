@@ -1,4 +1,4 @@
-function [specification, outputFile] = st_export_final_document(varargin)
+function varargout = st_export_final_document(varargin)
 %ST_EXPORT_FINAL_DOCUMENT Export the customer submission workbook.
 %   [T, PATH] = st_export_final_document()
 %   Default: result/final_document_<timestamp>.xlsx. Existing output files
@@ -29,6 +29,17 @@ function [specification, outputFile] = st_export_final_document(varargin)
 %     RequireTestResults  Fail instead of leaving the verdicts blank
 %     RequireCoverage     Fail instead of leaving the coverage N/A
 %     IncludeUsageSheet   Append the internal command list, default false
+%
+%   Called directly it writes its own run log; called from another command
+%   it appends to that command's run log.
+
+% max(nargout, 1) keeps a bare call showing its result as ans.
+[varargout{1:max(nargout, 1)}] = st_log_run(mfilename, ...
+    @() export_body(varargin{:}));
+end
+
+
+function [specification, outputFile] = export_body(varargin)
 p = inputParser;
 addParameter(p, 'OutputFile', '', @is_text_or_empty);
 addParameter(p, 'DecisionBlockScope', '', @is_text_or_empty);

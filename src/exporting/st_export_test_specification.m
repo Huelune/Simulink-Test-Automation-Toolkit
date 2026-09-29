@@ -1,4 +1,4 @@
-function [specification, outputFile] = st_export_test_specification(varargin)
+function varargout = st_export_test_specification(varargin)
 %ST_EXPORT_TEST_SPECIFICATION Export saved Assessment definitions without running.
 %   [T, PATH] = st_export_test_specification('OutputFile', 'specification.xlsx')
 %   Default: result/test_specification_<timestamp>.xlsx. Existing output files
@@ -18,6 +18,17 @@ function [specification, outputFile] = st_export_test_specification(varargin)
 %   coverage objectives without one, such as Saturate, Relay and the
 %   lookup table family. 'NONE' leaves the column empty. Omit it to use
 %   cfg.DecisionBlockScope.
+%
+%   Called directly it writes its own run log; called from another command
+%   it appends to that command's run log.
+
+% max(nargout, 1) keeps a bare call showing its result as ans.
+[varargout{1:max(nargout, 1)}] = st_log_run(mfilename, ...
+    @() export_body(varargin{:}));
+end
+
+
+function [specification, outputFile] = export_body(varargin)
 p = inputParser;
 addParameter(p, 'OutputFile', '', @(v) (ischar(v) && isrow(v)) || ...
     (isstring(v) && isscalar(v)) || isempty(v));

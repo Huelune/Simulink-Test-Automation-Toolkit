@@ -1,4 +1,4 @@
-function cfg = st_select_target_model(forceSelectModel)
+function varargout = st_select_target_model(varargin)
 %ST_SELECT_TARGET_MODEL Select one Simulink model without resolving CUTPath.
 %
 % Usage:
@@ -11,6 +11,17 @@ function cfg = st_select_target_model(forceSelectModel)
 %
 % This helper only selects the runtime target model. It does not modify
 % TestManagement.xlsx and does not resolve any CUT paths.
+%
+% Called directly it writes its own run log; called from another command
+% it appends to that command's run log.
+
+% max(nargout, 1) keeps a bare call showing its result as ans.
+[varargout{1:max(nargout, 1)}] = st_log_run(mfilename, ...
+    @() select_body(varargin{:}));
+end
+
+
+function cfg = select_body(forceSelectModel)
 
 if nargin < 1
     forceSelectModel = false;

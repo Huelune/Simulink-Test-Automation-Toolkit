@@ -89,27 +89,16 @@ else
 end
 
 totalTimer = tic;
-fprintf('\n============================================\n');
-fprintf('%s\n', exportTitle);
-fprintf('Model       : %s\n', cfg.TopModel);
-fprintf('Destination : %s\n', destination);
-fprintf('Run         : %s\n', runId);
-fprintf('Profile     : %s\n', profile);
-fprintf('Model Mode  : %s\n', executionModelMode);
-fprintf('Archive     : %s\n', on_off_text(createArchive));
-fprintf('Products    : %s\n', on_off_text(analyzeProducts));
-fprintf('Start       : %s\n', console_timestamp_text());
-fprintf('============================================\n');
-
 st_log(cfg, 'INFO', ...
-    ['Export Test Bundle start | Model=%s | Destination=%s | ' ...
+    ['Export Test Bundle start | Title=%s | Model=%s | Destination=%s | ' ...
      'RunId=%s | Profile=%s | ExecutionModelMode=%s | ' ...
-     'Archive=%d | ReferenceReport=%d'], ...
-    cfg.TopModel, destination, runId, profile, executionModelMode, ...
-    logical(createArchive), logical(includeReferenceReport));
+     'Archive=%d | ReferenceReport=%d | AnalyzeProducts=%d'], ...
+    exportTitle, cfg.TopModel, destination, runId, profile, ...
+    executionModelMode, logical(createArchive), ...
+    logical(includeReferenceReport), analyzeProducts);
 
 currentStage = 'Validate Export Sources';
-stageTimer = start_step(currentStage);
+stageTimer = start_step(cfg, currentStage);
 
 try
 requiredFiles = {cfg.ModelFile, cfg.TestFile, cfg.ManagementExcel};
@@ -132,15 +121,15 @@ if reproducible
     sourceTestSignature = st_file_signature(cfg.TestFile);
     sourceHarnessInventory = harness_inventory(cfg);
 else
-    fprintf('Source SHA-256 validation: SKIP (asset profile)\n');
+    st_log(cfg, 'INFO', 'Source SHA-256 validation: SKIP (asset profile)');
 end
 targets = st_load_targets(cfg.OnlyEnabled);
-fprintf('Targets      : %d\n', height(targets));
+st_log(cfg, 'INFO', 'Export targets loaded | Count=%d', height(targets));
 assert_sldv_manifest_covers_targets(targets, cfg);
-finish_step(currentStage, stageTimer);
+finish_step(cfg, currentStage, stageTimer);
 
 currentStage = 'Discover Model Dependencies';
-stageTimer = start_step(currentStage);
+stageTimer = start_step(cfg, currentStage);
 st_log(cfg, 'DEBUG', 'Dependency analysis start | Model=%s', ...
     cfg.ModelFile);
 if reproducible
@@ -153,7 +142,6 @@ if reproducible
         dependencyFiles = {canonical_path(cfg.ModelFile)};
         st_log(cfg, 'INFO', ...
             'Whole-model dependency analysis deferred | Scope=STANDALONE_HARNESS');
-        fprintf('Dependency scope: deferred to generated standalone Harness models\n');
     else
         [dependencyFiles, missingDependencies] = ...
             discover_dependencies(cfg.ModelFile);
@@ -167,32 +155,32 @@ if reproducible
     end
 else
     dependencyFiles = {canonical_path(cfg.ModelFile)};
-    fprintf(['Model dependency analysis: SKIP ' ...
-        '(asset profile copies the Harness container model only)\n']);
+    st_log(cfg, 'INFO', ...
+        ['Model dependency analysis: SKIP ' ...
+         '(asset profile copies the Harness container model only)']);
 end
 assert_saved_dependency_models(dependencyFiles);
 normalize_top_model_load_state(cfg, topModelWasLoadedAtEntry, ...
     'dependency analysis');
 st_log(cfg, 'DEBUG', 'Dependency analysis done | count=%d', ...
     numel(dependencyFiles));
-fprintf('Dependencies : %d\n', numel(dependencyFiles));
-finish_step(currentStage, stageTimer);
+finish_step(cfg, currentStage, stageTimer);
 
 currentStage = 'Resolve Reference Report';
-stageTimer = start_step(currentStage);
+stageTimer = start_step(cfg, currentStage);
 if includeReferenceReport
     [referenceRunId, referenceRunDirectory] = ...
         resolve_reference_run(cfg, runId);
-    fprintf('Reference Run : %s\n', referenceRunId);
+    st_log(cfg, 'INFO', 'Reference report run | RunId=%s', referenceRunId);
 else
     referenceRunId = 'NONE';
     referenceRunDirectory = '';
-    fprintf('Reference report: SKIP\n');
+    st_log(cfg, 'INFO', 'Reference report: SKIP');
 end
-finish_step(currentStage, stageTimer);
+finish_step(cfg, currentStage, stageTimer);
 
 currentStage = 'Prepare Bundle Template';
-stageTimer = start_step(currentStage);
+stageTimer = start_step(cfg, currentStage);
 if ~isfolder(destination)
     mkdir(destination);
 end
@@ -221,7 +209,7 @@ if reproducible
     copyfile_checked(fullfile(projectRoot, 'src'), ...
         fullfile(templateDirectory, 'src'));
 else
-    fprintf('Automation runtime copy: SKIP (asset profile)\n');
+    st_log(cfg, 'INFO', 'Automation runtime copy: SKIP (asset profile)');
 end
 
 copyfile_checked(cfg.ManagementExcel, ...
@@ -231,20 +219,20 @@ copyfile_checked(cfg.TestFile, ...
     fullfile(templateDirectory, testFileName));
 
 modelBundlePath = '';
-finish_step(currentStage, stageTimer);
+finish_step(cfg, currentStage, stageTimer);
 
 standaloneDetails = repmat(empty_standalone_detail(), height(targets), 1);
 if strcmp(executionModelMode, 'STANDALONE_HARNESS')
     currentStage = 'Export Standalone Harness Models';
-    stageTimer = start_step(currentStage);
+    stageTimer = start_step(cfg, currentStage);
     standaloneDirectory = fullfile(workspaceDirectory, 'standalone');
     [~, standaloneDetails] = st_export_standalone_harnesses( ...
         cfg.ModelFile, cfg.TopModel, targets, standaloneDirectory, ...
         stagingDirectory, 'LogConfig', cfg);
-    finish_step(currentStage, stageTimer);
+    finish_step(cfg, currentStage, stageTimer);
 
     currentStage = 'Discover Standalone Harness Dependencies';
-    stageTimer = start_step(currentStage);
+    stageTimer = start_step(cfg, currentStage);
     standaloneDependencies = discover_standalone_harness_dependencies( ...
         standaloneDetails, stagingDirectory, workspaceDirectory, cfg);
     dependencyFiles = unique([{canonical_path(cfg.ModelFile)}; ...
@@ -253,23 +241,22 @@ if strcmp(executionModelMode, 'STANDALONE_HARNESS')
     st_log(cfg, 'INFO', ...
         'Standalone dependency analysis complete | Scope=STANDALONE_HARNESS | Files=%d', ...
         numel(dependencyFiles));
-    fprintf('Standalone dependencies : %d\n', numel(dependencyFiles) - 1);
-    finish_step(currentStage, stageTimer);
+    finish_step(cfg, currentStage, stageTimer);
 end
 
 currentStage = 'Copy Bundle Model Dependencies';
-stageTimer = start_step(currentStage);
+stageTimer = start_step(cfg, currentStage);
 [dependencyInventory, modelBundlePath] = copy_dependencies_to_workspace( ...
     dependencyFiles, cfg.ModelFile, workspaceDirectory, stagingDirectory, ...
-    executionModelMode);
+    executionModelMode, cfg);
 if isempty(modelBundlePath)
     error('simtest:ExportModelCopyMissing', ...
         'The selected model was not included in dependency analysis.');
 end
-finish_step(currentStage, stageTimer);
+finish_step(cfg, currentStage, stageTimer);
 
 currentStage = 'Collect Target Inputs';
-stageTimer = start_step(currentStage);
+stageTimer = start_step(cfg, currentStage);
 sldvManifestBundlePath = '';
 targetInventory = collect_target_inputs( ...
     targets, cfg, stagingDirectory, templateDirectory, ...
@@ -291,22 +278,22 @@ if isfile(cfg.SldvManifestFile)
 end
 normalize_top_model_load_state(cfg, topModelWasLoadedAtEntry, ...
     'target input collection');
-finish_step(currentStage, stageTimer);
+finish_step(cfg, currentStage, stageTimer);
 
 currentStage = 'Copy Reference Report';
-stageTimer = start_step(currentStage);
+stageTimer = start_step(cfg, currentStage);
 if includeReferenceReport
     referenceOutput = fullfile( ...
         stagingDirectory, 'reference-report', referenceRunId);
     copyfile_checked(referenceRunDirectory, referenceOutput);
-    fprintf('Reference report copied: %s\n', referenceRunId);
+    st_log(cfg, 'INFO', 'Reference report copied | RunId=%s', referenceRunId);
 else
-    fprintf('Reference report: SKIP\n');
+    st_log(cfg, 'INFO', 'Reference report: SKIP');
 end
-finish_step(currentStage, stageTimer);
+finish_step(cfg, currentStage, stageTimer);
 
 currentStage = 'Build Bundle Manifest';
-stageTimer = start_step(currentStage);
+stageTimer = start_step(cfg, currentStage);
 resourceDirectory = fullfile(projectRoot, 'resources', 'export_bundle');
 productAnalysis = 'ANALYZED';
 if reproducible
@@ -322,8 +309,6 @@ if reproducible
             'found=%d', numel(products));
     else
         productAnalysis = 'SKIPPED';
-        fprintf('%-22s : SKIP   AnalyzeProducts=false\n', ...
-            'Toolbox products');
         st_log(cfg, 'INFO', ...
             'Toolbox product analysis skipped | AnalyzeProducts=false');
     end
@@ -332,7 +317,7 @@ else
     products = repmat(struct('Name', '', 'Version', ''), 0, 1);
     productAnalysis = 'NOT_APPLICABLE';
     readmeResource = 'README.assets.ko.md';
-    fprintf('Toolbox dependency analysis: SKIP (asset profile)\n');
+    st_log(cfg, 'INFO', 'Toolbox dependency analysis: SKIP (asset profile)');
 end
 manifest = struct();
 if reproducible
@@ -393,7 +378,8 @@ if reproducible
 else
     manifest.Files = inventory_files_light(stagingDirectory, ...
         {'manifest.json'});
-    fprintf('Bundle file SHA-256 inventory: SKIP (asset profile)\n');
+    st_log(cfg, 'INFO', ...
+        'Bundle file SHA-256 inventory: SKIP (asset profile)');
 end
 write_json(fullfile(stagingDirectory, 'manifest.json'), manifest);
 
@@ -411,11 +397,11 @@ if reproducible
     end_task(cfg, 'Source unchanged check', taskTimer, 'result=OK');
 end
 assert_saved_dependency_models(dependencyFiles);
-fprintf('Inventory files : %d\n', numel(manifest.Files));
-finish_step(currentStage, stageTimer);
+st_log(cfg, 'INFO', 'Bundle inventory | Files=%d', numel(manifest.Files));
+finish_step(cfg, currentStage, stageTimer);
 
 currentStage = 'Finalize Bundle';
-stageTimer = start_step(currentStage);
+stageTimer = start_step(cfg, currentStage);
 finalDirectory = fullfile(destination, bundleId);
 if isfolder(finalDirectory) || isfile(finalDirectory)
     error('simtest:ExportDestinationExists', ...
@@ -426,15 +412,15 @@ if ~ok
     error('simtest:ExportMoveFailed', ...
         'Cannot finalize export bundle: %s', message);
 end
-finish_step(currentStage, stageTimer);
+finish_step(cfg, currentStage, stageTimer);
 
 archivePath = '';
 if createArchive
     currentStage = 'Create ZIP Archive';
-    stageTimer = start_step(currentStage);
+    stageTimer = start_step(cfg, currentStage);
     archivePath = [finalDirectory '.zip'];
     % Compression time tracks the bundle size, which the manifest already
-    % measured. Print it so a multi-minute archive is expected, not a hang.
+    % measured. Log it so a multi-minute archive is expected, not a hang.
     bundleBytes = 0;
     if ~isempty(manifest.Files)
         bundleBytes = sum([manifest.Files.Bytes]);
@@ -443,9 +429,9 @@ if createArchive
         bundleBytes / 1e6, numel(manifest.Files));
     zip(archivePath, bundleId, destination);
     end_task(cfg, 'ZIP archive', taskTimer, 'file=%s', archivePath);
-    finish_step(currentStage, stageTimer);
+    finish_step(cfg, currentStage, stageTimer);
 else
-    fprintf('\nCreate ZIP Archive: SKIP (CreateArchive=false)\n');
+    st_log(cfg, 'INFO', 'Create ZIP Archive: SKIP (CreateArchive=false)');
 end
 
 info = struct( ...
@@ -464,33 +450,23 @@ info = struct( ...
 st_log(cfg, 'INFO', ...
     'Export Test Bundle complete | Bundle=%s | elapsed=%.3f sec', ...
     bundleId, toc(totalTimer));
-
-fprintf('\n============================================\n');
-fprintf('Test Bundle Export Complete\n');
-fprintf('End     : %s\n', console_timestamp_text());
-fprintf('Elapsed : %s\n', elapsed_text(toc(totalTimer)));
-fprintf('Folder  : %s\n', finalDirectory);
-if ~isempty(archivePath)
-    fprintf('ZIP     : %s\n', archivePath);
-end
 if reproducible
-    fprintf('Run     : run_exported_tests\n');
+    st_log(cfg, 'INFO', 'Bundle usage | Run=run_exported_tests');
 else
-    fprintf('Use     : test asset management; rerun is not supported\n');
+    st_log(cfg, 'INFO', ...
+        'Bundle usage | test asset management; rerun is not supported');
 end
-fprintf('============================================\n');
+st_log(cfg, 'STEP', '%s done | Files=%d | Output=%s', ...
+    exportTitle, numel(manifest.Files), finalDirectory);
+if ~isempty(archivePath)
+    st_log(cfg, 'STEP', '    zip: %s', archivePath);
+end
 
 catch ME
-    fail_step(currentStage, stageTimer, ME);
+    fail_step(cfg, currentStage, stageTimer, ME);
     st_log(cfg, 'ERROR', ...
         'Export Test Bundle failed | Stage=%s | %s: %s', ...
         currentStage, ME.identifier, ME.message);
-    fprintf('\n============================================\n');
-    fprintf('Test Bundle Export Failed\n');
-    fprintf('Stage   : %s\n', currentStage);
-    fprintf('End     : %s\n', console_timestamp_text());
-    fprintf('Elapsed : %s\n', elapsed_text(toc(totalTimer)));
-    fprintf('============================================\n');
     rethrow(ME);
 end
 end
@@ -603,7 +579,7 @@ files = unique(files, 'stable');
 end
 
 function [inventory, modelBundlePath] = copy_dependencies_to_workspace( ...
-        files, sourceModelFile, workspaceDirectory, stagingDirectory, mode)
+        files, sourceModelFile, workspaceDirectory, stagingDirectory, mode, cfg)
 %COPY_DEPENDENCIES_TO_WORKSPACE Copy the union after its scope is known.
 dependencyRoot = st_export_common_root(files);
 inventory = repmat(empty_dependency(), 0, 1);
@@ -623,7 +599,8 @@ for i = 1:numel(files)
         modelBundlePath = item.BundlePath;
     end
     inventory(end + 1, 1) = item; %#ok<AGROW>
-    fprintf('[%d/%d] COPY %s\n', i, numel(files), item.BundlePath);
+    st_log(cfg, 'DEBUG', '[BundleExport] dependency copied | %d/%d | %s', ...
+        i, numel(files), item.BundlePath);
 end
 end
 
@@ -731,7 +708,7 @@ for i = rows(:)'
             first_line(ME.message)); %#ok<AGROW>
     end
 end
-fprintf('SLDV inputs  : %d rows, %d unresolved\n', ...
+st_log(cfg, 'INFO', 'SLDV manifest check | Rows=%d | Unresolved=%d', ...
     numel(rows), numel(failures));
 if isempty(failures), return; end
 error('simtest:ExportSldvManifestIncomplete', ...
@@ -783,8 +760,6 @@ for i = 1:height(targets)
     item.CoverageFilterRationale = char(row.CoverageFilterRationale);
 
     targetTimer = tic;
-    fprintf('[%d/%d] START %s | Harness=%s | SLDV=%s\n', ...
-        i, height(targets), item.CUTName, item.HarnessName, item.SldvMode);
     st_log(cfg, 'DEBUG', ...
         '[ExportTarget %d/%d] start | CUT=%s | Harness=%s | SLDV=%s', ...
         i, height(targets), item.CUTName, item.HarnessName, item.SldvMode);
@@ -830,18 +805,18 @@ for i = 1:height(targets)
             profile, 'SourceDataFile', outputDirectory, bundleRoot);
     end
     inventory(end + 1, 1) = item; %#ok<AGROW>
-    fprintf('[%d/%d] OK    %s | %s\n', ...
-        i, height(targets), item.CUTName, ...
-        elapsed_text(toc(targetTimer)));
     st_log(cfg, 'DEBUG', ...
         '[ExportTarget %d/%d] done | CUT=%s | elapsed=%.3f sec', ...
         i, height(targets), item.CUTName, toc(targetTimer));
+    st_log_progress(cfg, i, height(targets), 'OK', item.CUTName, ...
+        'Elapsed', toc(targetTimer), 'Detail', item.CUTPath);
     catch ME
         st_log(cfg, 'ERROR', ...
             '[ExportTarget %d/%d] failed | CUT=%s | %s: %s', ...
             i, height(targets), item.CUTName, ME.identifier, ME.message);
-        fprintf('[%d/%d] FAIL  %s | %s\n', ...
-            i, height(targets), item.CUTName, ME.message);
+        st_log_progress(cfg, i, height(targets), 'FAIL', item.CUTName, ...
+            'Elapsed', toc(targetTimer), 'Message', ME.message, ...
+            'Detail', item.CUTPath);
         rethrow(ME);
     end
 end
@@ -949,8 +924,6 @@ for i = 1:numel(listing)
     end
     % Hashing a large model or MAT can stall for a long time on its own.
     if toc(progressTimer) >= 5
-        fprintf('%-22s : %d/%d files\n', 'Bundle SHA-256', ...
-            numel(inventory), total);
         st_log(cfg, 'DEBUG', ...
             'Bundle SHA-256 progress | Done=%d | Total=%d | Current=%s', ...
             numel(inventory), total, relative);
@@ -1068,17 +1041,15 @@ value = char(datetime('now', ...
     'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSSXXX'));
 end
 
-function timerValue = start_step(label)
-fprintf('\n============================================\n');
-fprintf('%s\n', label);
-fprintf('START : %s\n', console_timestamp_text());
-fprintf('============================================\n');
+function timerValue = start_step(cfg, label)
+st_log(cfg, 'INFO', '[BundleExport] stage start | %s', label);
 timerValue = tic;
 end
 
-function finish_step(label, timerValue)
-fprintf('DONE    : %s\n', label);
-fprintf('ELAPSED : %s\n', elapsed_text(toc(timerValue)));
+function finish_step(cfg, label, timerValue)
+st_log(cfg, 'INFO', ...
+    '[BundleExport] stage done | %s | elapsed=%.3f sec', ...
+    label, toc(timerValue));
 end
 
 function timerValue = begin_task(cfg, label, formatText, varargin)
@@ -1086,7 +1057,6 @@ function timerValue = begin_task(cfg, label, formatText, varargin)
 % whole-bundle hashing and the source recheck each take model- or
 % file-proportional time with no output of their own.
 detail = sprintf(formatText, varargin{:});
-fprintf('%-22s : START  %s\n', label, detail);
 st_log(cfg, 'INFO', 'Manifest task start | Task=%s | %s', label, detail);
 timerValue = tic;
 end
@@ -1094,36 +1064,17 @@ end
 function end_task(cfg, label, timerValue, formatText, varargin)
 detail = sprintf(formatText, varargin{:});
 elapsed = toc(timerValue);
-fprintf('%-22s : DONE   %s | %s\n', label, elapsed_text(elapsed), detail);
 st_log(cfg, 'INFO', ...
     'Manifest task complete | Task=%s | elapsed=%.3f sec | %s', ...
     label, elapsed, detail);
 end
 
-function fail_step(label, timerValue, exception)
-fprintf('FAILED  : %s\n', label);
-fprintf('ERROR   : %s\n', exception.message);
-fprintf('ELAPSED : %s\n', elapsed_text(toc(timerValue)));
-end
-
-function value = console_timestamp_text()
-value = char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss'));
-end
-
-function value = elapsed_text(secondsValue)
-hoursValue = floor(secondsValue / 3600);
-minutesValue = floor(mod(secondsValue, 3600) / 60);
-secondsPart = mod(secondsValue, 60);
-value = sprintf('%02d:%02d:%06.3f', ...
-    hoursValue, minutesValue, secondsPart);
-end
-
-function value = on_off_text(enabled)
-if enabled
-    value = 'ON';
-else
-    value = 'OFF';
-end
+function fail_step(cfg, label, timerValue, exception)
+% The caller's ERROR line names the stage, identifier and message, so this
+% one only adds the elapsed time.
+st_log(cfg, 'DEBUG', ...
+    '[BundleExport] stage failed | %s | elapsed=%.3f sec | %s', ...
+    label, toc(timerValue), exception.identifier);
 end
 
 function value = normalize_export_profile(value)

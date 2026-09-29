@@ -124,9 +124,9 @@ verifyTrue(testCase, contains(text, ...
     "currentStage = 'Collect Target Inputs'"));
 verifyTrue(testCase, contains(text, ...
     "currentStage = 'Create ZIP Archive'"));
-verifyTrue(testCase, contains(text, 'START : %s'));
-verifyTrue(testCase, contains(text, 'DONE    : %s'));
-verifyTrue(testCase, contains(text, 'FAILED  : %s'));
+verifyTrue(testCase, contains(text, '[BundleExport] stage start | %s'));
+verifyTrue(testCase, contains(text, '[BundleExport] stage done | %s'));
+verifyTrue(testCase, contains(text, '[BundleExport] stage failed | %s'));
 verifyTrue(testCase, contains(text, 'st_log(cfg, ''ERROR'''));
 end
 

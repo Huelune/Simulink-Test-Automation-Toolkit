@@ -1,4 +1,4 @@
-function info = st_open_standalone_test_manager(varargin)
+function varargout = st_open_standalone_test_manager(varargin)
 %ST_OPEN_STANDALONE_TEST_MANAGER Open a standalone submission in Test Manager.
 %
 %   st_open_standalone_test_manager()                      % LATEST
@@ -29,7 +29,17 @@ function info = st_open_standalone_test_manager(varargin)
 %   'View'              - open the Test Manager window (default true).
 %   'PipelineId'        - pipeline to open, or 'LATEST' (default).
 %   'OutputRoot'        - pipeline root. Default cfg.StandaloneCoverageRootDir.
+%
+% Called directly it writes its own run log; called from another command
+% it appends to that command's run log.
 
+% max(nargout, 1) keeps a bare call showing its result as ans.
+[varargout{1:max(nargout, 1)}] = st_log_run(mfilename, ...
+    @() open_body(varargin{:}));
+end
+
+
+function info = open_body(varargin)
 p = inputParser;
 p.FunctionName = mfilename;
 addParameter(p, 'PipelineId', 'LATEST', @(x) ischar(x) || isstring(x));
