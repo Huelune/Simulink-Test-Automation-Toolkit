@@ -1,6 +1,6 @@
 function example = st_create_example(destination)
 %ST_CREATE_EXAMPLE Generate redistributable FILE/MAT inputs, without running.
-cfg = struct('VerboseLogging',true);
+cfg = struct('ConsoleLogLevel','DEBUG');
 st_log(cfg,'INFO','Example generation start');
 model = 'ST_ExampleModel';
 try

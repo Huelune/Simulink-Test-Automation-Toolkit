@@ -607,14 +607,13 @@ cfg.FinalDocumentNAText = 'N/A';
 % Progress / diagnostic logging
 %% ============================================================
 
-% true:
-%   Print detailed timestamped checkpoints around long-running operations.
-%   Useful for identifying the exact API call MATLAB is currently waiting on.
-%
-% false:
-%   Suppress detailed INFO / DEBUG / TRACE logs.
-%   Existing normal START / OK / FAIL / summary messages are still printed.
-cfg.VerboseLogging = true;
+% Console detail. Every level always goes to the run log under
+% result/logs; this only decides what the Command Window shows.
+%   'STEP'  stage and target progress, WARN, ERROR (default)
+%   'INFO'  + checkpoints
+%   'DEBUG' + details, captured MathWorks output
+%   'TRACE' everything
+cfg.ConsoleLogLevel = 'STEP';
 
 % Simulink warning identifiers to suppress while the toolkit drives a
 % long API loop. Each entry is reported once through st_log and restored

@@ -5,7 +5,7 @@ function R = st_configure_signal_editors(stageSelection)
 %   into a dedicated Signal Editor MAT file, persist the new Filename,
 %   reopen the Harness, then select the imported UT_REQ scenario.
 %
-% Detailed checkpoints are controlled by cfg.VerboseLogging.
+% Detailed checkpoints are controlled by cfg.ConsoleLogLevel.
 
 cfg = st_require_runtime_target();
 T = st_load_targets(cfg.OnlyEnabled);

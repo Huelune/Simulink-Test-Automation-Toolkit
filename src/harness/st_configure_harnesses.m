@@ -1,7 +1,7 @@
 function R = st_configure_harnesses(stageSelection)
 %ST_CONFIGURE_HARNESSES Set StopTime on existing harnesses.
 %
-% Detailed checkpoints are controlled by cfg.VerboseLogging.
+% Detailed checkpoints are controlled by cfg.ConsoleLogLevel.
 
 cfg = st_require_runtime_target();
 T = st_load_targets(cfg.OnlyEnabled);

@@ -34,7 +34,7 @@ verifyTrue(testCase, isfield(result.Dependency, ...
     'ExternalDataStoreCount'));
 verifyTrue(testCase, isfield(result, 'FirstAnalyzablePath'));
 verifySubstring(testCase, output, '[SLDV Precheck]');
-verifySubstring(testCase, output, '[ERROR]');
+verifySubstring(testCase, output, 'ERROR [SLDV Precheck]');
 end
 
 
