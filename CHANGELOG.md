@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **standalone 실행을 `%TEMP%` 아래 짧은 작업 폴더에서 돌립니다.**
+  기록 위치(`.work\<bundle>\executions\<id>\workspace`)는 짧은 출력 루트를 써도
+  150자에 가까워, Stateflow 빌드가 그 밑에 `slprj\_sfprj\...`를 만들면 260자를
+  넘겨 빌드가 실패하고 커버리지가 남지 않았습니다. 이제 러너는
+  `StandaloneBuildCacheDir`(비우면 `tempdir\stt_build`) 아래 `<id>_ws`에서 실행하고,
+  끝나면 빌드 산출물(`slprj`, `*.slxc`, `*.mex*`)을 뺀 작업 폴더를 기록 위치로
+  복사한 뒤 짧은 폴더를 지웁니다. manifest의 `Workspace`/`TestManagerWorkFile`은
+  그대로 기록 위치를 가리킵니다. 실행이 실패하면 짧은 폴더를 남기고 WARN 로그에
+  위치를 적습니다.
+
 - **`IgnoreUnexpectedSldvInputs`를 명령 옵션으로 줄 수 있습니다.**
   `st_run_from_harness('IgnoreUnexpectedSldvInputs', true)`처럼 부르면 그 실행에서만
   `cfg.IgnoreUnexpectedSldvInputs`를 덮어씁니다. `st_config.m`은 고치지 않습니다.

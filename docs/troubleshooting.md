@@ -374,8 +374,8 @@ st_set_standalone_coverage_root('D:\st_out')
 
 짧은 경로를 지정하면 `runtime_target.mat`에 로컬로 저장됩니다.
 
-빌드 산출물은 기본적으로 workspace가 아니라 `tempdir` 아래 짧은 폴더에 만들어지므로
-두 번째 오류는 보통 나지 않습니다. 그래도 나면 `cfg.StandaloneBuildCacheDir`에
+standalone 실행은 기본적으로 `tempdir\stt_build` 아래 짧은 작업 폴더에서 돌고 빌드
+산출물도 그 옆에 만들어지므로 두 번째 오류는 보통 나지 않습니다. 그래도 나면 `cfg.StandaloneBuildCacheDir`에
 `'D:\stt_build'`처럼 짧은 경로를 지정하십시오([설정 참조](config-reference.md)).
 
 ## 7. 명세서 추출 오류
