@@ -1,7 +1,12 @@
-function specs = st_collect_output_specs(T, modelName)
+function specs = st_collect_output_specs(T, modelName, cfg)
 %ST_COLLECT_OUTPUT_SPECS Compile top model once and collect direct CUT Outports.
 % This function is used only when cfg.VerifyAllAssessmentInputs is false.
+% cfg is optional and only routes log output; without it messages still go
+% to the console at the default level and to the active run log.
 
+if nargin < 3
+    cfg = [];
+end
 modelName = char(modelName);
 if ~bdIsLoaded(modelName)
     load_system(modelName);
@@ -19,10 +24,12 @@ specs = repmat(struct( ...
     'Status', '', ...
     'Message', ''), n, 1);
 
-fprintf('\n[Compile] %s\n', modelName);
+st_log(cfg, 'INFO', 'Collect Output Specs | Model=%s | Count=%d', ...
+    modelName, n);
+st_log(cfg, 'DEBUG', '[Compile] start | Model=%s', modelName);
 feval(modelName, [], [], [], 'compile');
 cleanupObj = onCleanup(@() cleanup_compile(modelName)); %#ok<NASGU>
-fprintf('[Compile complete]\n');
+st_log(cfg, 'DEBUG', '[Compile] complete | Model=%s', modelName);
 
 for i = 1:n
     cutPath = st_normalize_cut_path(T.CUTPath(i), modelName);
@@ -69,21 +76,20 @@ for i = 1:n
         specs(i).Status = 'OK';
         specs(i).Message = sprintf('Outport %d', numOut);
 
-        fprintf('[%d/%d] OK   %s (%d Outports)\n', ...
-            i, n, char(T.CUTName(i)), numOut);
-
     catch ME
         specs(i).Signals = emptySignals;
         specs(i).Status = 'FAIL';
         specs(i).Message = ME.message;
-        fprintf('[%d/%d] FAIL %s: %s\n', ...
-            i, n, char(T.CUTName(i)), ME.message);
     end
+
+    st_log_progress(cfg, i, n, specs(i).Status, char(T.CUTName(i)), ...
+        'Message', specs(i).Message, 'Detail', cutPath);
 end
 
-fprintf('[Compile terminate]\n');
+st_log(cfg, 'DEBUG', '[Compile] terminate | Model=%s', modelName);
 st_force_model_stopped(modelName);
-fprintf('[SimulationStatus] %s\n', get_param(modelName, 'SimulationStatus'));
+st_log(cfg, 'DEBUG', '[SimulationStatus] %s', ...
+    get_param(modelName, 'SimulationStatus'));
 
 end
 

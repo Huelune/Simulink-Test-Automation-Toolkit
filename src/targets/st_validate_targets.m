@@ -11,11 +11,16 @@ NormalizedCUTPath = strings(n,1);
 Status = strings(n,1);
 Message = strings(n,1);
 
-fprintf('\n=== Target validation (%d rows) ===\n', n);
+st_log(cfg, 'INFO', 'Validate Targets | Model=%s | Count=%d', ...
+    cfg.TopModel, n);
 
 for i = 1:n
     ownerPath = st_normalize_cut_path(T.CUTPath(i), cfg.TopModel);
     NormalizedCUTPath(i) = string(ownerPath);
+    label = char(T.HarnessName(i));
+    if isempty(label)
+        label = char(T.CUTName(i));
+    end
 
     try
         if strlength(T.CUTName(i)) == 0
@@ -45,12 +50,13 @@ for i = 1:n
 
         Status(i) = 'OK';
         Message(i) = 'CUT and harness found';
-        fprintf('[%d/%d] OK   %s -> %s\n', i, n, ownerPath, char(T.HarnessName(i)));
     catch ME
         Status(i) = 'FAIL';
         Message(i) = string(ME.message);
-        fprintf('[%d/%d] FAIL %s\n', i, n, ME.message);
     end
+
+    st_log_progress(cfg, i, n, Status(i), label, ...
+        'Message', Message(i), 'Detail', ownerPath);
 end
 
 R = table(T.No, T.CUTName, NormalizedCUTPath, T.HarnessName, ...

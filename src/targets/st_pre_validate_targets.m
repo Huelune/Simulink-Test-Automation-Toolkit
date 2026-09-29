@@ -1,4 +1,4 @@
-function R = st_pre_validate_targets()
+function varargout = st_pre_validate_targets(varargin)
 %ST_PRE_VALIDATE_TARGETS Validate CUT paths before Harness creation.
 %
 % Checks only:
@@ -13,6 +13,17 @@ function R = st_pre_validate_targets()
 %   - Test Assessment
 %   - Scenario
 %   - Test Manager / Test Case
+%
+% Called directly it writes its own run log; called from the workflow it
+% appends to the workflow's run log.
+
+% max(nargout, 1) keeps a bare call showing its result table as ans.
+[varargout{1:max(nargout, 1)}] = st_log_run(mfilename, ...
+    @() pre_validate_body(varargin{:}));
+end
+
+
+function R = pre_validate_body()
 
 cfg = st_require_runtime_target();
 
@@ -36,12 +47,8 @@ Message = strings(n,1);
 Timestamp = strings(n,1);
 
 
-fprintf('\n');
-fprintf('============================================\n');
-fprintf('Pre-Validate CUT Paths\n');
-fprintf('Model : %s\n', cfg.TopModel);
-fprintf('Count : %d\n', n);
-fprintf('============================================\n');
+st_log(cfg, 'INFO', 'Pre-Validate CUT Paths | Model=%s | Count=%d', ...
+    cfg.TopModel, n);
 
 
 for i = 1:n
@@ -52,13 +59,9 @@ for i = 1:n
     InputCUTPath(i) = ...
         rawPath;
 
-    fprintf('\n[%d/%d] %s\n', ...
-        i, ...
-        n, ...
-        char(T.CUTName(i)));
-
-    fprintf('  Input Path : %s\n', ...
-        char(rawPath));
+    st_log(cfg, 'DEBUG', ...
+        '[PreValidate %d/%d] start | CUT=%s | Input=%s', ...
+        i, n, char(T.CUTName(i)), char(rawPath));
 
 
     try
@@ -77,9 +80,6 @@ for i = 1:n
 
         NormalizedCUTPath(i) = ...
             string(ownerPath);
-
-        fprintf('  Normalized : %s\n', ...
-            ownerPath);
 
 
         blockHandle = ...
@@ -114,8 +114,6 @@ for i = 1:n
         Message(i) = ...
             'Valid CUT path';
 
-        fprintf('  -> OK\n');
-
 
     catch ME
 
@@ -124,9 +122,6 @@ for i = 1:n
 
         Message(i) = ...
             string(ME.message);
-
-        fprintf('  -> FAIL : %s\n', ...
-            ME.message);
     end
 
 
@@ -134,6 +129,9 @@ for i = 1:n
         string(datetime( ...
             'now', ...
             'Format', 'yyyy-MM-dd HH:mm:ss'));
+
+    st_log_progress(cfg, i, n, Status(i), char(T.CUTName(i)), ...
+        'Message', Message(i), 'Detail', char(NormalizedCUTPath(i)));
 end
 
 
@@ -158,15 +156,5 @@ R = table( ...
 st_write_result( ...
     'PreValidationResult', ...
     R);
-
-
-fprintf('\n');
-fprintf('============================================\n');
-fprintf('Pre-Validation Result\n');
-fprintf('============================================\n');
-fprintf('OK   : %d\n', sum(Status == 'OK'));
-fprintf('FAIL : %d\n', sum(Status == 'FAIL'));
-fprintf('Total: %d\n', n);
-fprintf('============================================\n');
 
 end
