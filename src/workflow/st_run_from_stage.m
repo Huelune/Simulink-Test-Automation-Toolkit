@@ -1,5 +1,10 @@
 function info = st_run_from_stage(varargin)
 %ST_RUN_FROM_STAGE Strict restart; never repairs earlier stages implicitly.
+
+info = st_log_run(mfilename, @() run_body(varargin{:}));
+end
+
+function info = run_body(varargin)
 p = inputParser;
 addParameter(p,'Workflow','');
 addParameter(p,'FromStage','');

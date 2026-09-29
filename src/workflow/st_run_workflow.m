@@ -66,18 +66,11 @@ updateResult = table();
 workflowResult = table();
 reportInfo = struct();
 runContext = struct();
-totalTimer = tic;
 
-fprintf('\n============================================\n');
-fprintf('Incremental Simulink Test Automation\n');
-fprintf('Workflow : %s\n', upper(char(string(workflowKind))));
-fprintf('Model    : %s\n', cfg.TopModel);
-fprintf('State    : %s\n', context.StateLoadStatus);
-fprintf('Execute  : %s (%s)\n', executionMode, ...
-    execution_flag_text(executeTests));
-fprintf('Start    : %s\n', timestamp_text());
-fprintf('============================================\n');
-print_plan(plan);
+st_log(cfg, 'STEP', 'Workflow %s | Model=%s | Execute=%s (%s) | State=%s', ...
+    upper(char(string(workflowKind))), cfg.TopModel, executionMode, ...
+    execution_flag_text(executeTests), context.StateLoadStatus);
+print_plan(plan, cfg);
 
 % Link protection changes SynchronizationMode on existing Harnesses. It
 % belongs to preparing them, so neither a strict restart nor an execute-only
@@ -221,7 +214,7 @@ if executeTests && any(~failedCloneRows)
             'Run Generated Tests', @() st_run_generated_tests());
     end
 else
-    fprintf('\nRun Generated Tests: SKIP (ExecuteTests=false)\n');
+    st_log(cfg, 'STEP', 'Run Generated Tests: SKIP (ExecuteTests=false)');
 end
 
 state.Artifacts.Model = st_file_signature(cfg.ModelFile);
@@ -263,9 +256,9 @@ if executeTests && any(~failedCloneRows) && strcmp(executionMode, 'PER_CUT')
             collectInfo = execute_timed_step('Collect PER_CUT Results', ...
                 @() st_collect_per_cut_results()); %#ok<NASGU>
         else
-            fprintf(['\nPER_CUT saved one ResultSet per CUT.\n' ...
+            st_log(cfg, 'STEP', ['PER_CUT saved one ResultSet per CUT.\n' ...
                 'Build the coverage filters and reports with:\n' ...
-                '  st_collect_per_cut_results\n']);
+                '  st_collect_per_cut_results']);
         end
     end
 elseif executeTests && any(~failedCloneRows)
@@ -280,26 +273,21 @@ elseif executeTests && any(~failedCloneRows)
             @() st_generate_test_report( ...
                 runContext, workflowResult, plan));
     else
-        fprintf(['\nGenerate Integrated Test Report: SKIP ' ...
+        st_log(cfg, 'STEP', ['Generate Integrated Test Report: SKIP ' ...
             '(cfg.GenerateTestReport=false)\n' ...
             'Collect it later with:\n' ...
-            '  st_generate_test_report(''RunRecord'', ''LATEST'')\n']);
+            '  st_generate_test_report(''RunRecord'', ''LATEST'')']);
     end
     reportInfo.RunRecord = recordInfo;
 elseif executeTests
-    fprintf('\nSave Run Record: SKIP (no target completed)\n');
+    st_log(cfg, 'STEP', 'Save Run Record: SKIP (no target completed)');
 end
 
-fprintf('\n============================================\n');
 if any(failedCloneRows)
-    fprintf('Automation finished with %d failed clone target(s).\n',sum(failedCloneRows));
-else
-    fprintf('Automation Complete\n');
+    st_log(cfg, 'WARN', 'Automation finished with %d failed clone target(s).', ...
+        sum(failedCloneRows));
 end
 reportInfo.CloneFailures = T(failedCloneRows,:);
-fprintf('End     : %s\n', timestamp_text());
-fprintf('Elapsed : %s\n', elapsed_text(toc(totalTimer)));
-fprintf('============================================\n');
 end
 
 function value = option_or_default(value, defaultValue)
@@ -325,23 +313,21 @@ end
 end
 
 function varargout = execute_timed_step(label, fn)
-fprintf('\n============================================\n');
-fprintf('%s\nSTART : %s\n', label, timestamp_text());
-fprintf('============================================\n');
+cfg = st_config();
+st_log_stage(cfg, 'start', label);
+warningScope = st_suppress_warnings(cfg, label); %#ok<NASGU>
 timerValue = tic;
 try
     [varargout{1:nargout}] = fn();
 catch ME
-    fprintf('FAILED  : %s\nELAPSED : %s\n', ...
-        label, elapsed_text(toc(timerValue)));
-    st_log_stage_result(label, [], ME);
+    st_log_stage(cfg, 'fail', label, 'Exception', ME, ...
+        'Elapsed', toc(timerValue));
     rethrow(ME);
 end
-fprintf('DONE    : %s\nELAPSED : %s\n', ...
-    label, elapsed_text(toc(timerValue)));
 result = [];
 if nargout >= 1, result = varargout{1}; end
-st_log_stage_result(label, result);
+st_log_stage(cfg, 'end', label, 'Result', result, ...
+    'Elapsed', toc(timerValue));
 end
 
 function require_success(result, message)
@@ -360,28 +346,16 @@ if ismember('CUTName', result.Properties.VariableNames)
     names = names + "]";
 end
 error('simtest:WorkflowStageFailed', ...
-    '%s %d target(s) failed%s. See WorkflowStageLog.log.', ...
+    '%s %d target(s) failed%s. See the run log.', ...
     message, sum(failed), char(names));
 end
 
-function print_plan(plan)
+function print_plan(plan, cfg)
 stages = {'HARNESS','SLDV','HARNESS_CONFIG','SIGNAL_EDITOR', ...
     'ASSESSMENT','TEST_MANAGER','ALIGNMENT'};
 for s = 1:numel(stages)
     runCount = sum(plan.(sprintf('Run%s', stages{s})));
-    fprintf('%-16s RUN=%d CACHED=%d\n', stages{s}, ...
+    st_log(cfg, 'INFO', '%-16s RUN=%d CACHED=%d', stages{s}, ...
         runCount, height(plan) - runCount);
 end
-end
-
-function text = timestamp_text()
-text = char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss'));
-end
-
-function text = elapsed_text(secondsValue)
-hoursValue = floor(secondsValue / 3600);
-minutesValue = floor(mod(secondsValue, 3600) / 60);
-secondsPart = mod(secondsValue, 60);
-text = sprintf('%02d:%02d:%06.3f', ...
-    hoursValue, minutesValue, secondsPart);
 end
