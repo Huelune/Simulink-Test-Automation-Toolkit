@@ -29,6 +29,17 @@ verifyEqual(testCase, options.PreparationMode, 'FORCE');
 verifyEqual(testCase, options.FromStage, 'ASSESSMENT');
 end
 
+function testIgnoreUnexpectedSldvInputsOption(testCase)
+options = st_parse_workflow_options();
+verifyEmpty(testCase, options.IgnoreUnexpectedSldvInputs);
+
+options = st_parse_workflow_options('IgnoreUnexpectedSldvInputs', true);
+verifyTrue(testCase, options.IgnoreUnexpectedSldvInputs);
+
+verifyError(testCase, @() st_parse_workflow_options( ...
+    'IgnoreUnexpectedSldvInputs', 'yes'), 'MATLAB:InputParser:ArgumentFailedValidation');
+end
+
 function testRemovedCoverageFilterStageIsRejected(testCase)
 % Coverage filters lost their preparation stage; a restart aimed at it has
 % to say where to go instead of silently starting somewhere else.

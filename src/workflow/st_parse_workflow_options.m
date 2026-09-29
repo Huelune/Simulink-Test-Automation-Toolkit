@@ -16,6 +16,8 @@ addParameter(p, 'ExecuteTests', [], ...
 addParameter(p, 'AutoCollect', [], ...
     @(v) isempty(v) || (islogical(v) && isscalar(v)));
 addParameter(p, 'StrictRestart', false, @(v) islogical(v) && isscalar(v));
+addParameter(p, 'IgnoreUnexpectedSldvInputs', [], ...
+    @(v) isempty(v) || (islogical(v) && isscalar(v)));
 parse(p, varargin{:});
 
 options = struct();
@@ -30,6 +32,7 @@ options.FailOnNonPass = p.Results.FailOnNonPass;
 options.ExecuteTests = p.Results.ExecuteTests;
 options.AutoCollect = p.Results.AutoCollect;
 options.StrictRestart = p.Results.StrictRestart;
+options.IgnoreUnexpectedSldvInputs = p.Results.IgnoreUnexpectedSldvInputs;
 
 if ~isempty(options.PreparationMode) && ...
         ~ismember(options.PreparationMode, {'AUTO','FORCE'})

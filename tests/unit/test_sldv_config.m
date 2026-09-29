@@ -31,6 +31,24 @@ verifyFalse(testCase, cfg.IgnoreUnexpectedSldvInputs);
 end
 
 
+function testConfigScopeOverridesOnlyWhileHeld(testCase)
+% A workflow option reaches every stage through st_config() and must not
+% outlive the command that set it.
+guard = st_config_scope('enter', ...
+    struct('IgnoreUnexpectedSldvInputs', true));
+verifyTrue(testCase, st_config().IgnoreUnexpectedSldvInputs);
+
+clear guard;
+verifyFalse(testCase, st_config().IgnoreUnexpectedSldvInputs);
+end
+
+
+function testConfigScopeRejectsUnknownField(testCase)
+guard = st_config_scope('enter', struct('NoSuchSetting', true)); %#ok<NASGU>
+verifyError(testCase, @() st_config(), 'simtest:UnknownConfigOverride');
+end
+
+
 function testSldvSubsystemPathMismatchIsTemporarilyAllowed(testCase)
 cfg = st_config();
 

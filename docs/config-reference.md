@@ -35,6 +35,7 @@ st_run_from_harness                % 이 명령은 st_config()를 새로 호출�
 | 정책 | 우선순위 (왼쪽이 이김) |
 | --- | --- |
 | 실행 모드 | 명령 옵션 `ExecutionMode` > `cfg.ExecutionMode` |
+| SLDV 추가 입력 무시 | 명령 옵션 `IgnoreUnexpectedSldvInputs` > `cfg.IgnoreUnexpectedSldvInputs` |
 | 준비 모드·시작 단계 | 명령 옵션 > Excel 행 > `cfg` |
 | 기대값 갱신 | Excel 행 > `cfg.ExpectedUpdateMode` |
 | 커버리지 필터 선택 | Excel 행의 `CoverageFilter*` (전역 설정 없음) |
@@ -314,6 +315,13 @@ SLDV MAT에 Harness의 ActiveScenario에는 없는 입력 신호가 들어 있�
 `true`로 바꾸는 것은 그 입력이 이 테스트에 필요 없다는 것을 사람이 확인한 뒤에만
 하십시오. 무시한 신호 목록은 `SldvGenerationResult`의 `IgnoredSldvInputs` 열에
 남습니다.
+
+파일을 고치지 않고 한 번만 바꾸려면 명령 옵션을 쓰십시오. 옵션이 이 설정보다
+우선합니다.
+
+```matlab
+st_run_from_harness('IgnoreUnexpectedSldvInputs', true);
+```
 
 ### `AllowSldvSubsystemPathMismatch` — 기본 `true`
 

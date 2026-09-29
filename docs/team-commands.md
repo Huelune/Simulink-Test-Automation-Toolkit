@@ -300,6 +300,24 @@ st_run_from_harness('ExecuteTests', false);
 Test Case까지만 만들고 멈춥니다. 실행은 Test Manager에서 직접 하거나 나중에 다시
 이 명령을 부르면 됩니다.
 
+#### SLDV 결과에 Harness에 없는 입력이 있을 때
+
+```matlab
+st_run_from_harness('IgnoreUnexpectedSldvInputs', true);
+```
+
+SLDV가 만든 입력 중 Harness ActiveScenario에 없는 신호를 버리고, 겹치는 입력만
+시나리오에 넣습니다. `st_config.m`을 고치지 않고 **이 명령 한 번에만**
+`cfg.IgnoreUnexpectedSldvInputs`를 바꿉니다. `st_run_after_harness`도 같은 옵션을
+받습니다.
+
+- 이 값은 SLDV 단계 지문에 들어갑니다. 옵션을 붙였다 뗐다 하면 그때마다 SLDV
+  단계부터 다시 준비합니다. 계속 무시해야 하면 매번 붙이거나 설정 파일을
+  고치십시오.
+- 버린 신호 이름은 `SldvGenerationResult`의 `IgnoredSldvInputs` 열에 남습니다.
+- `st_run_from_stage`(엄격 재시작)에는 쓸 수 없습니다. 재시작은 저장된 설정 그대로
+  돌기 때문입니다.
+
 #### 한꺼번에 돌릴까, 하나씩 돌릴까
 
 ```matlab

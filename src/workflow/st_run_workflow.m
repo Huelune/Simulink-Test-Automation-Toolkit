@@ -2,9 +2,20 @@ function [resultObj, updateResult, workflowResult, reportInfo] = ...
     st_run_workflow(workflowKind, varargin)
 %ST_RUN_WORKFLOW Execute the shared incremental preparation pipeline.
 
-cfg = st_require_runtime_target();
 options = st_parse_workflow_options(varargin{:});
+% Held until this function returns, so every stage's st_config() sees it.
+configScope = st_config_scope('enter', config_overrides(options)); %#ok<NASGU>
+cfg = st_require_runtime_target();
+if ~isempty(options.IgnoreUnexpectedSldvInputs)
+    st_log(cfg,'INFO', ...
+        'Workflow option override | IgnoreUnexpectedSldvInputs=%d', ...
+        cfg.IgnoreUnexpectedSldvInputs);
+end
 if options.StrictRestart
+    if ~isempty(options.IgnoreUnexpectedSldvInputs)
+        error('simtest:RestartConfigOverride', ...
+            'Strict restart uses the selected configuration; omit IgnoreUnexpectedSldvInputs override.');
+    end
     st_workflow_stages(workflowKind,options.FromStage);
     if ~isempty(options.ExecutionMode) && ...
             ~strcmp(options.ExecutionMode,cfg.ExecutionMode)
@@ -294,6 +305,14 @@ end
 function value = option_or_default(value, defaultValue)
 if isempty(value)
     value = defaultValue;
+end
+end
+
+function overrides = config_overrides(options)
+% Command options that replace an st_config value for this run only.
+overrides = struct();
+if ~isempty(options.IgnoreUnexpectedSldvInputs)
+    overrides.IgnoreUnexpectedSldvInputs = options.IgnoreUnexpectedSldvInputs;
 end
 end
 

@@ -639,4 +639,8 @@ cfg.SaveResultFiles = true;
 cfg.ResultReportDir = ...
     fullfile(cfg.ResultDir, 'reports');
 
+% A command option such as IgnoreUnexpectedSldvInputs replaces the value
+% above only while that command runs. See st_config_scope.
+cfg = st_config_scope('apply', cfg);
+
 end

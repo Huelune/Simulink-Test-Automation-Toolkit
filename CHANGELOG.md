@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **`IgnoreUnexpectedSldvInputs`를 명령 옵션으로 줄 수 있습니다.**
+  `st_run_from_harness('IgnoreUnexpectedSldvInputs', true)`처럼 부르면 그 실행에서만
+  `cfg.IgnoreUnexpectedSldvInputs`를 덮어씁니다. `st_config.m`은 고치지 않습니다.
+  각 단계가 `st_config()`를 따로 부르기 때문에, 명령이 도는 동안만 유효한 덮어쓰기
+  범위(`st_config_scope`)를 새로 두었습니다. 값은 SLDV 단계 지문에 들어가므로 옵션을
+  바꾸면 SLDV 단계부터 다시 준비합니다. 엄격 재시작(`StrictRestart`)과 함께 쓰면
+  `simtest:RestartConfigOverride`로 거부합니다.
 - **라이브러리 링크된 CUT도 `GENERATE`를 돌릴 수 있는 opt-in을 추가합니다.**
   지금까지 비-Atomic linked CUT의 `FILE+SLDV`/`GENERATE`는
   `SldvLinkedCUTRequiresAtomic`으로 실패했고, 원본 라이브러리를 Atomic으로 고치는
