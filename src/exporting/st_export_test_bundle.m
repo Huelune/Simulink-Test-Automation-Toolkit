@@ -420,7 +420,8 @@ if createArchive
     stageTimer = start_step(cfg, currentStage);
     archivePath = [finalDirectory '.zip'];
     % Compression time tracks the bundle size, which the manifest already
-    % measured. Log it so a multi-minute archive is expected, not a hang.
+    % measured. The task start line is STEP, so the console shows the size
+    % and a multi-minute archive is expected, not mistaken for a hang.
     bundleBytes = 0;
     if ~isempty(manifest.Files)
         bundleBytes = sum([manifest.Files.Bytes]);
@@ -450,10 +451,11 @@ info = struct( ...
 st_log(cfg, 'INFO', ...
     'Export Test Bundle complete | Bundle=%s | elapsed=%.3f sec', ...
     bundleId, toc(totalTimer));
+% The usage hint is the last thing the caller needs, so it stays on the console.
 if reproducible
-    st_log(cfg, 'INFO', 'Bundle usage | Run=run_exported_tests');
+    st_log(cfg, 'STEP', 'Bundle usage | Run=run_exported_tests');
 else
-    st_log(cfg, 'INFO', ...
+    st_log(cfg, 'STEP', ...
         'Bundle usage | test asset management; rerun is not supported');
 end
 st_log(cfg, 'STEP', '%s done | Files=%d | Output=%s', ...
@@ -1053,19 +1055,19 @@ st_log(cfg, 'INFO', ...
 end
 
 function timerValue = begin_task(cfg, label, formatText, varargin)
-% The manifest stage is a long silent wait otherwise: toolbox analysis,
-% whole-bundle hashing and the source recheck each take model- or
-% file-proportional time with no output of their own.
+% Toolbox analysis, whole-bundle hashing, the source recheck and the ZIP
+% each take model- or file-proportional time with no output of their own.
+% Their start and done lines are STEP so the console is not silent while
+% they run; the per-file hashing heartbeat stays DEBUG (log file only).
 detail = sprintf(formatText, varargin{:});
-st_log(cfg, 'INFO', 'Manifest task start | Task=%s | %s', label, detail);
+st_log(cfg, 'STEP', 'Manifest task start | Task=%s | %s', label, detail);
 timerValue = tic;
 end
 
 function end_task(cfg, label, timerValue, formatText, varargin)
 detail = sprintf(formatText, varargin{:});
 elapsed = toc(timerValue);
-st_log(cfg, 'INFO', ...
-    'Manifest task complete | Task=%s | elapsed=%.3f sec | %s', ...
+st_log(cfg, 'STEP', 'Manifest task complete | Task=%s | elapsed=%.3f sec | %s', ...
     label, elapsed, detail);
 end
 

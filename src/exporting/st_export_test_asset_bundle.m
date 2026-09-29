@@ -237,7 +237,12 @@ try
         currentStage = 'Create ZIP Archive';
         stageTimer = start_step(cfg, currentStage);
         archivePath = [finalDirectory '.zip'];
+        % Compression time tracks the bundle size and prints nothing itself, so
+        % the start and done lines are STEP to keep the console from going silent.
+        zipTimer = tic;
+        st_log(cfg, 'STEP', 'ZIP archive start | file=%s', archivePath);
         zip(archivePath, bundleId, destination);
+        st_log(cfg, 'STEP', 'ZIP archive done | elapsed=%.3f sec', toc(zipTimer));
         finish_step(cfg, currentStage, stageTimer);
     else
         st_log(cfg, 'INFO', 'Create ZIP Archive: SKIP (CreateArchive=false)');

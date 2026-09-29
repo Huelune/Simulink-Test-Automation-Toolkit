@@ -26,8 +26,7 @@ verifyTrue(testCase, isscalar(summary));
 verifyEqual(testCase, summary.Status, 'PASS');
 verifyEqual(testCase, numel(summary.Bits), 10);
 verifyEqual(testCase, height(details), 2);
-verifyLessThanOrEqual(testCase, ...
-    count_screen_lines(splitlines(string(output))), 20);
+verify_one_screen(testCase, output);
 end
 
 function testPackageFailureAppearsInDetails(testCase)
@@ -170,8 +169,7 @@ manifest.Targets(12).RunCount = 2;
 st_write_standalone_pipeline_manifest(root, manifest);
 output = evalc('[~, ~, details] = st_check_standalone_coverage(''OutputRoot'', root);');
 verifyEqual(testCase, height(details), 12);
-verifyLessThanOrEqual(testCase, ...
-    count_screen_lines(splitlines(strtrim(string(output)))), 20);
+verify_one_screen(testCase, output);
 verifyTrue(testCase, contains(output, 'additional targets; inspect details'));
 end
 
@@ -396,13 +394,31 @@ value = struct( ...
     'DecisionPercentageText', 'N/A', 'ExecutionPercentageText', 'N/A');
 end
 
+function verify_one_screen(testCase, output)
+% The checker's own block fits one screen (at most 20 lines) and the run-log
+% frame around it is exactly four lines, so the whole console output stays
+% within 24 lines. Pinning the frame size keeps the exclusion in
+% count_screen_lines from absorbing later growth of the block.
+lines = splitlines(strtrim(string(output)));
+verifyLessThanOrEqual(testCase, count_screen_lines(lines), 20);
+verifyEqual(testCase, count_scope_frame_lines(lines), 4);
+verifyLessThanOrEqual(testCase, numel(lines), 24);
+end
+
 function count = count_screen_lines(lines)
-% The checker's own block must fit one screen. The four run-log scope lines
-% (==> start, <== done and the two "log:" path lines) come from the command's
-% log scope, not from the checker, so they are not part of that block.
-scopeLine = ~cellfun(@isempty, regexp(cellstr(lines), ...
+% Lines of the checker's own block: everything except the run-log frame.
+count = sum(~is_scope_frame_line(lines));
+end
+
+function count = count_scope_frame_lines(lines)
+count = sum(is_scope_frame_line(lines));
+end
+
+function mask = is_scope_frame_line(lines)
+% The four run-log scope lines (==> start, <== done and the two "log:" path
+% lines) come from the command's log scope, not from the checker.
+mask = ~cellfun(@isempty, regexp(cellstr(lines), ...
     '^\[\d{2}:\d{2}:\d{2}\]\s+(ERROR\s+)?(==>|<==|log:)', 'once'));
-count = sum(~scopeLine);
 end
 
 function append_event(path, order, event)

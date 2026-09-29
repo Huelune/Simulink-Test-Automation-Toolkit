@@ -1,11 +1,14 @@
 function varargout = st_check_standalone_coverage(varargin)
-%ST_CHECK_STANDALONE_COVERAGE Read-only one-screen pipeline verification.
+%ST_CHECK_STANDALONE_COVERAGE Read-only pipeline verification; its block fits one screen.
 %
 %   [code, summary, details] = st_check_standalone_coverage()
 %   returns 1111111111 only when every completed contract check passes.
 %
-%   Called directly it writes its own run log; called from another command
-%   it appends to that command's run log.
+%   The block the checker prints fits one screen (at most 20 lines). Called
+%   directly, its run log adds a frame of 4 lines around that block: the
+%   "==>" start line, the "<==" done line and two "log:" path lines.
+%   Called from another command it appends to that command's run log and
+%   adds no frame.
 
 % max(nargout, 1) keeps a bare call showing its result as ans.
 [varargout{1:max(nargout, 1)}] = st_log_run(mfilename, ...
