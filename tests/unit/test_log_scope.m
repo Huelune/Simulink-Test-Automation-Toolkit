@@ -76,3 +76,37 @@ verifyEqual(testCase, st_log_elapsed_text(30.94), '30.9s');
 verifyEqual(testCase, st_log_elapsed_text(758), '12m38s');
 verifyEqual(testCase, st_log_elapsed_text(3725), '1h02m');
 end
+
+function testConsoleIsCopiedToConsoleLog(testCase)
+assumeEqual(testCase, get(0, 'Diary'), 'off');
+logDir = testCase.TestData.Dir;
+previousFile = get(0, 'DiaryFile');
+guard = st_log_scope('enter', 'diary_cmd', logDir); %#ok<NASGU>
+fprintf('console-probe-line\n');
+clear guard;
+verifyEqual(testCase, get(0, 'Diary'), 'off');
+verifyEqual(testCase, get(0, 'DiaryFile'), previousFile);
+files = dir(fullfile(logDir, '*_diary_cmd.console.log'));
+verifyEqual(testCase, numel(files), 1);
+text = fileread(fullfile(files(1).folder, files(1).name));
+verifyTrue(testCase, contains(text, 'console-probe-line'));
+end
+
+function testExistingDiaryIsLeftAlone(testCase)
+assumeEqual(testCase, get(0, 'Diary'), 'off');
+logDir = testCase.TestData.Dir;
+previousFile = get(0, 'DiaryFile');
+userDiary = fullfile(logDir, 'user_diary.txt');
+diary(userDiary);
+restore = onCleanup(@() restore_diary(previousFile)); %#ok<NASGU>
+guard = st_log_scope('enter', 'busy_diary_cmd', logDir); %#ok<NASGU>
+clear guard;
+verifyEqual(testCase, get(0, 'Diary'), 'on');
+verifyEqual(testCase, get(0, 'DiaryFile'), userDiary);
+verifyEmpty(testCase, dir(fullfile(logDir, '*busy_diary_cmd.console.log')));
+end
+
+function restore_diary(previousFile)
+diary('off');
+set(0, 'DiaryFile', previousFile);
+end

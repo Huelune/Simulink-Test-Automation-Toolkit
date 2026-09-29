@@ -29,6 +29,7 @@ switch action
         if isempty(logDir), logDir = default_log_dir(cfg); end
         state = open_state(commandName, logDir, cfg);
         value = onCleanup(@() st_log_scope('leave'));
+        state = start_diary(state);
         st_log(state.Cfg, 'STEP', '==> %s start', commandName);
         if ~isempty(state.LogPath)
             st_log(state.Cfg, 'STEP', '    log: %s', state.LogPath);
@@ -53,6 +54,7 @@ switch action
         if ~isempty(finished.LogPath)
             st_log(finished.Cfg, 'STEP', '    log: %s', finished.LogPath);
         end
+        stop_diary(finished);
         state = idle_state();
     case 'fail'
         value = [];
@@ -122,5 +124,32 @@ function logDir = default_log_dir(cfg)
 logDir = '';
 if isstruct(cfg) && isfield(cfg, 'ResultDir')
     logDir = fullfile(char(cfg.ResultDir), 'logs');
+end
+end
+
+function state = start_diary(state)
+if isempty(state.ConsolePath), return; end
+if strcmp(get(0, 'Diary'), 'on')
+    st_log(state.Cfg, 'WARN', ...
+        'diary is already on; console copy not recorded | DiaryFile=%s', ...
+        get(0, 'DiaryFile'));
+    return;
+end
+state.PreviousDiaryFile = get(0, 'DiaryFile');
+try
+    diary(state.ConsolePath);
+    state.DiaryOwned = true;
+catch ME
+    st_log(state.Cfg, 'WARN', 'Console copy could not start | %s', ME.message);
+end
+end
+
+function stop_diary(state)
+if ~state.DiaryOwned, return; end
+try
+    diary('off');
+    set(0, 'DiaryFile', state.PreviousDiaryFile);
+catch ME
+    st_log(state.Cfg, 'WARN', 'Console copy could not stop | %s', ME.message);
 end
 end
