@@ -447,6 +447,7 @@ PASS/FAIL이 다를 수 있으므로 판정은 1단계에서, 커버리지만 3�
 %% 준비 — MATLAB을 켤 때마다
 st_setup
 st_select_target_model          % 처음 1회, 또는 모델을 바꿀 때만
+st_set_standalone_coverage_root('D:\st_out')  % 필수. 3단계 결과를 짧은 경로에 둡니다
 R = st_pre_validate_targets();  % Excel을 고칠 때마다
 disp(R)
 
@@ -478,7 +479,7 @@ disp(code)                      % 1111111111 이어야 합니다
 disp(summary)
 
 %% 4단계 — 팀 제출 트리 (MATLAB 밖 명령 프롬프트에서)
-% python tools/python/classify_standalone_results.py result/standalone_coverage/<PipelineId>
+% python tools/python/classify_standalone_results.py D:\st_out\<PipelineId>
 
 %% 5단계 — 고객 제출용 최종 문서
 [T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
@@ -491,6 +492,7 @@ winopen(finalFile)
 %% 준비 — MATLAB을 켤 때마다
 st_setup
 st_select_target_model          % 처음 1회, 또는 모델을 바꿀 때만
+st_set_standalone_coverage_root('D:\st_out')  % 필수. 3단계 결과를 짧은 경로에 둡니다
 R = st_pre_validate_targets();  % Excel을 고칠 때마다
 disp(R)
 
@@ -513,7 +515,7 @@ disp(code)                      % 1111111111 이어야 합니다
 disp(summary)
 
 %% 4단계 — 팀 제출 트리 (MATLAB 밖 명령 프롬프트에서)
-% python tools/python/classify_standalone_results.py result/standalone_coverage/<PipelineId>
+% python tools/python/classify_standalone_results.py D:\st_out\<PipelineId>
 
 %% 5단계 — 고객 제출용 최종 문서
 [T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
