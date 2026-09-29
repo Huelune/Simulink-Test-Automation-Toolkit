@@ -47,7 +47,7 @@
 | --- | --- |
 | `result/logs/<시각>_<명령>.log` | 툴킷 로그. 콘솔 설정과 상관없이 **모든 레벨**(`TRACE`~`ERROR`)이 남습니다 |
 | `result/logs/<시각>_<명령>.console.log` | 그 명령이 도는 동안 Command Window에 보인 내용 그대로(`diary` 사본) |
-| `result/logs/session_<날짜>.log` | 위 명령들 밖에서 찍힌 로그. `st_create_harnesses` 같은 단계 함수나 `st_generate_test_report`를 직접 부르면 여기로 갑니다 |
+| `result/logs/session_<날짜>.log` | 위 명령들 밖에서 찍힌 로그. `st_create_harnesses` 같은 단계 함수를 직접 부르면 여기로 갑니다. `st_generate_test_report`는 직접 부르면 자기 로그 파일을 엽니다 |
 
 - `<시각>`은 `yyyyMMdd_HHmmss`, `<날짜>`는 `yyyyMMdd`, `<명령>`은
   `st_run_from_harness` 같은 명령 이름입니다. 같은 이름의 파일이 이미 있으면 `_2`,

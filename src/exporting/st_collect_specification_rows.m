@@ -72,6 +72,7 @@ for i = 1:height(targets)
     harness = char(target.HarnessName);
     owner = st_normalize_cut_path(target.CUTPath, cfg.TopModel);
     loadedHere = ~bdIsLoaded(harness);
+    targetTimer = tic;
     st_log(cfg, 'INFO', 'Specification target start | Case=%s | Harness=%s', ...
         target.TestCaseName, harness);
     harnessCleanup = onCleanup(@() close_harness(harness, loadedHere, cfg));
@@ -102,6 +103,8 @@ for i = 1:height(targets)
         verifyCells = [verifyCells; targetVerifyCells]; %#ok<AGROW>
         maxTimes = [maxTimes; targetMaxTimes]; %#ok<AGROW>
         decisionBlockLists = [decisionBlockLists; targetDecisionBlocks]; %#ok<AGROW>
+        targetStatus = worst_row_status(targetRows(:,12));
+        targetMessage = sprintf('rows=%d', size(targetRows, 1));
     catch ME
         if any(strcmp(ME.identifier, {'simtest:SpecificationUnsaved', ...
                 'simtest:SpecificationSourceChanged'}))
@@ -114,10 +117,17 @@ for i = 1:height(targets)
         verifyCells{end+1,1} = "<verify 읽기 실패>"; %#ok<AGROW>
         maxTimes(end+1,1) = NaN; %#ok<AGROW>
         decisionBlockLists(end+1,1) = "[]"; %#ok<AGROW>
-        st_log(cfg, 'ERROR', 'Specification target failed | Case=%s | Harness=%s | %s', ...
+        targetStatus = 'FAIL';
+        targetMessage = ME.message;
+        % The progress line below carries this failure to the console.
+        st_log(cfg, 'DEBUG', 'Specification target failed | Case=%s | Harness=%s | %s', ...
             target.TestCaseName, harness, ME.message);
     end
     clear harnessCleanup;
+    % Each target loads its Harness, so a long export shows where it is.
+    st_log_progress(cfg, i, height(targets), targetStatus, harness, ...
+        'Elapsed', toc(targetTimer), 'Message', targetMessage, ...
+        'Detail', char(string(target.CUTPath)));
     st_log(cfg, 'INFO', 'Specification target end | Case=%s', target.TestCaseName);
 end
 check_model(cfg.TopModel, cfg.ModelFile);
@@ -152,6 +162,16 @@ verify_sources();
         st_log(cfg, 'DEBUG', 'Specification source verification end | Files=%d', numel(sources));
     end
 
+end
+
+function status = worst_row_status(rowStatus)
+% A target's progress line reports its worst specification row.
+status = 'OK';
+if any(rowStatus == "FAIL")
+    status = 'FAIL';
+elseif any(rowStatus == "WARN")
+    status = 'WARN';
+end
 end
 
 function close_test_file(testFile, cfg)

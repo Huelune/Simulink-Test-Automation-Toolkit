@@ -9,8 +9,9 @@
   (`-->`/`<--`), 대상(`[ 3/26] FAIL ...`)의 한 줄 진행과 `WARN`·`ERROR`만 나옵니다.
   모든 레벨은 `result/logs/<yyyyMMdd_HHmmss>_<명령>.log`에 남습니다.
   - 콘솔에 보인 내용 그대로는 같은 이름의 `.console.log`에, 명령 밖에서 찍힌 로그는
-    `session_<yyyyMMdd>.log`에 남습니다. `st_run_from_harness` 등 직접 부르는 명령
-    11개가 각자 로그 파일을 열고, 단계 함수를 직접 부르면 session 로그로 갑니다.
+    `session_<yyyyMMdd>.log`에 남습니다. `st_run_from_harness`,
+    `st_generate_test_report` 등 직접 부르는 명령 12개가 각자 로그 파일을 열고,
+    단계 함수를 직접 부르면 session 로그로 갑니다.
     자세한 위치와 여는 법은 `docs/troubleshooting.md`의 "로그는 어디에 있나"에
     있습니다.
   - 명령의 끝 줄은 정상이면 `<== <명령> done`, 오류면 `FAILED`, Ctrl+C로 끊었으면

@@ -651,7 +651,7 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 | `log:` | 그 명령의 로그 파일 경로 |
 
 `st_run_from_harness`, `st_run_after_harness`, `st_run_from_stage`,
-`st_pre_validate_targets`, `st_collect_per_cut_results`,
+`st_pre_validate_targets`, `st_collect_per_cut_results`, `st_generate_test_report`,
 `st_run_standalone_coverage_pipeline`, `st_check_standalone_coverage`,
 `st_open_standalone_test_manager`, `st_export_test_specification`,
 `st_export_final_document`, `st_select_target_model`이 각각 로그 파일을 하나씩

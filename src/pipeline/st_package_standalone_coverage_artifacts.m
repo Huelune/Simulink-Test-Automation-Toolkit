@@ -29,6 +29,8 @@ for i = 1:numel(manifest.Targets)
     item.OutputDirectory = targetDirectory;
     item.TargetManifest = fullfile(targetDirectory, ...
         'target-manifest.json');
+    targetTimer = tic;
+    progressMessage = '';
     st_log(cfg, 'INFO', ...
         '[PACKAGE %d/%d] start | CUT=%s', ...
         i, numel(manifest.Targets), item.CUTName);
@@ -56,9 +58,10 @@ for i = 1:numel(manifest.Targets)
     catch ME
         item.PackageStatus = 'FAIL';
         item.PackageFailure = package_failure_detail(ME);
-        item.Message = append_message(item.Message, ...
-            sprintf('%s: %s', ME.identifier, ME.message));
-        st_log(cfg, 'ERROR', ...
+        progressMessage = sprintf('%s: %s', ME.identifier, ME.message);
+        item.Message = append_message(item.Message, progressMessage);
+        % The progress line below carries this failure to the console.
+        st_log(cfg, 'DEBUG', ...
             '[PACKAGE %d/%d] failed | CUT=%s | %s: %s', ...
             i, numel(manifest.Targets), item.CUTName, ...
             ME.identifier, ME.message);
@@ -67,6 +70,9 @@ for i = 1:numel(manifest.Targets)
     manifest.Targets(i) = item;
     manifest.UpdatedAt = timestamp_text();
     st_write_standalone_pipeline_manifest(outputRoot, manifest);
+    st_log_progress(cfg, i, numel(manifest.Targets), item.PackageStatus, ...
+        target_label(item), 'Elapsed', toc(targetTimer), ...
+        'Message', progressMessage, 'Detail', item.CUTPath);
 end
 
 status = target_action_status(manifest.Targets, 'PackageStatus');
@@ -463,6 +469,12 @@ end
 
 function delete_if_present(path)
 if isfile(path), delete(path); end
+end
+
+function label = target_label(item)
+% Progress lines name the Harness, or the CUT when there is none.
+label = char(string(item.HarnessName));
+if isempty(label), label = char(string(item.CUTName)); end
 end
 
 function value = append_message(existing, added)

@@ -1,4 +1,4 @@
-function reportInfo = st_generate_test_report(varargin)
+function varargout = st_generate_test_report(varargin)
 %ST_GENERATE_TEST_REPORT Create one local bundle for a complete test run.
 %
 % st_generate_test_report
@@ -11,12 +11,21 @@ function reportInfo = st_generate_test_report(varargin)
 % ran the tests can do. The three-argument form is the live path used by
 % the workflow itself.
 
+% Called directly it writes its own run log; called from the workflow it
+% appends to the workflow's run log. max(nargout, 1) keeps a bare call
+% showing its result as ans.
+[varargout{1:max(nargout, 1)}] = st_log_run(mfilename, ...
+    @() generate_report(varargin{:}));
+end
+
+
+function reportInfo = generate_report(varargin)
 cfg = st_require_runtime_target();
 [runContext, workflowResult, workflowPlan] = resolve_inputs(cfg, varargin{:});
 % Every step below reads a ResultSet that may have come from a file, which is
-% much slower than the live objects this used to run on. Announce each step so
-% a slow one is distinguishable from a hang.
-step = @(text) st_log(cfg, 'INFO', 'Report step | %s', text);
+% much slower than the live objects this used to run on. Announce each step on
+% the console so a slow one is distinguishable from a hang.
+step = @(text) st_log(cfg, 'STEP', 'Report step | %s', text);
 step('Loading targets');
 targetConfig = st_load_targets(cfg.OnlyEnabled);
 runInfo = st_report_run_context(runContext);
@@ -361,7 +370,7 @@ interval = max(1, ceil(total / 20));
 if current ~= 1 && current ~= total && mod(current, interval) ~= 0
     return;
 end
-st_log(cfg, 'INFO', 'Report step | Coverage %s | %s | %d/%d', ...
+st_log(cfg, 'STEP', 'Report step | Coverage %s | %s | %d/%d', ...
     label, char(string(phase)), current, total);
 end
 

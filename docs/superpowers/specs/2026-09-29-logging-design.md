@@ -108,20 +108,21 @@ info  = st_log_scope('current')              % st_log가 조회
 
 [team-commands.md](../../team-commands.md)에 나오는 명령 가운데 사용자가 직접
 부르는 것의 첫 줄에서 `st_log_run`(또는 `st_log_scope('enter', ...)`)으로 연다. 다음
-11개다.
+12개다.
 
 - `st_run_from_harness`, `st_run_after_harness`, `st_run_from_stage`: 각자 연다.
   이 명령들이 거치는 `st_run_workflow`는 따로 열지 않는다.
 - `st_run_standalone_coverage_pipeline`, `st_check_standalone_coverage`,
   `st_open_standalone_test_manager`
-- `st_collect_per_cut_results`, `st_export_test_specification`,
-  `st_export_final_document`
+- `st_collect_per_cut_results`, `st_generate_test_report`,
+  `st_export_test_specification`, `st_export_final_document`
 - `st_pre_validate_targets`, `st_select_target_model`
 - 워크플로 단계 함수(`st_create_harnesses` 등)는 범위를 따로 열지 않는다. 워크플로
   안에서 불리면 바깥 명령의 파일에 이어 쓰고, 단독으로 부르면
   `session_<yyyyMMdd>.log`로 간다.
 - 다른 명령 안에서 불린 명령은 안쪽 명령이므로 새 파일을 만들지 않는다. 예: 워크플로가
-  부르는 `st_pre_validate_targets`, `st_collect_per_cut_results`.
+  부르는 `st_pre_validate_targets`, `st_collect_per_cut_results`,
+  `st_generate_test_report`.
 
 ### 4.3 파일 쓰기
 

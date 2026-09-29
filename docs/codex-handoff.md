@@ -309,12 +309,15 @@
     `<-- [k] <label> | OK=24, FAIL=1 | 12m38s`(전체 단계 수 없음), 대상
     `[ i/n] STATUS label elapsed message`. 대상 START 줄은 Harness 생성, SLDV,
     PER_CUT 실행, PER_CUT 결과 정리에만 있다.
-  - 실행 로그를 여는 명령은 11개다: `st_run_from_harness`, `st_run_after_harness`,
+  - 실행 로그를 여는 명령은 12개다: `st_run_from_harness`, `st_run_after_harness`,
     `st_run_from_stage`, `st_pre_validate_targets`, `st_collect_per_cut_results`,
-    `st_run_standalone_coverage_pipeline`, `st_check_standalone_coverage`,
-    `st_open_standalone_test_manager`, `st_export_test_specification`,
-    `st_export_final_document`, `st_select_target_model`. 단계 함수를 직접 부르면
-    session 로그로 간다.
+    `st_generate_test_report`, `st_run_standalone_coverage_pipeline`,
+    `st_check_standalone_coverage`, `st_open_standalone_test_manager`,
+    `st_export_test_specification`, `st_export_final_document`,
+    `st_select_target_model`. 단계 함수를 직접 부르면 session 로그로 간다.
+    `st_generate_test_report`의 단계 알림(`Report step | ...`)과 Coverage 진행 줄은
+    STEP이고, PACKAGE와 명세서 수집의 대상별 루프는 START 없이 결과 진행 줄 하나를
+    찍는다.
   - `st_call_quiet`가 MathWorks 호출 14곳(`sltest.harness.create`, `sldvrun`,
     `run(testCase)`, `run(testFile)`, `cvsave`, `cvhtml`,
     `sltest.testmanager.report`, `sltest.harness.export`)의 출력을 `evalc`로 받아
