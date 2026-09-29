@@ -315,17 +315,34 @@ try
 catch ME
     fprintf('FAILED  : %s\nELAPSED : %s\n', ...
         label, elapsed_text(toc(timerValue)));
+    st_log_stage_result(label, [], ME);
     rethrow(ME);
 end
 fprintf('DONE    : %s\nELAPSED : %s\n', ...
     label, elapsed_text(toc(timerValue)));
+result = [];
+if nargout >= 1, result = varargout{1}; end
+st_log_stage_result(label, result);
 end
 
 function require_success(result, message)
-if istable(result) && ismember('Status', result.Properties.VariableNames) && ...
-        any(strcmpi(string(result.Status), 'FAIL'))
-    error('simtest:WorkflowStageFailed', '%s', message);
+if ~istable(result) || ~ismember('Status', result.Properties.VariableNames)
+    return;
 end
+failed = strcmpi(string(result.Status), 'FAIL');
+if ~any(failed)
+    return;
+end
+names = "";
+if ismember('CUTName', result.Properties.VariableNames)
+    failedNames = string(result.CUTName(failed));
+    names = " [" + strjoin(failedNames(1:min(3, end)), ", ");
+    if numel(failedNames) > 3, names = names + ", ..."; end
+    names = names + "]";
+end
+error('simtest:WorkflowStageFailed', ...
+    '%s %d target(s) failed%s. See WorkflowStageLog.log.', ...
+    message, sum(failed), char(names));
 end
 
 function print_plan(plan)

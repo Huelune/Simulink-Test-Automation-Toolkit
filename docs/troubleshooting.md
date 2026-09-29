@@ -7,7 +7,11 @@
 무슨 오류인지 모르겠다면 이 순서대로 보십시오.
 
 1. **Command Window의 마지막 `[단계/대상] FAIL` 줄** — 어느 단계의 몇 번째 대상에서
-   멈췄는지 알려 줍니다.
+   멈췄는지 알려 줍니다. 창이 넘어갔거나 MATLAB이 꺼졌다면
+   **`result/reports/WorkflowStageLog.log`** 를 보십시오. 단계마다 끝날 때
+   `RESULT` 집계(`OK=30, FAIL=2` 같은)와 FAIL 대상별 No·CUT·Harness·Message,
+   단계 자체가 예외로 멈춘 경우 그 오류를 한 줄씩 덧붙여 남깁니다. INI와 달리
+   실행마다 지워지지 않고 이어서 쌓입니다.
 2. **`result/reports/WorkflowPlanResult.ini`** — 이번 실행이 어떤 단계를 하려고
    했는지 보여 줍니다.
 3. **해당 단계의 INI 결과 파일**의 `Status`와 `Message` 열.
