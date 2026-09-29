@@ -360,9 +360,11 @@
     `test_per_cut_execution.m`, `test_partial_iteration_update.m`,
     `test_export_bundle.m`, `test_standalone_harness_bundle.m`,
     `test_standalone_coverage_screen_status.m`.
-- **이 개편과 무관하게 이미 있던 불일치.** `tests/unit/test_export_bundle.m`이
-  `end_task(cfg,`가 3번 나온다고 검사하지만 `st_export_test_bundle.m`에는 5번 있다
-  (호출 4곳과 정의 1곳). main에도 같은 불일치가 있다. MATLAB PC에서 확인한다.
+- **이 개편과 무관하게 이미 있던 불일치(고침).** `tests/unit/test_export_bundle.m`이
+  `end_task(cfg,`가 3번 나온다고 검사했지만 `st_export_test_bundle.m`에는 5번 있었다
+  (호출 4곳과 정의 1곳). 이제 네 작업 이름(`Toolbox products`, `Bundle SHA-256`,
+  `Source unchanged check`, `ZIP archive`)의 호출을 하나씩, 그리고 호출이 모두 4곳인지를
+  확인한다. main의 같은 검사는 이 브랜치가 들어갈 때 함께 고쳐진다.
 
 ## 변경 불가 핵심 결정
 

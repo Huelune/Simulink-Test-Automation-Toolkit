@@ -406,7 +406,13 @@ verifyTrue(testCase, contains(source, ...
     "begin_task(cfg, 'Bundle SHA-256'"));
 verifyTrue(testCase, contains(source, ...
     "begin_task(cfg, 'Source unchanged check'"));
-verifyEqual(testCase, numel(strfind(source, 'end_task(cfg,')), 3);
+% Every long task closes with its own end_task call. Pin the four calls by
+% task name; the definition 'end_task(cfg, label, ...' has no quoted name.
+for task = ["Toolbox products", "Bundle SHA-256", ...
+        "Source unchanged check", "ZIP archive"]
+    verifyTrue(testCase, contains(source, "end_task(cfg, '" + task + "'"), task);
+end
+verifyEqual(testCase, numel(strfind(source, "end_task(cfg, '")), 4);
 verifyTrue(testCase, contains(source, ...
     'Manifest task start | Task=%s'));
 % These lines exist because the wait is silent otherwise, so they are STEP
