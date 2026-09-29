@@ -485,6 +485,41 @@ disp(summary)
 winopen(finalFile)
 ```
 
+1-2단계 결과 확인과 2단계 명세서 Excel을 뺀 코드입니다.
+
+```matlab
+%% 준비 — MATLAB을 켤 때마다
+st_setup
+st_select_target_model          % 처음 1회, 또는 모델을 바꿀 때만
+R = st_pre_validate_targets();  % Excel을 고칠 때마다
+disp(R)
+
+%% 1단계 — Harness 생성 → 실행
+st_run_from_harness
+% Harness가 이미 전부 있으면: st_run_after_harness
+
+%% 1-2단계 — 결과 정리 (필수. 빼면 5단계 판정이 빈 칸)
+st_collect_per_cut_results
+
+%% 3단계 — 원본 Top Model과 Harness는 파이프라인이 저장하고 닫습니다
+info = st_run_standalone_coverage_pipeline( ...
+    'Action', 'ALL', ...
+    'ContinueOnFailure', true, ...
+    'FailOnNonPass', false);
+disp(info.PipelineId)
+
+[code, summary, details] = st_check_standalone_coverage();
+disp(code)                      % 1111111111 이어야 합니다
+disp(summary)
+
+%% 4단계 — 팀 제출 트리 (MATLAB 밖 명령 프롬프트에서)
+% python tools/python/classify_standalone_results.py result/standalone_coverage/<PipelineId>
+
+%% 5단계 — 고객 제출용 최종 문서
+[T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
+winopen(finalFile)
+```
+
 ## 9. 자주 막히는 곳
 
 | 증상 | 대처 |
