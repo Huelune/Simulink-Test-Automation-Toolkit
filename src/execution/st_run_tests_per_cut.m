@@ -95,6 +95,7 @@ if isempty(p.Results.TargetConfig)
 else
     targetConfig = p.Results.TargetConfig;
 end
+targetConfig = st_resolve_target_cut_paths(targetConfig, cfg);
 if isempty(p.Results.TestFile)
     tf = sltest.testmanager.TestFile(cfg.TestFile);
 else

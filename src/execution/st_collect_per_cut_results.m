@@ -29,7 +29,7 @@ if isempty(reportMode)
 end
 
 targets = struct2table(manifest.Targets, 'AsArray', true);
-config = st_load_targets(cfg.OnlyEnabled);
+config = st_resolve_target_cut_paths(st_load_targets(cfg.OnlyEnabled), cfg);
 
 st_log(cfg, 'INFO', ...
     'PER_CUT collect start | RunId=%s | Targets=%d | ReportMode=%s', ...
