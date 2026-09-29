@@ -492,13 +492,14 @@ if isfile(cfg.RuntimeTargetFile)
     end
 end
 
-% Where the standalone pipeline's bundle runner lets Simulink build. The
-% execution workspace is already ~150 characters deep, and Stateflow
-% simulation targets nest slprj/_sfprj/<Harness>/... below pwd, so building
-% there fails on Windows before any coverage is recorded. Empty (default)
-% builds under tempdir; set a short path such as 'D:\stt_build' to keep the
-% build on a specific drive. Each execution gets its own subfolder and
-% removes it when the run ends.
+% Where the standalone pipeline's bundle runner runs and lets Simulink
+% build. The recorded execution workspace is ~150 characters deep, and
+% Stateflow simulation targets nest slprj/_sfprj/<Harness>/... below pwd, so
+% running there fails on Windows before any coverage is recorded. The runner
+% therefore executes in <dir>/<id>_ws with its build cache in <dir>/<id>,
+% copies the workspace (without build products) to its recorded place, and
+% removes both. Empty (default) uses tempdir/stt_build; set a short path
+% such as 'D:\stt_build' to keep it on a specific drive.
 cfg.StandaloneBuildCacheDir = '';
 
 % Standalone verification runs and latest pointers are stored separately

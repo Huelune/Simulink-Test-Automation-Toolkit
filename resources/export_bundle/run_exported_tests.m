@@ -73,14 +73,23 @@ end
 
 validate_release(manifest, p.Results.AllowReleaseMismatch);
 validate_files(bundleRoot, manifest.Files);
-prepare_existing_session(bundleRoot, manifest);
+shortBase = short_base(p.Results.BuildCacheFolder);
+prepare_existing_session(bundleRoot, manifest, shortBase);
 
 executionId = make_execution_id();
 executionRoot = fullfile(bundleRoot, 'executions', executionId);
-workRoot = fullfile(executionRoot, 'workspace');
+recordedWorkRoot = fullfile(executionRoot, 'workspace');
+workRoot = recordedWorkRoot;
+if strcmp(executionModelMode, 'STANDALONE_HARNESS')
+    % The recorded workspace sits ~150 characters deep, and whatever
+    % Simulink or Stateflow builds below pwd pushes past the Windows
+    % 260-character limit. Run in a short folder and copy the workspace
+    % to its recorded place once the run has closed everything.
+    workRoot = fullfile(shortBase, [build_cache_token(executionId) '_ws']);
+end
 templateRoot = fullfile(bundleRoot, char(manifest.TemplateRoot));
-if ~isfolder(fileparts(workRoot))
-    mkdir(fileparts(workRoot));
+if ~isfolder(executionRoot)
+    mkdir(executionRoot);
 end
 [ok, message] = copyfile(templateRoot, workRoot);
 if ~ok
@@ -114,7 +123,12 @@ cfg = st_require_runtime_target( ...
     'LoadModel', ~strcmp(executionModelMode, 'STANDALONE_HARNESS'));
 testFilePath = cfg.TestFile;
 [buildCacheFolder, buildCacheCleanup] = enter_build_cache( ...
-    p.Results.BuildCacheFolder, executionId, cfg); %#ok<NASGU>
+    shortBase, executionId, cfg); %#ok<NASGU>
+if ~strcmp(workRoot, recordedWorkRoot)
+    st_log(cfg, 'INFO', ...
+        'Execution workspace placed in short folder | Folder=%s | Length=%d', ...
+        workRoot, strlength(workRoot));
+end
 st_log(cfg, 'INFO', ...
     ['Exported bundle execution start | Bundle=%s | ModelMode=%s | ' ...
      'PrepareOnly=%d'], ...
@@ -183,7 +197,39 @@ catch ME
     st_log(cfg, 'ERROR', ...
         'Exported bundle execution failed | ModelMode=%s | %s: %s', ...
         executionModelMode, ME.identifier, ME.message);
+    if ~strcmp(workRoot, recordedWorkRoot)
+        % Keep what the failed run left for inspection. Models may still be
+        % open, so the short folder stays and the log names it.
+        try
+            copy_workspace_back(workRoot, recordedWorkRoot, cfg);
+        catch copyError
+            st_log(cfg, 'WARN', ...
+                'Failed run workspace copy-back failed | %s | %s: %s', ...
+                workRoot, copyError.identifier, copyError.message);
+        end
+        st_log(cfg, 'WARN', ...
+            'Failed run short workspace left in place | Folder=%s', workRoot);
+    end
     rethrow(ME);
+end
+if ~strcmp(workRoot, recordedWorkRoot)
+    copy_workspace_back(workRoot, recordedWorkRoot, cfg);
+    testFilePath = rebase_path(testFilePath, workRoot, recordedWorkRoot);
+    if istable(preparation) && ...
+            ismember('ModelFile', preparation.Properties.VariableNames)
+        preparation.ModelFile = rebase_path( ...
+            preparation.ModelFile, workRoot, recordedWorkRoot);
+    end
+    if istable(runtimeContext.Targets) && ismember('ExecutionModelFile', ...
+            runtimeContext.Targets.Properties.VariableNames)
+        runtimeContext.Targets.ExecutionModelFile = rebase_path( ...
+            runtimeContext.Targets.ExecutionModelFile, workRoot, recordedWorkRoot);
+    end
+    % Windows refuses to remove the current folder, and the environment
+    % restore on exit would return here anyway.
+    cd(previousDirectory);
+    remove_short_workspace(workRoot, cfg);
+    workRoot = recordedWorkRoot;
 end
 st_log(cfg, 'INFO', ...
     'Exported bundle execution complete | Bundle=%s | ModelMode=%s', ...
@@ -351,8 +397,12 @@ for i = 1:numel(files)
 end
 end
 
-function prepare_existing_session(bundleRoot, manifest)
+function prepare_existing_session(bundleRoot, manifest, shortBase)
 executionRoot = fullfile(bundleRoot, 'executions');
+% A standalone run executes in a short folder, so an earlier run's models
+% and Test File were loaded from there rather than from executions/.
+inBundle = @(file) is_under_root(file, executionRoot) || ...
+    is_under_root(file, shortBase);
 models = string(manifest.TopModel);
 if isfield(manifest, 'Targets')
     for j = 1:numel(manifest.Targets)
@@ -368,7 +418,7 @@ for m = 1:numel(models)
     model = char(models(m));
     if bdIsLoaded(model)
         loadedFile = get_param(model, 'FileName');
-        if ~is_under_root(loadedFile, executionRoot)
+        if ~inBundle(loadedFile)
             error('simtest:BundleModelAlreadyLoaded', ...
                 ['A model with the same name is loaded outside this bundle. ' ...
                  'Save and close it before running the bundle: %s'], loadedFile);
@@ -383,7 +433,7 @@ end
 openFiles = sltest.testmanager.getTestFiles;
 for i = 1:numel(openFiles)
     try
-        if is_under_root(openFiles(i).FilePath, executionRoot)
+        if inBundle(openFiles(i).FilePath)
             if openFiles(i).Dirty
                 saveToFile(openFiles(i));
             end
@@ -491,7 +541,71 @@ cd(previousDirectory);
 path(previousPath);
 end
 
-function [folder, cleanup] = enter_build_cache(requested, executionId, cfg)
+function base = short_base(requested)
+%SHORT_BASE Folder that holds the short build cache and workspace.
+base = strtrim(char(string(requested)));
+if isempty(base)
+    base = fullfile(tempdir, 'stt_build');
+end
+end
+
+function copy_workspace_back(source, destination, cfg)
+%COPY_WORKSPACE_BACK Put the run's workspace where the manifest records it.
+% Build products are left behind: they are what overflows the path limit,
+% and nothing reads them after the run.
+st_log(cfg, 'INFO', 'Execution workspace copy-back start | From=%s | To=%s', ...
+    source, destination);
+timerValue = tic;
+if ~isfolder(destination)
+    mkdir(destination);
+end
+entries = dir(source);
+copied = 0;
+for i = 1:numel(entries)
+    name = entries(i).name;
+    if any(strcmp(name, {'.', '..', 'slprj', 'sfprj'})), continue; end
+    [~, ~, extension] = fileparts(name);
+    if ~entries(i).isdir && ...
+            (strcmpi(extension, '.slxc') || startsWith(lower(extension), '.mex'))
+        continue;
+    end
+    [ok, message] = copyfile(fullfile(source, name), ...
+        fullfile(destination, name), 'f');
+    if ~ok
+        error('simtest:BundleWorkspaceCopyBackFailed', ...
+            'Cannot copy %s back to the execution workspace: %s', name, message);
+    end
+    copied = copied + 1;
+end
+st_log(cfg, 'INFO', ...
+    'Execution workspace copy-back complete | Entries=%d | elapsed=%.3f sec', ...
+    copied, toc(timerValue));
+end
+
+function remove_short_workspace(folder, cfg)
+try
+    rmdir(folder, 's');
+catch ME
+    st_log(cfg, 'WARN', ...
+        'Short execution workspace removal failed | %s | %s: %s', ...
+        folder, ME.identifier, ME.message);
+end
+end
+
+function value = rebase_path(value, fromRoot, toRoot)
+%REBASE_PATH Point paths under the short workspace at the recorded one.
+wasChar = ischar(value);
+value = string(value);
+prefix = string(fromRoot);
+for i = 1:numel(value)
+    if strlength(value(i)) > 0 && startsWith(value(i), prefix, 'IgnoreCase', ispc)
+        value(i) = string(toRoot) + extractAfter(value(i), strlength(prefix));
+    end
+end
+if wasChar, value = char(value); end
+end
+
+function [folder, cleanup] = enter_build_cache(base, executionId, cfg)
 %ENTER_BUILD_CACHE Send Simulink build files to a short folder.
 % Simulink builds slprj/ in pwd, and pwd here is the execution workspace
 % under <root>/<pipeline>/.work/<bundle>/executions/<execution>/workspace.
@@ -500,10 +614,6 @@ function [folder, cleanup] = enter_build_cache(requested, executionId, cfg)
 % fails the build before any coverage is recorded. CacheFolder and
 % CodeGenFolder point at a short per-execution folder for the duration of
 % this run and are restored afterwards.
-base = strtrim(char(string(requested)));
-if isempty(base)
-    base = fullfile(tempdir, 'stt_build');
-end
 folder = fullfile(base, build_cache_token(executionId));
 [created, message] = mkdir(folder);
 if ~created
