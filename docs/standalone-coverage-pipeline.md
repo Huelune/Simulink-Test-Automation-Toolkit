@@ -48,8 +48,8 @@ info = st_run_standalone_coverage_pipeline( ...
 `ContinueOnFailure`와 `FailOnNonPass`를 명시해 두면 한 대상이 실패해도 나머지가
 처리되고 MATLAB 오류 대신 결과 표로 판정하게 됩니다.
 
-전체 계약을 통과한 코드만 `1111111111`입니다. 화면 출력은 최대 20줄이며 전체 CUT
-결과는 `details` 표에서 확인합니다.
+전체 계약을 통과한 코드만 `1111111111`입니다. 검사 결과 화면은 최대 20줄이며(직접
+부르면 실행 로그 틀 4줄이 더 붙습니다) 전체 CUT 결과는 `details` 표에서 확인합니다.
 
 ## 3. Action별 실행과 재개
 

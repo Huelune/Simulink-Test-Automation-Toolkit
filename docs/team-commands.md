@@ -496,7 +496,8 @@ File·CVF를 저장하거나 바꾸지 않습니다.
 
 - 인자 없이 부르면 가장 최근 실행을 검사합니다.
 - 특정 실행은 `'PipelineId', info.PipelineId`로 지정합니다.
-- 화면 출력은 최대 20줄이고, 전체 CUT 결과는 `details` 표에 있습니다.
+- 검사 결과 화면은 최대 20줄이고, 직접 부르면 실행 로그 틀 4줄(`==>`, `<==`, `log:`
+  두 줄)이 더 붙습니다. 전체 CUT 결과는 `details` 표에 있습니다.
 
 #### 판정
 
@@ -624,7 +625,52 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 | 제출물의 Results까지 본다 | 파이프라인을 `'SaveTestResult', true`로 돌린 뒤 `st_open_standalone_test_manager('ImportResults', true)` |
 | 고객에게 낼 문서를 만든다 | 결과 정리 후 → `st_export_final_document` |
 
-## 5. 자주 막히는 곳
+## 5. 콘솔에 보이는 줄과 로그 위치
+
+명령은 Command Window에 명령, 단계, 대상 한 줄과 `WARN`·`ERROR`만 찍습니다. 세부
+내용은 로그 파일에 남습니다.
+
+```text
+[14:02:11] ==> st_run_from_harness start
+[14:02:11]     log: D:\...\result\logs\20260929_140211_st_run_from_harness.log
+[14:02:20] --> [3] Create Harnesses
+[14:02:25]     [ 3/26] START  Ctrl_Sample_Harness
+[14:02:56]     [ 3/26] OK     Ctrl_Sample_Harness                        30.9s
+...
+[14:14:58] <-- [3] Create Harnesses | OK=26 | 12m38s
+...
+[14:27:52] <== st_run_from_harness done | 25m41s
+[14:27:52]     log: D:\...\result\logs\20260929_140211_st_run_from_harness.log
+```
+
+| 줄 | 뜻 |
+| --- | --- |
+| `==>` / `<==` | 명령의 시작과 끝. 끝 줄에 걸린 시간이 붙고, 실패하면 `FAILED`와 오류가 붙습니다 |
+| `--> [3]` / `<-- [3]` | 단계의 시작과 끝. `[3]`은 그 명령에서 몇 번째 단계인지이고 전체 개수는 없습니다. 끝 줄에 `OK=26` 같은 상태별 개수가 붙습니다 |
+| `[ 3/26]` | 대상 26개 중 3번째의 결과. 오래 걸리는 곳(Harness 생성, SLDV, PER_CUT 실행·결과 정리)은 `START` 줄이 먼저 나옵니다 |
+| `log:` | 그 명령의 로그 파일 경로 |
+
+`st_run_from_harness`, `st_run_after_harness`, `st_run_from_stage`,
+`st_pre_validate_targets`, `st_collect_per_cut_results`,
+`st_run_standalone_coverage_pipeline`, `st_check_standalone_coverage`,
+`st_open_standalone_test_manager`, `st_export_test_specification`,
+`st_export_final_document`, `st_select_target_model`이 각각 로그 파일을 하나씩
+엽니다. 다른 명령 안에서 불리면 바깥 명령의 로그에 이어 씁니다.
+
+로그는 `result/logs/`에 있습니다.
+
+| 파일 | 내용 |
+| --- | --- |
+| `<시각>_<명령>.log` | 모든 레벨. 콘솔에 안 나온 세부 내용과 MathWorks 출력(`[SYS <API>]`) |
+| `<시각>_<명령>.console.log` | 그 명령이 도는 동안 콘솔에 보인 내용 그대로 |
+| `session_<날짜>.log` | 명령 밖에서 찍힌 로그. 단계 함수를 직접 부른 경우 등 |
+
+콘솔을 더 자세히 하려면 `src/config/st_config.m`의 `cfg.ConsoleLogLevel`을
+`'INFO'`, `'DEBUG'`, `'TRACE'` 중 하나로 바꿉니다([설정 사전](config-reference.md)
+10장). 파일은 값과 상관없이 늘 모든 레벨입니다. 가장 최근 로그를 여는 명령과
+`[SYS ...]`를 찾는 법은 [문제 해결](troubleshooting.md#로그는-어디에-있나)에 있습니다.
+
+## 6. 자주 막히는 곳
 
 | 증상 | 원인과 대처 |
 | --- | --- |
@@ -638,7 +684,8 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 | `Scenario`와 `Iteration` 수가 안 맞는다 | `FromStage','SLDV'`로 다시 돌리십시오 |
 | 커버리지가 `0/0`, `N/A` | 필터가 objective를 다 뺀 정상 상태일 수 있습니다 |
 | CVF 뷰어 이름이 `n/a` | 정상입니다. 그 CVF 옆의 standalone 모델을 먼저 여십시오 (원본 Top Model 아님) |
-| 준비가 너무 오래 걸린다 | Harness 생성과 SLDV `GENERATE`는 원래 느립니다. 마지막 `START` 로그가 현재 위치입니다 |
+| 준비가 너무 오래 걸린다 | Harness 생성과 SLDV `GENERATE`는 원래 느립니다. 콘솔의 마지막 `START` 줄이 현재 위치입니다 |
+| 창이 넘어가서 어디서 실패했는지 모르겠다 | 명령이 끝날 때 찍힌 `log:` 경로의 실행 로그를 여십시오. 5절 |
 | 경로가 너무 길다는 오류 | `st_set_standalone_coverage_root('D:\st_out')`로 짧은 경로 지정 |
 | 실행은 끝났는데 보고서가 없다 | 정상입니다. `st_generate_test_report`(BATCH) 또는 `st_collect_per_cut_results`(PER_CUT)를 부르십시오. PER_CUT에서 매번 자동으로 하려면 `AutoCollect`를 쓰십시오 |
 | `RunRecordPointerMissing` | 아직 실행한 적이 없습니다. 먼저 `st_run_from_harness`를 돌리십시오 |
@@ -650,7 +697,7 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 
 오류 식별자별 대처는 [문제 해결](troubleshooting.md)에 있습니다.
 
-## 6. 반드시 지킬 것
+## 7. 반드시 지킬 것
 
 - `st_run_from_harness` / `st_run_after_harness`는 **모델과 Test File을 저장합니다.**
   처음 돌리기 전에 백업하십시오.
@@ -662,7 +709,7 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 - 제출물은 폴더 전체를 복사해 전달하십시오.
 - 실제 모델·Excel·MAT·MLDATX와 `result/`는 **Git에 올리지 않습니다.**
 
-## 7. 더 필요할 때
+## 8. 더 필요할 때
 
 | 찾는 것 | 문서 |
 | --- | --- |

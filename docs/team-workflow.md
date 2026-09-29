@@ -33,7 +33,7 @@ MATLAB이 처음이면 [처음 시작하기](getting-started.md)를 옆에 두�
 | 단계 | 명령 | 만들어지는 것 | 끝났다는 증거 |
 | --- | --- | --- | --- |
 | 준비 | `st_pre_validate_targets` | `result/reports/PreValidationResult.ini` | 모든 행이 통과 |
-| 1 | `st_run_from_harness` | Harness, Test File, `result/run_records/` | 마지막 로그가 `EXECUTE` 완료 |
+| 1 | `st_run_from_harness` | Harness, Test File, `result/run_records/` | `<== st_run_from_harness done` 줄이 나옴 |
 | 1-2 (필수) | `st_collect_per_cut_results` | `result/per_cut_runs/`, CVF, CUT별 보고서 | `latest.Status = PASS`, 결과 요약 Excel이 열림 |
 | 2 | `st_export_test_specification` | `result/test_specification_<시각>.xlsx` | 파일이 열리고 행 수가 시나리오 수와 같음 |
 | 3 | `st_run_standalone_coverage_pipeline` + `st_check_standalone_coverage` | `result/standalone_coverage/<PipelineId>/` | 검사 코드 `1111111111`, `Status = PASS` |
@@ -180,10 +180,54 @@ st_collect_per_cut_results
 
 ### 2.2 실행 중 볼 것
 
-- 로그의 마지막 `START`가 지금 진행 중인 단계입니다. Harness 생성과 SLDV
+Command Window에는 명령, 단계, 대상 한 줄과 `WARN`·`ERROR`만 나옵니다. 앞의
+`[14:02:11]`은 시각입니다. 아래는 Harness 생성에서 대상 하나가 실패해 멈춘 실행의
+예이고, `...`는 줄여 쓴 부분입니다.
+
+```text
+[14:02:11] ==> st_run_from_harness start
+[14:02:11]     log: D:\...\result\logs\20260929_140211_st_run_from_harness.log
+...
+[14:02:20] --> [3] Create Harnesses
+[14:02:25]     [ 3/26] START  Ctrl_Sample_Harness
+[14:02:56]     [ 3/26] OK     Ctrl_Sample_Harness                        30.9s
+[14:02:58]     [ 4/26] START  Diag_Sample_Harness
+[14:03:10] ERROR     [ 4/26] FAIL   Diag_Sample_Harness                        12.3s  Port mismatch ...
+...
+[14:14:58] WARN  <-- [3] Create Harnesses | OK=25, FAIL=1 | 12m38s
+[14:14:58] ERROR     No=4 | CUTName=Diag_Sample | HarnessName=Diag_Sample_Harness | Port mismatch ...
+[14:14:58] ERROR <== st_run_from_harness FAILED | 12m47s | simtest:WorkflowStageFailed: Harness creation failed. ...
+[14:14:58]     log: D:\...\result\logs\20260929_140211_st_run_from_harness.log
+```
+
+- `==> <명령> start` / `<== <명령> done`: 명령의 시작과 끝입니다. 끝 줄에 걸린 시간이
+  붙고, 실패로 끝나면 `FAILED`와 오류 식별자·메시지가 붙습니다.
+- `--> [3] <단계>` / `<-- [3] <단계>`: 단계의 시작과 끝입니다. `[3]`은 이 명령에서
+  세 번째로 시작한 단계입니다. 실행마다 도는 단계가 달라 전체 개수는 적지 않습니다.
+  끝 줄에는 상태별 개수(`OK=25, FAIL=1`)와 걸린 시간이 붙습니다. FAIL이 있으면 끝
+  줄이 `WARN`이 되고, 실패한 대상이 `ERROR` 줄로 이어집니다.
+- `[ 3/26] OK <이름> 30.9s`: 대상 26개 중 3번째의 결과입니다. FAIL은 `ERROR`로
+  나오고, 이름은 40자, 메시지는 60자에서 잘립니다.
+- `[ 3/26] START <이름>`: 대상 하나가 오래 걸리는 곳(Harness 생성, SLDV, PER_CUT
+  실행, 결과 정리)에서만 먼저 나오는 시작 줄입니다.
+- `    log: <경로>`: 이 명령의 로그 파일입니다. 시작할 때와 끝날 때 한 번씩 나옵니다.
+
+실행 중에는 이렇게 봅니다.
+
+- 마지막 `START` 줄이 지금 진행 중인 대상입니다. Harness 생성과 SLDV
   `GENERATE`는 CUT 하나에 수 분이 걸리는 것이 정상입니다.
 - 기본 실행 방식은 `PER_CUT`입니다. Test Case를 하나씩 돌리고, 한 CUT이 터져도
   기록하고 다음 CUT으로 넘어갑니다(`ContinueOnFailure` 기본 `true`).
+
+로그 파일은 `result/logs/`에 남습니다.
+
+- `<시각>_<명령>.log`: 모든 레벨입니다. 콘솔에 나오지 않은 세부 내용과 MathWorks
+  함수가 낸 출력(`[SYS <API>]`)이 여기에 있습니다.
+- `<시각>_<명령>.console.log`: 그 명령이 도는 동안 콘솔에 보인 내용 그대로입니다.
+- `session_<날짜>.log`: 명령 밖에서 찍힌 로그입니다.
+
+파일을 여는 방법과 `[SYS ...]` 줄을 찾는 방법은
+[문제 해결](troubleshooting.md#로그는-어디에-있나)에 있습니다.
 
 ### 2.3 끝났는지 확인 — 결과 정리까지 돌았는가
 
@@ -539,6 +583,7 @@ winopen(finalFile)
 | 명세서나 최종 문서가 `SpecificationUnsaved`로 저장하라고 한다 | 예전 결과 정리가 Harness를 미저장으로 남긴 경우입니다. 지금은 결과 정리가 자기가 올린 표시를 되돌리므로, 여전히 나오면 정말 손으로 고친 변경입니다. 열어 보고 저장하거나 닫기 |
 | 파이프라인이 `StandalonePipelineHarnessInternalizeFailed`로 멈춘다 | 파이프라인은 외부 저장 Harness를 모델 안으로 자동으로 옮깁니다. 그 옮기기가 실패한 경우입니다. 모델을 열어 그 Harness의 저장 방식을 내부로 바꾸고 저장 |
 | `Metadata`의 `ResultRunId`가 옛 실행이다 | 1단계 뒤 결과 정리를 다시 하고 최종 문서를 다시 만듭니다 |
+| 창이 넘어가서 어디서 실패했는지 모르겠다 | 명령이 끝날 때 찍힌 `    log:` 경로의 실행 로그를 여십시오. [2.2절](#22-실행-중-볼-것) |
 
 오류 식별자별 대처는 [문제 해결](troubleshooting.md)에, 명령별 옵션은
 [내부 표준 명령](team-commands.md)에 있습니다.

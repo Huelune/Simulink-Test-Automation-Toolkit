@@ -1,7 +1,7 @@
 # 로그 체계 개편 설계
 
 - 작성일: 2026-09-29
-- 상태: 설계 합의, 구현 전
+- 상태: 구현 중
 - 대상 브랜치: develop
 
 ## 1. 배경
@@ -39,7 +39,7 @@
 
 | 레벨 | 용도 | 콘솔 기본 | 파일 |
 | --- | --- | --- | --- |
-| `STEP` | 단계 시작·끝, 대상별 진행 한 줄 | 표시 | 기록 |
+| `STEP` | 명령·단계 시작·끝, 대상별 진행 한 줄 | 표시 | 기록 |
 | `WARN` | 저하된 경로, 시스템 경고 요약 | 표시 | 기록 |
 | `ERROR` | 실패 대상, 예외 | 표시 | 기록 |
 | `INFO` | 기존 체크포인트 | 숨김 | 기록 |
@@ -48,9 +48,10 @@
 
 - 새 설정 `cfg.ConsoleLogLevel`: `'STEP'`(기본), `'INFO'`, `'DEBUG'`, `'TRACE'`.
   지정한 레벨과, 위 표에서 그보다 위에 있는 레벨이 콘솔에 찍힌다. 따라서 STEP·WARN·
-  ERROR는 어느 값에서도 항상 찍힌다.
-- `cfg.VerboseLogging`은 없앤다. 설정에 `true`가 남아 있으면 `'DEBUG'`로 취급하고,
-  한 번만 WARN으로 `ConsoleLogLevel`로 바꾸라고 안내한다. `false`는 `'STEP'`로
+  ERROR는 어느 값에서도 항상 찍힌다. 네 값 밖의 값은 `'STEP'`으로 취급한다.
+- `cfg.VerboseLogging`은 없앤다. `st_config.m`에서 이 필드를 지우므로 사용자 설정에
+  남을 수가 없어서, 바꾸라고 알리는 WARN은 넣지 않는다. `ConsoleLogLevel`이 없는
+  struct cfg(테스트나 예제)에서만 `true`는 `'DEBUG'`로, `false`는 `'STEP'`로
   취급한다.
 - 이 설정을 참조하는 곳은 함께 고친다.
   - `st_create_example.m:3`
@@ -58,6 +59,9 @@
   - 주석: `st_configure_harnesses.m`, `st_configure_signal_editors.m`
 - 콘솔 줄 형식: `[HH:mm:ss] <메시지>`. STEP 줄에는 레벨 표시를 붙이지 않는다.
   WARN·ERROR 줄에는 `WARN `·`ERROR` 접두를 붙인다.
+- 콘솔 표시 기호와 문구는 ASCII 영어로 쓴다. 기존 로그 문구가 모두 영어이고, `.m`
+  파일 인코딩 문제를 피하려는 것이다. 한글이 필요한 곳(경고 접두 `경고`)은
+  `char([0xACBD 0xACE0])`처럼 코드값으로 만든다.
 - 파일 줄 형식: `[yyyy-MM-dd HH:mm:ss.SSS][LEVEL] <메시지>`.
 
 ## 4. 로그 파일과 실행 범위
@@ -74,32 +78,45 @@ info  = st_log_scope('current')              % st_log가 조회
 - **처음 들어갈 때(깊이 0 → 1):**
   - `result/logs/<yyyyMMdd_HHmmss>_<commandName>.log`를 정한다.
   - 같은 이름의 파일이 이미 있으면 `_2`, `_3`을 붙인다.
-  - 시작 줄 `▶ <commandName>`을 STEP으로 찍는다.
+  - 시작 줄 `==> <commandName> start`를 STEP으로 찍고, 이어서 로그 파일 경로
+    `    log: <경로>`를 찍는다.
 - **안쪽 명령이 다시 들어갈 때(깊이 ≥ 1):** 새 파일을 만들지 않는다. 깊이만 올리고
   `commandName`은 파일에 INFO로 기록한다.
 - **처음 들어간 범위가 끝날 때:**
-  - `■ <commandName> | <경과 시간>`을 STEP으로 찍는다. 오류로 끝났으면
-    `■ <commandName> | FAILED | <경과 시간>`을 ERROR로 찍는다.
-  - 마지막 줄에 로그 파일 경로를 찍는다.
+  - `<== <commandName> done | <경과 시간>`을 STEP으로 찍는다. 오류로 끝났으면
+    `<== <commandName> FAILED | <경과 시간> | <오류 식별자>: <메시지>`를 ERROR로
+    찍는다.
+  - 마지막 줄에 로그 파일 경로 `    log: <경로>`를 한 번 더 찍는다.
   - `onCleanup`만으로는 정상 종료와 예외를 구분할 수 없다. 그래서 명령 쪽에서
     `st_log_scope('fail', ME)`를 불러 실패를 표시한 뒤 rethrow한다.
+- **명령 본문 헬퍼 `st_log_run`:** 위 순서를 명령마다 되풀이하지 않도록 범위를 열고,
+  명령 본문을 실행하고, 실패하면 `fail`을 표시한 뒤 rethrow하는 헬퍼를 둔다.
+
+  ```matlab
+  [varargout{1:nargout}] = st_log_run(mfilename, @() body(varargin{:}))
+  ```
 - **범위 밖에서 `st_log`를 부를 때:** `result/logs/session_<yyyyMMdd>.log`에
   이어 쓴다.
 - `result/logs/`는 `.gitignore`에 들어 있는 `result/` 아래이므로 따로 처리하지 않는다.
 
 ### 4.2 범위를 여는 명령
 
-[team-commands.md](../../team-commands.md)에 나오는 공개 명령과, 단독으로도 불리는
-단계 명령의 첫 줄에서 연다.
+[team-commands.md](../../team-commands.md)에 나오는 명령 가운데 사용자가 직접
+부르는 것의 첫 줄에서 `st_log_run`(또는 `st_log_scope('enter', ...)`)으로 연다. 다음
+11개다.
 
-- `st_run_workflow`: `st_run_from_harness`, `st_run_after_harness`,
-  `st_run_from_stage`가 이것을 거친다.
-- `st_run_standalone_coverage_pipeline`, `st_check_standalone_coverage`
+- `st_run_from_harness`, `st_run_after_harness`, `st_run_from_stage`: 각자 연다.
+  이 명령들이 거치는 `st_run_workflow`는 따로 열지 않는다.
+- `st_run_standalone_coverage_pipeline`, `st_check_standalone_coverage`,
+  `st_open_standalone_test_manager`
 - `st_collect_per_cut_results`, `st_export_test_specification`,
   `st_export_final_document`
 - `st_pre_validate_targets`, `st_select_target_model`
-- 워크플로 단계 함수(`st_create_harnesses` 등): 단독 호출에 대비해 연다.
-  워크플로 안에서 불리면 바깥 파일에 이어 쓴다.
+- 워크플로 단계 함수(`st_create_harnesses` 등)는 범위를 따로 열지 않는다. 워크플로
+  안에서 불리면 바깥 명령의 파일에 이어 쓰고, 단독으로 부르면
+  `session_<yyyyMMdd>.log`로 간다.
+- 다른 명령 안에서 불린 명령은 안쪽 명령이므로 새 파일을 만들지 않는다. 예: 워크플로가
+  부르는 `st_pre_validate_targets`, `st_collect_per_cut_results`.
 
 ### 4.3 파일 쓰기
 
@@ -134,9 +151,9 @@ varargout = st_call_quiet(cfg, label, fn)
 - 예외가 나기 직전까지의 출력도 잃지 않도록, `evalc` **안에서** try/catch로 예외를
   받는다. 먼저 텍스트를 기록하고, 그다음 원래 예외를 그대로 rethrow한다.
   `st_is_user_interrupt`에 해당하는 사용자 중단도 같은 방식으로 기록한 뒤 올린다.
-- 받은 텍스트에 `Warning:`으로 시작하는 줄이 있으면 콘솔에 WARN 한 줄로 요약한다.
-  형식은 `<label> 시스템 경고 N건(종류 K) — 로그 참조`이다. 경고 원문은 모두 DEBUG로
-  파일에 있다.
+- 받은 텍스트에 `Warning:`(한국어 MATLAB은 `경고:`)으로 시작하는 줄이 있으면 콘솔에
+  WARN 한 줄로 요약한다. 형식은 `<label> system warnings: N (K distinct) - see log`
+  이다(표시 문구는 ASCII 영어). 경고 원문은 모두 DEBUG로 파일에 있다.
 - 감싼 API는 끝날 때까지 콘솔에 아무것도 찍지 않는다. 앞뒤에 STEP 줄이 있으므로
   무엇을 기다리는지는 보인다.
 - 적용 위치: 시끄러운 곳을 아직 모르므로, 다음 14곳을 모두 감싼다. 다음 실행에서
@@ -169,17 +186,23 @@ varargout = st_call_quiet(cfg, label, fn)
 ### 6.1 `st_log_stage`
 
 ```matlab
-st_log_stage(cfg, 'start', label, 'Index', k, 'Count', m, 'Targets', n)
+st_log_stage(cfg, 'start', label)
 st_log_stage(cfg, 'end',   label, 'Result', T, 'Elapsed', sec)
 st_log_stage(cfg, 'fail',  label, 'Exception', ME, 'Elapsed', sec)
 ```
 
 - 콘솔 예:
-  - `▶ 2/5 Create Test Harnesses | 대상 26`
-  - `■ 2/5 Create Test Harnesses | OK=24 SKIP=1 FAIL=1 | 12m38s`
-- `Result` 표에 `Status` 열이 있으면 상태별 개수를 붙인다. FAIL·EXCEPT 대상마다
-  `No | CUT | Harness | Message`를 ERROR로 한 줄씩 남긴다.
-  `st_log_stage_result`의 집계 코드를 옮겨 온다.
+  - `--> [2] Create Harnesses`
+  - `<-- [2] Create Harnesses | OK=24, SKIP=1, FAIL=1 | 12m38s`
+  - 단계가 예외로 멈추면 `<-- [2] Create Harnesses | FAILED | 12m38s | <오류 식별자>: <메시지>`를
+    ERROR로 찍는다.
+- 단계 번호 `[k]`는 그 명령의 범위 안에서 몇 번째로 시작한 단계인지이다. 재시작이나
+  plan에 따라 실행할 단계 수가 달라지므로 전체 개수(`2/5`)는 붙이지 않는다. 시작 줄에
+  대상 수도 붙이지 않는다. 대상 수는 진행 줄의 `[i/n]`으로 보인다.
+- `Result` 표에 `Status` 열이 있으면 상태별 개수를 처음 나온 순서대로 붙인다.
+  FAIL·EXCEPT가 있으면 끝 줄을 WARN으로 찍고, 그 대상마다
+  `No=.. | CUTName=.. | HarnessName=.. | TestCaseName=.. | <Message>`를 ERROR로 한
+  줄씩 남긴다. `st_log_stage_result`의 집계 코드를 옮겨 온다.
 - `st_log_stage_result`와 `st_run_workflow`의 `execute_timed_step` 배너는 이것으로
   바꾼다.
 
@@ -189,10 +212,15 @@ st_log_stage(cfg, 'fail',  label, 'Exception', ME, 'Elapsed', sec)
 st_log_progress(cfg, i, n, status, label, 'Elapsed', sec, 'Message', msg, 'Detail', detail)
 ```
 
-- 콘솔 예: `  [ 3/26] FAIL  OBC_DIAG_..._Harness     30.9s  Port mismatch ...`
-- `status`가 FAIL·EXCEPT이면 ERROR, WARN이면 WARN, 그 밖에는 STEP으로 찍는다.
+- 콘솔 예: `    [ 3/26] FAIL   OBC_DIAG_..._Harness     30.9s  Port mismatch ...`
+- 대상 하나가 오래 걸리는 곳에는 시작 줄 `    [ 3/26] START  <label>`을 먼저 찍는다.
+  Harness 생성, SLDV, PER_CUT 실행, PER_CUT 결과 정리가 해당하며, 그곳에서는 대상
+  하나에 콘솔 줄이 최대 두 줄이 된다.
+- `status`가 FAIL·EXCEPT이면 ERROR, WARN·PARTIAL이면 WARN, 그 밖에는 STEP으로 찍는다.
 - 콘솔에서는 `label`을 40자, `Message`를 60자로 자르고 줄바꿈을 없앤다. 파일에는
   `Detail`(CUT 경로 등)과 전체 메시지를 그대로 남긴다.
+- `cfg`를 받지 않던 `st_collect_output_specs`는 선택 세 번째 인자 `cfg`(기본 `[]`)를
+  받아 이 진행 줄을 찍는다.
 
 ## 7. 기존 출력 정리 규칙
 
@@ -204,6 +232,15 @@ st_log_progress(cfg, i, n, status, label, 'Elapsed', sec, 'Message', msg, 'Detai
   `st_check_standalone_coverage` 코드와 요약, `disp`로 돌려주는 반환값.
   그대로 `fprintf`/`disp`로 두어도 `diary`에 담긴다.
 - 사용자 중단 배너(`terminated by user`)는 `st_log_stage(..., 'fail', ...)`로 바꾼다.
+- `st_check_standalone_coverage`의 한 화면 계약은 자기 블록 20줄 이내에, 직접 부를 때의
+  실행 로그 틀 4줄(`==>`, `<==`, `log:` 두 줄)을 더한 24줄 이내다. 다른 명령 안에서
+  부르면 틀이 없다.
+- 테스트 실행 중에 불리는 도우미 `st_apply_run_test_case_scope`,
+  `st_get_run_test_cases`도 같은 규칙을 따른다. 인자 없이 부른 `st_get_run_test_cases`가
+  찍던 대상 목록은 DEBUG로 옮기고, 목록은 두 번째 출력 `R`로 본다.
+- 번들 export의 오래 걸리는 작업(toolbox 분석, 번들 SHA-256, 원본 불변 검사, ZIP)은
+  시작·끝 줄을 STEP으로 콘솔에 남기고, `Bundle usage | Run=run_exported_tests` 안내도
+  STEP으로 찍는다. 콘솔이 길게 조용하면 멈춘 것으로 보이기 때문이다.
 
 ## 8. 테스트
 

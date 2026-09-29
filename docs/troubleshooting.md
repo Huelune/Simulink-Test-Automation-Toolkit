@@ -6,12 +6,15 @@
 
 무슨 오류인지 모르겠다면 이 순서대로 보십시오.
 
-1. **Command Window의 마지막 `[단계/대상] FAIL` 줄** — 어느 단계의 몇 번째 대상에서
-   멈췄는지 알려 줍니다. 창이 넘어갔거나 MATLAB이 꺼졌다면
-   **`result/reports/WorkflowStageLog.log`** 를 보십시오. 단계마다 끝날 때
-   `RESULT` 집계(`OK=30, FAIL=2` 같은)와 FAIL 대상별 No·CUT·Harness·Message,
-   단계 자체가 예외로 멈춘 경우 그 오류를 한 줄씩 덧붙여 남깁니다. INI와 달리
-   실행마다 지워지지 않고 이어서 쌓입니다.
+1. **Command Window의 마지막 `FAIL` 줄** — 대상 줄(`[ 3/26] FAIL ...`)은 몇 번째
+   대상에서, 단계 끝 줄(`<-- [3] Create Harnesses | OK=25, FAIL=1 | 12m38s`)은 어느
+   단계에서 실패했는지 알려 줍니다. 창이 넘어갔거나 MATLAB이 꺼졌다면
+   **`result/logs/`의 실행 로그**를 보십시오. 단계가 끝날 때 집계(`OK=30, FAIL=2`
+   같은)와 FAIL 대상별 No·CUT·Harness·Message를 ERROR 줄로 한 번 더 모아 남기고,
+   단계 자체가 예외로 멈췄으면 `<-- [3] ... | FAILED | ...` 줄에 그 오류가 있습니다.
+   명령이 실패로 끝났다면 마지막 `<== <명령> FAILED` 줄에 오류 식별자와 메시지가
+   있습니다. 로그는 실행마다 새 파일이라 예전 실행과 섞이지 않습니다. 파일을 찾는
+   방법은 아래 "로그는 어디에 있나"에 있습니다.
 2. **`result/reports/WorkflowPlanResult.ini`** — 이번 실행이 어떤 단계를 하려고
    했는지 보여 줍니다.
 3. **해당 단계의 INI 결과 파일**의 `Status`와 `Message` 열.
@@ -32,6 +35,56 @@
 | Assessment | `AssessmentResult.ini` |
 | Test Manager | `TestManagerResult.ini` |
 | Scenario 정렬 | `ScenarioAlignmentResult.ini` |
+
+### 로그는 어디에 있나
+
+`st_run_from_harness`처럼 직접 부르는 주요 명령은 부를 때마다 `result/logs/`에 로그
+파일을 새로 만듭니다. 명령이 시작할 때와 끝날 때 Command Window에
+`    log: <경로>` 줄이 나오므로 그 경로를 복사하면 됩니다.
+
+| 파일 | 내용 |
+| --- | --- |
+| `result/logs/<시각>_<명령>.log` | 툴킷 로그. 콘솔 설정과 상관없이 **모든 레벨**(`TRACE`~`ERROR`)이 남습니다 |
+| `result/logs/<시각>_<명령>.console.log` | 그 명령이 도는 동안 Command Window에 보인 내용 그대로(`diary` 사본) |
+| `result/logs/session_<날짜>.log` | 위 명령들 밖에서 찍힌 로그. `st_create_harnesses` 같은 단계 함수나 `st_generate_test_report`를 직접 부르면 여기로 갑니다 |
+
+- `<시각>`은 `yyyyMMdd_HHmmss`, `<날짜>`는 `yyyyMMdd`, `<명령>`은
+  `st_run_from_harness` 같은 명령 이름입니다. 같은 이름의 파일이 이미 있으면 `_2`,
+  `_3`이 붙습니다.
+- 사용자가 이미 `diary`를 켜 둔 상태였다면 `.console.log`는 만들지 않고 WARN 한
+  줄만 남깁니다. `.log`는 그대로 남습니다.
+- MathWorks 함수가 스스로 찍는 출력(경고, SLDV 진행 표시 등)은 기본 설정에서 콘솔에
+  나오지 않고 실행 로그에 `[SYS <API>]` 머리말이 붙은 줄로 들어갑니다. 대상은
+  `sltest.harness.create`, `sldvrun`, `run(testCase)`, `run(testFile)`, `cvsave`,
+  `cvhtml`, `sltest.testmanager.report`, `sltest.harness.export`입니다. 그 출력에
+  경고가 있었으면 콘솔에 `sldvrun system warnings: 3 (2 distinct) - see log` 같은 한
+  줄이 나옵니다. 원문을 찾을 때는 `[SYS sldvrun]`처럼 대괄호까지 글자 그대로
+  검색하십시오(`grep`이면 `-F`).
+- 어느 API에서 기다리는지 알고 싶으면 `[SYS <API>] start`는 있는데 짝이 되는
+  `[SYS <API>] end`가 없는 마지막 줄을 찾습니다.
+- 콘솔에서도 자세히 보고 싶으면 `src/config/st_config.m`의
+  `cfg.ConsoleLogLevel`을 `'DEBUG'`로 바꿉니다. 로그 파일에는 이미 모든 레벨이
+  있으므로 콘솔이 넘칠 때만 바꾸면 됩니다.
+- `st_cleanup_results`는 `result/logs/`를 지우지 않습니다. 쌓인 로그는 직접
+  정리하십시오.
+
+가장 최근 실행 로그를 열려면 다음을 씁니다.
+
+```matlab
+cfg = st_config();
+d = dir(fullfile(cfg.ResultDir, 'logs', '*.log'));
+names = {d.name};
+d = d(~endsWith(names, '.console.log') & ~startsWith(names, 'session_'));
+[~, k] = max([d.datenum]);
+edit(fullfile(d(k).folder, d(k).name))
+```
+
+이어서 `[SYS ...]` 줄만 골라 보려면 다음을 씁니다.
+
+```matlab
+lines = readlines(fullfile(d(k).folder, d(k).name));
+disp(lines(contains(lines, '[SYS ')))
+```
 
 ## 2. 읽기 전용 점검 명령
 
@@ -191,8 +244,9 @@ manifest는 `st_prepare_sldv_targets`가 **그때 `Enabled=true`였던 행만** 
 Harness 생성은 모델 컴파일을 포함하고, SLDV `GENERATE`는 분기를 탐색하므로 CUT 하나에
 수 분 이상 걸릴 수 있습니다. 정상입니다.
 
-지금 어디서 기다리는지는 마지막 `START` 로그로 확인합니다. blocking API 안의 진행률은
-MATLAB이 알려 주지 않으므로 퍼센트를 표시할 수 없습니다.
+지금 어디서 기다리는지는 Command Window의 마지막 `START` 줄(`[ 3/26] START ...`)로
+확인합니다. blocking API 안의 진행률은 MATLAB이 알려 주지 않으므로 퍼센트를 표시할
+수 없습니다.
 
 `cfg.CheckSharedSignalEditorDataFile=true`로 켜 두면 모든 Harness를 열고 닫으므로
 크게 느려집니다. 기본값은 `false`입니다.
@@ -510,6 +564,7 @@ plan = st_cleanup_results('Scope','STATE','Apply',true); % 실제 삭제
 문의하거나 기록을 남길 때는 다음을 함께 전달하십시오.
 
 - 오류 식별자 전체 (`simtest:`로 시작하는 부분)와 stack
+- 실행 로그(`result/logs/<시각>_<명령>.log`)와 같은 이름의 `.console.log`
 - `SYSTEM-CHECK-v1` 또는 `CVF-CHECK-v2`로 시작하는 출력 줄 전체
 - `st_check_actual_system`의 `summary.Environment`, `summary.Run`, `summary.CVF` 표
 - standalone이면 `PipelineId`와 pipeline manifest

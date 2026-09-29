@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+- **콘솔에는 진행만 남기고, 모든 로그는 실행마다 파일에 남깁니다.**
+  지금까지는 `cfg.VerboseLogging`의 기본값(`true`) 때문에 DEBUG까지 전부 콘솔에
+  나왔고, 대상마다 붙는 배너와 MathWorks 출력이 섞여 어느 단계의 몇 번째 대상인지
+  알아보기 어려웠습니다. 이제 Command Window에는 명령(`==>`/`<==`), 단계
+  (`-->`/`<--`), 대상(`[ 3/26] FAIL ...`)의 한 줄 진행과 `WARN`·`ERROR`만 나옵니다.
+  모든 레벨은 `result/logs/<yyyyMMdd_HHmmss>_<명령>.log`에 남습니다.
+  - 콘솔에 보인 내용 그대로는 같은 이름의 `.console.log`에, 명령 밖에서 찍힌 로그는
+    `session_<yyyyMMdd>.log`에 남습니다. `st_run_from_harness` 등 직접 부르는 명령
+    11개가 각자 로그 파일을 열고, 단계 함수를 직접 부르면 session 로그로 갑니다.
+    자세한 위치와 여는 법은 `docs/troubleshooting.md`의 "로그는 어디에 있나"에
+    있습니다.
+  - **설정이 바뀝니다.** `cfg.VerboseLogging`이 없어지고 `cfg.ConsoleLogLevel`
+    (`'STEP'` 기본, `'INFO'`, `'DEBUG'`, `'TRACE'`)이 대신합니다. 파일에는 값과
+    상관없이 모든 레벨이 남습니다. `st_config.m`에 `cfg.VerboseLogging` 줄을 직접
+    남겨 둔 곳은 이제 읽지 않으므로, `true`였다면 `cfg.ConsoleLogLevel = 'DEBUG'`로
+    바꾸십시오. `false`였다면 기본값 `'STEP'` 그대로 두면 됩니다.
+  - MathWorks 함수(`sltest.harness.create`, `sldvrun`, `run(testCase)`,
+    `run(testFile)`, `cvsave`, `cvhtml`, `sltest.testmanager.report`,
+    `sltest.harness.export`)의 출력은 경고를 포함해 콘솔에 나오지 않고 실행 로그의
+    `[SYS <API>]` 줄로 남습니다. 경고가 있었으면 콘솔에
+    `<API> system warnings: N (K distinct) - see log` 한 줄이 나옵니다.
+  - `result/reports/WorkflowStageLog.log`는 없어졌습니다. 실행 로그가 대신하며,
+    단계 실패 오류(`simtest:WorkflowStageFailed`)도 "See the run log."로 안내합니다.
+  - 인자 없이 부른 `st_get_run_test_cases`는 더 이상 대상 목록을 콘솔에 찍지
+    않습니다. `[testCases, R] = st_get_run_test_cases(); disp(R)`로 봅니다.
+  - `st_check_standalone_coverage`의 한 화면 블록은 그대로 최대 20줄이지만, 직접
+    부르면 실행 로그 틀 4줄(`==>`, `<==`, `log:` 두 줄)이 더 붙어 최대 24줄입니다.
+    다른 명령 안에서 부르면 틀이 붙지 않습니다.
+  - 번들 실행 로그 `execution.log`와 `run_exported_tests.m`은 바뀌지 않습니다.
+  - R2025b 실물 확인이 남아 있습니다. `evalc`가 경고 출력을 받는지, `diary`가
+    콘솔 내용을 그대로 받는지, 감싼 API가 `evalc` 안에서도 같은 동작과 속도를 내는지
+    입니다.
+
 - **`IgnoreUnexpectedSldvInputs`를 명령 옵션으로 줄 수 있습니다.**
   `st_run_from_harness('IgnoreUnexpectedSldvInputs', true)`처럼 부르면 그 실행에서만
   `cfg.IgnoreUnexpectedSldvInputs`를 덮어씁니다. `st_config.m`은 고치지 않습니다.

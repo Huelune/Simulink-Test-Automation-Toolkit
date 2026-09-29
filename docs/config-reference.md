@@ -461,15 +461,33 @@ BATCH에서만 갱신되므로 PER_CUT 뒤에 읽으면 예전 BATCH 값이 나�
 
 ## 10. 로그와 진단
 
-### `VerboseLogging` — 기본 `true`
+### `ConsoleLogLevel` — 기본 `'STEP'`
 
-| 값 | 동작 |
+Command Window에 어디까지 보일지 정합니다. **로그 파일에는 이 값과 상관없이 모든
+레벨이 항상 남습니다.** 값을 바꿔도 사라지는 기록은 없고, 콘솔이 얼마나 조용한지만
+달라집니다.
+
+| 값 | 콘솔에 보이는 것 |
 | --- | --- |
-| `true` (기본) | 오래 걸리는 API 호출 앞뒤에 timestamp·단계·대상·경과 시간을 출력합니다 |
-| `false` | 상세 로그를 끄고 START/OK/FAIL 요약만 남깁니다 |
+| `'STEP'` (기본) | 명령·단계·대상별 진행 줄과 `WARN`, `ERROR` |
+| `'INFO'` | 위에 더해 체크포인트(`INFO`) |
+| `'DEBUG'` | 위에 더해 세부 정보와 MathWorks 함수가 낸 출력 원문(`[SYS <API>]`) |
+| `'TRACE'` | 전부 |
+
+- 레벨 순서는 `TRACE < DEBUG < INFO < STEP < WARN < ERROR`이고, 지정한 레벨과 그보다
+  높은 레벨이 보입니다. 그래서 `STEP`, `WARN`, `ERROR`는 어느 값에서도 보입니다.
+- 네 값 밖의 글자(오타 포함)는 `'STEP'`으로 처리합니다.
+- 예전 `VerboseLogging`은 없어졌습니다. `st_config.m`에 그 줄이 남아 있어도 읽지
+  않으니 `ConsoleLogLevel`로 바꾸십시오. `true`였다면 `'DEBUG'`, `false`였다면
+  `'STEP'`에 해당합니다.
 
 MATLAB이 지금 어느 API에서 기다리는지는 blocking 호출 안을 들여다볼 수 없으므로
-알 수 없습니다. **마지막 `START` 로그가 현재 대기 중인 위치입니다.**
+알 수 없습니다. **콘솔의 마지막 `START` 줄이 현재 대기 중인 대상입니다.** `START`
+줄은 대상 하나가 오래 걸리는 Harness 생성, SLDV, PER_CUT 실행, PER_CUT 결과 정리에서만
+나옵니다.
+
+로그 파일이 어디에 생기고 어떻게 여는지는
+[문제 해결](troubleshooting.md#로그는-어디에-있나)에 있습니다.
 
 ### `SuppressedWarnings` — 기본 `{}`
 

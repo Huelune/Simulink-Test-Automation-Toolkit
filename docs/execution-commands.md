@@ -580,7 +580,8 @@ info = st_export_test_bundle('ExecutionModelMode','STANDALONE_HARNESS');
 
 ### `st_check_standalone_coverage`
 
-standalone 결과를 10비트 코드와 최대 20줄 화면으로 검사합니다.
+standalone 결과를 10비트 코드와 최대 20줄 화면으로 검사합니다. 직접 부르면 실행 로그
+틀 4줄(`==>`, `<==`, `log:` 두 줄)이 더 붙습니다.
 
 ```matlab
 [code, summary, details] = st_check_standalone_coverage('PipelineId', info.PipelineId);

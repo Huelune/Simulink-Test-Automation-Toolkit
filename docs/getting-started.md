@@ -138,7 +138,7 @@ disp(info)
 
 명령이 오래 걸릴 때 Command Window가 멈춘 것처럼 보이는 것은 정상입니다. Harness
 생성과 SLDV 분석은 모델 크기에 따라 몇 분 이상 걸립니다. 지금 어디서 기다리는지는
-**마지막 `START` 로그**로 확인합니다.
+Command Window의 **마지막 `START` 줄**로 확인합니다.
 
 ## 5. 대상 모델 고르기
 
@@ -334,8 +334,9 @@ disp(summary)
 disp(details)
 ```
 
-`1111111111`이고 `summary.Status = 'PASS'`면 정상입니다. 화면 출력은 최대 20줄이며
-전체 CUT 결과는 `details` 표에 있습니다.
+`1111111111`이고 `summary.Status = 'PASS'`면 정상입니다. 검사 결과 화면은 최대
+20줄이며(직접 부르면 실행 로그 틀 4줄이 더 붙습니다) 전체 CUT 결과는 `details`
+표에 있습니다.
 
 읽기 전용 검사이므로 모델·Test File·CVF를 저장하거나 바꾸지 않습니다.
 

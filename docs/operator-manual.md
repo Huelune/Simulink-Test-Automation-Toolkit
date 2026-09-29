@@ -450,12 +450,17 @@ MATLAB path에 등록하고 ResultSet coverage에도 절대 경로로 연결합�
 ## 9. 진행 로그
 
 ```matlab
-cfg.VerboseLogging = true;   % 기본값
+cfg.ConsoleLogLevel = 'STEP';   % 기본값. 'INFO', 'DEBUG', 'TRACE'로 갈수록 자세히
 ```
 
-오래 걸리는 MATLAB API 호출 앞뒤에 timestamp, 단계, 대상, 경과 시간을 출력합니다.
-blocking API 내부의 실제 진행률은 알 수 없으므로 **마지막 `START` 로그가 현재 대기
-위치입니다.**
+`src/config/st_config.m`의 이 값은 **Command Window에 무엇을 보일지**만 정합니다.
+로그 파일 `result/logs/<시각>_<명령>.log`에는 어느 값에서든 모든 레벨이 남습니다.
+
+기본값 `'STEP'`에서는 명령(`==>`/`<==`), 단계(`-->`/`<--`), 대상별 진행 줄
+(`[ 3/26] OK ...`)과 `WARN`, `ERROR`만 보입니다. blocking API 내부의 실제 진행률은 알
+수 없으므로 **콘솔의 마지막 `START` 줄이 현재 대기 위치입니다.** 줄의 모양은
+[팀 작업 절차](team-workflow.md)에, 로그 파일 위치와 여는 법은
+[문제 해결](troubleshooting.md#로그는-어디에-있나)에 있습니다.
 
 `PER_CUT`의 상세 순서는 각 실행의 `logs/execution.log`에서 확인합니다.
 

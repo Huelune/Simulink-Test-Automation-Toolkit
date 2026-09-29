@@ -18,6 +18,9 @@
   `sltest.harness.set(..., 'SaveExternally', false)`로 모델 안에 옮기고 저장한다.
   `.slx`가 없는 외부 Harness에도 이 set이 통하는지는 **실물 미검증**이다. 사용자는
   같은 상황을 GUI에서 내부로 바꿔 해결했다.
+- 2026-09-29 feat/logging: 로그 체계 개편. develop `19c4dbd`에서 분기한 브랜치이며
+  아직 develop에 합치지 않았다. **정적 구현과 문서까지 끝났고 MATLAB 실행 검증은
+  미수행이다.** 미검증 항목은 아래 "2026-09-29 로그 체계 개편" 절에 있다.
 - Standalone Action 단순화 작업 시작 기준: 3e5ed63
 - 필수 기능 기준: feat/per-cut-filtered-execution의 7f0825e
 - 필수 handoff 기준: 2b3ba09 이후
@@ -286,6 +289,75 @@
   `writecell`과 `writetable`을 섞은 워크북의 시트 순서,
   `Pre Condition` 숫자 왕복, Excel과 LibreOffice에서 수식 표시와 복구 대화상자
   미발생. 자세한 목록은 `docs/final-document.md` 11장에 있다.
+
+## 2026-09-29 로그 체계 개편
+
+- 설계는 `docs/superpowers/specs/2026-09-29-logging-design.md`, 구현 계획은
+  `docs/superpowers/plans/2026-09-29-logging.md`다. develop `19c4dbd`에서 분기한
+  `feat/logging`에 있다. **정적 구현과 문서까지 끝났고 MATLAB 실행 검증은
+  미수행이다.** 이 PC에는 MATLAB이 없어 `git diff --check`와 정적 계약 확인만 했다.
+- 바뀐 것:
+  - `cfg.ConsoleLogLevel`(`'STEP'` 기본, `'INFO'`, `'DEBUG'`, `'TRACE'`)이
+    `cfg.VerboseLogging`을 대신한다. `st_config`에서 `VerboseLogging`을 지웠고,
+    `ConsoleLogLevel`이 없는 struct cfg만 `true`는 `DEBUG`, `false`는 `STEP`으로 읽는다.
+  - `st_log`는 모든 레벨을 실행 로그 `result/logs/<yyyyMMdd_HHmmss>_<명령>.log`에
+    쓰고 콘솔은 레벨로 거른다. 콘솔 사본은 같은 이름의 `.console.log`(`diary`), 명령
+    밖은 `session_<yyyyMMdd>.log`다.
+  - 콘솔 기호는 ASCII 영어다. 명령 `==> <명령> start` / `<== <명령> done`(실패는
+    `FAILED`), 단계 `--> [k] <label>` / `<-- [k] <label> | OK=24, FAIL=1 | 12m38s`
+    (전체 단계 수 없음), 대상 `[ i/n] STATUS label elapsed message`. 대상 START 줄은
+    Harness 생성, SLDV, PER_CUT 실행, PER_CUT 결과 정리에만 있다.
+  - 실행 로그를 여는 명령은 11개다: `st_run_from_harness`, `st_run_after_harness`,
+    `st_run_from_stage`, `st_pre_validate_targets`, `st_collect_per_cut_results`,
+    `st_run_standalone_coverage_pipeline`, `st_check_standalone_coverage`,
+    `st_open_standalone_test_manager`, `st_export_test_specification`,
+    `st_export_final_document`, `st_select_target_model`. 단계 함수를 직접 부르면
+    session 로그로 간다.
+  - `st_call_quiet`가 MathWorks 호출 14곳(`sltest.harness.create`, `sldvrun`,
+    `run(testCase)`, `run(testFile)`, `cvsave`, `cvhtml`,
+    `sltest.testmanager.report`, `sltest.harness.export`)의 출력을 `evalc`로 받아
+    로그에 `[SYS <API>]` DEBUG 줄로 남긴다. 경고가 있으면 콘솔에
+    `<API> system warnings: N (K distinct) - see log` 한 줄이 나온다.
+  - `result/reports/WorkflowStageLog.log`와 `st_log_stage_result`는 없앴다.
+    `require_success` 오류는 "See the run log."로 안내한다.
+  - 번들 실행 로그 `execution.log`와 `run_exported_tests.m`은 바꾸지 않았다.
+  - 번들 export의 긴 작업(`Toolbox products`, `Bundle SHA-256`,
+    `Source unchanged check`, `ZIP archive`)의 `Manifest task start`/`complete` 줄과
+    `Bundle usage | Run=run_exported_tests` 안내는 STEP으로 콘솔에 남긴다.
+  - one-screen checker의 계약은 자기 블록 20줄 이내에 직접 부를 때의 틀 4줄을 더한
+    것이다. 다른 명령 안에서 부르면 틀이 없다.
+  - `st_get_run_test_cases`를 인자 없이 부르면 목록을 콘솔에 찍지 않는다.
+    `[testCases, R] = st_get_run_test_cases(); disp(R)`로 본다.
+    `st_collect_output_specs`는 선택 세 번째 인자 `cfg`를 받는다.
+- **실물 미검증 가정.** 다음 MATLAB 실행에서 확인하고, 확인할 때까지 미검증으로 둔다.
+  - `evalc`가 R2025b에서 `warning` 출력을 받는지(`test_call_quiet.m`의
+    `testMatlabWarningIsCaptured`). 받지 못하면 경고가 콘솔로 새고 `system warnings`
+    요약 줄이 나오지 않는다.
+  - `sltest.harness.create`, `sldvrun`, `run(testCase)`, `run(testFile)`를 `evalc`
+    안에서 불러도 동작과 속도가 같은지. 특히 GUI를 띄우는 경로를 본다.
+  - `evalc` 안의 Ctrl+C 중단이 `st_is_user_interrupt`로 알아볼 수 있는 예외로 다시
+    올라오는지. `st_call_quiet`는 받은 예외를 그대로 다시 던진다.
+  - 번들 실행 중 번들 사본의 `st_log`가 번들 폴더의 session 로그로 가는지, 바깥 실행
+    로그와 섞이지 않는지.
+  - `diary`가 사용자 세션의 `fprintf` 출력을 실제로 받는지, `get(0,'DiaryFile')`이
+    넘긴 경로 그대로 돌려주는지, 쓸 수 없는 경로에서 `diary()`가 그 자리에서 던지는지
+    (늦게 실패하지 않는지). 던지면 WARN `Console copy could not start`로 넘어간다.
+  - 한국어 로캘 MATLAB에서 `경고` 접두(`char([0xACBD 0xACE0])`)가 `evalc`와
+    `fprintf`를 거쳐도 깨지지 않는지.
+- **다음 실행 뒤에 할 일.** `.console.log`와 `[SYS ...]` 줄을 보고 `st_call_quiet`를
+  어디에 남길지와 `cfg.SuppressedWarnings`에 무엇을 넣을지 정한다. 지금
+  `SuppressedWarnings`는 빈 목록이다.
+- **MATLAB에서 돌려야 하는 테스트.**
+  - 새 테스트: `test_log_levels.m`, `test_log_scope.m`, `test_call_quiet.m`,
+    `test_log_progress.m`, `test_workflow_log_contract.m`, `test_log_adoption.m`.
+  - 단언을 새 콘솔 계약에 맞게 옮긴 테스트: `test_sldv_target_precheck.m`,
+    `test_per_cut_collection.m`, `test_standalone_coverage_pipeline.m`,
+    `test_per_cut_execution.m`, `test_partial_iteration_update.m`,
+    `test_export_bundle.m`, `test_standalone_harness_bundle.m`,
+    `test_standalone_coverage_screen_status.m`.
+- **이 개편과 무관하게 이미 있던 불일치.** `tests/unit/test_export_bundle.m`이
+  `end_task(cfg,`가 3번 나온다고 검사하지만 `st_export_test_bundle.m`에는 5번 있다
+  (호출 4곳과 정의 1곳). main에도 같은 불일치가 있다. MATLAB PC에서 확인한다.
 
 ## 변경 불가 핵심 결정
 
@@ -708,7 +780,8 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   교체한다. PDF, TestSummary.xlsx와 coverage-metrics.mat는 만들지 않는다.
 - bundle 실행 후 copied Test File과 copied Top Model을 닫고 caller의 MATLAB path와
   현재 폴더를 복원한다. 이 상태와 외부 Harness/Input 파일 checksum도 manifest와
-  one-screen checker에서 확인한다.
+  one-screen checker에서 확인한다. checker 화면은 자기 블록이 최대 20줄이고, 직접
+  부르면 실행 로그 틀 4줄(`==>`, `<==`, `log:` 두 줄)이 더 붙는다.
 - 현재 PC에는 MATLAB과 MISS_HIT 실행 환경이 없어 `git diff --check`와 정적 계약
   검사만 수행할 수 있다. `tests/integration/test_standalone_coverage_pipeline_runtime.m`
   및 위 20번 R2025b/GUI 증거 전에는 main에 통합하지 않는다.
@@ -820,7 +893,8 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   보존하고 CVF/CVT/report만 검증 성공 시 생성한다. R2025b 재검증이 필요하다.
 - 캡처 한 장으로 상태를 전달하는 기존 출력기는
   `st_check_standalone_coverage`로 교체했다. manifest v2, lifecycle event, 실제 파일,
-  Excel schema와 원본 checksum을 교차 검사하며 최대 20줄과 10비트 code를 출력한다.
+  Excel schema와 원본 checksum을 교차 검사하며 최대 20줄(직접 부르면 실행 로그 틀
+  4줄이 더 붙는다)과 10비트 code를 출력한다.
   전체 통과는 `1111111111`뿐이며 Result import나 model load/save를 수행하지 않는다.
 - 첫 실제 이전 STATUS 캡처에서 모든 CUT의 RF/restore와 root/hierarchy Coverage가 1로
   성공했지만 실행 대상 상태는 Initial report incomplete로 FAIL이었다. compact
