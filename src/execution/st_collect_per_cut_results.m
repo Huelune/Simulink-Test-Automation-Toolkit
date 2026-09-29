@@ -63,7 +63,8 @@ for i = 1:height(targets)
              'run against the workbook it was produced from.'], ...
             testCaseName);
     end
-    targetDirectory = st_per_cut_target_directory(runDirectory, row);
+    targetDirectory = recorded_target_directory( ...
+        runDirectory, targets(i,:), row);
     initialSaved = fullfile(targetDirectory, 'initial', 'Results.mldatx');
     if ~isfile(initialSaved)
         Collected(i) = "SKIP";
@@ -307,5 +308,26 @@ runDirectory = char(string(manifest.RunDirectory));
 if ~isfolder(runDirectory)
     error('simtest:CollectRunMissing', ...
         'PER_CUT run directory is missing: %s', runDirectory);
+end
+end
+
+
+function directory = recorded_target_directory(runDirectory, target, row)
+%RECORDED_TARGET_DIRECTORY Use the folder the run wrote, not a recomputed one.
+% The folder name hashes CUTPath, and how CUTPath is resolved can change
+% between the run and the collect. The run manifest records the folder, so
+% only a run without that record falls back to recomputing it. Only the
+% folder name is taken so a moved run directory still resolves.
+directory = '';
+if ismember('TargetManifest', target.Properties.VariableNames)
+    manifestPath = char(string(target.TargetManifest));
+    if ~isempty(manifestPath)
+        [recorded, ~, ~] = fileparts(manifestPath);
+        [~, folder, extension] = fileparts(recorded);
+        directory = fullfile(runDirectory, 'targets', [folder extension]);
+    end
+end
+if isempty(directory)
+    directory = st_per_cut_target_directory(runDirectory, row);
 end
 end
