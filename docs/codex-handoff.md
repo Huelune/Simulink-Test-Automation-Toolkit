@@ -349,6 +349,16 @@
     (늦게 실패하지 않는지). 던지면 WARN `Console copy could not start`로 넘어간다.
   - 한국어 로캘 MATLAB에서 `경고` 접두(`char([0xACBD 0xACE0])`)가 `evalc`와
     `fprintf`를 거쳐도 깨지지 않는지.
+  - `dbstop if error`를 켜 둔 세션에서 `evalc` 안(`st_call_quiet`)에서 오류가 나면
+    디버거에서 멈추고 그 프롬프트가 `evalc`에 잡혀 콘솔에 안 보일 수 있다. 그러면
+    멈춘 것처럼 보인다. 재현되면 `dbclear if error` 뒤 다시 돌리라고 안내한다.
+  - 호출마다 `fopen`/`fclose`하는 비용이 작은지. 다음 실행에서 실행 로그의 전체 줄
+    수와 명령 경과 시간을 적어 이전 실행과 비교한다.
+  - 실제 Ctrl+C 뒤 실행 로그와 콘솔의 끝 줄이 `<== <명령> INTERRUPTED`인지(guard의
+    `onCleanup`이 Ctrl+C에서도 돈다는 가정).
+  - `evalc`로 받은 경고 원문에 verbose 안내 `(Type "warning off <id>" ...)`가 콘솔과
+    같이 들어가는지. `st_collect_warning_ids`는 이 안내로 실행 로그의 `[SYS ...]`
+    줄에서 식별자를 찾는다.
 - **다음 실행 뒤에 할 일.** `.console.log`와 `[SYS ...]` 줄을 보고 `st_call_quiet`를
   어디에 남길지와 `cfg.SuppressedWarnings`에 무엇을 넣을지 정한다. 지금
   `SuppressedWarnings`는 빈 목록이다.
@@ -360,6 +370,15 @@
     `test_per_cut_execution.m`, `test_partial_iteration_update.m`,
     `test_export_bundle.m`, `test_standalone_harness_bundle.m`,
     `test_standalone_coverage_screen_status.m`.
+  - 로그 범위로 감싼 명령의 정적 확인: `test_open_standalone_test_manager.m`,
+    `test_run_record.m`(`st_generate_test_report(1, 2)` 오류가 감싸기를 지나 그대로
+    올라오는지).
+  - 최종 리뷰 수정에서 더한 테스트: `test_log_scope.m`의
+    `testUnmarkedCloseIsInterrupted`, `testOnlyTheOutermostCompleteCounts`,
+    `testWriteFailureWarnsAgainInTheNextCommand`, `test_log_progress.m`의
+    `testRunSuccessIsDone`, `test_call_quiet.m`의 끝 줄 확인,
+    `test_log_adoption.m`의 `testPerCutExpectedUpdateKeepsIterationsInTheLog`(PER_CUT
+    대상 안 반복 줄), `testReportAndLateTargetLoopsShowProgress`.
 - **이 개편과 무관하게 이미 있던 불일치(고침).** `tests/unit/test_export_bundle.m`이
   `end_task(cfg,`가 3번 나온다고 검사했지만 `st_export_test_bundle.m`에는 5번 있었다
   (호출 4곳과 정의 1곳). 이제 네 작업 이름(`Toolbox products`, `Bundle SHA-256`,
