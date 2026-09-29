@@ -46,6 +46,36 @@ verifyTrue(testCase, contains(src('reporting/st_export_result_set_report.m'), ..
     "st_call_quiet(cfg, 'cvsave'"));
 end
 
+function testPerCutExpectedUpdateKeepsIterationsInTheLog(testCase)
+% A PER_CUT target shows START and one result line on the console (spec
+% 6.2). Its expected update is called with that one target row, so the
+% per-iteration lines go to DEBUG; the gate's PARTIAL/FAIL WARN stays on
+% the console. BATCH passes no target row and keeps its progress lines.
+text = src('execution/st_update_expected_from_results.m');
+verifyTrue(testCase, contains(text, ...
+    'perTarget = nargin >= 2 && ~isempty(targetConfig);'));
+verifyEqual(testCase, numel(strfind(text, ...
+    'report_iteration(cfg, perTarget, i, n, Status(i),')), 3);
+verifyEqual(testCase, numel(strfind(text, 'st_log_progress(')), 1);
+helper = extractAfter(text, 'function report_iteration(');
+verifyTrue(testCase, contains(helper, 'if perTarget'));
+debugAt = strfind(helper, "st_log(cfg, 'DEBUG'");
+progressAt = strfind(helper, 'st_log_progress(');
+verifyNotEmpty(testCase, debugAt);
+verifyNotEmpty(testCase, progressAt);
+verifyLessThan(testCase, debugAt(1), progressAt(1));
+perCut = src('execution/st_run_tests_per_cut.m');
+verifyTrue(testCase, contains(perCut, ...
+    'st_update_expected_from_results(initialResult, row)'));
+verifyTrue(testCase, contains(perCut, ...
+    "ismember(updateGate.Status, {'PARTIAL', 'FAIL'})"));
+verifyNotEmpty(testCase, regexp(perCut, ...
+    "st_log\(cfg, 'WARN', \.\.\.\s*\['\[PER_CUT %d/%d\] expected update %s", 'once'));
+batch = src('execution/st_run_generated_tests.m');
+verifyNotEmpty(testCase, regexp(batch, ...
+    'st_update_expected_from_results\(\s*\.\.\.\s*resultObj\)', 'once'));
+end
+
 function testCollectOpensALogScope(testCase)
 verifyTrue(testCase, contains(src('execution/st_collect_per_cut_results.m'), ...
     'st_log_run(mfilename'));
