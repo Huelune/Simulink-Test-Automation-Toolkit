@@ -146,7 +146,7 @@ verifyEmpty(testCase, regexp(source, ...
     'any\(verifyTimingResult\.Status == ''FAIL''\)', 'once'));
 verifyNotEmpty(testCase, regexp(source, ...
     'runContext\.Status = st_combine_run_status', 'once'));
-verifyNotEmpty(testCase, regexp(source, 'Run Judgment', 'once'));
+verifyNotEmpty(testCase, regexp(source, 'Run judgment \| Status=', 'once'));
 end
 
 

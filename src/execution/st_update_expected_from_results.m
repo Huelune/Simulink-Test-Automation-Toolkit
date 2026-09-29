@@ -82,12 +82,6 @@ Message = strings(n,1);
 Timestamp = strings(n,1);
 
 
-fprintf('\n');
-fprintf('============================================\n');
-fprintf('Expected Value Auto Update\n');
-fprintf('Sample Time : per target/scenario\n');
-fprintf('============================================\n');
-
 totalTimer = tic;
 
 st_log(cfg, 'INFO', ...
@@ -131,12 +125,6 @@ for i = 1:n
     st_log(cfg, 'DEBUG', ...
         '[ExpectedUpdate %d/%d] start | TestCase=%s | Harness=%s | Scenario=%s', ...
         i, n, testCaseName, harnessName, scenarioName);
-
-
-    fprintf('\n[%d/%d] %s\n', ...
-        i, ...
-        n, ...
-        testCaseName);
 
 
     try
@@ -206,9 +194,6 @@ for i = 1:n
                      'expected update applies to Failed Iterations only'], ...
                     char(IterationOutcome(i)));
 
-            fprintf('  -> SKIP : SKIP_OUTCOME_NOT_FAILED (Outcome=%s)\n', ...
-                char(IterationOutcome(i)));
-
             ElapsedSec(i) = ...
                 toc(timerValue);
 
@@ -221,6 +206,10 @@ for i = 1:n
                  'Outcome=%s | elapsed=%.3f sec'], ...
                 i, n, testCaseName, scenarioName, ...
                 char(IterationOutcome(i)), ElapsedSec(i));
+
+            st_log_progress(cfg, i, n, Status(i), testCaseName, ...
+                'Elapsed', ElapsedSec(i), 'Message', Message(i), ...
+                'Detail', char(string(T.CUTPath(targetIndex))));
 
             continue;
         end
@@ -245,8 +234,6 @@ for i = 1:n
                      'expected update not applicable'], ...
                     usableOutputCount);
 
-            fprintf('  -> SKIP : SKIP_NO_VERIFY_OUTPUT\n');
-
             ElapsedSec(i) = ...
                 toc(timerValue);
 
@@ -257,6 +244,10 @@ for i = 1:n
                 ['[ExpectedUpdate %d/%d] skipped | TestCase=%s | ' ...
                  'Reason=SKIP_NO_VERIFY_OUTPUT | elapsed=%.3f sec'], ...
                 i, n, testCaseName, ElapsedSec(i));
+
+            st_log_progress(cfg, i, n, Status(i), testCaseName, ...
+                'Elapsed', ElapsedSec(i), 'Message', Message(i), ...
+                'Detail', char(string(T.CUTPath(targetIndex))));
 
             continue;
         end
@@ -513,13 +504,6 @@ for i = 1:n
         end
 
 
-        fprintf( ...
-            '  -> OK : verify=%d, mismatch=%d, updated=%d\n', ...
-            lineCount, ...
-            mismatchCount, ...
-            updatedCount);
-
-
     catch ME
 
         if ~standalone
@@ -532,11 +516,6 @@ for i = 1:n
 
         Message(i) = ...
             string(ME.message);
-
-
-        fprintf( ...
-            '  -> FAIL : %s\n', ...
-            ME.message);
     end
 
 
@@ -546,6 +525,10 @@ for i = 1:n
     st_log(cfg, 'DEBUG', ...
         '[ExpectedUpdate %d/%d] finished | status=%s | elapsed=%.3f sec | total=%.3f sec', ...
         i, n, char(Status(i)), ElapsedSec(i), toc(totalTimer));
+
+    st_log_progress(cfg, i, n, Status(i), testCaseName, ...
+        'Elapsed', ElapsedSec(i), 'Message', Message(i), ...
+        'Detail', char(string(T.CUTPath(targetIndex))));
 
     Timestamp(i) = ...
         current_timestamp();
@@ -596,19 +579,10 @@ st_write_result( ...
     R);
 
 
-fprintf('\n');
-fprintf('============================================\n');
-fprintf('Expected Value Update Result\n');
-fprintf('============================================\n');
-fprintf('Updated lines : %d\n', ...
-    sum(UpdatedCount));
-fprintf('FAIL         : %d\n', ...
-    sum(strcmp(Status, 'FAIL')));
-fprintf('============================================\n');
-
 st_log(cfg, 'INFO', ...
-    'Expected value update complete | elapsed=%.3f sec', ...
-    toc(totalTimer));
+    ['Expected value update complete | updated lines=%d | fail=%d | ' ...
+     'elapsed=%.3f sec'], ...
+    sum(UpdatedCount), sum(strcmp(Status, 'FAIL')), toc(totalTimer));
 
 end
 

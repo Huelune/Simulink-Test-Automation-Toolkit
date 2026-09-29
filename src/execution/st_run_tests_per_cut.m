@@ -259,11 +259,13 @@ for i = 1:n
                 'The generated CVF was not applied to %s.', ...
                 char(TestCaseName(i)));
         end
+        st_log_progress(cfg, i, n, 'START', char(TestCaseName(i)), ...
+            'Detail', char(CUTPath(i)));
         st_log(cfg, 'DEBUG', ...
             '[PER_CUT %d/%d] run(testCase) initial start', i, n);
         append_event(logPath, i, 'RUN_START', char(TestCaseName(i)));
         append_event(logPath, i, 'RUN_INITIAL_START', char(TestCaseName(i)));
-        initialResult = run(tc);
+        initialResult = st_call_quiet(cfg, 'run(testCase)', @() run(tc));
         RunCount(i) = RunCount(i) + 1;
         append_event(logPath, i, 'RUN_INITIAL_DONE', char(TestCaseName(i)));
         append_event(logPath, i, 'RUN_DONE', char(TestCaseName(i)));
@@ -339,7 +341,7 @@ for i = 1:n
             st_log(cfg, 'DEBUG', ...
                 '[PER_CUT %d/%d] run(testCase) final start', i, n);
             append_event(logPath, i, 'RUN_FINAL_START', char(TestCaseName(i)));
-            finalResult = run(tc);
+            finalResult = st_call_quiet(cfg, 'run(testCase)', @() run(tc));
             RunCount(i) = RunCount(i) + 1;
             append_event(logPath, i, 'RUN_FINAL_DONE', char(TestCaseName(i)));
             st_log(cfg, 'DEBUG', ...
@@ -624,6 +626,10 @@ for i = 1:n
             abortError = manifestME;
         end
     end
+
+    st_log_progress(cfg, i, n, Status(i), char(TestCaseName(i)), ...
+        'Elapsed', DurationSec(i), 'Message', Message(i), ...
+        'Detail', char(CUTPath(i)));
 
     if ~isempty(abortError)
         st_log(cfg, 'ERROR', ...
@@ -998,7 +1004,7 @@ function save_package_evidence_cvt(path, objects, cfg)
 base = fullfile(folder, name);
 arguments = [{base}; objects(:)];
 writableCleanup = st_enter_writable_coverage_directory(cfg, 'CVSAVE');
-cvsave(arguments{:});
+st_call_quiet(cfg, 'cvsave', @() cvsave(arguments{:}));
 clear writableCleanup;
 if ~isfile(path)
     error('simtest:StandalonePackageEvidenceCVTSaveMissing', ...
@@ -1025,7 +1031,8 @@ st_log(cfg, 'INFO', ...
     ['Standalone original Coverage report capture start | CUT=%s | ' ...
      'Scratch=%s | Destination=%s'], ...
     char(string(row.CUTName)), reportHTML, reportZip);
-report = cvhtml(reportHTML, coverageObjects{1}, '-sRT=0');
+report = st_call_quiet(cfg, 'cvhtml', ...
+    @() cvhtml(reportHTML, coverageObjects{1}, '-sRT=0'));
 if isstruct(report) && isfield(report, 'fileName') && isfield(report, 'path')
     reportHTML = fullfile(char(report(1).path), char(report(1).fileName));
 end

@@ -12,14 +12,11 @@ function [testCases, R] = st_get_run_test_cases(tf)
 %
 % 실행 전에 개별 확인용으로도 사용할 수 있습니다.
 %
-%   st_get_run_test_cases
-%
-% 또는:
-%
 %   [testCases, R] = st_get_run_test_cases;
 %   disp(R);
 %
-% R은 result/RunTargetResult.* 로도 저장됩니다.
+% R은 result/RunTargetResult.* 로도 저장됩니다. 대상별 한 줄 목록은
+% 실행 로그에 DEBUG로 남습니다.
 
 cfg = ...
     st_require_runtime_target();
@@ -246,18 +243,16 @@ st_write_result( ...
     R);
 
 
-fprintf('\n');
-fprintf('============================================\n');
-fprintf('Selected Test Cases For Execution\n');
-fprintf('Test File  : %s\n', cfg.TestFile);
-fprintf('Test Suite : %s\n', cfg.TestSuiteName);
-fprintf('============================================\n');
+st_log(cfg, 'INFO', ...
+    ['Selected Test Cases For Execution | TestFile=%s | TestSuite=%s | ' ...
+     'WillRun=%d | Fail=%d'], ...
+    cfg.TestFile, cfg.TestSuiteName, sum(R.WillRun), sum(R.Status == 'FAIL'));
 
 for i = 1:height(R)
 
-    fprintf( ...
+    st_log(cfg, 'DEBUG', ...
         ['[%d/%d] %s | CUT=%s | ExpectedUpdate=%s | ' ...
-         'CurrentEnabled=%d | %s\n'], ...
+         'CurrentEnabled=%d | %s'], ...
         i, ...
         height(R), ...
         char(R.TestCaseName(i)), ...
@@ -266,11 +261,6 @@ for i = 1:height(R)
         R.CurrentEnabled(i), ...
         char(R.Status(i)));
 end
-
-fprintf('--------------------------------------------\n');
-fprintf('Will run : %d\n', sum(R.WillRun));
-fprintf('FAIL     : %d\n', sum(R.Status == 'FAIL'));
-fprintf('============================================\n');
 
 
 if any(R.Status == 'FAIL')

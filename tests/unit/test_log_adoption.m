@@ -29,6 +29,36 @@ verifyTrue(testCase, contains(src('harness/st_create_harnesses.m'), "'START'"));
 verifyTrue(testCase, contains(src('sldv/st_prepare_sldv_targets.m'), "'START'"));
 end
 
+function testExecutionCallsAreQuiet(testCase)
+perCut = src('execution/st_run_tests_per_cut.m');
+verifyEqual(testCase, numel(strfind(perCut, "st_call_quiet(cfg, 'run(testCase)'")), 2);
+verifyTrue(testCase, contains(perCut, "st_call_quiet(cfg, 'cvsave'"));
+verifyTrue(testCase, contains(perCut, "st_call_quiet(cfg, 'cvhtml'"));
+verifyTrue(testCase, contains(perCut, "'START'"));
+batch = src('execution/st_run_generated_tests.m');
+verifyEqual(testCase, numel(strfind(batch, "st_call_quiet(cfg, 'run(testFile)'")), 2);
+for file = {'reporting/st_generate_test_report.m', 'reporting/st_export_result_set_report.m'}
+    text = src(file{1});
+    verifyTrue(testCase, contains(text, "st_call_quiet(cfg, 'sltest.testmanager.report'"), file{1});
+    verifyTrue(testCase, contains(text, "st_call_quiet(cfg, 'cvhtml'"), file{1});
+end
+verifyTrue(testCase, contains(src('reporting/st_export_result_set_report.m'), ...
+    "st_call_quiet(cfg, 'cvsave'"));
+end
+
+function testCollectOpensALogScope(testCase)
+verifyTrue(testCase, contains(src('execution/st_collect_per_cut_results.m'), ...
+    'st_log_run(mfilename'));
+end
+
+function testExecutionScopeFilesPrintNoBanner(testCase)
+files = {'test_manager/st_apply_run_test_case_scope.m', ...
+    'test_manager/st_get_run_test_cases.m'};
+for k = 1:numel(files)
+    verify_no_banner(testCase, src(files{k}), files{k});
+end
+end
+
 function files = stage_files()
 files = {'harness/st_create_harnesses.m', 'sldv/st_prepare_sldv_targets.m', ...
     'harness/st_configure_harnesses.m', 'signal_editor/st_configure_signal_editors.m', ...

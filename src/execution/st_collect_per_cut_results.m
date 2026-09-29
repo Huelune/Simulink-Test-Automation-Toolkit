@@ -1,4 +1,4 @@
-function info = st_collect_per_cut_results(varargin)
+function varargout = st_collect_per_cut_results(varargin)
 %ST_COLLECT_PER_CUT_RESULTS Build the artifacts of a deferred PER_CUT run.
 %
 % st_collect_per_cut_results
@@ -13,7 +13,17 @@ function info = st_collect_per_cut_results(varargin)
 %
 % A run that already built its artifacts inline (the standalone bundle) has
 % nothing to collect and is reported as such.
+%
+% Called directly it writes its own run log; called from the workflow it
+% appends to the workflow's run log.
 
+% max(nargout, 1) keeps a bare call showing its result as ans.
+[varargout{1:max(nargout, 1)}] = st_log_run(mfilename, ...
+    @() collect_body(varargin{:}));
+end
+
+
+function info = collect_body(varargin)
 p = inputParser;
 p.FunctionName = mfilename;
 addParameter(p, 'RunId', 'LATEST', @(x) ischar(x) || isstring(x));
@@ -35,11 +45,8 @@ st_log(cfg, 'INFO', ...
     'PER_CUT collect start | RunId=%s | Targets=%d | ReportMode=%s', ...
     runId, height(targets), reportMode);
 
-fprintf('\n============================================\n');
-fprintf('Collect PER_CUT Results\n');
-fprintf('Run       : %s\n', runId);
-fprintf('Directory : %s\n', runDirectory);
-fprintf('============================================\n');
+st_log(cfg, 'INFO', 'Collect PER_CUT Results | RunId=%s | Directory=%s', ...
+    runId, runDirectory);
 
 % The standalone pipeline refuses to run while the Top Model is loaded, so
 % leave the session as this command found it: close what this command
@@ -55,6 +62,7 @@ Message = strings(height(targets),1);
 totalTimer = tic;
 
 for i = 1:height(targets)
+    rowTimer = tic;
     testCaseName = string(targets.TestCaseName(i));
     row = config(string(config.TestCaseName) == testCaseName, :);
     if height(row) ~= 1
@@ -65,13 +73,18 @@ for i = 1:height(targets)
     end
     targetDirectory = st_per_cut_target_directory(runDirectory, row);
     initialSaved = fullfile(targetDirectory, 'initial', 'Results.mldatx');
+    cutPath = char(string(row.CUTPath));
     if ~isfile(initialSaved)
         Collected(i) = "SKIP";
         Message(i) = "No saved ResultSet; this run built its artifacts inline";
+        st_log_progress(cfg, i, height(targets), Collected(i), ...
+            char(testCaseName), 'Elapsed', toc(rowTimer), ...
+            'Message', Message(i), 'Detail', cutPath);
         continue;
     end
 
-    fprintf('[%d/%d] %s\n', i, height(targets), testCaseName);
+    st_log_progress(cfg, i, height(targets), 'START', char(testCaseName), ...
+        'Detail', cutPath);
     % A ResultSet read back from a file carries block paths, not handles.
     % Simulink Coverage rebuilds that map on first access, and with the
     % models unloaded the walk does not finish in any useful time.
@@ -96,6 +109,9 @@ for i = 1:height(targets)
         filterPath, ruleCount);
     Collected(i) = "OK";
     Message(i) = "Reports built from the saved ResultSet";
+    st_log_progress(cfg, i, height(targets), Collected(i), ...
+        char(testCaseName), 'Elapsed', toc(rowTimer), ...
+        'Message', Message(i), 'Detail', cutPath);
 end
 
 result = table(targets.No, string(targets.TestCaseName), ...
@@ -111,9 +127,6 @@ info = struct( ...
     'CollectedCount', sum(Collected == "OK"), ...
     'SkippedCount', sum(Collected == "SKIP"));
 
-fprintf('\nCollected : %d\n', info.CollectedCount);
-fprintf('Skipped   : %d\n', info.SkippedCount);
-fprintf('============================================\n');
 st_log(cfg, 'INFO', ...
     'PER_CUT collect complete | RunId=%s | OK=%d | SKIP=%d | elapsed=%.3f sec', ...
     runId, info.CollectedCount, info.SkippedCount, toc(totalTimer));

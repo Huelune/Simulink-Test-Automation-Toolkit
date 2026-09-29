@@ -77,11 +77,7 @@ tf = ...
         cfg.TestFile);
 
 
-fprintf('\n');
-fprintf('============================================\n');
-fprintf('Run Generated Tests\n');
-fprintf('Test File : %s\n', cfg.TestFile);
-fprintf('============================================\n');
+st_log(cfg, 'INFO', 'Run Generated Tests | TestFile=%s', cfg.TestFile);
 
 
 %% ============================================================
@@ -89,11 +85,6 @@ fprintf('============================================\n');
 %% ============================================================
 
 if autoUpdateExpected
-
-    fprintf('\nExpected value APPLY 준비 (%d Target)\n', ...
-        expectedUpdateTargetCount);
-    fprintf('Sample time : %.17g sec\n', ...
-        cfg.ExpectedValueSampleTime);
 
     st_log(cfg, 'DEBUG', ...
         'Expected value logging preparation start');
@@ -131,9 +122,6 @@ runScopeCleanup = ...
 selectedNames = string(runScopeResult.TestCaseName( ...
     runScopeResult.WillRun));
 
-fprintf('\nSelected Test Case 실행 시작 (%d): %s\n', ...
-    numel(runTestCases), char(strjoin(selectedNames, ', ')));
-
 st_log(cfg, 'DEBUG', ...
     ['run(tf) start | selected Test Cases=%d [%s] | no coverage filter. ' ...
      'Test Manager execution may stay inside this call for a long time.'], ...
@@ -142,7 +130,7 @@ st_log(cfg, 'DEBUG', ...
 runTimer = tic;
 
 resultObj = ...
-    run(tf);
+    st_call_quiet(cfg, 'run(testFile)', @() run(tf));
 
 runContext.InitialResult = resultObj;
 runContext.FinalResult = resultObj;
@@ -150,8 +138,6 @@ runContext.FinalResult = resultObj;
 st_log(cfg, 'DEBUG', ...
     'run(tf) returned | elapsed=%.3f sec', ...
     toc(runTimer));
-
-fprintf('Selected Test Case 실행 완료\n');
 
 verifyTimingResult = st_validate_sldv_verify_results(resultObj);
 verifyGate = st_verify_timing_gate(verifyTimingResult, cfg, 'initial');
@@ -199,10 +185,9 @@ end
 % Expected value 갱신
 %% ============================================================
 
-fprintf('\n');
-fprintf('============================================\n');
-fprintf('Update Expected Values From Test Results\n');
-fprintf('============================================\n');
+st_log(cfg, 'INFO', ...
+    'Update Expected Values From Test Results | Targets=%d', ...
+    expectedUpdateTargetCount);
 
 
 st_log(cfg, 'DEBUG', ...
@@ -226,7 +211,8 @@ runContext.ExpectedUpdateStatus = updateGate.Status;
 updatedTotal = updateGate.UpdatedCount;
 
 
-fprintf('\nExpected value updated lines : %d\n', ...
+st_log(cfg, 'INFO', ...
+    'Expected value updated lines | %d', ...
     updatedTotal);
 
 
@@ -248,10 +234,9 @@ end
 if updatedTotal > 0 && ...
         cfg.RerunAfterExpectedUpdate
 
-    fprintf('\n');
-    fprintf('============================================\n');
-    fprintf('Rerun After Expected Value Update\n');
-    fprintf('============================================\n');
+    st_log(cfg, 'INFO', ...
+        'Rerun After Expected Value Update | UpdatedLines=%d', ...
+        updatedTotal);
 
     st_log(cfg, 'DEBUG', ...
         'rerun run(tf) start');
@@ -259,7 +244,7 @@ if updatedTotal > 0 && ...
     rerunTimer = tic;
 
     resultObj = ...
-        run(tf);
+        st_call_quiet(cfg, 'run(testFile)', @() run(tf));
 
     runContext.FinalResult = resultObj;
     runContext.RerunPerformed = true;
@@ -285,16 +270,15 @@ if updatedTotal > 0 && ...
             finalVerifyGate.Message);
     end
 
-    fprintf('재실행 완료\n');
-
 elseif updatedTotal == 0
 
-    fprintf('변경할 Expected value가 없어 재실행하지 않습니다.\n');
+    st_log(cfg, 'INFO', ...
+        'Rerun skipped | no Expected value changed');
 
 else
 
-    fprintf('cfg.RerunAfterExpectedUpdate = false\n');
-    fprintf('Expected value 갱신 후 재실행을 건너뜁니다.\n');
+    st_log(cfg, 'INFO', ...
+        'Rerun skipped | cfg.RerunAfterExpectedUpdate=false');
 end
 
 runContext.Status = st_combine_run_status( ...
@@ -320,15 +304,9 @@ end
 %% ============================================================
 
 function report_run_judgment(cfg, runContext)
-%REPORT_RUN_JUDGMENT Print and log the run judgment without hiding PARTIAL.
-
-fprintf('\n');
-fprintf('============================================\n');
-fprintf('Run Judgment : %s\n', runContext.Status);
-fprintf('Verify timing (initial) : %s\n', runContext.VerifyTimingStatus);
-fprintf('Verify timing (final)   : %s\n', runContext.FinalVerifyTimingStatus);
-fprintf('Expected update         : %s\n', runContext.ExpectedUpdateStatus);
-fprintf('============================================\n');
+%REPORT_RUN_JUDGMENT Log the run judgment without hiding PARTIAL.
+%
+% PARTIAL and FAIL log at WARN and ERROR, so the console shows them.
 
 if strcmp(runContext.Status, 'PARTIAL')
     level = 'WARN';
