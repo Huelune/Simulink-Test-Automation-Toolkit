@@ -320,6 +320,11 @@ Harness와 Input이 만들어지기 **전에** 실패한 경우에는 보존을 
 
 ### `StandalonePipelineHarnessFileMissing`
 
+> 이제 파이프라인은 시작할 때 외부 저장 Harness를 모델 안으로 옮기고 저장합니다
+> (`CloseSourceModel=true`, 기본). 이 오류는 `CloseSourceModel=false`로 돌렸을
+> 때만 남습니다. 옮기기 자체가 실패하면 `StandalonePipelineHarnessInternalizeFailed`로
+> 멈추며, 그때는 모델을 열어 Harness 저장 방식을 내부로 바꾸고 저장하십시오.
+
 **뜻:** `sltest.harness.find`가 그 Harness를 외부 파일 저장(`saveExternally`)으로
 보고했는데, 파일 경로가 비어 있거나 그 자리에 `.slx`가 없습니다. 파이프라인은
 원본 파일의 SHA-256을 전후 비교하므로 파일 없이는 진행하지 않습니다.

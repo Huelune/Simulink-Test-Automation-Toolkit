@@ -441,7 +441,7 @@ Harness를 **독립 실행 가능한 모델**로 떼어내 실행하고, 커버�
 | `'Action','ALL'` | EXECUTE → PACKAGE → SUMMARY를 한 번에 |
 | `'ContinueOnFailure', true` | 한 CUT이 실패해도 나머지를 계속 처리 |
 | `'FailOnNonPass', false` | 실패해도 MATLAB 오류를 내지 않고 결과 표로 판정 |
-| `'CloseSourceModel', true` (기본, 생략 가능) | 원본 Top Model을 저장하고 닫은 뒤 진행. `false`면 열려 있을 때 중단 |
+| `'CloseSourceModel', true` (기본, 생략 가능) | 원본 Top Model을 저장하고 닫은 뒤 진행. 외부 저장 Harness는 모델 안으로 옮겨 저장. `false`면 열려 있을 때 중단 |
 
 #### 실행 전 조건
 

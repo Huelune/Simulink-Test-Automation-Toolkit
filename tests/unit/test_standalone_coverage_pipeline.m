@@ -79,6 +79,23 @@ verifyError(testCase, @() st_run_standalone_coverage_pipeline( ...
     'MATLAB:InputParser:ArgumentFailedValidation');
 end
 
+function testReleaseStoresExternalHarnessesInsideTheModel(testCase)
+% A harness left external is moved inside the model and saved before the
+% source snapshot, so a missing .slx no longer stops the pipeline.
+text = source('pipeline', 'st_run_standalone_coverage_pipeline.m');
+closeAt = strfind(text, 'close_open_harnesses(cfg, model);');
+internalizeAt = strfind(text, 'internalize_external_harnesses(cfg, model);');
+saveAt = strfind(text, 'save_source_model(cfg, model);');
+verifyEqual(testCase, numel(internalizeAt), 1);
+verifyEqual(testCase, numel(saveAt), 2);
+verifyLessThan(testCase, closeAt(1), internalizeAt);
+verifyLessThan(testCase, internalizeAt, saveAt(2));
+verifyTrue(testCase, contains(text, ...
+    "sltest.harness.set(owner, name, 'SaveExternally', false);"));
+verifyTrue(testCase, contains(text, ...
+    'simtest:StandalonePipelineHarnessInternalizeFailed'));
+end
+
 function testExternalHarnessWithoutPathFallsBackThenNamesTheFix(testCase)
 % sltest.harness.find can flag a harness external and still report no file.
 % The inventory then looks next to the model, and when nothing is there the

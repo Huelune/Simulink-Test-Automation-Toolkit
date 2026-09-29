@@ -1025,29 +1025,74 @@ function release_source_model(cfg, options)
 % source Top Model must be unloaded before the export. With
 % CloseSourceModel=true the pipeline does that itself: unsaved changes are
 % saved (never discarded), open harnesses are closed, then the model.
-% Everything happens before source_snapshot so the saved files are what
-% the unchanged-source checks compare against. With false the caller keeps
-% the model, and assert_pipeline_source_unloaded stops the pipeline.
+% Harnesses saved outside the model are moved inside it, as this toolkit
+% creates them. Everything happens before source_snapshot so the saved
+% files are what the unchanged-source checks compare against. With false
+% the caller keeps the model, and assert_pipeline_source_unloaded stops the
+% pipeline.
 if ~logical(options.CloseSourceModel), return; end
 save_dirty_test_file(cfg);
-if ~bdIsLoaded(cfg.TopModel), return; end
 model = cfg.TopModel;
-if strcmp(get_param(model, 'Dirty'), 'on')
-    st_log(cfg, 'INFO', ...
-        'Saving source model before standalone export | Model=%s', model);
-    try
-        save_system(model);
-    catch saveError
-        error('simtest:StandalonePipelineSourceSaveFailed', ...
-            ['Cannot save %s before the standalone export: %s. ' ...
-             'Save or discard its changes, then run the pipeline again.'], ...
-            model, saveError.message);
-    end
-end
+if ~bdIsLoaded(model), load_system(cfg.ModelFile); end
+save_source_model(cfg, model);
 close_open_harnesses(cfg, model);
+internalize_external_harnesses(cfg, model);
+save_source_model(cfg, model);
 st_log(cfg, 'INFO', ...
     'Closing source model before standalone export | Model=%s', model);
 close_system(model, 0);
+end
+
+function save_source_model(cfg, model)
+if ~strcmp(get_param(model, 'Dirty'), 'on'), return; end
+st_log(cfg, 'INFO', ...
+    'Saving source model before standalone export | Model=%s', model);
+try
+    save_system(model);
+catch saveError
+    error('simtest:StandalonePipelineSourceSaveFailed', ...
+        ['Cannot save %s before the standalone export: %s. ' ...
+         'Save or discard its changes, then run the pipeline again.'], ...
+        model, saveError.message);
+end
+end
+
+function internalize_external_harnesses(cfg, model)
+%INTERNALIZE_EXTERNAL_HARNESSES Store externally saved harnesses in the model.
+% A harness left external (usually one made by hand) needs its .slx on disk
+% for the unchanged-source checks, and that file is often missing or moved.
+% The toolkit keeps every harness inside the model, so the pipeline does
+% the same here instead of stopping on StandalonePipelineHarnessFileMissing.
+harnesses = sltest.harness.find(model);
+if ~isfield(harnesses, 'saveExternally'), return; end
+external = find(arrayfun( ...
+    @(h) logical_value(h.saveExternally), harnesses));
+if isempty(external), return; end
+st_log(cfg, 'INFO', ...
+    'Storing external harnesses inside the model start | Model=%s | Count=%d', ...
+    model, numel(external));
+for i = reshape(external, 1, [])
+    owner = char(string(harnesses(i).ownerFullPath));
+    name = char(string(harnesses(i).name));
+    st_log(cfg, 'WARN', ...
+        'Harness was saved externally; storing it inside the model | Harness=%s | Owner=%s', ...
+        name, owner);
+    try
+        sltest.harness.set(owner, name, 'SaveExternally', false);
+    catch setError
+        st_log(cfg, 'ERROR', ...
+            'Cannot store external harness inside the model | Harness=%s | Owner=%s | %s', ...
+            name, owner, setError.message);
+        error('simtest:StandalonePipelineHarnessInternalizeFailed', ...
+            ['Cannot store external Harness %s (Owner=%s) inside %s: %s. ' ...
+             'Open the model, set the Harness storage to internal, ' ...
+             'save, and run the pipeline again.'], ...
+            name, owner, model, setError.message);
+    end
+end
+st_log(cfg, 'INFO', ...
+    'Storing external harnesses inside the model end | Model=%s | Count=%d', ...
+    model, numel(external));
 end
 
 function close_open_harnesses(cfg, model)

@@ -14,6 +14,10 @@
   (`st_collect_per_cut_results`), 최종 문서 추출, `CloseSourceModel` 자동
   저장·닫기 등 그 뒤에 들어온 기능은 **main에 있지만 실물 미검증**이다.
   main에 있다는 것이 검증됐다는 뜻이 아니다.
+- 2026-09-29 develop: `release_source_model`이 외부 저장 Harness를
+  `sltest.harness.set(..., 'SaveExternally', false)`로 모델 안에 옮기고 저장한다.
+  `.slx`가 없는 외부 Harness에도 이 set이 통하는지는 **실물 미검증**이다. 사용자는
+  같은 상황을 GUI에서 내부로 바꿔 해결했다.
 - Standalone Action 단순화 작업 시작 기준: 3e5ed63
 - 필수 기능 기준: feat/per-cut-filtered-execution의 7f0825e
 - 필수 handoff 기준: 2b3ba09 이후
