@@ -33,7 +33,7 @@ verifyFalse(testCase, contains(text, 'load_system(cfg.ModelFile)'));
 end
 
 function testDefaultMatchesTheManualSnippet(testCase)
-% docs/manual/open-results.md: addpath every target OutputDirectory, open
+% docs/reference/open-results.md: addpath every target OutputDirectory, open
 % the packaged Test File with sltest.testmanager.TestFile, then view.
 % Everything beyond that is opt-in.
 text = source();

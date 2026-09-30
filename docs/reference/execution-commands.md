@@ -5,7 +5,7 @@
 
 - Excel 열의 역할: [관리 Excel 열 사전](workbook-reference.md)
 - 전역 설정의 역할: [설정 사전](config-reference.md)
-- 복사해서 바로 쓸 코드: [수동 실행 안내](manual/README.md)
+- 복사해서 바로 쓸 코드: [사용자 매뉴얼](../user-manual.md)
 
 `st_export_test_specification`이 만드는 Excel의 첫 번째 `사용법` 탭에도 같은 기준의
 표가 들어갑니다.
@@ -307,7 +307,7 @@ info = st_run_from_stage('Workflow','FROM_HARNESS', 'FromStage','ASSESSMENT');
 | `SourcePipelineId` | `''` | `STANDALONE`의 `PACKAGE`/`SUMMARY` 재생성 원본 |
 
 `st_check_readiness`로 먼저 검사한 뒤 같은 인자로 이 명령을 실행하는 것이 표준
-절차입니다. 자세한 제한은 [재시작](manual/restart.md)에 있습니다.
+절차입니다. 자세한 제한은 [재시작](restart.md)에 있습니다.
 
 ## 6. 테스트 실행
 
@@ -452,7 +452,7 @@ Action의 역할:
 
 ### `st_open_standalone_test_manager`
 
-PACKAGE가 끝난 제출물을 Test Manager에서 엽니다. 기본 동작은 [결과 열기](manual/open-results.md)의
+PACKAGE가 끝난 제출물을 Test Manager에서 엽니다. 기본 동작은 [결과 열기](open-results.md)의
 수동 절차와 같습니다: 대상 CUT 폴더 전부 `addpath` → `sltest.testmanager.TestFile(TestManagerFile)`
 → `sltest.testmanager.view`. **파일을 만들거나 바꾸지 않고, 모델도 로드하지 않습니다.**
 
@@ -747,7 +747,7 @@ plan = st_cleanup_results('Scope','STATE','Apply',true);  % 실제 삭제
 부분 재현이 필요할 때** 직접 실행합니다. 앞 단계 산출물이 없으면 실패합니다.
 
 실행 순서와 각 단계의 확인 방법은
-[단계별로 끊어서 실행하기](manual/step-by-step.md)에 있습니다. 전부 인자 없이
+[단계별로 끊어서 실행하기](step-by-step.md)에 있습니다. 전부 인자 없이
 부르며 관리 Excel의 활성 행 전체를 대상으로 합니다.
 
 > 단계 명령을 직접 부르면 **checkpoint를 남기지 않습니다.** 이후

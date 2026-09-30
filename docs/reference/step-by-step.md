@@ -4,7 +4,7 @@
 문서는 그것을 **단계별로 나눠 실행하고, 각 단계 결과를 확인한 뒤 다음으로
 넘어가는** 방법을 설명합니다.
 
-평소에는 [준비 및 실행](prepare.md)의 한 번에 실행하는 방식이 더 안전하고
+평소에는 [사용자 매뉴얼](../user-manual.md)의 한 번에 실행하는 방식이 더 안전하고
 빠릅니다. 아래 경우에만 이 문서를 쓰십시오.
 
 - 한 단계의 결과를 눈으로 확인하고 다음으로 넘어가고 싶을 때
@@ -76,7 +76,7 @@ CUT마다 Test Harness를 만듭니다.
 `Status` 열이 전부 `OK` 또는 `SKIP`이어야 합니다.
 
 **실패 시:** `HarnessChangedLibraryLink`가 나오면 **모델을 저장하지 말고** 닫으십시오.
-자세한 내용은 [문제 해결](../troubleshooting.md)에 있습니다.
+자세한 내용은 [문제 해결](troubleshooting.md)에 있습니다.
 
 ### 2단계 — 입력 설정
 
@@ -280,7 +280,7 @@ info = st_run_standalone_coverage_pipeline( ...
 ```
 
 원본 Top Model과 열린 Harness를 **저장하고 닫은 뒤** 실행합니다. 자세한 내용은
-[Standalone 실행](standalone-run.md)에 있습니다.
+[사용자 매뉴얼 5절](../user-manual.md#5-3단계--standalone-제출물)에 있습니다.
 
 ## 4. 순서를 지켜야 하는 이유
 
@@ -437,5 +437,5 @@ Assessment 구조가 바뀌면 Iteration 연결도 다시 확인해야 하므로
   판단한 뒤 그 단계부터 다시 실행하십시오.
 - 단계별 결과 INI의 `Status`와 `Message` 열이 가장 빠른 진단 수단입니다.
 
-각 명령이 받는 옵션의 전체 목록은 [실행 명령 사전](../execution-commands.md),
-단계별 내부 동작은 [운영자 매뉴얼](../operator-manual.md)에 있습니다.
+각 명령이 받는 옵션의 전체 목록은 [실행 명령 사전](execution-commands.md),
+단계별 내부 동작은 [운영자 매뉴얼](operator-manual.md)에 있습니다.

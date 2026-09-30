@@ -50,7 +50,7 @@ summary = st_check_actual_system();
 ```
 
 중간 단계부터 실행할 때 앞 단계가 멀쩡한지 미리 보려면 선택 기능인
-`st_check_readiness`를 쓸 수 있습니다. [재시작](manual/restart.md)을 보십시오.
+`st_check_readiness`를 쓸 수 있습니다. [재시작](restart.md)을 보십시오.
 
 ## 3. 준비 단계 오류
 
@@ -241,7 +241,7 @@ CUT이면 분모가 0이 되어 백분율을 계산할 수 없습니다. 이것�
 
 해당 CVF를 만든 standalone 모델을 먼저 여십시오. 그 모델은 CVF 바로 옆에 있습니다.
 **원본 Top Model을 열어서는 안 됩니다.** standalone 모델은 원본의 SID를 재사용하지
-않습니다. 자세한 설명은 [결과 열기](manual/open-results.md)에 있습니다.
+않습니다. 자세한 설명은 [결과 열기](open-results.md)에 있습니다.
 
 rule의 rationale이 `none`으로 보이는 것도 의도된 값입니다. 규칙 분류는 rationale
 문구가 아니라 selector 경로로 판정합니다.
@@ -316,7 +316,7 @@ Harness와 Input이 만들어지기 **전에** 실패한 경우에는 보존을 
 허용합니다.
 
 **대처:** 다시 만들려면 `st_run_from_stage`를 쓰십시오. 저장된 증거를 검증한 뒤
-**새 PipelineId**로 재생성합니다. [재시작](manual/restart.md)에 절차가 있습니다.
+**새 PipelineId**로 재생성합니다. [재시작](restart.md)에 절차가 있습니다.
 
 ### `StandalonePipelineHarnessFileMissing`
 

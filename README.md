@@ -6,9 +6,9 @@ Test Manager Test Case를 자동으로 구성하고, 테스트 실행·기대값
 
 저장소: [Huelune/Simulink-Test-Automation-Toolkit](https://github.com/Huelune/Simulink-Test-Automation-Toolkit)
 
-> **처음 쓰신다면 [처음 시작하기](docs/getting-started.md)부터 읽으십시오.**
+> **처음 쓰신다면 [사용자 매뉴얼](docs/user-manual.md)부터 읽으십시오.**
 > MATLAB과 Simulink Test를 모른다는 전제로 설명합니다.
-> 용어가 낯설면 [용어집](docs/glossary.md)을 함께 보십시오.
+> 용어가 낯설면 [용어집](docs/reference/glossary.md)을 함께 보십시오.
 
 ## 무엇을 대신해 주는가
 
@@ -56,53 +56,33 @@ TestManagement.xlsx
 | Simulink Design Verifier | `SldvMode=GENERATE`를 쓸 때만 필수 |
 
 입력으로 필요한 것은 대상 Top Model과 `TestManagement.xlsx` 두 가지입니다. 자세한
-준비물은 [처음 시작하기](docs/getting-started.md)에 있습니다.
+준비물은 [사용자 매뉴얼](docs/user-manual.md)에 있습니다.
 
 ## 가장 빠른 시작
 
-MATLAB에서 저장소 루트를 Current Folder로 연 뒤 실행합니다.
+MATLAB에서 툴킷 클론 루트를 Current Folder로 연 뒤 실행합니다. 모두 기본 옵션입니다.
 
 ```matlab
-st_setup
-st_pre_validate_targets
-st_run_from_harness
+st_setup                          % 세션마다 한 번
+st_select_target_model            % 처음이거나 모델을 바꿀 때
+st_set_standalone_coverage_root   % 결과 루트 D:\model_result\<Top Model>
+st_pre_validate_targets           % Excel을 고칠 때마다
 
-st_run_standalone_coverage_pipeline( ...
-    'Action', 'ALL', ...
-    'ContinueOnFailure', true, ...
-    'FailOnNonPass', false);
+st_run_from_harness               % Harness 생성 → 준비 → 실행
+st_collect_per_cut_results        % 결과 정리 (필수)
+
+info = st_run_standalone_coverage_pipeline();     % standalone 제출물
+st_check_standalone_coverage();                    % 1111111111이면 정상
+st_classify_standalone_results('PipelineId', info.PipelineId);   % 팀 제출 트리
+st_export_final_document('CoveragePipelineId', info.PipelineId); % 최종 문서
 ```
 
-| 명령 | 하는 일 |
-| --- | --- |
-| `st_setup` | `src/`와 진단 명령을 MATLAB path에 등록합니다. 세션마다 한 번 |
-| `st_pre_validate_targets` | Excel의 CUT 경로를 실행 전에 확인합니다 |
-| `st_run_from_harness` | Harness·입력·verify·Test Case를 만들고 테스트를 실행합니다 |
-| `st_run_standalone_coverage_pipeline` | 그 결과를 독립 실행 가능한 제출물로 묶습니다 |
-
-처음이거나 대상 모델을 바꿀 때만 모델 선택을 사이에 넣습니다. 선택 결과는
-`runtime_target.mat`에 저장되어 이후 실행에서 재사용됩니다.
-
-```matlab
-st_select_target_model
-```
-
-제출물이 제대로 만들어졌는지는 읽기 전용 검사로 확인합니다. `1111111111`이면
-정상입니다.
-
-```matlab
-[code, summary, details] = st_check_standalone_coverage();
-```
-
-Harness가 이미 전부 있으면 생성 단계를 건너뛰는 진입점을 씁니다.
-
-```matlab
-st_run_after_harness
-```
+단계마다 무엇을 확인하고 어떤 옵션이 있는지는 [사용자 매뉴얼](docs/user-manual.md)에
+있습니다.
 
 > **실행 전 주의:** 이 도구는 모델과 Test File을 실제로 수정합니다. 처음 돌리기
 > 전에 백업하고, 기본 기대값 정책이 `APPLY`(실패 시 기대값 자동 갱신)라는 점을
-> [처음 시작하기 7장](docs/getting-started.md#7-기대값-자동-갱신apply-주의)에서
+> [사용자 매뉴얼 2.3절](docs/user-manual.md#23-실행-전-주의--모델이-바뀝니다)에서
 > 확인하십시오.
 
 모델 이름과 파일 경로는 추적되는 `src/config/st_config.m`에 기록하지 않습니다.
@@ -123,10 +103,10 @@ Git에서 제외된 `runtime_target.mat`에만 저장되므로 저장소를 pull
 
 나머지 열(SLDV 입력, 기대값 정책, Coverage 필터, 준비 재실행, Harness 복제)은 전부
 선택입니다. 모든 열의 역할·기본값·잘못 적었을 때의 동작은
-**[관리 Excel 열 사전](docs/workbook-reference.md)** 한 곳에 정리되어 있습니다.
+**[관리 Excel 열 사전](docs/reference/workbook-reference.md)** 한 곳에 정리되어 있습니다.
 
-전역 기본값은 **[설정 사전](docs/config-reference.md)**, 명령과 그 옵션은
-**[실행 명령 사전](docs/execution-commands.md)** 을 보십시오.
+전역 기본값은 **[설정 사전](docs/reference/config-reference.md)**, 명령과 그 옵션은
+**[실행 명령 사전](docs/reference/execution-commands.md)** 을 보십시오.
 
 ## 실행 모드
 
@@ -176,29 +156,18 @@ result/
 
 | 문서 | 언제 보는가 |
 | --- | --- |
-| [내부 표준 명령](docs/team-commands.md) | **평소 쓰는 명령만 빠르게 볼 때** |
+| [사용자 매뉴얼](docs/user-manual.md) | **처음부터 끝까지 따라갈 때.** 단계마다 코드·확인 방법·옵션 |
 | [문서 지도](docs/README.md) | 어떤 문서를 봐야 할지 모를 때 |
-| [처음 시작하기](docs/getting-started.md) | 설치하고 첫 실행을 할 때 |
-| [용어집](docs/glossary.md) | 용어가 낯설 때 |
-| [관리 Excel 열 사전](docs/workbook-reference.md) | Excel 열의 뜻과 기본값을 찾을 때 |
-| [설정 사전](docs/config-reference.md) | 기본 동작을 바꾸고 싶을 때 |
-| [실행 명령 사전](docs/execution-commands.md) | 어떤 명령이 있고 어떤 옵션을 받는지 |
-| [수동 실행 안내](docs/manual/README.md) | 작업별로 복사해 쓸 코드가 필요할 때 |
-| [단계별로 끊어서 실행하기](docs/manual/step-by-step.md) | Harness·입력·Assessment·Test Case·실행을 나눠서 할 때 |
-| [운영자 매뉴얼](docs/operator-manual.md) | 단계별 전제조건·부작용·복구 방법을 확인할 때 |
-| [문제 해결](docs/troubleshooting.md) | 오류가 났을 때 |
+| [용어집](docs/reference/glossary.md) | 용어가 낯설 때 |
+| [관리 Excel 열 사전](docs/reference/workbook-reference.md) | Excel 열의 뜻과 기본값을 찾을 때 |
+| [설정 사전](docs/reference/config-reference.md) | 기본 동작을 바꾸고 싶을 때 |
+| [실행 명령 사전](docs/reference/execution-commands.md) | 어떤 명령이 있고 어떤 옵션을 받는지 |
+| [운영자 매뉴얼](docs/reference/operator-manual.md) | 단계별 전제조건·부작용·복구 방법을 확인할 때 |
+| [문제 해결](docs/reference/troubleshooting.md) | 오류가 났을 때 |
 
-선택 기능:
-
-| 문서 | 언제 보는가 |
-| --- | --- |
-| [테스트 명세서 추출](docs/test-specification.md) | 실행 없이 명세 Excel을 뽑을 때 |
-| [Standalone Coverage 파이프라인](docs/standalone-coverage-pipeline.md) | 제출물의 경계와 결과 구조를 확인할 때 |
-| [내보내기 번들](docs/export-bundle.md) | 다른 PC에서 재실행할 번들을 만들 때 |
-| [Template Harness clone](docs/harness-template-clone.md) | 기존 Harness를 본떠 만들 때 |
-| [종합 검증](docs/verification.md) | 도구 자체의 상태를 인증할 때 |
-| [저장소 구조](docs/architecture.md) | 모듈 책임과 경계를 확인할 때 |
-| [TODO](docs/TODO.md) | 아직 결정·검증되지 않은 작업을 확인할 때 |
+`docs/`는 메인 매뉴얼 하나와 세 폴더로 나뉩니다. `reference/`는 자세히 볼 문서,
+`design/`은 설계, `ai/`는 AI 에이전트 작업용입니다. 전체 목록은
+[문서 지도](docs/README.md)에 있습니다.
 
 ## 저장소 구조
 
@@ -218,7 +187,7 @@ result/
 | `src/maintenance/` | 안전한 결과 정리 |
 | `diagnostics/` | MATLAB·Python 읽기 전용 진단 |
 | `tests/` | 단위·통합 테스트와 실행 시 생성 fixture |
-| `docs/` | 사용 문서 |
+| `docs/` | 문서. 메인 매뉴얼과 `reference/`·`design/`·`ai/` |
 
 기존 공개 `st_*` 함수 이름은 호환성을 위해 유지합니다. 향후 `src/+simtest` package
 이전 범위와 호환 기간은 아직 결정되지 않았습니다.
@@ -264,9 +233,9 @@ st_setup
 results = runtests(fullfile(st_project_root(), 'tests', 'unit'));
 ```
 
-이후 절차는 [R2025b 배포 전 확인](docs/manual/runtime-verification.md)과
-[종합 검증](docs/verification.md)을 따릅니다. 아직 결정되지 않은 항목은
-[TODO](docs/TODO.md)에 있습니다.
+이후 절차는 [R2025b 배포 전 확인](docs/reference/runtime-verification.md)과
+[종합 검증](docs/reference/verification.md)을 따릅니다. 아직 결정되지 않은 항목은
+[TODO](docs/design/TODO.md)에 있습니다.
 
 ## 라이선스
 

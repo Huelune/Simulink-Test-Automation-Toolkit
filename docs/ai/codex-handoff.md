@@ -287,6 +287,26 @@
   `Pre Condition` 숫자 왕복, Excel과 LibreOffice에서 수식 표시와 복구 대화상자
   미발생. 자세한 목록은 `docs/final-document.md` 11장에 있다.
 
+## 2026-09-30 문서 폴더 재구성
+
+- 사용자 진입점은 `docs/user-manual.md` 하나다. 준비부터 최종 문서까지 단계마다
+  코드·확인 방법·옵션 표를 적는다. 이 이름은 2026-09-16에 지운 옛
+  `user-manual.md`(검증 문서)와 다른 문서다.
+- `docs/`를 역할별 폴더로 나눴다. `reference/`(Excel 열·설정·명령 사전, 용어,
+  문제 해결, 운영자 매뉴얼, 단계별 실행, 선택 기능), `design/`(architecture, TODO),
+  `ai/`(이 문서, commit-convention). `superpowers/`는 도구가 쓰는 위치라 그대로 둔다.
+  `AGENTS.md`의 두 경로도 `docs/ai/`로 바꿨다.
+- 삭제하고 `user-manual.md`로 합친 문서: `getting-started`, `team-workflow`,
+  `team-commands`, `workflow-options`, `manual/README`, `manual/prepare`,
+  `manual/standalone-run`. standalone-run의 실패 상세·PREPARE 절은
+  `reference/standalone-coverage-pipeline.md` 10·11절로 옮겼다.
+- `docs/manual/`은 없어졌다. 남은 파일(step-by-step, open-results, restart, example,
+  runtime-verification)은 `reference/`에 있다.
+- 이 문서의 위쪽 날짜 기록에 나오는 옛 경로는 당시 기록이라 고치지 않았다.
+- 매뉴얼이 같은 내용을 여러 문서에 나눠 적지 않게 한다. 절차와 기본 옵션은
+  `user-manual.md`, 옵션 전체는 `reference/execution-commands.md`, Excel 열은
+  `reference/workbook-reference.md`, 설정은 `reference/config-reference.md`가 원본이다.
+
 ## 변경 불가 핵심 결정
 
 CoverageFilterMode이 활성화된 CUT의 content rule은 CUT 자기 자신을 선택하면

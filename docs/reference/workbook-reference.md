@@ -355,7 +355,7 @@ START → HARNESS → SLDV → HARNESS_CONFIG → SIGNAL_EDITOR
 
 > 이 열은 "지금부터 다시 해라"라는 뜻이고, 앞 단계의 유효성을 검사하지는 않습니다.
 > 앞 단계가 멀쩡한지 확인한 뒤 실행하고 싶으면 `st_check_readiness`와
-> `st_run_from_stage`를 쓰십시오. [재시작](manual/restart.md)에 설명이 있습니다.
+> `st_run_from_stage`를 쓰십시오. [재시작](restart.md)에 설명이 있습니다.
 
 ## 8. Template Harness 복제
 

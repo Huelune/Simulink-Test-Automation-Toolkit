@@ -89,7 +89,7 @@ info  = st_log_scope('current')              % st_log가 조회
 
 ### 4.2 범위를 여는 명령
 
-[team-commands.md](../../team-commands.md)에 나오는 공개 명령과, 단독으로도 불리는
+[user-manual.md](../../user-manual.md)에 나오는 공개 명령과, 단독으로도 불리는
 단계 명령의 첫 줄에서 연다.
 
 - `st_run_workflow`: `st_run_from_harness`, `st_run_after_harness`,
@@ -225,7 +225,7 @@ MATLAB이 없는 편집 클론이므로 정적 계약 테스트와 순수 함수
 
 ## 9. 커밋 순서
 
-[commit-convention.md](../../commit-convention.md)에 따라 목적 하나당 커밋 하나로
+[commit-convention.md](../../ai/commit-convention.md)에 따라 목적 하나당 커밋 하나로
 나눈다.
 
 1. `feat(log)`: `st_log` 파일 기록, `st_log_scope`, `ConsoleLogLevel`,

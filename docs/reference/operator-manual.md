@@ -262,10 +262,10 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');  % 그 단�
 > 앞 단계 재실행을 **확실히 막는** 것은 선택 기능인 `st_check_readiness` +
 > `st_run_from_stage`뿐입니다. 앞 단계를 읽기 전용으로 검증한 뒤 유효하면 그보다 앞을
 > `CACHED`로 못 박고, 유효하지 않으면 자동으로 고치지 않고 중단합니다. 절차는
-> [재시작](manual/restart.md)에 있습니다.
+> [재시작](restart.md)에 있습니다.
 
 단계를 하나씩 끊어서 실행하려면
-[단계별로 끊어서 실행하기](manual/step-by-step.md)를 보십시오.
+[단계별로 끊어서 실행하기](step-by-step.md)를 보십시오.
 
 ### 5.3 checkpoint만 지우기
 

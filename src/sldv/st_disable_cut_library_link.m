@@ -13,7 +13,7 @@ function info = st_disable_cut_library_link(cfg, cutPath)
 % Simulink refuses to disable a link while any block inside it has a test
 % harness. That is why the workflow calls this before creating Harnesses.
 % On an already-prepared model the Harnesses inside the link owner must be
-% deleted once by hand; see docs/troubleshooting.md.
+% deleted once by hand; see docs/reference/troubleshooting.md.
 
 cutPath = char(string(cutPath));
 before = st_cut_library_link_state(cutPath);
