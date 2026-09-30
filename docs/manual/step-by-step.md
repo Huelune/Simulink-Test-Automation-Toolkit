@@ -29,7 +29,7 @@
 | 5a | Test Case 생성 | `st_create_test_manager` | Test File, Test Case, Iteration | `TestManagerResult.ini` |
 | 5b | 정렬 검사 | `st_validate_scenario_alignment` | (확인만) | `ScenarioAlignmentResult.ini` |
 | 6 | 실행 + verify 수정 | `st_run_tests_per_cut` 또는 `st_run_generated_tests` | 결과와 보고서 | `result/per_cut_runs/` 또는 `result/runs/` |
-| 7 | 제출물 | `st_run_standalone_coverage_pipeline` | standalone 제출물 | `result/standalone_coverage/` |
+| 7 | 제출물 | `st_run_standalone_coverage_pipeline` | standalone 제출물 | `st_set_standalone_coverage_root`로 정한 결과 루트 (기본 `result/standalone_coverage/`) |
 
 결과 INI는 전부 `result/reports/` 아래에 있습니다.
 

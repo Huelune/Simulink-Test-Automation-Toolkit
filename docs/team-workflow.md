@@ -36,8 +36,8 @@ MATLAB이 처음이면 [처음 시작하기](getting-started.md)를 옆에 두�
 | 1 | `st_run_from_harness` | Harness, Test File, `result/run_records/` | 마지막 로그가 `EXECUTE` 완료 |
 | 1-2 (필수) | `st_collect_per_cut_results` | `result/per_cut_runs/`, CVF, CUT별 보고서 | `latest.Status = PASS`, 결과 요약 Excel이 열림 |
 | 2 | `st_export_test_specification` | `result/test_specification_<시각>.xlsx` | 파일이 열리고 행 수가 시나리오 수와 같음 |
-| 3 | `st_run_standalone_coverage_pipeline` + `st_check_standalone_coverage` | `result/standalone_coverage/<PipelineId>/` | 검사 코드 `1111111111`, `Status = PASS` |
-| 4 | `classify_standalone_results.py` | `result/standalone_coverage/<TopModel>/` 세 갈래 | 건너뛴 목록에 `.slx`·`.cvf`·`.cvt`·`.html`·`.mat`이 없음 |
+| 3 | `st_run_standalone_coverage_pipeline` + `st_check_standalone_coverage` | `D:\model_result\<Top Model>\<PipelineId>\` | 검사 코드 `1111111111`, `Status = PASS` |
+| 4 | `classify_standalone_results.py` | `D:\model_result\<Top Model>\<TopModel>\` 세 갈래 | 건너뛴 목록에 `.slx`·`.cvf`·`.cvt`·`.html`·`.mat`이 없음 |
 | 5 | `st_export_final_document` | `result/final_document_<시각>.xlsx` | `TestResults` 시트에 `확인 필요 = Y`가 없거나 전부 검토됨 |
 
 한 번에 끝내는 복사용 코드는 [8절](#8-복사용-전체-코드)에 있습니다. 처음 하는
@@ -77,7 +77,7 @@ CUT 하나입니다. 열 순서는 상관없고 이름으로 찾습니다.
 | 열 | 적는 것 | 예 |
 | --- | --- | --- |
 | `CUTName` | Subsystem 블록 이름 | `Controller` |
-| `CUTPath` | Top Model 이름부터 시작하는 전체 경로 | `TopModel/Logic/Controller` |
+| `CUTPath` | Top Model 이름부터 시작하는 전체 경로. Top Model 이름을 빼고 적으면 앞에 붙여 해석합니다 | `TopModel/Logic/Controller` |
 | `HarnessName` | 만들거나 재사용할 Harness 이름 | `Controller_Harness1` |
 | `TestCaseName` | Test Manager에 만들 Test Case 이름 | `Controller_12345` |
 
@@ -292,10 +292,11 @@ disp(summary)
 
 ### 4.4 만들어진 것
 
-`result/standalone_coverage/<PipelineId>/` 아래입니다. 경로가 너무 길다는 오류가
-나면 `st_set_standalone_coverage_root`를 인자 없이 불러 `D:\model_result\<Top Model>`로
-옮기거나, `st_set_standalone_coverage_root('E:\st_out')`처럼 원하는 짧은 경로를 지정하고
-다시 돌립니다.
+준비 단계에서 인자 없이 부른 `st_set_standalone_coverage_root`가 정한 결과 루트
+`D:\model_result\<Top Model>\<PipelineId>\` 아래입니다. 다른 곳에 두려면
+`st_set_standalone_coverage_root('E:\st_out')`처럼 짧은 경로를 지정합니다. 한 번도
+지정하지 않았으면 툴킷 클론의 `result\standalone_coverage\`에 만들어지는데, 모델
+폴더가 깊으면 Windows 260자 제한에 걸리므로 권하지 않습니다.
 
 ```text
 <PipelineId>/
@@ -331,7 +332,7 @@ MATLAB이 필요 없고 표준 라이브러리만 씁니다.
 툴킷 클론 루트에서 실행합니다.
 
 ```bash
-python tools/python/classify_standalone_results.py result/standalone_coverage/<PipelineId>
+python tools/python/classify_standalone_results.py D:\model_result\<Top Model>\<PipelineId>
 ```
 
 먼저 계획만 보려면 `--dry-run`을 붙입니다. 출력 위치를 바꾸려면 `--out <폴더>`,
@@ -340,7 +341,7 @@ python tools/python/classify_standalone_results.py result/standalone_coverage/<P
 파이프라인 폴더 **옆에** `{TopModel}/`이 생깁니다.
 
 ```text
-result/standalone_coverage/{TopModel}/
+D:\model_result\<Top Model>\{TopModel}\
 ├── 테스트 케이스/{NUM}_UT_REQ_{TestCaseName}/    Input .mat
 ├── 테스트 보고서/{TopModel}.mldatx
 ├── 테스트 보고서/{NUM}_UT_REQ_{TestCaseName}/    .cvf .cvt .html + 부속 asset 폴더
@@ -433,8 +434,8 @@ PASS/FAIL이 다를 수 있으므로 판정은 1단계에서, 커버리지만 3�
 | 무엇 | 어디서 | 비고 |
 | --- | --- | --- |
 | 최종 문서 Excel | `result/final_document_<시각>.xlsx` | 5단계 |
-| 제출 트리 `{TopModel}/` 세 갈래 | `result/standalone_coverage/{TopModel}/` | 4단계. 폴더 단위로 통째로 |
-| `CoverageSummary.xlsx` | `result/standalone_coverage/<PipelineId>/` | 4단계가 복사하지 않으므로 필요하면 따로 |
+| 제출 트리 `{TopModel}/` 세 갈래 | `D:\model_result\<Top Model>\{TopModel}\` | 4단계. 폴더 단위로 통째로 |
+| `CoverageSummary.xlsx` | `D:\model_result\<Top Model>\<PipelineId>\` | 4단계가 복사하지 않으므로 필요하면 따로 |
 | 명세서 Excel (요청 시) | `result/test_specification_<시각>.xlsx` | 2단계 |
 
 실제 모델·Excel·MAT·MLDATX와 `result/` 폴더는 **Git에 올리지 않습니다.**
@@ -529,7 +530,7 @@ winopen(finalFile)
 | --- | --- |
 | `st_setup` 뒤에도 명령을 못 찾는다 | Current Folder가 클론 루트가 아닙니다 |
 | 고쳐진 오류가 다시 난다 | 클론이 예전 커밋입니다. `git pull` 후 MATLAB에서 `which -all st_setup` |
-| `CUTPath`를 찾을 수 없다 | 모델 이름부터 시작하는 전체 경로여야 합니다 |
+| `CUTPath`를 찾을 수 없다 | 블록 이름의 철자·공백을 확인합니다. Top Model 이름은 빼도 되지만 그 아래 경로는 빠짐없이 적어야 합니다 |
 | 기대값이 마음대로 바뀌었다 | `ExpectedUpdateMode`가 비어 있으면 `APPLY`입니다. `OFF`로 내리십시오 |
 | 실행은 끝났는데 판정이 빈 칸 | 결과 정리를 안 했거나, 정리 뒤 다시 돌렸습니다. `st_collect_per_cut_results` |
 | 필터 사유가 없다고 중단 | `CoverageFilterRationale`을 채우십시오 |

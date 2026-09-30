@@ -62,6 +62,8 @@ Signal Editor·SLDV 입력과 결과 보고서·Coverage를 복사합니다. 독
   standalone 모델에서 실제 누락이 발견되면 역시 부분 번들을 만들지 않습니다.
 - 번들 `template/`은 기준 상태이며 실행 중 직접 수정하지 않습니다.
 - 각 재실행은 `executions/{timestamp}/workspace`에 새 작업 사본을 만듭니다.
+  standalone 번들(`STANDALONE_HARNESS`)은 경로 길이 때문에 `tempdir\stt_build`
+  아래 짧은 폴더에서 실행한 뒤, 빌드 산출물을 뺀 사본을 이 위치로 옮깁니다.
 - 받는 쪽에서 변경되는 Harness Filename, SLDV manifest, 기대값과 Test File은
   해당 작업 사본에만 저장됩니다.
 

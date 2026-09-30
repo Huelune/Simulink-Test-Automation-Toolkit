@@ -394,7 +394,7 @@ TEMPLATE_MODEL/TemplateCUT
 
 | 증상 | 확인할 열 |
 | --- | --- |
-| 블록을 찾을 수 없다 | `CUTPath` — 모델 이름부터 시작하는 전체 경로인가 |
+| 블록을 찾을 수 없다 | `CUTPath` — 철자·공백이 맞고 중간 Subsystem이 빠지지 않았는가 (Top Model 이름은 생략 가능) |
 | Harness 설정이 서로 덮어써진다 | `CUTPath` — 두 활성 행이 같은 경로를 쓰고 있는가 |
 | MAT 파일을 찾을 수 없다 | `SldvDataFile` — 상대 경로 기준은 Excel 파일 위치입니다 |
 | MAT은 있는데 형식 오류 | `DataFileFormat` — `SLDV`와 `MAT`을 바꿔 적지 않았는가 |

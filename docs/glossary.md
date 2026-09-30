@@ -25,7 +25,7 @@ CUT은 두 값으로 지정합니다.
 | 값 | 의미 | 예 |
 | --- | --- | --- |
 | `CUTName` | Subsystem 블록의 이름 | `Controller` |
-| `CUTPath` | Top Model부터 시작하는 전체 경로 | `TopModel/Logic/Controller` |
+| `CUTPath` | Top Model부터 시작하는 전체 경로. Top Model 이름은 생략할 수 있습니다 | `TopModel/Logic/Controller` |
 
 이름만으로는 같은 이름의 Subsystem이 여러 개일 때 구분할 수 없으므로 경로가
 필요합니다. 경로를 채우는 보조 명령은 [운영자 매뉴얼](operator-manual.md)에

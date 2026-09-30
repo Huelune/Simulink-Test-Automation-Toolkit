@@ -201,8 +201,8 @@ Excel에 적은 CUT 경로가 실제로 존재하는지 확인합니다. **모�
 결과는 `result/reports/PreValidationResult.ini`에 저장됩니다.
 
 > **여기서 걸리면 다음으로 넘어가지 마십시오.** Harness를 엉뚱한 블록에 만들게
-> 됩니다. 대부분 `CUTPath` 오타이거나, 경로가 모델 이름부터 시작하지 않는
-> 경우입니다.
+> 됩니다. 대부분 `CUTPath` 오타이거나, 중간 Subsystem을 빠뜨린 경로입니다. Top
+> Model 이름은 빼고 적어도 앞에 붙여 해석합니다.
 
 ### `st_run_from_harness` / `st_run_after_harness`
 
@@ -477,7 +477,8 @@ CUT 폴더 `{NUM}_UT_REQ_{TC_NAME}` 안에:
 - target manifest
 
 root에는 재배선된 Test File과 11열짜리 `CoverageSummary.xlsx`가 생깁니다.
-저장 위치는 `result/standalone_coverage/`입니다.
+저장 위치는 `st_set_standalone_coverage_root`로 정한 결과 루트(인자 없이 부르면
+`D:\model_result\<Top Model>`)이고, 지정하지 않았으면 `result/standalone_coverage/`입니다.
 
 > 결과를 전달할 때는 **폴더 전체**를 복사하십시오. HTML은 옆의 리소스 파일 없이
 > 제대로 렌더링되지 않습니다.
@@ -629,7 +630,7 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 | 증상 | 원인과 대처 |
 | --- | --- |
 | `st_setup` 후 명령을 못 찾는다 | Current Folder가 저장소 루트가 아닙니다 |
-| `CUTPath`를 찾을 수 없다 | 모델 이름부터 시작하는 전체 경로여야 합니다 |
+| `CUTPath`를 찾을 수 없다 | 블록 이름의 철자·공백을 확인합니다. Top Model 이름은 빼도 되지만 그 아래 경로는 빠짐없이 적어야 합니다 |
 | SLDV MAT을 찾을 수 없다 | `SldvDataFile` 상대 경로 기준은 **Excel 파일이 있는 폴더**입니다 (Current Folder 아님) |
 | 같은 이름의 모델이 열려 있다 | standalone은 기본으로 저장하고 닫습니다. 그래도 나면(`CloseSourceModel=false`, 저장 실패) 저장하고 닫거나 MATLAB 재시작 |
 | 기대값이 마음대로 바뀌었다 | `ExpectedUpdateMode`가 비어 있으면 `APPLY`입니다. `OFF`로 내리십시오 |

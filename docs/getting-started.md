@@ -169,7 +169,7 @@ st_select_target_model(true)
 | 열 | 뜻 | 예 |
 | --- | --- | --- |
 | `CUTName` | 대상 Subsystem 이름 | `Controller` |
-| `CUTPath` | Top Model부터의 전체 경로 | `TopModel/Logic/Controller` |
+| `CUTPath` | Top Model부터의 전체 경로. Top Model 이름을 빼면 앞에 붙여 해석합니다 | `TopModel/Logic/Controller` |
 | `HarnessName` | 만들거나 재사용할 Harness 이름 | `Controller_Harness` |
 | `TestCaseName` | Test Manager에 만들 Test Case 이름 | `Controller_TC` |
 
@@ -229,7 +229,7 @@ Excel에 적은 경로가 실제로 존재하는지, 그 블록이 Subsystem이 
 바꾸지 않고** 확인합니다. 결과는 `result/reports/PreValidationResult.ini`에
 저장됩니다.
 
-여기서 걸리는 문제는 대부분 `CUTPath` 오타이거나, 모델 이름부터 시작하지 않는
+여기서 걸리는 문제는 대부분 `CUTPath` 오타이거나, 중간 Subsystem을 빠뜨린
 경로입니다.
 
 ## 9. 준비와 실행 — `st_run_from_harness`
