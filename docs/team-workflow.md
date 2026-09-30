@@ -455,8 +455,10 @@ PASS/FAIL이 다를 수 있으므로 판정은 1단계에서, 커버리지만 3�
 
 ## 8. 복사용 전체 코드
 
-처음부터 끝까지 한 세션에서 하는 경우입니다. 3단계의 모델 저장과 닫기, 4단계
-팀 제출 트리는 파이프라인이 하므로 MATLAB 밖에서 할 일은 없습니다.
+처음부터 끝까지 한 세션에서 하는 경우입니다. 3단계의 모델 저장과 닫기는
+파이프라인이 하고, 4단계 팀 제출 트리도 MATLAB 명령 하나라 MATLAB 밖에서 할 일은
+없습니다. 3단계의 자동 재배치는 끄고(`'ClassifyResults', false`) 4단계에서
+명시적으로 만들어, 같은 복사를 두 번 하지 않습니다.
 
 ```matlab
 %% 준비 — MATLAB을 켤 때마다
@@ -486,15 +488,17 @@ disp(specFile)
 info = st_run_standalone_coverage_pipeline( ...
     'Action', 'ALL', ...
     'ContinueOnFailure', true, ...
-    'FailOnNonPass', false);
+    'FailOnNonPass', false, ...
+    'ClassifyResults', false);  % 팀 제출 트리는 4단계에서 만듭니다
 disp(info.PipelineId)
 
 [code, summary, details] = st_check_standalone_coverage();
 disp(code)                      % 1111111111 이어야 합니다
 disp(summary)
 
-%% 4단계 — 팀 제출 트리 (3단계가 자동으로 만듭니다)
-disp(info.SubmissionTree)       % 비어 있으면 로그의 WARN 확인
+%% 4단계 — 팀 제출 트리 (기존 트리는 지우고 다시 만듭니다)
+tree = st_classify_standalone_results('PipelineId', info.PipelineId);
+disp(tree.OutputDir)
 
 %% 5단계 — 고객 제출용 최종 문서
 [T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
@@ -522,15 +526,17 @@ st_collect_per_cut_results
 info = st_run_standalone_coverage_pipeline( ...
     'Action', 'ALL', ...
     'ContinueOnFailure', true, ...
-    'FailOnNonPass', false);
+    'FailOnNonPass', false, ...
+    'ClassifyResults', false);  % 팀 제출 트리는 4단계에서 만듭니다
 disp(info.PipelineId)
 
 [code, summary, details] = st_check_standalone_coverage();
 disp(code)                      % 1111111111 이어야 합니다
 disp(summary)
 
-%% 4단계 — 팀 제출 트리 (3단계가 자동으로 만듭니다)
-disp(info.SubmissionTree)       % 비어 있으면 로그의 WARN 확인
+%% 4단계 — 팀 제출 트리 (기존 트리는 지우고 다시 만듭니다)
+tree = st_classify_standalone_results('PipelineId', info.PipelineId);
+disp(tree.OutputDir)
 
 %% 5단계 — 고객 제출용 최종 문서
 [T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
