@@ -639,7 +639,7 @@ BATCH로 돌렸으면 `st_generate_test_report`입니다. 실행할 때
 | 커버리지가 `0/0`, `N/A` | 필터가 objective를 다 뺀 정상 상태일 수 있습니다 |
 | CVF 뷰어 이름이 `n/a` | 정상입니다. 그 CVF 옆의 standalone 모델을 먼저 여십시오 (원본 Top Model 아님) |
 | 준비가 너무 오래 걸린다 | Harness 생성과 SLDV `GENERATE`는 원래 느립니다. 마지막 `START` 로그가 현재 위치입니다 |
-| 경로가 너무 길다는 오류 | `st_set_standalone_coverage_root('D:\st_out')`로 짧은 경로 지정 |
+| 경로가 너무 길다는 오류 | `st_set_standalone_coverage_root`(기본 `D:\model_result\<Top Model>`) 또는 `st_set_standalone_coverage_root('E:\st_out')`로 짧은 경로 지정 |
 | 실행은 끝났는데 보고서가 없다 | 정상입니다. `st_generate_test_report`(BATCH) 또는 `st_collect_per_cut_results`(PER_CUT)를 부르십시오. PER_CUT에서 매번 자동으로 하려면 `AutoCollect`를 쓰십시오 |
 | `RunRecordPointerMissing` | 아직 실행한 적이 없습니다. 먼저 `st_run_from_harness`를 돌리십시오 |
 | `RemovedExecutionMode` | `ExecutionMode='AUTO'`는 없어졌습니다. `'BATCH'` 또는 `'PER_CUT'`을 쓰십시오 |

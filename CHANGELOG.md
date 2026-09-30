@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **`st_set_standalone_coverage_root`를 인자 없이 부를 수 있습니다.**
+  인자가 없으면 `st_select_target_model`로 고른 Top Model 이름으로
+  `D:\model_result\<Top Model>`을 만들어 standalone 결과 루트로 저장합니다. 경로를
+  주면 예전처럼 그 경로를 씁니다. Top Model을 고르지 않았으면
+  `simtest:StandaloneCoverageRootNoTarget`으로 멈춥니다.
+
 - **1단계 PER_CUT 실행도 짧은 폴더에서 Test Case를 돌립니다.**
   원본 모델 폴더가 깊으면 Stateflow 빌드(`slprj\_sfprj\...`)가 260자를 넘겨
   커버리지가 남지 않을 수 있었습니다. `st_run_tests_per_cut`은 실행 루프 동안

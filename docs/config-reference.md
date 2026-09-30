@@ -626,7 +626,8 @@ cfg.ReportMatchCoverageObjects = true;
 
 > **Windows 경로 길이 주의:** standalone pipeline은 폴더를 여러 겹 만들기 때문에
 > 저장소가 깊은 경로에 있으면 Windows의 260자 제한에 걸릴 수 있습니다. 이때는
-> `st_set_standalone_coverage_root`로 짧은 경로(예: 다른 드라이브 루트)를 지정하십시오.
+> `st_set_standalone_coverage_root`로 짧은 경로를 지정하십시오. 인자 없이 부르면
+> 지금 선택한 Top Model 이름으로 `D:\model_result\<Top Model>`을 만들어 씁니다.
 > 이 값은 `runtime_target.mat`에 로컬로 저장되며 Git에 올라가지 않습니다.
 >
 > standalone 실행은 기록 위치(`.work\<bundle>\executions\<id>\workspace`)가 아니라

@@ -369,10 +369,12 @@ Windows의 260자 제한에 걸립니다. 두 가지 모양으로 나타납니�
 **대처:**
 
 ```matlab
-st_set_standalone_coverage_root('D:\st_out')
+st_set_standalone_coverage_root              % D:\model_result\<Top Model>
+st_set_standalone_coverage_root('E:\st_out') % 다른 경로를 쓰려면
 ```
 
-짧은 경로를 지정하면 `runtime_target.mat`에 로컬로 저장됩니다.
+인자 없이 부르면 지금 선택한 Top Model 이름으로 `D:\model_result\<Top Model>`을
+만들어 씁니다. 지정한 경로는 `runtime_target.mat`에 로컬로 저장됩니다.
 
 standalone 실행과 1단계 PER_CUT 실행은 기본적으로 `tempdir\stt_build` 아래 짧은
 폴더에서 Test Case를 돌리고 빌드 산출물도 그곳에 만들므로 두 번째 오류는 보통 나지

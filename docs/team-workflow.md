@@ -293,7 +293,8 @@ disp(summary)
 ### 4.4 만들어진 것
 
 `result/standalone_coverage/<PipelineId>/` 아래입니다. 경로가 너무 길다는 오류가
-나면 `st_set_standalone_coverage_root('D:\st_out')`처럼 짧은 경로를 지정하고
+나면 `st_set_standalone_coverage_root`를 인자 없이 불러 `D:\model_result\<Top Model>`로
+옮기거나, `st_set_standalone_coverage_root('E:\st_out')`처럼 원하는 짧은 경로를 지정하고
 다시 돌립니다.
 
 ```text
@@ -447,7 +448,7 @@ PASS/FAIL이 다를 수 있으므로 판정은 1단계에서, 커버리지만 3�
 %% 준비 — MATLAB을 켤 때마다
 st_setup
 st_select_target_model          % 처음 1회, 또는 모델을 바꿀 때만
-st_set_standalone_coverage_root('D:\st_out')  % 필수. 3단계 결과를 짧은 경로에 둡니다
+st_set_standalone_coverage_root  % 필수. 3단계 결과를 D:\model_result\<Top Model>에 둡니다
 R = st_pre_validate_targets();  % Excel을 고칠 때마다
 disp(R)
 
@@ -479,7 +480,7 @@ disp(code)                      % 1111111111 이어야 합니다
 disp(summary)
 
 %% 4단계 — 팀 제출 트리 (MATLAB 밖 명령 프롬프트에서)
-% python tools/python/classify_standalone_results.py D:\st_out\<PipelineId>
+% python tools/python/classify_standalone_results.py D:\model_result\<Top Model>\<PipelineId>
 
 %% 5단계 — 고객 제출용 최종 문서
 [T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
@@ -492,7 +493,7 @@ winopen(finalFile)
 %% 준비 — MATLAB을 켤 때마다
 st_setup
 st_select_target_model          % 처음 1회, 또는 모델을 바꿀 때만
-st_set_standalone_coverage_root('D:\st_out')  % 필수. 3단계 결과를 짧은 경로에 둡니다
+st_set_standalone_coverage_root  % 필수. 3단계 결과를 D:\model_result\<Top Model>에 둡니다
 R = st_pre_validate_targets();  % Excel을 고칠 때마다
 disp(R)
 
@@ -515,7 +516,7 @@ disp(code)                      % 1111111111 이어야 합니다
 disp(summary)
 
 %% 4단계 — 팀 제출 트리 (MATLAB 밖 명령 프롬프트에서)
-% python tools/python/classify_standalone_results.py D:\st_out\<PipelineId>
+% python tools/python/classify_standalone_results.py D:\model_result\<Top Model>\<PipelineId>
 
 %% 5단계 — 고객 제출용 최종 문서
 [T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
@@ -534,7 +535,7 @@ winopen(finalFile)
 | 필터 사유가 없다고 중단 | `CoverageFilterRationale`을 채우십시오 |
 | 같은 이름의 모델이 열려 있다고 멈춘다 | `CloseSourceModel`을 `false`로 줬거나 저장에 실패한 경우입니다. 저장하고 닫거나 MATLAB 재시작 |
 | 검사 코드에 `0`이 있다 | `details` 표에서 그 CUT의 원인을 보고 3단계를 다시 |
-| 경로가 너무 길다 | `st_set_standalone_coverage_root('D:\st_out')` |
+| 경로가 너무 길다 | `st_set_standalone_coverage_root` (`D:\model_result\<Top Model>`) |
 | 재배치 스크립트가 종료 코드 `2` | 입력 폴더가 파이프라인 루트가 아니거나 출력 폴더가 이미 있습니다. `--overwrite` |
 | 명세서나 최종 문서가 `SpecificationUnsaved`로 저장하라고 한다 | 예전 결과 정리가 Harness를 미저장으로 남긴 경우입니다. 지금은 결과 정리가 자기가 올린 표시를 되돌리므로, 여전히 나오면 정말 손으로 고친 변경입니다. 열어 보고 저장하거나 닫기 |
 | 파이프라인이 `StandalonePipelineHarnessInternalizeFailed`로 멈춘다 | 파이프라인은 외부 저장 Harness를 모델 안으로 자동으로 옮깁니다. 그 옮기기가 실패한 경우입니다. 모델을 열어 그 Harness의 저장 방식을 내부로 바꾸고 저장 |
