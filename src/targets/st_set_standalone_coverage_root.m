@@ -2,7 +2,12 @@ function cfg = st_set_standalone_coverage_root(rootDir)
 %ST_SET_STANDALONE_COVERAGE_ROOT Set a local override for the standalone
 % coverage pipeline's output root.
 %
+%   st_set_standalone_coverage_root
 %   st_set_standalone_coverage_root('D:\stt_work')
+%
+% Without an argument the root is D:\model_result\<TopModel> for the Top
+% Model chosen with st_select_target_model, created if missing. Pass a
+% path to use that instead.
 %
 % The standalone coverage pipeline (st_run_standalone_coverage_pipeline)
 % nests exported Harness models several folders deep
@@ -21,17 +26,33 @@ function cfg = st_set_standalone_coverage_root(rootDir)
 %
 %   st_set_standalone_coverage_root('')
 
-if nargin < 1
-    error('Usage: st_set_standalone_coverage_root(rootDir)');
+cfg = st_config();
+
+useDefault = nargin < 1;
+if useDefault
+    rootDir = st_default_standalone_coverage_root(cfg);
+    st_log(cfg, 'INFO', ...
+        'Standalone coverage root default chosen | TopModel=%s | Root=%s', ...
+        cfg.TopModel, rootDir);
 end
 
 rootDir = strtrim(char(string(rootDir)));
 
-cfg = st_config();
-
 if ~isempty(rootDir)
 
     parentDir = fileparts(rootDir);
+    if useDefault && ~isempty(parentDir) && ~isfolder(parentDir)
+        [created, message] = mkdir(parentDir);
+        if ~created
+            st_log(cfg, 'ERROR', ...
+                'Standalone coverage default root unavailable | %s | %s', ...
+                parentDir, message);
+            error('simtest:StandaloneCoverageRootUnavailable', ...
+                ['Cannot create %s: %s. Pass a root explicitly, for ' ...
+                 'example st_set_standalone_coverage_root(''%s'').'], ...
+                parentDir, message, 'C:\st_out');
+        end
+    end
 
     if ~isempty(parentDir) && ~isfolder(parentDir)
         error( ...

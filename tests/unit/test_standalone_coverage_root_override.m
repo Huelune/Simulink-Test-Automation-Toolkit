@@ -113,6 +113,19 @@ verifyEqual(testCase, cleared.StandaloneCoverageRootDir, ...
 end
 
 
+function testDefaultRootIsModelResultPerTopModel(testCase)
+root = st_default_standalone_coverage_root(struct('TopModel', 'MyTopModel'));
+verifyEqual(testCase, root, fullfile('D:\', 'model_result', 'MyTopModel'));
+end
+
+
+function testDefaultRootNeedsASelectedTopModel(testCase)
+verifyError(testCase, ...
+    @() st_default_standalone_coverage_root(struct('TopModel', '')), ...
+    'simtest:StandaloneCoverageRootNoTarget');
+end
+
+
 function restore_runtime_target(targetFile, hadOriginal, originalContent)
 if hadOriginal
     save(targetFile, '-struct', 'originalContent');
