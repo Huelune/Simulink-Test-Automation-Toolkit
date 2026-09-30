@@ -22,10 +22,10 @@ MATLAB이 처음이면 [처음 시작하기](getting-started.md)를 옆에 두�
  2단계       (선택) st_export_test_specification      명세서 Excel
    │
  3단계       st_run_standalone_coverage_pipeline('Action','ALL', ...)
-   │         (원본 Top Model·Harness 저장과 닫기, 4단계 팀 제출 트리는 자동)
+   │         (원본 Top Model·Harness 저장과 닫기는 자동)
    │         st_check_standalone_coverage   →  1111111111 PASS
    │
- 4단계       (자동) st_classify_standalone_results      팀 제출 트리
+ 4단계       st_classify_standalone_results            팀 제출 트리
    │
  5단계       st_export_final_document                 고객 제출용 최종 문서
 ```
@@ -37,7 +37,7 @@ MATLAB이 처음이면 [처음 시작하기](getting-started.md)를 옆에 두�
 | 1-2 (필수) | `st_collect_per_cut_results` | `result/per_cut_runs/`, CVF, CUT별 보고서 | `latest.Status = PASS`, 결과 요약 Excel이 열림 |
 | 2 | `st_export_test_specification` | `result/test_specification_<시각>.xlsx` | 파일이 열리고 행 수가 시나리오 수와 같음 |
 | 3 | `st_run_standalone_coverage_pipeline` + `st_check_standalone_coverage` | `D:\model_result\<Top Model>\<PipelineId>\` | 검사 코드 `1111111111`, `Status = PASS` |
-| 4 | 3단계가 자동으로 (`st_classify_standalone_results`) | `D:\model_result\<Top Model>\<TopModel>\` 세 갈래 | 건너뛴 목록에 `.slx`·`.cvf`·`.cvt`·`.html`·`.mat`이 없음 |
+| 4 | `st_classify_standalone_results` | `D:\model_result\<Top Model>\<TopModel>\` 세 갈래 | 건너뛴 목록에 `.slx`·`.cvf`·`.cvt`·`.html`·`.mat`이 없음 |
 | 5 | `st_export_final_document` | `result/final_document_<시각>.xlsx` | `TestResults` 시트에 `확인 필요 = Y`가 없거나 전부 검토됨 |
 
 한 번에 끝내는 복사용 코드는 [8절](#8-복사용-전체-코드)에 있습니다. 처음 하는
@@ -326,22 +326,19 @@ st_open_standalone_test_manager('PipelineId', info.PipelineId)
 ## 5. 4단계 — 팀 제출 트리로 재배치
 
 파이프라인 폴더는 CUT별로 파일 종류가 섞여 있지만, 팀 제출은 **파일 종류별 세
-갈래**를 씁니다. **3단계 `Action='ALL'`이 끝나면 자동으로 만들어지므로 따로 할
-일은 없습니다.** 파일 이름은 바꾸지 않고 복사만 합니다. 결과 위치는 `info.SubmissionTree`에
-있고, 빈 문자열이면 만들지 못한 것이니 로그의 WARN을 보십시오.
-
-다시 만들거나 다른 실행으로 만들 때는 직접 부릅니다.
+갈래**를 씁니다. 3단계가 끝난 뒤 MATLAB에서 명령 하나로 만듭니다. 파일 이름은
+바꾸지 않고 복사만 합니다.
 
 ```matlab
 st_classify_standalone_results                                  % 가장 최근 실행
-st_classify_standalone_results('PipelineId', id)                % 다른 실행으로
+st_classify_standalone_results('PipelineId', info.PipelineId)   % 방금 돌린 실행
 st_classify_standalone_results('DryRun', true)                  % 계획만 보기
 ```
 
 이미 트리가 있으면 지우고 새로 만들므로 이전 실행의 CUT 폴더가 섞이지 않습니다.
 그 폴더에 세 갈래 폴더 말고 다른 것이 있으면 지우지 않고 멈춥니다. 기존 트리를
-건드리지 않으려면 `'Replace', false`를 줍니다. 자동 실행을 끄려면 3단계에
-`'ClassifyResults', false`를 줍니다.
+건드리지 않으려면 `'Replace', false`를 줍니다. 3단계에 `'ClassifyResults', true`를
+주면 3단계가 끝날 때 자동으로 만들고 위치를 `info.SubmissionTree`에 돌려줍니다.
 
 MATLAB이 없는 PC에서는 같은 규칙의 Python 스크립트를 씁니다(`--dry-run`, `--out`,
 `--overwrite`).
@@ -457,8 +454,8 @@ PASS/FAIL이 다를 수 있으므로 판정은 1단계에서, 커버리지만 3�
 
 처음부터 끝까지 한 세션에서 하는 경우입니다. 3단계의 모델 저장과 닫기는
 파이프라인이 하고, 4단계 팀 제출 트리도 MATLAB 명령 하나라 MATLAB 밖에서 할 일은
-없습니다. 3단계의 자동 재배치는 끄고(`'ClassifyResults', false`) 4단계에서
-명시적으로 만들어, 같은 복사를 두 번 하지 않습니다.
+없습니다. 3단계 옵션은 기본값(`Action='ALL'`, `ContinueOnFailure=true`,
+`FailOnNonPass=false`, `ClassifyResults=false`)을 그대로 쓰므로 적지 않습니다.
 
 ```matlab
 %% 준비 — MATLAB을 켤 때마다
@@ -485,11 +482,7 @@ winopen(latest.Summary)
 disp(specFile)
 
 %% 3단계 — 원본 Top Model과 Harness는 파이프라인이 저장하고 닫습니다
-info = st_run_standalone_coverage_pipeline( ...
-    'Action', 'ALL', ...
-    'ContinueOnFailure', true, ...
-    'FailOnNonPass', false, ...
-    'ClassifyResults', false);  % 팀 제출 트리는 4단계에서 만듭니다
+info = st_run_standalone_coverage_pipeline();
 disp(info.PipelineId)
 
 [code, summary, details] = st_check_standalone_coverage();
@@ -523,11 +516,7 @@ st_run_from_harness
 st_collect_per_cut_results
 
 %% 3단계 — 원본 Top Model과 Harness는 파이프라인이 저장하고 닫습니다
-info = st_run_standalone_coverage_pipeline( ...
-    'Action', 'ALL', ...
-    'ContinueOnFailure', true, ...
-    'FailOnNonPass', false, ...
-    'ClassifyResults', false);  % 팀 제출 트리는 4단계에서 만듭니다
+info = st_run_standalone_coverage_pipeline();
 disp(info.PipelineId)
 
 [code, summary, details] = st_check_standalone_coverage();

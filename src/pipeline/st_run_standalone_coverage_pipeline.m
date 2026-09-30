@@ -20,8 +20,8 @@ function info = st_run_standalone_coverage_pipeline(varargin)
 %   model name. With false the pipeline keeps the older contract: a loaded
 %   source model stops it with StandaloneModelStillLoadedBeforeRun.
 %
-%   'ClassifyResults' (default true) makes Action=ALL finish by copying the
-%   pipeline into the team submission tree with
+%   'ClassifyResults' (default false) set to true makes Action=ALL finish
+%   by copying the pipeline into the team submission tree with
 %   st_classify_standalone_results, replacing the tree an earlier run left
 %   next to it. info.SubmissionTree names the tree, or is empty when the
 %   copy was skipped or failed; a failure is logged as WARN and does not
@@ -40,7 +40,7 @@ addParameter(p, 'FailOnNonPass', false, ...
     @(x) islogical(x) && isscalar(x));
 addParameter(p, 'CloseSourceModel', true, ...
     @(x) islogical(x) && isscalar(x));
-addParameter(p, 'ClassifyResults', true, ...
+addParameter(p, 'ClassifyResults', false, ...
     @(x) islogical(x) && isscalar(x));
 % Parse removed options only to return an actionable migration error.
 addParameter(p, 'RunMode', '', @(x) ischar(x) || isstring(x));

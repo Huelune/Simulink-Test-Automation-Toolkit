@@ -566,9 +566,8 @@ st_classify_standalone_results('PipelineId', id)
 
 standalone 파이프라인 폴더를 팀 제출 트리 `{TopModel}/`(테스트 케이스·테스트
 보고서·프로젝트 세 갈래)로 복사합니다. `st_run_standalone_coverage_pipeline`의
-`Action='ALL'`이 끝날 때 자동 호출되므로(`ClassifyResults`
-기본 `true`) 보통은 직접 부를 일이 없습니다. 원본 파이프라인 폴더는 바꾸지
-않습니다.
+`Action='ALL'`이 끝난 뒤 부릅니다. 파이프라인에 `'ClassifyResults', true`를 주면
+끝날 때 자동으로 부릅니다(기본 `false`). 원본 파이프라인 폴더는 바꾸지 않습니다.
 
 | 옵션 | 기본값 | 역할 |
 | --- | --- | --- |

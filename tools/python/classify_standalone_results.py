@@ -20,8 +20,9 @@ launcher .m, .work, .provenance 등)과 CUT 폴더 안의 `scv_images` 폴더는
 
 종료 코드: 0 성공, 1 복사 중 예외, 2 입력/출력 검증 실패.
 
-MATLAB에서는 같은 규칙의 st_classify_standalone_results 를 쓰고, standalone
-파이프라인 Action='ALL' 이 끝날 때 자동으로 불린다. 규칙을 바꿀 때는 둘을 함께 고친다.
+MATLAB에서는 같은 규칙의 st_classify_standalone_results 를 쓴다(standalone 파이프라인에
+ClassifyResults=true 를 주면 Action='ALL' 이 끝날 때 자동으로 불린다). 규칙을 바꿀 때는
+둘을 함께 고친다.
 """
 
 from __future__ import annotations
