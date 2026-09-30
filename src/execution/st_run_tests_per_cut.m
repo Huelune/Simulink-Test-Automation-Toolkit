@@ -193,6 +193,9 @@ else
 end
 
 abortError = [];
+% Run the Test Cases from a short folder so Simulink and Stateflow builds
+% below pwd stay inside the Windows path limit. Cleared after the loop.
+shortBuildDirectory = st_enter_short_build_directory(cfg, 'PER_CUT');
 for i = 1:n
     rowTimer = tic;
     StartedAt(i) = timestamp_text();
@@ -633,6 +636,7 @@ for i = 1:n
     end
     append_event(logPath, i, 'TARGET_COMPLETE', char(Status(i)));
 end
+clear shortBuildDirectory
 
 processed = strlength(CompletedAt) > 0;
 Status(~processed) = "SKIP";
