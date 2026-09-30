@@ -22,10 +22,10 @@ MATLAB이 처음이면 [처음 시작하기](getting-started.md)를 옆에 두�
  2단계       (선택) st_export_test_specification      명세서 Excel
    │
  3단계       st_run_standalone_coverage_pipeline('Action','ALL', ...)
-   │         (원본 Top Model·Harness 저장과 닫기는 자동)
+   │         (원본 Top Model·Harness 저장과 닫기, 4단계 팀 제출 트리는 자동)
    │         st_check_standalone_coverage   →  1111111111 PASS
    │
- 4단계       python classify_standalone_results.py    팀 제출 트리
+ 4단계       (자동) st_classify_standalone_results      팀 제출 트리
    │
  5단계       st_export_final_document                 고객 제출용 최종 문서
 ```
@@ -37,7 +37,7 @@ MATLAB이 처음이면 [처음 시작하기](getting-started.md)를 옆에 두�
 | 1-2 (필수) | `st_collect_per_cut_results` | `result/per_cut_runs/`, CVF, CUT별 보고서 | `latest.Status = PASS`, 결과 요약 Excel이 열림 |
 | 2 | `st_export_test_specification` | `result/test_specification_<시각>.xlsx` | 파일이 열리고 행 수가 시나리오 수와 같음 |
 | 3 | `st_run_standalone_coverage_pipeline` + `st_check_standalone_coverage` | `D:\model_result\<Top Model>\<PipelineId>\` | 검사 코드 `1111111111`, `Status = PASS` |
-| 4 | `classify_standalone_results.py` | `D:\model_result\<Top Model>\<TopModel>\` 세 갈래 | 건너뛴 목록에 `.slx`·`.cvf`·`.cvt`·`.html`·`.mat`이 없음 |
+| 4 | 3단계가 자동으로 (`st_classify_standalone_results`) | `D:\model_result\<Top Model>\<TopModel>\` 세 갈래 | 건너뛴 목록에 `.slx`·`.cvf`·`.cvt`·`.html`·`.mat`이 없음 |
 | 5 | `st_export_final_document` | `result/final_document_<시각>.xlsx` | `TestResults` 시트에 `확인 필요 = Y`가 없거나 전부 검토됨 |
 
 한 번에 끝내는 복사용 코드는 [8절](#8-복사용-전체-코드)에 있습니다. 처음 하는
@@ -326,17 +326,29 @@ st_open_standalone_test_manager('PipelineId', info.PipelineId)
 ## 5. 4단계 — 팀 제출 트리로 재배치
 
 파이프라인 폴더는 CUT별로 파일 종류가 섞여 있지만, 팀 제출은 **파일 종류별 세
-갈래**를 씁니다. Python 스크립트가 파일 이름을 바꾸지 않고 복사만 합니다.
-MATLAB이 필요 없고 표준 라이브러리만 씁니다.
+갈래**를 씁니다. **3단계 `Action='ALL'`이 끝나면 자동으로 만들어지므로 따로 할
+일은 없습니다.** 파일 이름은 바꾸지 않고 복사만 합니다. 결과 위치는 `info.SubmissionTree`에
+있고, 빈 문자열이면 만들지 못한 것이니 로그의 WARN을 보십시오.
 
-툴킷 클론 루트에서 실행합니다.
+다시 만들거나 다른 실행으로 만들 때는 직접 부릅니다.
+
+```matlab
+st_classify_standalone_results                                  % 가장 최근 실행
+st_classify_standalone_results('PipelineId', id, 'Replace', true)  % 기존 트리를 지우고 다시
+st_classify_standalone_results('DryRun', true)                  % 계획만 보기
+```
+
+이미 트리가 있으면 `'Replace', true` 없이는 멈춥니다. `Replace`는 그 폴더에 세
+갈래 폴더만 있을 때만 지웁니다. 3단계 자동 실행은 항상 `Replace`로 부르므로 이전
+실행의 CUT 폴더가 섞이지 않습니다. 자동 실행을 끄려면 3단계에
+`'ClassifyResults', false`를 줍니다.
+
+MATLAB이 없는 PC에서는 같은 규칙의 Python 스크립트를 씁니다(`--dry-run`, `--out`,
+`--overwrite`).
 
 ```bash
 python tools/python/classify_standalone_results.py D:\model_result\<Top Model>\<PipelineId>
 ```
-
-먼저 계획만 보려면 `--dry-run`을 붙입니다. 출력 위치를 바꾸려면 `--out <폴더>`,
-이미 있는 출력 폴더를 덮어쓰려면 `--overwrite`입니다.
 
 파이프라인 폴더 **옆에** `{TopModel}/`이 생깁니다.
 
@@ -349,9 +361,10 @@ D:\model_result\<Top Model>\{TopModel}\
 ```
 
 `CoverageSummary.xlsx`, manifest, 로그, launcher, CUT 폴더 안의 `scv_images`는
-복사하지 않고 **건너뛴 목록으로 출력**합니다. 그 목록에 `.slx`·`.mat`·`.cvf`·
-`.cvt`·`.html`이 보이면 CUT 폴더 이름이 `NNN_UT_REQ_` 규칙을 벗어난 것이니 원인을
-확인하십시오. 종료 코드는 `0` 성공, `1` 복사 중 예외, `2` 입력·출력 검증 실패입니다.
+복사하지 않고 **건너뛴 목록**(`info.Skipped`)에만 남깁니다. 그 목록에 `.slx`·`.mat`·
+`.cvf`·`.cvt`·`.html`이 보이면 CUT 폴더 이름이 `NNN_UT_REQ_` 규칙을 벗어난 것이니
+원인을 확인하십시오. Python 스크립트의 종료 코드는 `0` 성공, `1` 복사 중 예외,
+`2` 입력·출력 검증 실패입니다.
 
 원본 파이프라인 폴더는 그대로 남으므로 `st_open_standalone_test_manager`와
 `st_export_final_document`는 계속 원본에 대해 동작합니다. **HTML은 옆의 부속
@@ -442,8 +455,8 @@ PASS/FAIL이 다를 수 있으므로 판정은 1단계에서, 커버리지만 3�
 
 ## 8. 복사용 전체 코드
 
-처음부터 끝까지 한 세션에서 하는 경우입니다. 3단계의 모델 저장과 닫기는
-파이프라인이 하므로, 손으로 할 것은 4단계의 명령 프롬프트 한 줄뿐입니다.
+처음부터 끝까지 한 세션에서 하는 경우입니다. 3단계의 모델 저장과 닫기, 4단계
+팀 제출 트리는 파이프라인이 하므로 MATLAB 밖에서 할 일은 없습니다.
 
 ```matlab
 %% 준비 — MATLAB을 켤 때마다
@@ -480,8 +493,8 @@ disp(info.PipelineId)
 disp(code)                      % 1111111111 이어야 합니다
 disp(summary)
 
-%% 4단계 — 팀 제출 트리 (MATLAB 밖 명령 프롬프트에서)
-% python tools/python/classify_standalone_results.py D:\model_result\<Top Model>\<PipelineId>
+%% 4단계 — 팀 제출 트리 (3단계가 자동으로 만듭니다)
+disp(info.SubmissionTree)       % 비어 있으면 로그의 WARN 확인
 
 %% 5단계 — 고객 제출용 최종 문서
 [T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
@@ -516,8 +529,8 @@ disp(info.PipelineId)
 disp(code)                      % 1111111111 이어야 합니다
 disp(summary)
 
-%% 4단계 — 팀 제출 트리 (MATLAB 밖 명령 프롬프트에서)
-% python tools/python/classify_standalone_results.py D:\model_result\<Top Model>\<PipelineId>
+%% 4단계 — 팀 제출 트리 (3단계가 자동으로 만듭니다)
+disp(info.SubmissionTree)       % 비어 있으면 로그의 WARN 확인
 
 %% 5단계 — 고객 제출용 최종 문서
 [T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);

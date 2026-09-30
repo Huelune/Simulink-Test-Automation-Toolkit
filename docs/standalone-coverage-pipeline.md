@@ -142,8 +142,16 @@ Coverage 보고서 하나만 보존하며, 렌더링에 필요한 부속 asset�
 
 ### 팀 제출 트리로 재배치
 
-팀 내부 제출은 위 폴더를 파일 종류별 세 갈래로 나눈 형태를 씁니다. MATLAB 없이
-Python만으로 재배치합니다.
+팀 내부 제출은 위 폴더를 파일 종류별 세 갈래로 나눈 형태를 씁니다.
+`Action='ALL'`이 끝나면 `st_classify_standalone_results`가 자동으로 재배치하고
+(`ClassifyResults` 기본 `true`, 기존 트리는 지우고 다시 만듦) 위치를
+`info.SubmissionTree`에 돌려줍니다. 재배치에 실패해도 파이프라인은 실패로 끝나지
+않고 WARN만 남깁니다. 다시 만들 때는 직접 부르고, MATLAB이 없는 PC에서는 같은
+규칙의 Python 스크립트를 씁니다.
+
+```matlab
+st_classify_standalone_results('PipelineId', id, 'Replace', true)
+```
 
 ```bash
 python tools/python/classify_standalone_results.py result/standalone_coverage/{PipelineId}

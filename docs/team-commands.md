@@ -557,6 +557,30 @@ MAT·CVF를 이름으로 찾을 수 있게), `TestManager/`의 재배선된 Test
 `'ClearTestManager', true`로 부르십시오. `ClearTestManager`는 Test Manager에 열린
 **모든** Test File과 Result를 닫으니, 저장하지 않은 것이 있으면 먼저 저장하십시오.
 
+### `st_classify_standalone_results`
+
+```matlab
+st_classify_standalone_results                                   % 가장 최근 실행
+st_classify_standalone_results('PipelineId', id, 'Replace', true)
+```
+
+standalone 파이프라인 폴더를 팀 제출 트리 `{TopModel}/`(테스트 케이스·테스트
+보고서·프로젝트 세 갈래)로 복사합니다. `st_run_standalone_coverage_pipeline`의
+`Action='ALL'`이 끝날 때 `'Replace', true`로 자동 호출되므로(`ClassifyResults`
+기본 `true`) 보통은 직접 부를 일이 없습니다. 원본 파이프라인 폴더는 바꾸지
+않습니다.
+
+| 옵션 | 기본값 | 역할 |
+| --- | --- | --- |
+| `PipelineId` | `'LATEST'` | 정리할 실행 id |
+| `PipelineRoot` | `''` | id 대신 파이프라인 폴더를 직접 지정 |
+| `OutputDir` | `''` | 출력 폴더. 비우면 파이프라인 폴더 옆 `{TopModel}` |
+| `Replace` | `false` | 출력 폴더가 있으면 지우고 다시 만듭니다. 세 갈래 폴더만 있을 때만 지웁니다 |
+| `DryRun` | `false` | 계획만 출력하고 복사하지 않습니다 |
+
+같은 규칙의 `tools/python/classify_standalone_results.py`가 MATLAB 없는 PC용으로
+남아 있습니다. 규칙을 바꿀 때는 둘을 함께 고칩니다.
+
 ### `st_export_final_document`
 
 ```matlab

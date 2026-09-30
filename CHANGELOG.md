@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **팀 제출 트리 재배치를 MATLAB에서 하고, 3단계가 자동으로 부릅니다.**
+  `tools/python/classify_standalone_results.py`와 같은 규칙의
+  `st_classify_standalone_results`를 추가했습니다. `st_run_standalone_coverage_pipeline`
+  의 `Action='ALL'`은 끝날 때 이 함수를 `'Replace', true`로 불러 파이프라인 폴더 옆
+  `{TopModel}\`을 새로 만들고 위치를 `info.SubmissionTree`에 돌려줍니다. 기존 트리는
+  세 갈래 폴더만 있을 때만 지웁니다. 재배치 실패는 WARN으로 남고 파이프라인을
+  실패시키지 않습니다. `'ClassifyResults', false`로 끌 수 있습니다. Python
+  스크립트는 MATLAB 없는 PC용으로 남습니다.
+
 - **SLDV 준비와 Harness 생성도 짧은 폴더에서 돕니다.**
   PER_CUT 실행과 같은 방식으로 `st_prepare_sldv_targets`와 `st_create_harnesses`의
   대상 루프 동안 현재 폴더와 빌드 폴더를 `StandaloneBuildCacheDir`(비우면
