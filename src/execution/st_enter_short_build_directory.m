@@ -15,13 +15,7 @@ if nargin < 2 || strlength(strtrim(string(label))) == 0
     label = 'BUILD';
 end
 label = char(string(label));
-base = '';
-if isfield(cfg, 'StandaloneBuildCacheDir')
-    base = strtrim(char(string(cfg.StandaloneBuildCacheDir)));
-end
-if isempty(base)
-    base = fullfile(tempdir, 'stt_build');
-end
+base = st_short_build_base(cfg);
 previousDirectory = pwd;
 if is_under_root(previousDirectory, base)
     st_log(cfg, 'DEBUG', ...
@@ -32,7 +26,7 @@ if is_under_root(previousDirectory, base)
 end
 
 [~, token] = fileparts(tempname);
-folder = fullfile(base, ['pc_' token(end-7:end)]);
+folder = fullfile(base, [lower(label) '_' token(end-7:end)]);
 [created, message] = mkdir(folder);
 if ~created
     st_log(cfg, 'ERROR', ...

@@ -499,9 +499,10 @@ end
 % therefore executes in <dir>/<id>_ws with its build cache in <dir>/<id>,
 % copies the workspace (without build products) to its recorded place, and
 % removes both. Empty (default) uses tempdir/stt_build; set a short path
-% such as 'D:\stt_build' to keep it on a specific drive. PER_CUT runs its
-% Test Cases from <dir>/pc_<id> for the same reason; see
-% st_enter_short_build_directory.
+% such as 'D:\stt_build' to keep it on a specific drive. SLDV preparation,
+% Harness creation, and PER_CUT run their loops from <dir>/<stage>_<id> for
+% the same reason (st_enter_short_build_directory), and SLDV stages its
+% output in <dir>/sldvout_<id>.
 cfg.StandaloneBuildCacheDir = '';
 
 % Standalone verification runs and latest pointers are stored separately

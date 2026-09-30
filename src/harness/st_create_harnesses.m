@@ -40,7 +40,9 @@ fprintf('Count : %d\n', n);
 fprintf('Start : %s\n', st_now_text());
 fprintf('============================================\n');
 
-
+% Creating a Harness can compile the model, which builds below pwd; run
+% from a short folder so that stays inside the Windows path limit.
+shortBuildDirectory = st_enter_short_build_directory(cfg, 'HARNESS');
 for i = 1:n
 
     if ~selection.Run(i)
@@ -287,6 +289,7 @@ for i = 1:n
         '[HarnessCreate %d/%d] finished | status=%s | elapsed=%.3f sec', ...
         i, n, char(Status(i)), ElapsedSec(i));
 end
+clear shortBuildDirectory
 
 
 R = table( ...

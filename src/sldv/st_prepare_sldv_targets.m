@@ -70,6 +70,9 @@ fprintf('\n============================================\n');
 fprintf('Prepare FILE / Simulink Design Verifier Data\n');
 fprintf('============================================\n');
 
+% SLDV compiles the model and builds below pwd; run from a short folder so
+% that stays inside the Windows path limit. Cleared after the loop.
+shortBuildDirectory = st_enter_short_build_directory(cfg, 'SLDV');
 for i = 1:n
     timerValue = tic;
     ownerPath = st_normalize_cut_path(T.CUTPath(i), cfg.TopModel);
@@ -422,6 +425,7 @@ for i = 1:n
         mode, ...
         char(Message(i)));
 end
+clear shortBuildDirectory
 
 % Signal Editor MAT ownership is checked only after every target data file
 % has passed its source-side validation. This stage does not modify models.
@@ -751,7 +755,11 @@ if ~isfolder(targetDir)
     mkdir(targetDir);
 end
 
-stagingDir = tempname(targetDir);
+% sldvrun nests its own folders below OutputDir, so stage in the short
+% build base rather than under the result tree.
+[~, stagingToken] = fileparts(tempname);
+stagingDir = fullfile(st_short_build_base(cfg), ...
+    ['sldvout_' stagingToken(end-7:end)]);
 mkdir(stagingDir);
 
 cleanup = onCleanup( ...
