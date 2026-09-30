@@ -19,6 +19,13 @@ function info = st_run_standalone_coverage_pipeline(varargin)
 %   export, because the exported bundle loads its own copy under the same
 %   model name. With false the pipeline keeps the older contract: a loaded
 %   source model stops it with StandaloneModelStillLoadedBeforeRun.
+%
+%   'ClassifyResults' (default true) makes Action=ALL finish by copying the
+%   pipeline into the team submission tree with
+%   st_classify_standalone_results, replacing the tree an earlier run left
+%   next to it. info.SubmissionTree names the tree, or is empty when the
+%   copy was skipped or failed; a failure is logged as WARN and does not
+%   fail the pipeline, whose own artifacts are already complete.
 
 p = inputParser;
 p.FunctionName = mfilename;
@@ -32,6 +39,8 @@ addParameter(p, 'ContinueOnFailure', true, ...
 addParameter(p, 'FailOnNonPass', false, ...
     @(x) islogical(x) && isscalar(x));
 addParameter(p, 'CloseSourceModel', true, ...
+    @(x) islogical(x) && isscalar(x));
+addParameter(p, 'ClassifyResults', true, ...
     @(x) islogical(x) && isscalar(x));
 % Parse removed options only to return an actionable migration error.
 addParameter(p, 'RunMode', '', @(x) ischar(x) || isstring(x));
@@ -108,6 +117,11 @@ try
     manifestPath = st_write_standalone_pipeline_manifest( ...
         outputRoot, manifest);
     info = public_info(manifest, manifestPath);
+    info.SubmissionTree = '';
+    if strcmp(action, 'ALL') && p.Results.ClassifyResults
+        info.SubmissionTree = classify_submission_tree( ...
+            fileparts(manifestPath), cfg);
+    end
     st_log(cfg, 'INFO', ...
         ['Standalone coverage pipeline complete | Action=%s | ' ...
          'PipelineId=%s | elapsed=%.3f sec'], ...
@@ -1159,6 +1173,21 @@ end
 
 function value = append_message(existing, added)
 if isempty(existing), value = added; else, value = [existing ' | ' added]; end
+end
+
+function tree = classify_submission_tree(pipelineRoot, cfg)
+%CLASSIFY_SUBMISSION_TREE Team submission tree for a finished ALL run.
+tree = '';
+try
+    result = st_classify_standalone_results( ...
+        'PipelineRoot', pipelineRoot, 'Replace', true);
+    tree = result.OutputDir;
+catch ME
+    st_log(cfg, 'WARN', ...
+        ['Standalone submission tree was not created | %s: %s | ' ...
+         'Rerun st_classify_standalone_results(''PipelineRoot'', ''%s'', ' ...
+         '''Replace'', true)'], ME.identifier, ME.message, pipelineRoot);
+end
 end
 
 function info = public_info(manifest, manifestPath)
