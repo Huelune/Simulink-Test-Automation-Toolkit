@@ -638,10 +638,13 @@ cfg.ReportMatchCoverageObjects = true;
 > 끝나면 작업 폴더를 빌드 산출물 없이 기록 위치로 복사하고 두 폴더를 지웁니다.
 > 실행이 실패하면 복사는 하되 짧은 폴더를 남기고 WARN 로그에 위치를 적습니다.
 >
-> 1단계 PER_CUT 실행도 Test Case를 도는 동안에는 현재 폴더와 Simulink 빌드 폴더를
-> 같은 곳의 `pc_<id>` 폴더로 옮깁니다. 원래 현재 폴더와 모델 폴더는 그동안 MATLAB
-> path 앞에 넣어 두므로 이름으로 찾던 파일은 그대로 찾습니다. 루프가 끝나면 현재
-> 폴더, 빌드 폴더 설정, path를 되돌리고 `pc_<id>`를 지웁니다.
+> 1단계의 SLDV 준비, Harness 생성, PER_CUT 실행도 대상 루프를 도는 동안에는 현재
+> 폴더와 Simulink 빌드 폴더를 같은 곳의 `<단계>_<id>` 폴더(`sldv_`, `harness_`,
+> `per_cut_`)로 옮깁니다. 원래 현재 폴더와 모델 폴더는 그동안 MATLAB path 앞에 넣어
+> 두므로 이름으로 찾던 파일은 그대로 찾습니다. 루프가 끝나면 현재 폴더, 빌드 폴더
+> 설정, path를 되돌리고 그 폴더를 지웁니다. SLDV의 임시 출력(`sldvrun` OutputDir)도
+> `result\sldv` 대신 같은 곳의 `sldvout_<id>`에 만들고, 결과 파일
+> `latest_sldvdata.mat`만 `result\sldv\<대상>`으로 옮깁니다.
 
 ## 14. 모델 선택 관련 (코드에 적지 않는 값)
 

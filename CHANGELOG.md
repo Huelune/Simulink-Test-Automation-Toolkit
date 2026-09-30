@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **SLDV 준비와 Harness 생성도 짧은 폴더에서 돕니다.**
+  PER_CUT 실행과 같은 방식으로 `st_prepare_sldv_targets`와 `st_create_harnesses`의
+  대상 루프 동안 현재 폴더와 빌드 폴더를 `StandaloneBuildCacheDir`(비우면
+  `tempdir\stt_build`) 아래 `sldv_<id>`, `harness_<id>`로 옮깁니다. SLDV 임시
+  출력도 `result\sldv\<대상>\tp<GUID>` 대신 `sldvout_<id>`에 만들고, 최종
+  `latest_sldvdata.mat`만 예전 위치로 옮깁니다. PER_CUT 폴더 이름은 `pc_<id>`에서
+  `per_cut_<id>`로 바뀌었습니다.
+
 - **`st_set_standalone_coverage_root`를 인자 없이 부를 수 있습니다.**
   인자가 없으면 `st_select_target_model`로 고른 Top Model 이름으로
   `D:\model_result\<Top Model>`을 만들어 standalone 결과 루트로 저장합니다. 경로를

@@ -376,9 +376,9 @@ st_set_standalone_coverage_root('E:\st_out') % 다른 경로를 쓰려면
 인자 없이 부르면 지금 선택한 Top Model 이름으로 `D:\model_result\<Top Model>`을
 만들어 씁니다. 지정한 경로는 `runtime_target.mat`에 로컬로 저장됩니다.
 
-standalone 실행과 1단계 PER_CUT 실행은 기본적으로 `tempdir\stt_build` 아래 짧은
-폴더에서 Test Case를 돌리고 빌드 산출물도 그곳에 만들므로 두 번째 오류는 보통 나지
-않습니다. 그래도 나면 `cfg.StandaloneBuildCacheDir`에
+standalone 실행과 1단계의 SLDV 준비·Harness 생성·PER_CUT 실행은 기본적으로
+`tempdir\stt_build` 아래 짧은 폴더에서 돌고 빌드 산출물도 그곳에 만들므로 두 번째
+오류는 보통 나지 않습니다. 그래도 나면 `cfg.StandaloneBuildCacheDir`에
 `'D:\stt_build'`처럼 짧은 경로를 지정하십시오([설정 참조](config-reference.md)).
 
 ## 7. 명세서 추출 오류
