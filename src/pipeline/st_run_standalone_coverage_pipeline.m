@@ -1179,14 +1179,13 @@ function tree = classify_submission_tree(pipelineRoot, cfg)
 %CLASSIFY_SUBMISSION_TREE Team submission tree for a finished ALL run.
 tree = '';
 try
-    result = st_classify_standalone_results( ...
-        'PipelineRoot', pipelineRoot, 'Replace', true);
+    result = st_classify_standalone_results('PipelineRoot', pipelineRoot);
     tree = result.OutputDir;
 catch ME
     st_log(cfg, 'WARN', ...
         ['Standalone submission tree was not created | %s: %s | ' ...
-         'Rerun st_classify_standalone_results(''PipelineRoot'', ''%s'', ' ...
-         '''Replace'', true)'], ME.identifier, ME.message, pipelineRoot);
+         'Rerun st_classify_standalone_results(''PipelineRoot'', ''%s'')'], ...
+        ME.identifier, ME.message, pipelineRoot);
 end
 end
 

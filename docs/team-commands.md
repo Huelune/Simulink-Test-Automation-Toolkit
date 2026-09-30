@@ -561,12 +561,12 @@ MAT·CVF를 이름으로 찾을 수 있게), `TestManager/`의 재배선된 Test
 
 ```matlab
 st_classify_standalone_results                                   % 가장 최근 실행
-st_classify_standalone_results('PipelineId', id, 'Replace', true)
+st_classify_standalone_results('PipelineId', id)
 ```
 
 standalone 파이프라인 폴더를 팀 제출 트리 `{TopModel}/`(테스트 케이스·테스트
 보고서·프로젝트 세 갈래)로 복사합니다. `st_run_standalone_coverage_pipeline`의
-`Action='ALL'`이 끝날 때 `'Replace', true`로 자동 호출되므로(`ClassifyResults`
+`Action='ALL'`이 끝날 때 자동 호출되므로(`ClassifyResults`
 기본 `true`) 보통은 직접 부를 일이 없습니다. 원본 파이프라인 폴더는 바꾸지
 않습니다.
 
@@ -575,7 +575,7 @@ standalone 파이프라인 폴더를 팀 제출 트리 `{TopModel}/`(테스트 �
 | `PipelineId` | `'LATEST'` | 정리할 실행 id |
 | `PipelineRoot` | `''` | id 대신 파이프라인 폴더를 직접 지정 |
 | `OutputDir` | `''` | 출력 폴더. 비우면 파이프라인 폴더 옆 `{TopModel}` |
-| `Replace` | `false` | 출력 폴더가 있으면 지우고 다시 만듭니다. 세 갈래 폴더만 있을 때만 지웁니다 |
+| `Replace` | `true` | 출력 폴더가 있으면 지우고 다시 만듭니다. 세 갈래 폴더만 있을 때만 지우고, 다른 것이 섞여 있으면 멈춥니다. `false`면 폴더가 있을 때 멈춥니다 |
 | `DryRun` | `false` | 계획만 출력하고 복사하지 않습니다 |
 
 같은 규칙의 `tools/python/classify_standalone_results.py`가 MATLAB 없는 PC용으로

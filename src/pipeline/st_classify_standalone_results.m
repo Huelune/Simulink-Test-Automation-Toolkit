@@ -5,7 +5,7 @@ function info = st_classify_standalone_results(varargin)
 %   info = st_classify_standalone_results('PipelineId', id)
 %   info = st_classify_standalone_results('PipelineRoot', folder)
 %   info = st_classify_standalone_results(..., 'OutputDir', folder)
-%   info = st_classify_standalone_results(..., 'Replace', true)
+%   info = st_classify_standalone_results(..., 'Replace', false)
 %   info = st_classify_standalone_results(..., 'DryRun', true)
 %
 % The pipeline keeps each CUT's files together in {NUM}_UT_REQ_{TestCase}.
@@ -21,9 +21,10 @@ function info = st_classify_standalone_results(varargin)
 % pipeline folder is left as it is. Files outside the three kinds and each
 % CUT folder's scv_images are skipped and listed in info.Skipped.
 %
-% An existing output folder stops the copy unless Replace is true. Replace
-% deletes it first so CUT folders from an earlier run cannot mix in, and it
-% only deletes a folder that holds nothing but the three category folders.
+% An existing output folder is deleted first (Replace, default true) so CUT
+% folders from an earlier run cannot mix in. Only a folder that holds
+% nothing but the three category folders is deleted; anything else stops
+% the copy. Replace=false stops at any existing output folder.
 %
 % tools/python/classify_standalone_results.py applies the same rules for
 % use without MATLAB. Change both together.
@@ -33,7 +34,7 @@ p.FunctionName = mfilename;
 addParameter(p, 'PipelineId', 'LATEST', @(x) ischar(x) || isstring(x));
 addParameter(p, 'PipelineRoot', '', @(x) ischar(x) || isstring(x));
 addParameter(p, 'OutputDir', '', @(x) ischar(x) || isstring(x));
-addParameter(p, 'Replace', false, @(x) islogical(x) && isscalar(x));
+addParameter(p, 'Replace', true, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'DryRun', false, @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 
@@ -242,8 +243,8 @@ end
 if ~isfolder(outputRoot), return; end
 if ~replace
     error('simtest:StandaloneClassifyOutputExists', ...
-        ['The output folder already exists: %s. Pass ''Replace'', true ' ...
-         'to delete it and copy again.'], outputRoot);
+        ['The output folder already exists and Replace is false: %s'], ...
+        outputRoot);
 end
 entries = sorted_entries(outputRoot);
 unexpected = setdiff({entries.name}, categories());

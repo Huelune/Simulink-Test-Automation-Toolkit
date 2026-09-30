@@ -44,17 +44,18 @@ verifyTrue(testCase, isfile(fullfile(pipeline, cutA, 'Controller_Harness.slx')))
 end
 
 
-function testExistingTreeStopsUnlessReplaced(testCase)
+function testExistingTreeIsReplacedByDefault(testCase)
 pipeline = testCase.TestData.Pipeline;
 st_classify_standalone_results('PipelineRoot', pipeline);
 stale = fullfile(testCase.TestData.Root, 'TOP', '프로젝트', '099_UT_REQ_Old');
 mkdir(stale);
 
-verifyError(testCase, ...
-    @() st_classify_standalone_results('PipelineRoot', pipeline), ...
+verifyError(testCase, @() st_classify_standalone_results( ...
+    'PipelineRoot', pipeline, 'Replace', false), ...
     'simtest:StandaloneClassifyOutputExists');
+verifyTrue(testCase, isfolder(stale));
 
-st_classify_standalone_results('PipelineRoot', pipeline, 'Replace', true);
+st_classify_standalone_results('PipelineRoot', pipeline);
 verifyFalse(testCase, isfolder(stale));
 end
 
@@ -66,7 +67,7 @@ mkdir(other);
 write_file(fullfile(other, 'notes.txt'));
 
 verifyError(testCase, @() st_classify_standalone_results( ...
-    'PipelineRoot', pipeline, 'Replace', true), ...
+    'PipelineRoot', pipeline), ...
     'simtest:StandaloneClassifyOutputNotATree');
 verifyTrue(testCase, isfile(fullfile(other, 'notes.txt')));
 end
@@ -95,7 +96,8 @@ verifyTrue(testCase, contains(text, ...
     "addParameter(p, 'ClassifyResults', true"));
 verifyTrue(testCase, contains(text, ...
     "if strcmp(action, 'ALL') && p.Results.ClassifyResults"));
-verifyTrue(testCase, contains(text, "'PipelineRoot', pipelineRoot, 'Replace', true"));
+verifyTrue(testCase, contains(text, ...
+    "st_classify_standalone_results('PipelineRoot', pipelineRoot);"));
 end
 
 

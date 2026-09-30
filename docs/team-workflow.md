@@ -334,13 +334,13 @@ st_open_standalone_test_manager('PipelineId', info.PipelineId)
 
 ```matlab
 st_classify_standalone_results                                  % 가장 최근 실행
-st_classify_standalone_results('PipelineId', id, 'Replace', true)  % 기존 트리를 지우고 다시
+st_classify_standalone_results('PipelineId', id)                % 다른 실행으로
 st_classify_standalone_results('DryRun', true)                  % 계획만 보기
 ```
 
-이미 트리가 있으면 `'Replace', true` 없이는 멈춥니다. `Replace`는 그 폴더에 세
-갈래 폴더만 있을 때만 지웁니다. 3단계 자동 실행은 항상 `Replace`로 부르므로 이전
-실행의 CUT 폴더가 섞이지 않습니다. 자동 실행을 끄려면 3단계에
+이미 트리가 있으면 지우고 새로 만들므로 이전 실행의 CUT 폴더가 섞이지 않습니다.
+그 폴더에 세 갈래 폴더 말고 다른 것이 있으면 지우지 않고 멈춥니다. 기존 트리를
+건드리지 않으려면 `'Replace', false`를 줍니다. 자동 실행을 끄려면 3단계에
 `'ClassifyResults', false`를 줍니다.
 
 MATLAB이 없는 PC에서는 같은 규칙의 Python 스크립트를 씁니다(`--dry-run`, `--out`,

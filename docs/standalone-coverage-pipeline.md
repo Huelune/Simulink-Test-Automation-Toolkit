@@ -150,7 +150,7 @@ Coverage 보고서 하나만 보존하며, 렌더링에 필요한 부속 asset�
 규칙의 Python 스크립트를 씁니다.
 
 ```matlab
-st_classify_standalone_results('PipelineId', id, 'Replace', true)
+st_classify_standalone_results('PipelineId', id)
 ```
 
 ```bash

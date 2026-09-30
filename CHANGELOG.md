@@ -5,9 +5,9 @@
 - **팀 제출 트리 재배치를 MATLAB에서 하고, 3단계가 자동으로 부릅니다.**
   `tools/python/classify_standalone_results.py`와 같은 규칙의
   `st_classify_standalone_results`를 추가했습니다. `st_run_standalone_coverage_pipeline`
-  의 `Action='ALL'`은 끝날 때 이 함수를 `'Replace', true`로 불러 파이프라인 폴더 옆
-  `{TopModel}\`을 새로 만들고 위치를 `info.SubmissionTree`에 돌려줍니다. 기존 트리는
-  세 갈래 폴더만 있을 때만 지웁니다. 재배치 실패는 WARN으로 남고 파이프라인을
+  의 `Action='ALL'`은 끝날 때 이 함수를 불러 파이프라인 폴더 옆 `{TopModel}\`을
+  새로 만들고 위치를 `info.SubmissionTree`에 돌려줍니다. 기존 트리는 기본으로
+  지우고 다시 만들되(`Replace` 기본 `true`), 세 갈래 폴더만 있을 때만 지웁니다. 재배치 실패는 WARN으로 남고 파이프라인을
   실패시키지 않습니다. `'ClassifyResults', false`로 끌 수 있습니다. Python
   스크립트는 MATLAB 없는 PC용으로 남습니다.
 
