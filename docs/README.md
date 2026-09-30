@@ -32,6 +32,7 @@ st_run_standalone_coverage_pipeline( ...
 | --- | --- |
 | [관리 Excel 열 사전](workbook-reference.md) | `Targets` 시트 모든 열의 역할·기본값·오답 시 동작 |
 | [설정 사전](config-reference.md) | `st_config.m`의 전역 설정 전체 |
+| [전체 흐름과 단계별 옵션](workflow-options.md) | 팀 작업 순서대로 각 단계 명령의 옵션과 기본값, 상황별 조합 |
 | [실행 명령 사전](execution-commands.md) | 각 명령과 그 명령이 받는 옵션의 역할 |
 
 ## 작업할 때
