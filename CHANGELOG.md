@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **1단계 PER_CUT 실행도 짧은 폴더에서 Test Case를 돌립니다.**
+  원본 모델 폴더가 깊으면 Stateflow 빌드(`slprj\_sfprj\...`)가 260자를 넘겨
+  커버리지가 남지 않을 수 있었습니다. `st_run_tests_per_cut`은 실행 루프 동안
+  현재 폴더와 `CacheFolder`/`CodeGenFolder`를 `StandaloneBuildCacheDir`(비우면
+  `tempdir\stt_build`) 아래 `pc_<id>`로 옮기고, 원래 현재 폴더와 모델 폴더를
+  MATLAB path에 넣어 둡니다. 루프가 끝나면 모두 되돌리고 폴더를 지웁니다.
+  standalone 러너 안에서 부를 때는 이미 짧은 폴더에 있으므로 그대로 둡니다.
+
 - **standalone 실행을 `%TEMP%` 아래 짧은 작업 폴더에서 돌립니다.**
   기록 위치(`.work\<bundle>\executions\<id>\workspace`)는 짧은 출력 루트를 써도
   150자에 가까워, Stateflow 빌드가 그 밑에 `slprj\_sfprj\...`를 만들면 260자를

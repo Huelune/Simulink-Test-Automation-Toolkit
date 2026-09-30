@@ -615,7 +615,7 @@ cfg.ReportMatchCoverageObjects = true;
 | `CoverageFilterDir` | `result/coverage_filters/` | 자동 생성 CVF |
 | `ExportRootDir` | `result/exports/` | 내보내기 번들 |
 | `StandaloneCoverageRootDir` | `result/standalone_coverage/` | standalone 제출물 |
-| `StandaloneBuildCacheDir` | `''` (임시 폴더) | standalone 실행 작업 폴더와 Simulink 빌드(`slprj`) 위치 |
+| `StandaloneBuildCacheDir` | `''` (임시 폴더) | standalone 실행 작업 폴더, PER_CUT 실행 중 현재 폴더, Simulink 빌드(`slprj`) 위치 |
 | `VerificationRootDir` | `result/verification/` | 종합 검증 결과 |
 | `LatestReportPointer` | `result/latest.json` | 최신 BATCH 실행 위치 |
 | `LatestRunRecordPointer` | `result/run_record_latest.json` | 최신 실행 기록 위치 |
@@ -636,6 +636,11 @@ cfg.ReportMatchCoverageObjects = true;
 > `slprj\_sfprj\<Harness>\...`를 더 만들어 260자를 넘기기 때문입니다. 실행이
 > 끝나면 작업 폴더를 빌드 산출물 없이 기록 위치로 복사하고 두 폴더를 지웁니다.
 > 실행이 실패하면 복사는 하되 짧은 폴더를 남기고 WARN 로그에 위치를 적습니다.
+>
+> 1단계 PER_CUT 실행도 Test Case를 도는 동안에는 현재 폴더와 Simulink 빌드 폴더를
+> 같은 곳의 `pc_<id>` 폴더로 옮깁니다. 원래 현재 폴더와 모델 폴더는 그동안 MATLAB
+> path 앞에 넣어 두므로 이름으로 찾던 파일은 그대로 찾습니다. 루프가 끝나면 현재
+> 폴더, 빌드 폴더 설정, path를 되돌리고 `pc_<id>`를 지웁니다.
 
 ## 14. 모델 선택 관련 (코드에 적지 않는 값)
 
