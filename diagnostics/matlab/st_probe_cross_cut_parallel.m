@@ -829,13 +829,31 @@ if ~isempty(hit)
         reason = reason + " " + lines(hit + 1);
     end
 end
-% The first frames name the module that faulted: a MathWorks library, or a
-% MEX/S-Function file of the model.
 first = find(startsWith(lines, "Stack Trace", 'IgnoreCase', true), 1);
-if ~isempty(first)
-    block = lines(first + 1:min(numel(lines), first + 12));
-    frames = block(strlength(block) > 0);
+if isempty(first)
+    return;
 end
+stack = strings(0, 1);
+for k = first + 1:min(numel(lines), first + 400)
+    if startsWith(lines(k), "[")
+        stack(end+1, 1) = lines(k); %#ok<AGROW>
+    elseif ~isempty(stack) && strlength(lines(k)) > 0
+        break;
+    end
+end
+% On std::terminate the top frames are the crash handler and the C++
+% runtime unwinding the exception. The module that threw it, a MathWorks
+% library or a MEX/S-Function of the model, is the first frame below them.
+handler = ["libmwfl.dll", "mcr.dll", "libmwfoundation_crash_handling.dll", ...
+    "ucrtbase.dll", "VCRUNTIME140", "MSVCP140", "KERNELBASE.dll", "ntdll.dll"];
+isHandler = contains(stack, handler, 'IgnoreCase', true);
+firstOwn = find(~isHandler, 1);
+if isempty(firstOwn)
+    firstOwn = 1;
+end
+shown = stack(firstOwn:min(numel(stack), firstOwn + 14));
+frames = [string(sprintf('frames=%d | leading handler frames skipped=%d', ...
+    numel(stack), firstOwn - 1)); shown];
 end
 
 
