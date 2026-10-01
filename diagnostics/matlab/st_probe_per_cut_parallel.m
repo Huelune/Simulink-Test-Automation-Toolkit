@@ -763,7 +763,8 @@ end
 dumps = unique(dumps);
 for k = 1:numel(dumps)
     [reason, frames] = crash_summary(dumps(k));
-    emit('CRASH', 'File=%s | Reason=%s', char(dumps(k)), char(reason));
+    emit('CRASH', 'File=%s | Reason=%s | Top=%s', char(dumps(k)), ...
+        char(reason), char(top_frame(frames)));
     % Workers that die together almost always die the same way, so one
     % stack is enough.
     if k == 1
@@ -802,6 +803,20 @@ try
     end
 catch
 end
+end
+
+
+
+function text = top_frame(frames)
+% The first frame below the crash handler, reduced to module+offset and
+% symbol. Dumps that agree here died on the same code path; dumps that
+% differ died wherever an allocation happened to fail.
+text = "-";
+if numel(frames) < 2
+    return;
+end
+text = regexprep(frames(2), '^\[\s*\d+\]\s+0x[0-9a-fA-F]+\s+', '');
+text = regexprep(text, '^.*\\', '');
 end
 
 
