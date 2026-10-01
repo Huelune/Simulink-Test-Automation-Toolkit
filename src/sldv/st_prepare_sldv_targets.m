@@ -1006,6 +1006,7 @@ inputNames = cell(0,1);
 inputTypes = cell(0,1);
 inputDimensions = cell(0,1);
 ignoredInputNames = cell(0,1);
+harnessDrivenNames = st_harness_driven_sldv_inputs(ownerPath);
 
 % sourceIndex stays the position in sldvData.TestCases even when the
 % operator picked a subset, because every later stage reads the source MAT
@@ -1067,7 +1068,8 @@ for sourceIndex = 1:numel(data.TestCases)
         st_select_sldv_input_indices( ...
             names, ...
             harnessInput.Names, ...
-            ignoreUnexpectedSldvInputs);
+            ignoreUnexpectedSldvInputs, ...
+            harnessDrivenNames);
 
     signature = signature(selectedIndices);
     types = types(selectedIndices);

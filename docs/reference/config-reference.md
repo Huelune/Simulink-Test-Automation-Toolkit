@@ -316,6 +316,12 @@ SLDV MAT에 Harness의 ActiveScenario에는 없는 입력 신호가 들어 있�
 하십시오. 무시한 신호 목록은 `SldvGenerationResult`의 `IgnoredSldvInputs` 열에
 남습니다.
 
+**예외: 함수 호출 트리거.** CUT이 함수 호출(function-call) Subsystem이면 SLDV는 호출
+트리거를 `FcnTriggerPort`라는 입력으로 넣습니다. Harness는 스케줄러 블록으로 직접
+호출하므로 이 입력이 없습니다. 그래서 이 입력 하나는 설정이 `false`여도 빼고,
+WARN 로그와 `IgnoredSldvInputs` 열에 남깁니다. 호출 시점은 Harness 스케줄러가 정하므로
+SLDV TestCase가 가정한 시점과 다를 수 있습니다.
+
 파일을 고치지 않고 한 번만 바꾸려면 명령 옵션을 쓰십시오. 옵션이 이 설정보다
 우선합니다.
 

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **함수 호출 Subsystem도 SLDV 입력으로 준비됩니다.**
+  SLDV는 함수 호출 CUT의 호출 트리거를 Dataset 입력 `FcnTriggerPort`로 넣습니다.
+  그런데 Harness는 Test Sequence 스케줄러로 직접 호출하므로 Signal Editor에 그 입력이
+  없습니다. 그래서 `IgnoreUnexpectedSldvInputs=false`인 SLDV 준비가 "SLDV Dataset
+  contains signals that are not present in the Harness input interface.
+  Unexpected=[FcnTriggerPort]"로 멈췄습니다. 이제 CUT에 함수 호출 TriggerPort가 있으면
+  그 이름 하나만 빼고 WARN과 `IgnoredSldvInputs` 열에 남깁니다. 다른 예상 밖 입력은
+  계속 실패합니다. Signal Editor 단계는 SLDV 단계가 남긴 같은 목록을 씁니다.
+  - 호출 시점은 Harness 스케줄러가 정하므로 SLDV TestCase가 가정한 시점과 다를 수
+    있습니다.
+
 - **SLDV 최대 분석 시간을 설정할 수 있습니다.**
   `cfg.SldvMaxProcessTime`(초)을 새로 두었습니다. 비워 두면(기본) 예전처럼 모델의
   Design Verifier 설정(기본 300초)을 쓰고, 값을 주면 GENERATE 대상마다 그 시간을

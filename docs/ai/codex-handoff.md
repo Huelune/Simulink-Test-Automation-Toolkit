@@ -384,6 +384,18 @@ PER_CUT을 Test Manager 병렬 실행(`run(...,'Parallel',true)`)으로 빠르�
   모델에 남았다. 사용자의 이전 CacheFolder 값은 확인하지 못했다.
 - 수정: `keepPreviousPath=true`, 그리고 `addpath`를 set 다음으로 옮겼다. 끊긴 선이
   저장된 Harness292는 다시 만들어야 한다.
+- 2026-10-02 SLDV: 대상 1(`RNB_..._sys`, GENERATE)이 `status=-1`
+  (`Sldv:SldvRun:CanExtendTime`, MaxProcessTime 초과)로 끝났다. 사용자 결정에 따라
+  시간 초과는 계속 실패로 두고 `cfg.SldvMaxProcessTime`만 추가했다(`b8551f8`).
+  SLDV 단계 signature에는 넣지 않았다.
+- 2026-10-02 SLDV: No=304(함수 호출 CUT)가 `Unexpected=[FcnTriggerPort]`로 실패했다.
+  사용자 결정은 "호출 트리거만 자동 제외"다. `st_harness_driven_sldv_inputs`가 CUT 최상위
+  TriggerPort의 `TriggerType='function-call'`을 보고 `{'FcnTriggerPort'}`를 돌려준다.
+  `st_select_sldv_input_indices`의 4번째 인자로 이 이름만 엄격 모드에서도 뺀다.
+  Signal Editor 병합은 manifest의 `IgnoredSldvInputNames`를 같은 인자로 넘긴다.
+  미검증: SLDV가 이 입력을 항상 `FcnTriggerPort`로 부르는지(관측 1건),
+  `Simulink.io.SLDVMatFile` import 결과도 같은 이름인지, Harness 스케줄러의 호출 시점이
+  SLDV TestCase와 얼마나 다른지.
 - 미검증: 끝 `/`를 붙인 경로가 R2025b에서 해석되는지는 단위 테스트가 assume으로만
   다룬다. 이름이 공백으로 끝나는 CUT의 PER_CUT·standalone 커버리지와 최종 문서는
   실행해 보지 않았다.
