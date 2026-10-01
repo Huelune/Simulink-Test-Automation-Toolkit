@@ -7,6 +7,7 @@ function report = st_probe_per_cut_parallel(varargin)
 % report = st_probe_per_cut_parallel(..., 'ParallelRuns', 2)
 % report = st_probe_per_cut_parallel(..., 'Marker', false)
 % report = st_probe_per_cut_parallel(..., 'KeepPool', true)
+% report = st_probe_per_cut_parallel(..., 'WorkerCacheFolders', true)
 %
 % EXPERIMENTAL: exists only on branch exp/per-cut-parallel.
 %
@@ -44,6 +45,11 @@ function report = st_probe_per_cut_parallel(varargin)
 % physical memory, and when a parallel run fails the probe prints CRASH
 % lines from the crash dumps written since it started.
 %
+% WorkerCacheFolders=true gives every worker its own Simulink cache and
+% code generation folder (Simulink.fileGenControl) before the parallel
+% runs, as parsim does. Without it all workers share the client's folders.
+% If workers stop dying with it, they were racing on those shared files.
+%
 % With no TestCase, the target whose Test Case has the most Iterations is
 % chosen from the enabled rows of the management workbook.
 %
@@ -64,6 +70,7 @@ addParameter(p, 'ParallelRuns', 2, ...
     @(x) isnumeric(x) && isscalar(x) && x >= 1 && x == fix(x));
 addParameter(p, 'Marker', true, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'KeepPool', false, @(x) islogical(x) && isscalar(x));
+addParameter(p, 'WorkerCacheFolders', false, @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 requestedName = strtrim(char(string(p.Results.TestCase)));
 workers = double(p.Results.Workers);
@@ -74,8 +81,9 @@ cfg = st_require_runtime_target();
 totalTimer = tic;
 st_log(cfg, 'INFO', ...
     ['Per-CUT parallel probe start | TestCase=%s | Workers=%d | ' ...
-     'ParallelRuns=%d | Marker=%s'], ...
-    text_or(requestedName, 'AUTO'), workers, parallelRuns, yes_no(useMarker));
+     'ParallelRuns=%d | Marker=%s | WorkerCacheFolders=%s'], ...
+    text_or(requestedName, 'AUTO'), workers, parallelRuns, yes_no(useMarker), ...
+    yes_no(p.Results.WorkerCacheFolders));
 
 report = struct('Verdict', "", 'Environment', [], 'Target', [], ...
     'Marker', [], 'Pool', [], 'Workers', table(), 'Runs', [], ...
@@ -156,6 +164,9 @@ emit('POOL', 'Class=%s | Started=%s | Workers=%d | StartSec=%.1f | MemAvailGB=%.
     char(poolInfo.Class), yes_no(poolInfo.Started), poolInfo.Workers, ...
     poolInfo.StartSec, available_memory_gb());
 report.Workers = probe_workers(cfg, pool, cfg.TopModel);
+if p.Results.WorkerCacheFolders
+    isolate_worker_folders(cfg, pool);
+end
 
 for k = 1:parallelRuns
     runs(end+1) = run_once(cfg, tc, target, "PAR" + k, true, marker); %#ok<AGROW>
@@ -630,6 +641,32 @@ catch ME
     st_log(cfg, 'WARN', ...
         'Per-CUT parallel probe pool delete failed | %s: %s', ...
         ME.identifier, ME.message);
+end
+end
+
+
+function isolate_worker_folders(cfg, pool)
+% Whether Test Manager points its workers at their own slprj and cache
+% folder is not documented; parsim does. tempname runs on each worker, so
+% every worker gets folders of its own.
+st_log(cfg, 'INFO', ...
+    'Per-CUT parallel probe worker folder isolation start | Workers=%d', ...
+    pool.NumWorkers);
+try
+    fetchOutputs(parfevalOnAll(pool, @() Simulink.fileGenControl('set', ...
+        'CacheFolder', tempname, 'CodeGenFolder', tempname, ...
+        'createDir', true), 0));
+    folders = fetchOutputs(parfevalOnAll(pool, ...
+        @() string(Simulink.fileGenControl('get', 'CacheFolder')), 1));
+    emit('ISOLATE', 'Status=OK | Workers=%d | DistinctCacheFolders=%d | Client=%s', ...
+        numel(folders), numel(unique(folders)), ...
+        char(string(Simulink.fileGenControl('get', 'CacheFolder'))));
+    st_log(cfg, 'INFO', 'Per-CUT parallel probe worker folder isolation complete');
+catch ME
+    emit('ISOLATE', 'Status=FAILED | %s: %s', ME.identifier, ME.message);
+    st_log(cfg, 'WARN', ...
+        ['Per-CUT parallel probe worker folder isolation failed; the runs ' ...
+         'use shared folders | %s: %s'], ME.identifier, ME.message);
 end
 end
 
