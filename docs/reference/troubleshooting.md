@@ -151,6 +151,20 @@ st_run_from_harness('PreparationMode','FORCE')
 **대처:** Harness를 열어 Signal Editor 블록의 파일 경로와 선택된 Scenario를
 확인하십시오. 파일이 다른 위치로 옮겨졌거나 지워졌을 수 있습니다.
 
+메시지 끝에 `Input MAT not found`가 붙고 `Available=[Scenario]`이면 입력 MAT 파일
+자체가 없습니다. 블록이 파일을 읽지 못하면 라이브러리 기본값 `Scenario`만 보여
+줍니다. 2026-09-30 ~ 10-01 버전으로 새로 만든 Harness가 이렇습니다. 생성 중
+입력 파일이 임시 빌드 폴더에 생겼다가 함께 지워졌기 때문입니다. 그 Harness를 지우고
+다시 만드십시오.
+
+```matlab
+cfg = st_require_runtime_target();
+owner = st_normalize_cut_path("<CUTPath>", cfg.TopModel);
+sltest.harness.delete(owner, "<HarnessName>");
+save_system(cfg.TopModel);
+st_run_from_harness
+```
+
 ### `MatHarnessInterfaceMismatch`
 
 **뜻:** `DataFileFormat=MAT`으로 지정한 Dataset의 입력 구성이 Harness의 입력

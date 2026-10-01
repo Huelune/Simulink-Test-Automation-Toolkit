@@ -12,6 +12,12 @@
     Harness는 입력 파일이 없습니다. 그 Harness를 지우고
     `st_run_from_harness`를 다시 실행하십시오.
 
+- **`SignalEditorActiveScenarioInvalid` 메시지가 입력 MAT 파일을 가리킵니다.**
+  Signal Editor 단계의 메시지에 블록의 `Filename`을 함께 적습니다. 그 파일을 찾지
+  못하면 Harness를 다시 만들라는 안내를 덧붙입니다. 입력 파일이 없으면 블록이
+  라이브러리 기본값 `Scenario`만 보여 주므로, 예전 메시지는 Scenario 이름 문제처럼
+  읽혔습니다.
+
 - **테스트 명세서의 `DecisionBlocks`가 기본으로 암시적 분기까지 담습니다.**
   `cfg.DecisionBlockScope` 기본값을 `'EXPLICIT'`에서 `'ALL'`로 바꿨습니다. 이제
   Saturate, Abs, Lookup 계열, Integrator 계열, Enabled / Triggered Subsystem처럼

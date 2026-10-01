@@ -150,8 +150,10 @@ for i = 1:n
         if isempty(oldName) || ~ismember(oldName, options)
             error('simtest:SignalEditorActiveScenarioInvalid', ...
                 ['Signal Editor ActiveScenario is empty or unavailable. ' ...
-                 'Active=%s | Available=[%s] | Block=%s'], ...
-                oldName, strjoin(options, ', '), sigBlock);
+                 'Active=%s | Available=[%s] | Block=%s | Filename=%s%s'], ...
+                oldName, strjoin(options, ', '), sigBlock, ...
+                char(get_param(sigBlock, 'Filename')), ...
+                missing_input_hint(sigBlock, cfg.TopModel));
         end
 
         OldScenario(i) = ...
@@ -607,6 +609,22 @@ st_log(cfg, 'INFO', ...
     'Configure Signal Editor complete | elapsed=%.3f sec', ...
     toc(totalTimer));
 
+end
+
+
+function hint = missing_input_hint(sigBlock, topModel)
+%MISSING_INPUT_HINT Name the usual cause when the Harness input MAT is gone.
+% A block that cannot read its MAT file lists only the library default
+% 'Scenario', which reads like a scenario name mismatch rather than a lost
+% file.
+
+hint = '';
+try
+    st_resolve_data_file(get_param(sigBlock, 'Filename'), topModel);
+catch
+    hint = [' | Input MAT not found. Delete this Harness and run ' ...
+        'st_run_from_harness again to recreate it.'];
+end
 end
 
 
