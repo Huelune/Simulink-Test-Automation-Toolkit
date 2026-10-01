@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **SLDV 최대 분석 시간을 설정할 수 있습니다.**
+  `cfg.SldvMaxProcessTime`(초)을 새로 두었습니다. 비워 두면(기본) 예전처럼 모델의
+  Design Verifier 설정(기본 300초)을 쓰고, 값을 주면 GENERATE 대상마다 그 시간을
+  씁니다. 시간 안에 끝나지 않은 행은 계속 실패로 처리합니다. 메시지에는 쓴 시간과 이
+  설정을 늘리라는 안내가 붙고, WARN 로그가 남습니다.
+
 - **짧은 빌드 폴더에서도 Harness 입력 MAT을 찾습니다.**
   `st_enter_short_build_directory`는 호출한 폴더와 모델 폴더를 MATLAB path에 넣은
   뒤 `Simulink.fileGenControl('set', ...)`을 불렀습니다. 이 호출은 기본값

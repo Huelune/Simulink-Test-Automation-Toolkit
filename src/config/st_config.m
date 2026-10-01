@@ -143,6 +143,12 @@ cfg.SldvManifestFile = ...
 % before the source TestCase does. Set to [] to preserve raw end times.
 cfg.SldvTmaxResolution = 0.01;
 
+% Maximum analysis time of one GENERATE target [s]. [] (default) keeps the
+% model's own Design Verifier setting (MaxProcessTime, 300 s unless the
+% model changes it). A run that reaches the limit returns status -1 and the
+% target fails; raise this to give large CUTs more time.
+cfg.SldvMaxProcessTime = [];
+
 % true (default):
 %   Before FILE+SLDV validation or GENERATE execution, convert a non-atomic
 %   unlinked target Subsystem to TreatAsAtomicUnit=on and keep that model

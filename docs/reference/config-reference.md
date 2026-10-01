@@ -355,6 +355,24 @@ Harness 입력 인터페이스 검증은 어느 쪽이든 그대로 수행합니
 꼬리를 흡수하면서, Harness가 원본 TestCase보다 먼저 끝나지 않게 합니다. `[]`로
 두면 원본 종료 시각을 그대로 씁니다.
 
+### `SldvMaxProcessTime` — 기본 `[]`
+
+`SldvMode=GENERATE` 대상 하나에 SLDV가 쓸 수 있는 최대 분석 시간[초]입니다.
+
+| 값 | 동작 |
+| --- | --- |
+| `[]` (기본) | 모델의 Design Verifier 설정(`MaxProcessTime`, 바꾸지 않았으면 300초)을 씁니다 |
+| 양수 | 모든 GENERATE 대상에 이 시간을 씁니다. 모델 파일은 바꾸지 않습니다 |
+
+시간 안에 끝나지 않으면 `sldvrun`이 `status=-1`을 돌려주고 그 행은 실패로
+처리됩니다. 메시지 끝에 `SLDV stopped at MaxProcessTime=...`이 붙습니다. 큰 CUT이
+이렇게 실패하면 값을 늘리고 다시 실행하십시오. 이미 성공한 행은 다시 분석하지
+않습니다.
+
+```matlab
+cfg.SldvMaxProcessTime = 1800;   % st_config.m에서 30분으로
+```
+
 ## 7. 커버리지
 
 ### `CoverageStructuralLevel` / `CoverageMetricSettings`

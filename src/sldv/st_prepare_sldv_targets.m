@@ -773,12 +773,18 @@ opts.MakeOutputFilesUnique = 'off';
 opts.DataFileName = 'candidate_sldvdata';
 opts.SaveReport = 'off';
 opts.SaveHarnessModel = 'off';
+% Not part of the SLDV stage signature: a target that already completed
+% would not change with more time, so only failed rows run again.
+if isfield(cfg, 'SldvMaxProcessTime') && ~isempty(cfg.SldvMaxProcessTime)
+    opts.MaxProcessTime = max_process_time(cfg.SldvMaxProcessTime);
+end
 
 st_log( ...
     cfg, ...
     'INFO', ...
-    '[SLDV] sldvrun start | CUT=%s', ...
-    ownerPath);
+    '[SLDV] sldvrun start | CUT=%s | MaxProcessTime=%g s', ...
+    ownerPath, ...
+    double(opts.MaxProcessTime));
 
 runTimer = tic;
 
@@ -805,6 +811,17 @@ st_log( ...
 
 latestFile = '';
 meta = [];
+
+if double(status) == -1
+    st_log(cfg, 'WARN', ...
+        ['[SLDV] analysis reached MaxProcessTime | CUT=%s | ' ...
+         'MaxProcessTime=%g s | elapsed=%.1f s'], ...
+        ownerPath, double(opts.MaxProcessTime), runElapsed);
+    message = append_message(message, sprintf( ...
+        ['SLDV stopped at MaxProcessTime=%g s. Raise ' ...
+         'cfg.SldvMaxProcessTime to give this CUT more time.'], ...
+        double(opts.MaxProcessTime)));
+end
 
 if double(status) ~= 1
     return;
@@ -883,6 +900,17 @@ catch ME
     meta = [];
     message = append_message(message, ME.message);
 end
+
+end
+
+
+function value = max_process_time(value)
+
+if ~(isnumeric(value) && isscalar(value) && isfinite(value) && value > 0)
+    error('simtest:InvalidSldvMaxProcessTime', ...
+        'cfg.SldvMaxProcessTime must be [] or a positive number of seconds.');
+end
+value = double(value);
 
 end
 
