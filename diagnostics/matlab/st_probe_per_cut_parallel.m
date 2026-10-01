@@ -39,6 +39,11 @@ function report = st_probe_per_cut_parallel(varargin)
 % a message about unsaved changes, that is the answer to this check; run
 % again with Marker=false to see whether parallel runs work at all.
 %
+% Worker failures. A worker that dies mid-run surfaces on the client only as
+% "Simulation stopped before end time". ENV, POOL and RUN lines report free
+% physical memory, and when a parallel run fails the probe prints CRASH
+% lines from the crash dumps written since it started.
+%
 % With no TestCase, the target whose Test Case has the most Iterations is
 % chosen from the enabled rows of the management workbook.
 %
@@ -76,11 +81,14 @@ report = struct('Verdict', "", 'Environment', [], 'Target', [], ...
     'Marker', [], 'Pool', [], 'Workers', table(), 'Runs', [], ...
     'Differences', strings(0,1), 'SpeedupFirst', NaN, 'SpeedupLast', NaN);
 
+probeStart = now;
 env = probe_environment();
 report.Environment = env;
-emit('ENV', 'Release=R%s | PCT=%s | License=%s | PoolBefore=%s', ...
+emit('ENV', ['Release=R%s | PCT=%s | License=%s | PoolBefore=%s | ' ...
+    'ProfileWorkers=%d | MemTotalGB=%.1f | MemAvailGB=%.1f'], ...
     env.Release, yes_no(env.HasToolbox), yes_no(env.HasLicense), ...
-    char(env.PoolBefore));
+    char(env.PoolBefore), env.ProfileWorkers, env.MemTotalGB, ...
+    env.MemAvailGB);
 if ~env.HasToolbox || ~env.HasLicense
     report = finish(cfg, report, "NO_PCT", ...
         'Parallel Computing Toolbox is not installed or not licensed', ...
@@ -144,9 +152,9 @@ catch ME
     return;
 end
 report.Pool = poolInfo;
-emit('POOL', 'Class=%s | Started=%s | Workers=%d | StartSec=%.1f', ...
+emit('POOL', 'Class=%s | Started=%s | Workers=%d | StartSec=%.1f | MemAvailGB=%.1f', ...
     char(poolInfo.Class), yes_no(poolInfo.Started), poolInfo.Workers, ...
-    poolInfo.StartSec);
+    poolInfo.StartSec, available_memory_gb());
 report.Workers = probe_workers(cfg, pool, cfg.TopModel);
 
 for k = 1:parallelRuns
@@ -189,6 +197,7 @@ end
 
 % Below 1.2x the pool is not worth what it costs to start and hold.
 if ~isempty(failedRun)
+    report_crash_dumps(cfg, probeStart);
     report = finish(cfg, report, "PARALLEL_FAILED", ...
         sprintf('%s | %s', char(failedRun.Label), char(failedRun.Message)), ...
         totalTimer);
@@ -212,9 +221,22 @@ function env = probe_environment()
 env = struct('Release', version('-release'), ...
     'HasToolbox', ~isempty(ver('parallel')), ...
     'HasLicense', license('test', 'Distrib_Computing_Toolbox') == 1, ...
-    'PoolBefore', "NONE");
+    'PoolBefore', "NONE", 'ProfileWorkers', NaN, ...
+    'MemTotalGB', NaN, 'MemAvailGB', NaN);
+try
+    [~, systemView] = memory;
+    env.MemTotalGB = systemView.PhysicalMemory.Total / 2^30;
+    env.MemAvailGB = systemView.PhysicalMemory.Available / 2^30;
+catch
+end
 if ~env.HasToolbox
     return;
+end
+try
+    % The pool size parpool picks when Workers is not given.
+    cluster = parcluster('Processes');
+    env.ProfileWorkers = cluster.NumWorkers;
+catch
 end
 try
     pool = gcp('nocreate');
@@ -364,8 +386,12 @@ try
     % Say false outright so SEQ does not follow the Test Manager toolstrip.
     resultObj = run(tc, 'Parallel', parallel);
     entry.ElapsedSec = toc(timer);
+    % Workers keep the model loaded after a run, so this shows what they
+    % hold. A worker that died has already given its memory back.
+    entry.MemAvailGB = available_memory_gb();
 catch ME
     entry.ElapsedSec = toc(timer);
+    entry.MemAvailGB = available_memory_gb();
     if is_user_interrupt(ME)
         rethrow(ME);
     end
@@ -653,21 +679,22 @@ end
 
 function emit_run(entry)
 if entry.Status ~= "OK"
-    emit('RUN', 'Label=%s | Status=%s | Sec=%.1f | %s', ...
+    emit('RUN', 'Label=%s | Status=%s | Sec=%.1f | MemAvailGB=%.1f | %s', ...
         char(entry.Label), char(entry.Status), entry.ElapsedSec, ...
-        char(entry.Message));
+        entry.MemAvailGB, char(entry.Message));
     emit('STACK', '%s | %s', char(entry.Label), char(entry.Stack));
     return;
 end
 emit('RUN', ['Label=%s | Status=OK | Sec=%.1f | Outcome=%s | ' ...
     'Iterations=%d | Passed=%d | Failed=%d | OutputRuns=%g | Signals=%g | ' ...
     'CoverageObjects=%d | Decision=%s | Execution=%s | ' ...
-    'IterationCoverageRows=%d | Marker=%s'], ...
+    'IterationCoverageRows=%d | Marker=%s | MemAvailGB=%.1f'], ...
     char(entry.Label), entry.ElapsedSec, char(entry.Outcome), ...
     entry.IterationCount, entry.PassedCount, entry.FailedCount, ...
     entry.OutputRunCount, entry.SignalCount, entry.CoverageObjectCount, ...
     char(entry.Decision), char(entry.Execution), ...
-    entry.IterationCoverageRows, char(text_or(entry.MarkerSeen, 'OFF')));
+    entry.IterationCoverageRows, char(text_or(entry.MarkerSeen, 'OFF')), ...
+    entry.MemAvailGB);
 end
 
 
@@ -684,7 +711,7 @@ entry = struct('Label', string(label), 'Parallel', parallel, ...
     'IterationCount', 0, 'PassedCount', 0, 'FailedCount', 0, ...
     'OutputRunCount', NaN, 'SignalCount', NaN, ...
     'CoverageObjectCount', 0, 'Decision', "NONE", 'Execution', "NONE", ...
-    'IterationCoverageRows', 0, 'MarkerSeen', "", ...
+    'IterationCoverageRows', 0, 'MarkerSeen', "", 'MemAvailGB', NaN, ...
     'Iterations', table(), 'Message', "", 'Stack', "");
 end
 
@@ -699,6 +726,74 @@ end
 values = values(:);
 values(ismissing(values)) = "";
 values = values(strlength(values) > 0);
+end
+
+
+function value = available_memory_gb()
+value = NaN;
+try
+    [~, systemView] = memory;
+    value = systemView.PhysicalMemory.Available / 2^30;
+catch
+end
+end
+
+
+function report_crash_dumps(cfg, since)
+% A worker that dies leaves only "terminated abnormally" on the client. Its
+% crash dump says why: a fault in a named module, or memory. A worker the OS
+% killed for memory may leave no dump at all.
+folders = unique([string(tempdir); string(pwd)]);
+found = 0;
+for f = 1:numel(folders)
+    files = dir(fullfile(folders(f), 'matlab_crash_dump*'));
+    for k = 1:numel(files)
+        if files(k).datenum < since
+            continue;
+        end
+        found = found + 1;
+        dumpFile = fullfile(files(k).folder, files(k).name);
+        [reason, frames] = crash_summary(dumpFile);
+        emit('CRASH', 'File=%s | Reason=%s', dumpFile, char(reason));
+        for j = 1:numel(frames)
+            emit('CRASH-STACK', '%s | %s', files(k).name, char(frames(j)));
+        end
+    end
+end
+if found == 0
+    emit('CRASH', 'Found=0 | Searched=%s', char(strjoin(folders, '; ')));
+end
+st_log(cfg, 'WARN', ...
+    'Per-CUT parallel probe crash dump scan | Found=%d | Searched=%s', ...
+    found, char(strjoin(folders, '; ')));
+end
+
+
+function [reason, frames] = crash_summary(dumpFile)
+reason = "UNREADABLE";
+frames = strings(0,1);
+try
+    lines = strtrim(string(splitlines(fileread(dumpFile))));
+catch
+    return;
+end
+reason = "UNKNOWN";
+keys = ["Abnormal termination", "Segmentation violation", ...
+    "Access violation", "Out of memory", "bad_alloc", "Assertion"];
+hit = find(contains(lines, keys, 'IgnoreCase', true), 1);
+if ~isempty(hit)
+    reason = lines(hit);
+    if endsWith(reason, ":") && hit < numel(lines)
+        reason = reason + " " + lines(hit + 1);
+    end
+end
+% The first frames name the module that faulted: a MathWorks library, or a
+% MEX/S-Function file of the model.
+first = find(startsWith(lines, "Stack Trace", 'IgnoreCase', true), 1);
+if ~isempty(first)
+    block = lines(first + 1:min(numel(lines), first + 12));
+    frames = block(strlength(block) > 0);
+end
 end
 
 
