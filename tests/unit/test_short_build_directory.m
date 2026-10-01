@@ -29,6 +29,29 @@ verifyFalse(testCase, isfolder(folder));
 end
 
 
+function testCallerFolderStaysOnPathWhenItWasTheCacheFolder(testCase)
+% Simulink.fileGenControl('set') drops the previous cache folder from the
+% path unless keepPreviousPath is true. When that folder is also where the
+% caller works, the Harness input MAT files there stop resolving by name.
+base = tempname;
+caller = tempname;
+mkdir(caller);
+testCase.addTeardown(@() remove_folder(base));
+testCase.addTeardown(@() remove_folder(caller));
+testCase.addTeardown(@restore_session, pwd, path, ...
+    Simulink.fileGenControl('getConfig'));
+cd(caller);
+Simulink.fileGenControl('set', 'CacheFolder', caller, 'CodeGenFolder', caller);
+cfg = struct('StandaloneBuildCacheDir', base, 'VerboseLogging', false);
+
+cleanup = st_enter_short_build_directory(cfg, 'TEST');
+
+entries = string(strsplit(path, pathsep));
+verifyTrue(testCase, any(strcmpi(entries, caller)));
+clear cleanup
+end
+
+
 function testLeavesACallerInsideTheBaseAlone(testCase)
 base = tempname;
 mkdir(base);
@@ -118,4 +141,15 @@ end
 
 function remove_folder(folder)
 if isfolder(folder), rmdir(folder, 's'); end
+end
+
+
+function restore_session(directory, oldPath, config)
+cd(directory);
+try
+    Simulink.fileGenControl('set', 'config', config);
+catch
+    Simulink.fileGenControl('reset');
+end
+path(oldPath);
 end

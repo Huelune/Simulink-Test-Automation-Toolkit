@@ -373,6 +373,17 @@ PER_CUT을 Test Manager 병렬 실행(`run(...,'Parallel',true)`)으로 빠르�
   비교가 모두 이 값을 쓴다. Simulink 쪽 경로를 자르던 곳 두 곳도 고쳤다:
   `st_coverage_object_path`의 `StandaloneCUTPath` strtrim, 최종 문서의
   DecisionPoints 접두사 비교(readtable이 CUTPath 셀 끝 공백을 지움).
+- 후속 2: Test Manager를 통과한 뒤 PER_CUT 기대값 갱신에서 Harness를 열 때 다시
+  `{Harness}_HarnessInputs.mat`이 path에 없다는 경고가 났다. 결과는
+  `output run count=0`이었다. 사용자가 연 Harness에서는 입력 선이 빨간 점선이었다.
+  원인 추정: `st_enter_short_build_directory`가 `addpath(호출 폴더)` 다음에
+  `Simulink.fileGenControl('set',...)`을 불렀다. 이 호출은 기본
+  `keepPreviousPath=false`로 이전 캐시 폴더를 path에서 지운다(문서 확인). 이전 캐시
+  폴더가 호출 폴더라면 입력 MAT이 path에서 빠진다. 그 상태로
+  `st_prepare_expected_value_logging_for_targets`가 Harness를 열고 저장해서 끊긴 선이
+  모델에 남았다. 사용자의 이전 CacheFolder 값은 확인하지 못했다.
+- 수정: `keepPreviousPath=true`, 그리고 `addpath`를 set 다음으로 옮겼다. 끊긴 선이
+  저장된 Harness292는 다시 만들어야 한다.
 - 미검증: 끝 `/`를 붙인 경로가 R2025b에서 해석되는지는 단위 테스트가 assume으로만
   다룬다. 이름이 공백으로 끝나는 CUT의 PER_CUT·standalone 커버리지와 최종 문서는
   실행해 보지 않았다.

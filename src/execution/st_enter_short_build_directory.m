@@ -10,6 +10,13 @@ function cleanup = st_enter_short_build_directory(cfg, label)
 % folder and the model folder go on the MATLAB path so files that were
 % found through pwd still resolve. A caller already running inside that
 % short base (the standalone bundle runner) is left as it is.
+%
+% Simulink.fileGenControl('set') removes the previous cache folders from the
+% path unless keepPreviousPath is true. When the previous cache folder was
+% the caller's folder, that took the Harness input MAT files with it: the
+% Signal Editor lost its ports and a save wrote the broken lines into the
+% model. The folders therefore go on the path after the set, and the set
+% keeps the previous ones.
 
 if nargin < 2 || strlength(strtrim(string(label))) == 0
     label = 'BUILD';
@@ -39,24 +46,30 @@ end
 previousPath = path;
 previousConfig = Simulink.fileGenControl('getConfig');
 try
-    addpath(previousDirectory, '-begin');
+    cd(folder);
+    Simulink.fileGenControl('set', ...
+        'CacheFolder', folder, 'CodeGenFolder', folder, ...
+        'keepPreviousPath', true);
+    lookupFolders = {previousDirectory};
     if isfield(cfg, 'ModelFile') && ~isempty(char(string(cfg.ModelFile)))
         modelFolder = fileparts(char(string(cfg.ModelFile)));
         if isfolder(modelFolder)
-            addpath(modelFolder, '-begin');
+            lookupFolders{end+1} = modelFolder;
         end
     end
-    cd(folder);
-    Simulink.fileGenControl('set', ...
-        'CacheFolder', folder, 'CodeGenFolder', folder);
+    for k = 1:numel(lookupFolders)
+        addpath(lookupFolders{k}, '-begin');
+    end
 catch ME
     leave_short_build_directory(previousDirectory, previousPath, ...
         previousConfig, folder, label, cfg);
     rethrow(ME);
 end
 st_log(cfg, 'INFO', ...
-    'Short build directory enter | Label=%s | Folder=%s | Length=%d | From=%s', ...
-    label, folder, strlength(folder), previousDirectory);
+    ['Short build directory enter | Label=%s | Folder=%s | Length=%d | ' ...
+     'From=%s | Path+=%s'], ...
+    label, folder, strlength(folder), previousDirectory, ...
+    strjoin(lookupFolders, ';'));
 cleanup = onCleanup(@() leave_short_build_directory(previousDirectory, ...
     previousPath, previousConfig, folder, label, cfg));
 end

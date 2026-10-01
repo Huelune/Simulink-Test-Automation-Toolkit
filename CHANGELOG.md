@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **짧은 빌드 폴더에서도 Harness 입력 MAT을 찾습니다.**
+  `st_enter_short_build_directory`는 호출한 폴더와 모델 폴더를 MATLAB path에 넣은
+  뒤 `Simulink.fileGenControl('set', ...)`을 불렀습니다. 이 호출은 기본값
+  (`keepPreviousPath=false`)으로 이전 캐시 폴더를 path에서 지웁니다. 이전 캐시
+  폴더가 호출한 폴더였다면 거기 있는 `{Harness}_HarnessInputs.mat`도 path에서
+  빠졌습니다. 그러면 PER_CUT 실행 중 Signal Editor가 입력을 못 읽어 포트를 잃고, 출력
+  run이 생기지 않았습니다. 기대값 로깅 준비의 저장 때문에 끊긴 선이 모델에
+  저장되기도 했습니다. 이제 `keepPreviousPath=true`로 설정하고, 폴더는 그 뒤에
+  path에 넣습니다.
+  - **끊긴 선이 저장된 Harness는 다시 만들어야 합니다.** Harness를 열었을 때 입력
+    쪽 선이 빨간 점선이면 지우고 `st_run_from_harness`를 다시 실행하십시오.
+
 - **CUT 경로를 Simulink가 쓰는 표기로 넘깁니다.**
   `st_normalize_cut_path`는 블록을 찾으면 이제 Excel에 적힌 글자 대신
   `getfullname` 결과를 돌려줍니다. 경로 조회는 여러 표기를 받아 주지만 Test
