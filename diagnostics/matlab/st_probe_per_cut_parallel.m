@@ -363,7 +363,7 @@ try
         st_log(cfg, 'WARN', ...
             ['Per-CUT parallel probe marker detach readback differs | ' ...
              'Expected=%s | Actual=%s'], ...
-            char(strjoin(original, ', ')), char(strjoin(actual, ', ')));
+            char(strjoin(original(:)', ', ')), char(strjoin(actual(:)', ', ')));
     end
 catch ME
     st_log(cfg, 'WARN', ...
@@ -500,7 +500,7 @@ for r = 1:height(selected)
         parts(r) = selected.Status(r);
     end
 end
-text = strjoin(parts, ',');
+text = strjoin(parts(:)', ',');
 end
 
 
@@ -761,11 +761,11 @@ for f = 1:numel(folders)
     end
 end
 if found == 0
-    emit('CRASH', 'Found=0 | Searched=%s', char(strjoin(folders, '; ')));
+    emit('CRASH', 'Found=0 | Searched=%s', char(strjoin(folders(:)', '; ')));
 end
 st_log(cfg, 'WARN', ...
     'Per-CUT parallel probe crash dump scan | Found=%d | Searched=%s', ...
-    found, char(strjoin(folders, '; ')));
+    found, char(strjoin(folders(:)', '; ')));
 end
 
 
@@ -811,7 +811,7 @@ parts = strings(count, 1);
 for k = 1:count
     parts(k) = sprintf('%s:%d', ME.stack(k).name, ME.stack(k).line);
 end
-text = strjoin(parts, ' < ');
+text = strjoin(parts(:)', ' < ');
 end
 
 
