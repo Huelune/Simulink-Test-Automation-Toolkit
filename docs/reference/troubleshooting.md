@@ -423,8 +423,9 @@ Harness를 Dirty로 표시하는데, 이전에는 아무도 되돌리지 않았�
 ### 셀 내용이 `OverflowDetails` 참조로 바뀌었다
 
 Excel 셀의 문자 수나 줄바꿈 수 한도를 넘었습니다. 전체 내용은 `OverflowDetails`
-시트에 순번별로 나뉘어 있습니다. 특히 `DecisionBlockScope='ALL'`에서 Lookup 테이블이
-많은 CUT에 자주 발생합니다.
+시트에 순번별로 나뉘어 있습니다. 특히 `DecisionBlockScope='ALL'`(기본)에서 Lookup
+테이블이 많은 CUT에 자주 발생합니다. 분기 목록이 짧아도 되면
+`st_export_test_specification('DecisionBlockScope','EXPLICIT')`로 뽑으십시오.
 
 ## 8. 검증(`st_verify_all`) 오류
 

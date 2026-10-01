@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **테스트 명세서의 `DecisionBlocks`가 기본으로 암시적 분기까지 담습니다.**
+  `cfg.DecisionBlockScope` 기본값을 `'EXPLICIT'`에서 `'ALL'`로 바꿨습니다. 이제
+  Saturate, Abs, Lookup 계열, Integrator 계열, Enabled / Triggered Subsystem처럼
+  조건식 없이 Coverage objective를 만드는 블록도 명세서에 나옵니다. 최종 문서는
+  원래 `'ALL'`이었으므로 두 문서의 범위가 같아집니다.
+  - **명세서 출력이 달라집니다.** 그런 블록이 있는 CUT은 `DecisionBlocks` 셀이
+    길어지고 D번호가 다시 매겨집니다. Lookup 테이블이 많은 CUT은 셀이
+    `OverflowDetails` 참조로 바뀔 수 있습니다.
+  - 예전 목록이 필요하면 `cfg.DecisionBlockScope = 'EXPLICIT'`로 두거나
+    `st_export_test_specification('DecisionBlockScope','EXPLICIT')`로 뽑습니다.
+
 - **팀 제출 트리 재배치를 MATLAB에서 합니다.**
   `tools/python/classify_standalone_results.py`와 같은 규칙의
   `st_classify_standalone_results`를 추가했습니다. `st_run_standalone_coverage_pipeline`

@@ -400,20 +400,20 @@ workflow에서 `SLDV`로 해석됩니다.
 
 ## 9. 명세서와 최종 문서 추출
 
-### `DecisionBlockScope` — 기본 `'EXPLICIT'`
+### `DecisionBlockScope` — 기본 `'ALL'`
 
 `st_export_test_specification`이 `DecisionBlocks` 열에 어디까지 적을지 정합니다.
 
 | 값 | 포함 대상 | 쓰는 때 |
 | --- | --- | --- |
-| `'EXPLICIT'` (기본) | 대화상자에 조건을 적는 블록 5종 (If, Switch, MinMax, MultiPortSwitch, SwitchCase) | 평소 |
-| `'ALL'` | 위에 더해 조건식 없이 Coverage objective를 만드는 블록 13종 (Saturate, Abs, Lookup 계열, Integrator 계열 등) | If/Switch가 없는데 Decision 커버리지가 나오는 이유를 찾을 때 |
+| `'ALL'` (기본) | 아래 5종에 더해 조건식 없이 Coverage objective를 만드는 블록 13종 (Saturate, Abs, Lookup 계열, Integrator 계열 등)과 Enabled / Triggered Subsystem | 평소. If/Switch가 없는데 Decision 커버리지가 나오는 이유도 여기서 보입니다 |
+| `'EXPLICIT'` | 대화상자에 조건을 적는 블록 5종 (If, Switch, MinMax, MultiPortSwitch, SwitchCase) | 목록을 짧게 보고 싶을 때 |
 | `'NONE'` | 없음. 열이 비고 스캔도 건너뜁니다 | 목록이 필요 없을 때 |
 
 `'ALL'`은 목록이 크게 길어집니다. Lookup 테이블이 많은 CUT은 셀이 길이 한도를 넘어
 `OverflowDetails` 시트 참조로 대체될 수 있습니다.
 
-실행마다 덮어쓰려면 `st_export_test_specification('DecisionBlockScope','ALL')`을
+실행마다 덮어쓰려면 `st_export_test_specification('DecisionBlockScope','EXPLICIT')`를
 쓰십시오. 어느 범위로 뽑았는지는 실행 로그의 `DecisionBlockScope=` 항목에 남습니다.
 
 ### `FinalDocumentResultRun` — 기본 `'AUTO'`

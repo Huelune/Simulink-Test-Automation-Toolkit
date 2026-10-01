@@ -443,3 +443,15 @@ verifyEqual(testCase, decisionDetails.Name(1:4), ...
     ["Mode If"; "Mode If"; "Mode If"; "Sw"]);
 verifyEqual(testCase, decisionDetails.Path(1:3), repmat("Top/CUT/If", 3, 1));
 end
+
+function testDecisionScopeDefaultsToAll(testCase)
+% Implicit branches such as Saturate belong in the specification by
+% default, the same scope the final document uses. A config written before
+% the option existed has no field and must land on the same default.
+cfg = st_config();
+verifyEqual(testCase, upper(char(string(cfg.DecisionBlockScope))), 'ALL');
+source = fileread(fullfile(st_project_root(), 'src', 'exporting', ...
+    'st_export_test_specification.m'));
+verifyEmpty(testCase, regexp(source, "scope = 'EXPLICIT';", 'once'));
+verifyNotEmpty(testCase, regexp(source, "scope = 'ALL';", 'once'));
+end

@@ -359,14 +359,14 @@ Excel로 뽑습니다.
 | --- | --- | --- |
 | `OutputFile` | `result/test_specification_<timestamp>.xlsx` | 저장할 파일 경로. **이미 있으면 덮어쓰지 않고 실패합니다** |
 | `VerifyMode` | `'STEP2'` | `'STEP2'`는 각 시나리오의 직계 Step 2만, `'ALL_STEPS_COLUMNS'`는 verify가 있는 모든 스텝을 오른쪽 열에 나눠 씁니다 |
-| `DecisionBlockScope` | `cfg.DecisionBlockScope` (`'EXPLICIT'`) | `DecisionBlocks` 열에 어디까지 담을지. `'EXPLICIT'`/`'ALL'`/`'NONE'` |
+| `DecisionBlockScope` | `cfg.DecisionBlockScope` (`'ALL'`) | `DecisionBlocks` 열에 어디까지 담을지. `'ALL'`/`'EXPLICIT'`/`'NONE'` |
 
 ```matlab
 % 모든 스텝의 verify를 스텝별 열로
 [T, file] = st_export_test_specification('VerifyMode','ALL_STEPS_COLUMNS');
 
-% If/Switch가 없는데 Decision coverage가 나오는 이유를 찾을 때
-[T, file] = st_export_test_specification('DecisionBlockScope','ALL');
+% 조건이 적힌 블록(If, Switch 등)만 짧게 볼 때
+[T, file] = st_export_test_specification('DecisionBlockScope','EXPLICIT');
 ```
 
 모델을 읽기 위해 로드하지만 시뮬레이션·테스트 실행·SLDV 생성·기대값 갱신은 하지

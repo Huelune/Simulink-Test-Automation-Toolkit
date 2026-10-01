@@ -13,11 +13,11 @@ function [specification, outputFile] = st_export_test_specification(varargin)
 %   DecisionBlocks shows each direct child decision block Name followed by
 %   a D-numbered saved-parameter condition. DecisionBlockDetails retains
 %   outcomes, expressions, types, paths, and JSON.
-%   DecisionBlockScope: 'EXPLICIT' (default) lists only the blocks that
-%   carry a condition in their dialog. 'ALL' adds the blocks that create
-%   coverage objectives without one, such as Saturate, Relay and the
-%   lookup table family. 'NONE' leaves the column empty. Omit it to use
-%   cfg.DecisionBlockScope.
+%   DecisionBlockScope: 'ALL' (default) lists the blocks that carry a
+%   condition in their dialog and the blocks that create coverage
+%   objectives without one, such as Saturate, Relay and the lookup table
+%   family. 'EXPLICIT' keeps only the first group. 'NONE' leaves the
+%   column empty. Omit it to use cfg.DecisionBlockScope.
 p = inputParser;
 addParameter(p, 'OutputFile', '', @(v) (ischar(v) && isrow(v)) || ...
     (isstring(v) && isscalar(v)) || isempty(v));
@@ -78,11 +78,11 @@ if isempty(scope)
     if isstruct(cfg) && isfield(cfg, 'DecisionBlockScope')
         scope = upper(strtrim(char(string(cfg.DecisionBlockScope))));
     else
-        scope = 'EXPLICIT';
+        scope = 'ALL';
     end
 end
 if isempty(scope)
-    scope = 'EXPLICIT';
+    scope = 'ALL';
 end
 if ~ismember(scope, {'EXPLICIT', 'ALL', 'NONE'})
     error('simtest:SpecificationDecisionScope', ...

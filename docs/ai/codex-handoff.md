@@ -673,7 +673,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   `case`를 추가로 필요로 한다(`Formatter` 열이 그 구분을 명시한다). 파라미터가
   비활성이어도 행을 거르지 않고 상태를 표현식에 남긴다. breakpoint 등 값은 workspace
   에서 평가하지 않고 저장된 문자열 그대로 옮긴다.
-- 수집 범위는 `DecisionBlockScope`(`EXPLICIT` 기본 / `ALL` / `NONE`)로 고른다. 기본값은
+- 수집 범위는 `DecisionBlockScope`(`ALL` 기본 / `EXPLICIT` / `NONE`)로 고른다. 기본값은
   `cfg.DecisionBlockScope`, 실행별 덮어쓰기는 `st_export_test_specification`의 동명
   name-value다. 범위는 catalog의 `Kind` 열로 걸러진 **view**로 구현했고,
   `st_specification_decision_catalog(scope)`가 그 view를 돌려준다. 따라서

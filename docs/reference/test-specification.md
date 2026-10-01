@@ -161,15 +161,15 @@ D번호는 두 그룹을 구분하지 않고 정렬 결과에 연속으로 붙�
 ### 어디까지 뽑을지 고르기
 
 ```matlab
-[T, file] = st_export_test_specification('DecisionBlockScope','ALL');
+[T, file] = st_export_test_specification('DecisionBlockScope','EXPLICIT');
 ```
 
-기본값은 `cfg.DecisionBlockScope`입니다.
+기본값은 `cfg.DecisionBlockScope`(`'ALL'`)입니다.
 
 | 값 | 포함 대상 | 쓰는 때 |
 | --- | --- | --- |
-| `EXPLICIT` (기본) | 명시적 분기 5종 | 평소. 목록이 가장 짧습니다 |
-| `ALL` | 명시적 + 암시적 18종 | `If`/`Switch`가 없는데 Decision coverage가 나오는 이유를 찾을 때 |
+| `ALL` (기본) | 명시적 + 암시적 18종 | 평소. `If`/`Switch`가 없는데 Decision coverage가 나오는 이유도 여기서 보입니다 |
+| `EXPLICIT` | 명시적 분기 5종 | 목록을 짧게 보고 싶을 때 |
 | `NONE` | 없음 (셀이 빕니다) | 분기 목록이 필요 없고 export를 가볍게 하고 싶을 때 |
 
 `ALL`은 목록이 크게 길어집니다. Lookup 테이블이 많은 CUT은 `DecisionBlocks` 셀이 길이
@@ -295,7 +295,7 @@ ExternalReset=none`인 `Integrator`도 그대로 남기고 상태를 표시합�
 
 `'ALL'`에는 Enabled Subsystem과 Triggered Subsystem도 들어갑니다. enable과
 trigger 자체가 분기이기 때문입니다. 조건을 대화상자에 적는 블록이 아니므로
-`'EXPLICIT'`(기본)에는 나오지 않습니다.
+`'EXPLICIT'`에는 나오지 않습니다.
 
 그 분기는 Subsystem 한 겹 안의 port 블록에 붙어 있지만, 목록에는 **Subsystem이**
 적힙니다. port 블록 이름은 어느 모델에서나 `Enable`이라 그것을 적으면 어느

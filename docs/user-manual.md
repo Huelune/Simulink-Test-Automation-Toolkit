@@ -378,7 +378,7 @@ winopen(specFile)
 | --- | --- | --- |
 | `OutputFile` | `result/test_specification_<시각>.xlsx` | 출력 파일. 이미 있으면 거부합니다 |
 | `VerifyMode` | `'STEP2'` | `STEP2`는 Step 2의 verify만, `ALL_STEPS_COLUMNS`는 verify가 있는 모든 스텝을 열로 |
-| `DecisionBlockScope` | `'EXPLICIT'` | `EXPLICIT`는 조건이 적힌 블록만, `ALL`은 커버리지 목표를 만드는 블록까지, `NONE`은 비움 |
+| `DecisionBlockScope` | `'ALL'` | `ALL`은 커버리지 목표를 만드는 블록까지, `EXPLICIT`는 조건이 적힌 블록만, `NONE`은 비움 |
 
 열 구성은 [테스트 명세서 추출](reference/test-specification.md)에 있습니다.
 
@@ -591,7 +591,7 @@ PASS/FAIL이 다를 수 있기 때문입니다. `Metadata` 시트에 두 실행�
 | `CoveragePipelineId` | `'LATEST'` | 커버리지를 가져올 standalone 실행 |
 | `CoverageSource` | `'STANDALONE'` | `STANDALONE`은 3단계 결과, `TEST_RUN`은 1단계 실행의 커버리지, `NONE`은 비움 |
 | `ResultRun` | `'AUTO'` | 판정을 가져올 실행. `AUTO`는 BATCH·PER_CUT 중 더 최근 것. `BATCH`, `PER_CUT`, 폴더 경로도 됩니다 |
-| `DecisionBlockScope` | `'ALL'` | 명세서와 달리 기본이 `ALL`입니다 |
+| `DecisionBlockScope` | `'ALL'` | 명세서와 달리 `cfg.DecisionBlockScope`를 따르지 않습니다 |
 | `RequireTestResults` | `false` | `true`면 판정이 없을 때 파일을 만들지 않고 오류 |
 | `RequireCoverage` | `false` | `true`면 커버리지가 없을 때 파일을 만들지 않고 오류 |
 | `IncludeUsageSheet` | `false` | 사용법 시트를 맨 뒤에 붙입니다 |
