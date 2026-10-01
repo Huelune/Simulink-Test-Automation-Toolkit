@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **새로 만든 Harness의 Signal Editor 입력 파일이 지워지지 않습니다.**
+  Harness 생성을 짧은 폴더로 옮긴 뒤로 `sltest.harness.create`가 현재 폴더에 쓰는
+  `{Harness}_HarnessInputs.mat`이 그 짧은 폴더에 생겼고, 단계가 끝날 때 폴더째
+  지워졌습니다. 그래서 Signal Editor 단계가 `SignalEditorActiveScenarioInvalid`
+  (`Active=InputScenario | Available=[Scenario]`)로 멈췄습니다. 이제 생성과 저장은
+  호출한 폴더에서 하고, 빌드 캐시만 짧은 폴더에 둡니다.
+  - **이미 만든 Harness는 다시 만들어야 합니다.** 이 문제가 있던 버전으로 만든
+    Harness는 입력 파일이 없습니다. 그 Harness를 지우고
+    `st_run_from_harness`를 다시 실행하십시오.
+
 - **테스트 명세서의 `DecisionBlocks`가 기본으로 암시적 분기까지 담습니다.**
   `cfg.DecisionBlockScope` 기본값을 `'EXPLICIT'`에서 `'ALL'`로 바꿨습니다. 이제
   Saturate, Abs, Lookup 계열, Integrator 계열, Enabled / Triggered Subsystem처럼

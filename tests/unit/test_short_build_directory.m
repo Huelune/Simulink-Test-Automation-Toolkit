@@ -75,6 +75,30 @@ end
 end
 
 
+function testHarnessIsCreatedAndSavedFromTheCallerFolder(testCase)
+% sltest.harness.create writes <Harness>_HarnessInputs.mat into pwd, and
+% the short folder is deleted when the stage ends. Creating there left the
+% Signal Editor pointing at a file that no longer existed.
+text = fileread(fullfile(st_project_root(), 'src', 'harness', ...
+    'st_create_harnesses.m'));
+callerPosition = regexp(text, '\ncallerDirectory = pwd;', 'once');
+enterPosition = regexp(text, ['shortBuildDirectory = ' ...
+    'st_enter_short_build_directory\(cfg, ''HARNESS''\);'], 'once');
+verifyNotEmpty(testCase, callerPosition);
+verifyTrue(testCase, callerPosition < enterPosition);
+
+createCalls = regexp(text, 'sltest\.harness\.create\(');
+verifyNumElements(testCase, createCalls, 1);
+verifyNotEmpty(testCase, regexp(text, ['run_in_folder\(callerDirectory, ' ...
+    '@\(\) \.\.\.\s+sltest\.harness\.create\('], 'once'));
+
+saveCalls = regexp(text, 'save_system\(');
+verifyNumElements(testCase, saveCalls, 1);
+verifyNotEmpty(testCase, regexp(text, ['run_in_folder\(callerDirectory, ' ...
+    '@\(\) \.\.\.\s+save_system\(cfg\.TopModel\)\)'], 'once'));
+end
+
+
 function testSldvStagesOutputInTheShortBase(testCase)
 text = fileread(fullfile(st_project_root(), 'src', 'sldv', ...
     'st_prepare_sldv_targets.m'));

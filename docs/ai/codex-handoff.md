@@ -342,6 +342,27 @@ PER_CUT을 Test Manager 병렬 실행(`run(...,'Parallel',true)`)으로 빠르�
     실제 이득(GAIN).
   - 워커 수는 코어 수가 아니라 메모리로 정한다.
 
+## 2026-10-01 Harness 입력 MAT 유실 수정
+
+- 사용자 보고(R2025b): No=292 Harness의 Signal Editor 단계가
+  `SignalEditorActiveScenarioInvalid`로 멈췄다. `Active=InputScenario`인데
+  `Available=[Scenario]`(라이브러리 기본값)이었고, Harness를 열 때 LoadFcn이
+  `{Harness}_HarnessInputs.mat`이 MATLAB 경로에 없다고 경고했다.
+- 원인: `9b491f2`가 `st_create_harnesses` 루프를 `st_enter_short_build_directory`
+  안으로 옮겼다. 그 파일은 pwd에 생기고, 블록에는 파일 이름만 남는다. 단계가 끝나면
+  짧은 폴더를 `rmdir(folder,'s')`로 지우므로 입력 파일이 함께 사라졌다.
+- 수정: `sltest.harness.create`와 바로 뒤의 `save_system`은 호출한 폴더에서 돌린다.
+  `CacheFolder`/`CodeGenFolder`는 짧은 폴더 그대로다. HARNESS_CLONE 경로는 입력을
+  `result\harness_clone\<transaction>\input.mat` 절대 경로로 두므로 영향이 없다.
+- 사용자는 "CUT 이름 끝 공백"을 원인으로 의심했다. 로그의
+  `failed [Low_HVDC_Voltage_OperationRange]`에는 끝 공백이 없다. `readtable`의 기본
+  `WhitespaceRule='trim'`이 Excel 셀 앞뒤 공백을 읽는 순간 지우기 때문이다.
+  `st_load_targets` 주석과 문서의 "공백 보존"은 사실이 아니었다.
+- 미검증: 입력 파일이 create 때 생기는지 save 때 생기는지는 확인하지 않았다. 그래서 둘
+  다 호출한 폴더에서 돌린다. `9b491f2` 이후 만든 Harness는 입력 파일이 없으므로
+  사용자가 지우고 다시 만들어야 한다. 재생성 후 Signal Editor 단계 통과를 아직 보지
+  못했다.
+
 ## 변경 불가 핵심 결정
 
 CoverageFilterMode이 활성화된 CUT의 content rule은 CUT 자기 자신을 선택하면
