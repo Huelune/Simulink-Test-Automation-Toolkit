@@ -741,31 +741,67 @@ end
 
 function report_crash_dumps(cfg, since)
 % A worker that dies leaves only "terminated abnormally" on the client. Its
-% crash dump says why: a fault in a named module, or memory. A worker the OS
-% killed for memory may leave no dump at all.
-folders = unique([string(tempdir); string(pwd)]);
-found = 0;
-for f = 1:numel(folders)
-    files = dir(fullfile(folders(f), 'matlab_crash_dump*'));
-    for k = 1:numel(files)
-        if files(k).datenum < since
-            continue;
-        end
-        found = found + 1;
-        dumpFile = fullfile(files(k).folder, files(k).name);
-        [reason, frames] = crash_summary(dumpFile);
-        emit('CRASH', 'File=%s | Reason=%s', dumpFile, char(reason));
+% crash dump says why: a fault in a named module, or memory. A pool writes
+% its workers' dumps into the cluster job storage, not tempdir, and keeps
+% that job because of them. A worker the OS killed for memory may leave no
+% dump at all.
+searched = unique([string(tempdir); string(pwd)]);
+dumps = strings(0,1);
+for f = 1:numel(searched)
+    dumps = [dumps; recent_files( ...
+        dir(fullfile(searched(f), 'matlab_crash_dump*')), since)]; %#ok<AGROW>
+end
+storage = job_storage_location();
+if strlength(storage) > 0
+    searched(end+1,1) = storage;
+    listing = dir(fullfile(storage, '**', '*'));
+    listing = listing(~[listing.isdir]);
+    names = lower(string({listing.name}));
+    listing = listing(contains(names, "crash") | endsWith(names, ".dmp"));
+    dumps = [dumps; recent_files(listing, since)];
+end
+dumps = unique(dumps);
+for k = 1:numel(dumps)
+    [reason, frames] = crash_summary(dumps(k));
+    emit('CRASH', 'File=%s | Reason=%s', char(dumps(k)), char(reason));
+    % Workers that die together almost always die the same way, so one
+    % stack is enough.
+    if k == 1
         for j = 1:numel(frames)
-            emit('CRASH-STACK', '%s | %s', files(k).name, char(frames(j)));
+            emit('CRASH-STACK', '%s', char(frames(j)));
         end
     end
 end
-if found == 0
-    emit('CRASH', 'Found=0 | Searched=%s', char(strjoin(folders(:)', '; ')));
+if isempty(dumps)
+    emit('CRASH', 'Found=0 | Searched=%s', char(strjoin(searched(:)', '; ')));
 end
 st_log(cfg, 'WARN', ...
     'Per-CUT parallel probe crash dump scan | Found=%d | Searched=%s', ...
-    found, char(strjoin(folders(:)', '; ')));
+    numel(dumps), char(strjoin(searched(:)', '; ')));
+end
+
+
+function files = recent_files(listing, since)
+files = strings(0,1);
+for k = 1:numel(listing)
+    if listing(k).datenum >= since
+        files(end+1,1) = string(fullfile( ...
+            listing(k).folder, listing(k).name)); %#ok<AGROW>
+    end
+end
+end
+
+
+function location = job_storage_location()
+location = "";
+try
+    cluster = parcluster('Processes');
+    value = cluster.JobStorageLocation;
+    if ischar(value) || isstring(value)
+        location = string(value);
+    end
+catch
+end
 end
 
 
