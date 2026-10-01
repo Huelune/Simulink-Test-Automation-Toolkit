@@ -307,6 +307,41 @@
   `user-manual.md`, 옵션 전체는 `reference/execution-commands.md`, Excel 열은
   `reference/workbook-reference.md`, 설정은 `reference/config-reference.md`가 원본이다.
 
+## 2026-10-01 PER_CUT 병렬 실행 실험 종료
+
+PER_CUT을 Test Manager 병렬 실행(`run(...,'Parallel',true)`)으로 빠르게 할 수 있는지
+확인하고 **접었다**. 같은 실험을 다시 하지 않도록 결과를 남긴다.
+
+- 브랜치 `exp/per-cut-parallel`(`3fb563f`)에 진단 두 개만 있다. PER_CUT 코드는
+  바꾸지 않았다. `st_probe_per_cut_parallel`은 Test Case 하나의 순차/병렬 비교이고,
+  `st_probe_cross_cut_parallel`은 여러 CUT 일괄 병렬 설계의 전제를 잰다.
+- 코드로 확인한 것: 여러 CUT을 동시에 돌리는 것은 지금 구조로 불가하다. CUT마다
+  `saveToFile(tf)`(필터 복원)와 `save_system`(기대값 로깅 준비·갱신)으로 공유 파일을
+  저장한다.
+- 사용자 PC 실측(R2025b, 테스트 프로젝트 OBC_DM_SNAP_SWC, 2026-10-01):
+  - `run(tc,'Parallel',true)`는 이 툴킷의 Harness로 동작한다. 워커 2개에서 판정, 출력
+    run, 커버리지(Decision 14/21, Execution 27/27)가 순차와 같았다.
+  - 워커는 저장하지 않은 Test File 변경을 본다. 메모리에서만 붙인 표식 CVF가 병렬
+    결과에도 있었다. PER_CUT의 REPLACE 격리는 병렬에서도 유지된다.
+  - CUT마다 Iteration이 1개라 나눌 것이 없다. 순차 16.1초, 병렬 54.6초(0.29배)였고,
+    차이는 워커가 모델을 처음 불러오는 비용이다.
+  - 기본 풀(코어 수, 워커 12개)로는 워커 5~11개가 실행 중에 죽는다. 원인은 메모리다.
+    전체 63.2GB 중 풀을 띄우기 전 여유가 23~24GB였다. 유휴 워커 하나가 약 0.9GB를
+    쓰고, 실행 중 여유가 5.2GB까지 내려갔다.
+  - 덤프는 `std::terminate`(`sltp_sync`/`mf0` 경로) 또는 `m_parser.dll` 접근 위반이며
+    죽은 위치가 매번 다르다. 워커마다 `Simulink.fileGenControl` 캐시 폴더를 따로 줘도
+    죽었으므로 공유 폴더 경쟁은 원인이 아니다.
+- 접은 이유: Iteration 병렬은 이득이 없다. 여러 CUT 일괄 병렬은 이 PC에서 워커가
+  4개 안팎으로 제한된다. 반면 `st_run_tests_per_cut` 반복 구조 재작성, 로그 개편과의
+  충돌, 사용자 문서의 "병렬 CUT 실행 안 함" 원칙 변경이 필요하다. 줄어드는 시간은
+  실행 한 번에 몇 분 수준으로 추정되어 비용에 비해 작다.
+- 다시 시작할 때(CUT이 매우 많거나 메모리가 넉넉한 PC):
+  - `st_probe_cross_cut_parallel`부터 실행한다. 한 번도 실행되지 않았다.
+  - 남은 미확인 항목은 세 가지다. 기대값을 갱신하고 저장한 모델을 재실행 때 워커가
+    다시 읽는지(MODEL), 여러 Test Case 결과를 CUT별 MLDATX로 나눌 수 있는지(SPLIT),
+    실제 이득(GAIN).
+  - 워커 수는 코어 수가 아니라 메모리로 정한다.
+
 ## 변경 불가 핵심 결정
 
 CoverageFilterMode이 활성화된 CUT의 content rule은 CUT 자기 자신을 선택하면
@@ -333,12 +368,14 @@ f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사
 
 ## 활성 브랜치 지도
 
-2026-09-22 기준 원격에는 아래 두 브랜치만 있다.
+2026-09-22 기준 원격에는 아래 두 브랜치만 있었다. 2026-10-01에 참고용 실험 브랜치
+하나가 더해졌다.
 
 | 브랜치 | 기준 커밋 | 역할과 처리 방침 |
 | --- | --- | --- |
 | main | 54ae3ca | Harness Workflow v2 전체가 fast-forward로 들어온 기준. 사용자의 MATLAB 클론은 이 브랜치를 `git pull`한다. 직접 커밋하지 않고 develop에서 ff 통합한다. |
 | develop | main에서 분기 | 이후 모든 개발의 활성 브랜치. 검증된 묶음 단위로 main에 fast-forward 통합한다. |
+| exp/per-cut-parallel | 3fb563f | 종료한 PER_CUT 병렬 실험의 진단 두 개. 참고용으로만 남기며 develop·main에 합치지 않는다. 내용은 위 "2026-10-01 PER_CUT 병렬 실행 실험 종료" |
 
 ## 정리된 과거 브랜치
 
