@@ -362,6 +362,20 @@ PER_CUT을 Test Manager 병렬 실행(`run(...,'Parallel',true)`)으로 빠르�
   다 호출한 폴더에서 돌린다. `9b491f2` 이후 만든 Harness는 입력 파일이 없으므로
   사용자가 지우고 다시 만들어야 한다. 재생성 후 Signal Editor 단계 통과를 아직 보지
   못했다.
+- 후속(같은 날): 다시 만든 Harness292가 Signal Editor는 통과하고 Test Manager
+  `setProperty(...,'HarnessOwner',...)`에서 "A harness with owner
+  '.../Low_HVDC_Voltage_OperationRange /' and name ..."으로 멈췄다. owner 글자가
+  공백 + `/`로 끝난다. 그런데도 `getSimulinkBlockHandle`·`sltest.harness.create/load`는
+  통과했다. 실제 블록 이름이 공백으로 끝나고 CUTPath 셀이 `... /`로 적혔다고
+  추정하지만, 셀 원문과 블록 이름은 확인하지 못했다.
+- 수정: `st_normalize_cut_path`가 찾은 블록의 `getfullname`을 돌려준다. Test Manager,
+  SLDV 공유 검사(`ownerFullPath` strcmp), clone owner 확인, 명세서 `HarnessOwner`
+  비교가 모두 이 값을 쓴다. Simulink 쪽 경로를 자르던 곳 두 곳도 고쳤다:
+  `st_coverage_object_path`의 `StandaloneCUTPath` strtrim, 최종 문서의
+  DecisionPoints 접두사 비교(readtable이 CUTPath 셀 끝 공백을 지움).
+- 미검증: 끝 `/`를 붙인 경로가 R2025b에서 해석되는지는 단위 테스트가 assume으로만
+  다룬다. 이름이 공백으로 끝나는 CUT의 PER_CUT·standalone 커버리지와 최종 문서는
+  실행해 보지 않았다.
 
 ## 변경 불가 핵심 결정
 

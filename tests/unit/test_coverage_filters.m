@@ -254,6 +254,15 @@ verifyEqual(testCase, st_coverage_object_path(row), ...
     'standalone_Controller/Controller');
 end
 
+function testCoverageObjectPathKeepsATrailingSpaceInTheName(testCase)
+% The standalone path comes from Simulink, and a CUT named 'Controller '
+% is only found with its space.
+row = table("TOP/Controller ", "standalone_Controller/Controller ", ...
+    'VariableNames', {'CUTPath','StandaloneCUTPath'});
+verifyEqual(testCase, st_coverage_object_path(row), ...
+    'standalone_Controller/Controller ');
+end
+
 function testCoverageObjectPathFallsBackToTheCutPath(testCase)
 row = table("TOP/Controller", "", ...
     'VariableNames', {'CUTPath','StandaloneCUTPath'});

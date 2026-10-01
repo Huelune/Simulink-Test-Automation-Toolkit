@@ -27,6 +27,12 @@ function cutPath = st_normalize_cut_path(cutPath, modelName)
 %   Actual block name: 'B'
 %   Excel path       : 'TEST_TARGET_MODEL_NAME/A/B '
 %   -> exact path fails, legacy strtrim candidate is checked and used.
+%
+% A candidate that resolves is returned the way Simulink spells it
+% (getfullname), not as typed. Path lookup accepts forms that the
+% text-matching APIs reject: a CUTPath ending in ' /' passed validation and
+% got a Harness, and then Test Manager, which compares HarnessOwner as text,
+% reported no Harness with that owner.
 
 rawCutPath = st_scalar_text(cutPath);
 modelName = strtrim(st_scalar_text(modelName));
@@ -42,9 +48,11 @@ exactCandidate = ...
         rawCutPath, ...
         modelName);
 
-if st_cut_path_exists(exactCandidate)
+blockHandle = st_cut_path_handle(exactCandidate);
 
-    cutPath = exactCandidate;
+if blockHandle ~= -1
+
+    cutPath = getfullname(blockHandle);
     return;
 end
 
@@ -57,9 +65,11 @@ trimmedCandidate = ...
         trimmedInput, ...
         modelName);
 
-if st_cut_path_exists(trimmedCandidate)
+blockHandle = st_cut_path_handle(trimmedCandidate);
 
-    cutPath = trimmedCandidate;
+if blockHandle ~= -1
+
+    cutPath = getfullname(blockHandle);
     return;
 end
 
@@ -116,9 +126,9 @@ end
 end
 
 
-function tf = st_cut_path_exists(candidate)
+function blockHandle = st_cut_path_handle(candidate)
 
-tf = false;
+blockHandle = -1;
 
 if isempty(candidate)
     return;
@@ -130,12 +140,9 @@ try
         getSimulinkBlockHandle( ...
             candidate);
 
-    tf = ...
-        blockHandle ~= -1;
-
 catch
 
-    tf = false;
+    blockHandle = -1;
 end
 
 end

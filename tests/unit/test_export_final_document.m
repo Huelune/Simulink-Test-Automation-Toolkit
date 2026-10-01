@@ -501,6 +501,22 @@ verifyEqual(testCase, sort(entries.RelativePath), ...
     sort(["Switch1"; "Inner/If1"]));
 end
 
+function testDecisionPointsSurviveACutNameEndingInASpace(testCase)
+% readtable trims the CUTPath cell, so a CUT named 'Controller ' comes back
+% without its space while the blocks below it still carry it.
+folder = temp_folder(testCase);
+file = fullfile(folder, 'TestSummary.xlsx');
+write_decision_points(file, "Controller", "TOP/Controller ", ...
+    ["TOP/Controller /Switch1"; "TOP/Controller /Inner/If1"], ...
+    ["Switch"; "If"]);
+decisions = st_final_document_decisions(base_config(), ...
+    source_with_workbook("ANY", file));
+verifyTrue(testCase, isKey(decisions.ByCut, 'Controller'));
+entries = decisions.ByCut('Controller');
+verifyEqual(testCase, sort(entries.RelativePath), ...
+    sort(["Switch1"; "Inner/If1"]));
+end
+
 function testDecisionFinderRebuildsPathsUnderTheAskedRoot(testCase)
 entries = table(["Switch"; "If"], ["Switch1"; "Inner/If1"], ...
     'VariableNames', {'BlockType','RelativePath'});

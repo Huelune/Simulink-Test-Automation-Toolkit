@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **CUT 경로를 Simulink가 쓰는 표기로 넘깁니다.**
+  `st_normalize_cut_path`는 블록을 찾으면 이제 Excel에 적힌 글자 대신
+  `getfullname` 결과를 돌려줍니다. 경로 조회는 여러 표기를 받아 주지만 Test
+  Manager의 `HarnessOwner`는 글자로 비교합니다. 그래서 이름이 공백으로 끝나는 CUT을
+  `.../Name /`처럼 적으면 사전 검증·Harness 생성·Signal Editor는 통과하고 Test
+  Manager 단계에서 "A harness with owner ..."로 멈췄습니다. 같은 비교를 하는 SLDV 입력
+  공유 검사, Harness 복제 확인, 명세서의 Test Case 연결 확인도 함께 맞춰집니다.
+  - 그 뒤 단계에서 이 경로의 끝 공백을 다시 자르던 두 곳도 고쳤습니다. standalone
+    커버리지가 CUT을 찾는 `StandaloneCUTPath`, 그리고 최종 문서가 DecisionPoints
+    시트에서 CUT 아래 블록을 고르는 접두사 비교입니다. 후자는 `readtable`이
+    CUTPath 셀 끝 공백을 지우므로 구분자 앞 공백을 허용합니다.
+  - 보통의 경로는 결과가 그대로입니다. 표기가 달랐던 행은 SLDV manifest의 경로와
+    달라지므로 다음 실행에서 SLDV 단계부터 다시 준비됩니다.
+
 - **새로 만든 Harness의 Signal Editor 입력 파일이 지워지지 않습니다.**
   Harness 생성을 짧은 폴더로 옮긴 뒤로 `sltest.harness.create`가 현재 폴더에 쓰는
   `{Harness}_HarnessInputs.mat`이 그 짧은 폴더에 생겼고, 단계가 끝날 때 폴더째
