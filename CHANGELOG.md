@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **SLDV 데이터의 Subsystem 경로가 CUT과 달라도 정해진 대로 처리합니다.**
+  경로가 다르면 `AllowSldvSubsystemPathMismatch`(기본 `true`)를 보고 WARN 후 계속하거나
+  거부해야 했습니다. 그런데 그 검사를 하는 함수가 `cfg`를 받지 못해 "Unrecognized
+  function or variable 'cfg'"로 멈췄습니다. 이제 `cfg`를 넘깁니다.
+
 - **함수 호출 Subsystem도 SLDV 입력으로 준비됩니다.**
   SLDV는 함수 호출 CUT의 호출 트리거를 Dataset 입력 `FcnTriggerPort`로 넣습니다.
   그런데 Harness는 Test Sequence 스케줄러로 직접 호출하므로 Signal Editor에 그 입력이
