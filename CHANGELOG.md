@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **엑셀 목록대로 파일을 폴더에 복사하는 Python 도구를 추가했습니다.**
+  `python tools/python/copy_files_by_excel.py <목록.xlsx> <폴더 기준> <파일 기준>`은 행마다
+  B열 파일(`<파일 기준>/<B열>`)을 A열 폴더(`<폴더 기준>/<A열>`)로 복사합니다. 폴더가 없으면
+  만들고, 같은 이름의 파일이 이미 있으면 건너뜁니다(`--overwrite`로 덮어씀). 실패한 행은
+  사유와 함께 남기고 나머지 행은 계속 처리합니다. 첫 행은 제목 행으로 건너뜁니다
+  (`--no-header`). `--sheet`, `--dry-run`을 지원합니다. 표준 라이브러리만 쓰므로 설치할 것이
+  없습니다.
+
 - **Test File의 Model 이름을 한 번에 바꿀 수 있습니다.**
   `st_rename_test_file_models(testFilePath, topModel)`은 Test File의 모든 Test Case(하위
   Suite 포함)에서 Model 값 `A_B_C_D_E_Harness1`을 `{topModel}_Harness1`처럼 바꾸고 같은
