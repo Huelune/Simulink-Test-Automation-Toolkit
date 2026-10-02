@@ -14,6 +14,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 from xml.sax.saxutils import escape
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -23,6 +24,19 @@ import copy_files_by_excel as cfe  # noqa: E402
 MAIN_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
 REL_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
 PKG_REL_NS = 'http://schemas.openxmlformats.org/package/2006/relationships'
+CONTENT_TYPES_NS = 'http://schemas.openxmlformats.org/package/2006/content-types'
+SHEETML = 'application/vnd.openxmlformats-officedocument.spreadsheetml'
+
+
+def _excel_installed() -> bool:
+    if sys.platform != 'win32':
+        return False
+    import winreg
+    try:
+        winreg.CloseKey(winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, 'Excel.Application'))
+        return True
+    except OSError:
+        return False
 
 
 def _write_xlsx(path: Path, sheets: dict[str, list[list]]) -> None:
@@ -68,7 +82,26 @@ def _write_xlsx(path: Path, sheets: dict[str, list[list]]) -> None:
         f'<Relationship Id="rId{i}" Target="worksheets/sheet{i}.xml" '
         f'Type="{REL_NS}/worksheet"/>'
         for i in range(1, len(sheets) + 1))
+    sheet_types = ''.join(
+        f'<Override PartName="/xl/worksheets/sheet{i}.xml" ContentType="{SHEETML}.worksheet+xml"/>'
+        for i in range(1, len(sheets) + 1))
+    if shared:
+        rel_entries += (f'<Relationship Id="rIdS" Target="sharedStrings.xml" '
+                        f'Type="{REL_NS}/sharedStrings"/>')
+        sheet_types += (f'<Override PartName="/xl/sharedStrings.xml" '
+                        f'ContentType="{SHEETML}.sharedStrings+xml"/>')
     with zipfile.ZipFile(path, 'w') as book:
+        # Excel 이 열 수 있도록 패키지 구성 파일까지 쓴다.
+        book.writestr('[Content_Types].xml',
+                      f'<Types xmlns="{CONTENT_TYPES_NS}">'
+                      f'<Default Extension="rels" ContentType="application/'
+                      f'vnd.openxmlformats-package.relationships+xml"/>'
+                      f'<Default Extension="xml" ContentType="application/xml"/>'
+                      f'<Override PartName="/xl/workbook.xml" ContentType="{SHEETML}.sheet.main+xml"/>'
+                      f'{sheet_types}</Types>')
+        book.writestr('_rels/.rels',
+                      f'<Relationships xmlns="{PKG_REL_NS}"><Relationship Id="rId1" '
+                      f'Type="{REL_NS}/officeDocument" Target="xl/workbook.xml"/></Relationships>')
         book.writestr('xl/workbook.xml',
                       f'<workbook xmlns="{MAIN_NS}" xmlns:r="{REL_NS}">'
                       f'<sheets>{sheet_entries}</sheets></workbook>')
@@ -191,6 +224,38 @@ class CopyFilesByExcelTest(unittest.TestCase):
         ]})
         rows = cfe.read_columns_ab(self.excel)
         self.assertEqual(rows, [(1, '001_Ctrl', 'a.mat'), (2, '7', 'b.mat')])
+
+    def test_non_zip_file_is_read_through_excel(self) -> None:
+        # 회사 DRM(SoftCamp)은 Excel 이 저장한 .xlsx 를 SCDSA 헤더로 감싸 zip 이 아니게 만든다.
+        self.excel.write_bytes(b'SCDSA004' + b'\0' * 64)
+        with mock.patch.object(cfe, '_read_with_excel',
+                               return_value=[(2, '001_Ctrl', 'a.mat')]) as reader:
+            self.assertEqual(cfe.read_columns_ab(self.excel, '목록'), [(2, '001_Ctrl', 'a.mat')])
+        reader.assert_called_once_with(self.excel, '목록')
+
+    def test_excel_values_are_normalized_like_the_zip_reader(self) -> None:
+        self.assertEqual(cfe._excel_text(None), '')
+        self.assertEqual(cfe._excel_text(7.0), '7')
+        self.assertEqual(cfe._excel_text(1.5), '1.5')
+        self.assertEqual(cfe._excel_text(True), '1')
+        self.assertEqual(cfe._excel_text(' a.mat '), 'a.mat')
+
+    @unittest.skipUnless(_excel_installed(), 'Excel 이 있어야 한다')
+    def test_excel_reader_matches_zip_reader(self) -> None:
+        _write_xlsx(self.excel, {
+            '목록': [
+                ['폴더', '파일'],
+                [7, ('rich', ['a', '.mat'])],
+                [None, None],
+                [' 002_모터 ', 'b 파일.mat'],
+            ],
+            '둘째': [['x', 'y']],
+        })
+        self.assertEqual(cfe._read_with_excel(self.excel, None), cfe.read_columns_ab(self.excel))
+        self.assertEqual(cfe._read_with_excel(self.excel, '둘째'), [(1, 'x', 'y')])
+        with self.assertRaises(cfe.InputError) as raised:
+            cfe._read_with_excel(self.excel, '없음')
+        self.assertIn('목록', str(raised.exception))
 
 
 if __name__ == '__main__':

@@ -8,7 +8,8 @@
   만들고, 같은 이름의 파일이 이미 있으면 건너뜁니다(`--overwrite`로 덮어씀). 실패한 행은
   사유와 함께 남기고 나머지 행은 계속 처리합니다. 첫 행은 제목 행으로 건너뜁니다
   (`--no-header`). `--sheet`, `--dry-run`을 지원합니다. 표준 라이브러리만 쓰므로 설치할 것이
-  없습니다.
+  없습니다. 회사 DRM(SoftCamp)이 암호화한 목록 파일은 zip으로 열리지 않으므로, PowerShell로
+  Excel을 보이지 않게 띄워 읽기 전용으로 읽습니다(Windows와 Excel 필요).
 
 - **Test File의 Model 이름을 한 번에 바꿀 수 있습니다.**
   `st_rename_test_file_models(testFilePath, topModel)`은 Test File의 모든 Test Case(하위

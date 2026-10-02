@@ -16,9 +16,11 @@
   둘 다 빈 행은 넘어간다.
 - 첫 번째 시트를 읽고, 값이 있는 첫 행은 제목 행으로 보고 건너뛴다
   (--sheet 이름, --no-header).
-- .xlsx 만 읽는다. 표준 라이브러리로 직접 읽으므로 설치할 것이 없다. 옛 형식 .xls 는
-  Excel 에서 .xlsx 로 다시 저장해서 쓴다. Excel 이 숫자로 저장한 셀(예: 001 → 1)은
-  보이는 값이 아니라 저장된 값으로 읽힌다.
+- .xlsx 를 표준 라이브러리로 직접 읽으므로 설치할 것이 없다. 회사 DRM(SoftCamp)이
+  암호화한 파일처럼 zip 으로 열리지 않으면, PowerShell 로 Excel 을 보이지 않게 띄워
+  읽기 전용으로 읽는다(Windows + Excel 필요). 옛 형식 .xls 는 이 경로로 읽힌다.
+- 셀은 화면에 보이는 값이 아니라 저장된 값으로 읽힌다. 숫자로 저장된 셀은 001 → 1 이
+  되므로, 0 으로 시작하는 이름은 Excel 에서 텍스트로 넣는다.
 
 사용법:
     python tools/python/copy_files_by_excel.py <목록.xlsx> <폴더 기준> <파일 기준>
@@ -30,9 +32,13 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import json
+import os
 import posixpath
 import re
 import shutil
+import subprocess
 import sys
 import zipfile
 from dataclasses import dataclass, field
@@ -54,6 +60,9 @@ class InputError(Exception):
 
 def read_columns_ab(xlsx: Path, sheet: str | None = None) -> list[tuple[int, str, str]]:
     """시트에서 A열이나 B열에 값이 있는 행의 (행 번호, A열, B열). 값은 앞뒤 공백을 지운다."""
+    if not zipfile.is_zipfile(xlsx):
+        print(f'엑셀이 zip 형식이 아니어서(DRM 암호화 등) Excel 로 읽습니다: {xlsx}')
+        return _read_with_excel(xlsx, sheet)
     try:
         with zipfile.ZipFile(xlsx) as book:
             strings = _shared_strings(book)
@@ -114,6 +123,100 @@ def _cell_text(cell: ET.Element, strings: list[str]) -> str:
     if kind == 's' and value:
         return strings[int(value)]
     return value
+
+
+# DRM 이 걸린 파일은 DRM 을 아는 Excel 만 연다. Excel 을 보이지 않게 띄워 읽기 전용으로
+# 열고, A:B 를 저장된 값(Value2)으로 한 번에 가져와 행마다 JSON 한 줄로 내보낸 뒤 닫는다.
+# 파일은 쓰지 않는다. 경로와 시트 이름은 따옴표 문제를 피하려고 환경 변수로 넘긴다.
+EXCEL_READ_SCRIPT = r'''
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false
+$missing = $null
+try {
+    $xl = New-Object -ComObject Excel.Application
+    try {
+        $xl.Visible = $false
+        $xl.DisplayAlerts = $false
+        $wb = $xl.Workbooks.Open($env:COPY_XLSX_PATH, 0, $true)
+        try {
+            $ws = $wb.Worksheets.Item(1)
+            if ($env:COPY_XLSX_SHEET) {
+                $ws = $null
+                foreach ($s in $wb.Worksheets) {
+                    if ($s.Name -ceq $env:COPY_XLSX_SHEET) { $ws = $s }
+                }
+                if (-not $ws) {
+                    $missing = ($wb.Worksheets | ForEach-Object { $_.Name }) -join ', '
+                }
+            }
+            if ($ws) {
+                $used = $ws.UsedRange
+                $first = $used.Row
+                $count = $used.Rows.Count
+                $values = $ws.Range("A${first}:B$($first + $count - 1)").Value2
+                for ($i = 1; $i -le $count; $i++) {
+                    [pscustomobject]@{ r = $first + $i - 1; a = $values[$i, 1]; b = $values[$i, 2] } |
+                        ConvertTo-Json -Compress
+                }
+            }
+        } finally {
+            $wb.Close($false)
+        }
+    } finally {
+        $xl.Quit()
+        [void][Runtime.InteropServices.Marshal]::ReleaseComObject($xl)
+    }
+} catch {
+    [Console]::Error.WriteLine($_.Exception.Message)
+    exit 1
+}
+if ($null -ne $missing) {
+    [Console]::Error.WriteLine($missing)
+    exit 3
+}
+'''
+EXCEL_TIMEOUT_SEC = 600
+
+
+def _read_with_excel(xlsx: Path, sheet: str | None) -> list[tuple[int, str, str]]:
+    powershell = shutil.which('powershell')
+    if powershell is None:
+        raise InputError(f'.xlsx 가 zip 형식이 아닌데 Excel 을 띄울 PowerShell 이 없습니다: {xlsx}')
+    env = {**os.environ, 'COPY_XLSX_PATH': str(xlsx.resolve()), 'COPY_XLSX_SHEET': sheet or ''}
+    encoded = base64.b64encode(EXCEL_READ_SCRIPT.encode('utf-16-le')).decode('ascii')
+    try:
+        completed = subprocess.run(
+            [powershell, '-NoProfile', '-NonInteractive', '-EncodedCommand', encoded],
+            env=env, capture_output=True, timeout=EXCEL_TIMEOUT_SEC)
+    except subprocess.TimeoutExpired as exc:
+        raise InputError(f'Excel 이 {EXCEL_TIMEOUT_SEC}초 안에 응답하지 않았습니다: {xlsx}') from exc
+    stdout = completed.stdout.decode('utf-8', errors='replace')
+    stderr = completed.stderr.decode('utf-8', errors='replace').strip()
+    if completed.returncode == 3:
+        raise InputError(f'시트 "{sheet}" 가 없습니다. 있는 시트: {stderr}')
+    if completed.returncode != 0:
+        raise InputError(f'Excel 로 읽지 못했습니다: {xlsx} ({stderr})')
+
+    rows = []
+    for line in stdout.splitlines():
+        if line.strip():
+            item = json.loads(line)
+            folder, name = _excel_text(item['a']), _excel_text(item['b'])
+            if folder or name:
+                rows.append((int(item['r']), folder, name))
+    return rows
+
+
+def _excel_text(value: object) -> str:
+    """Excel Value2 를 .xlsx 에 저장된 값과 같은 글자로 바꾼다 (7.0 → '7', True → '1')."""
+    if value is None:
+        return ''
+    if isinstance(value, bool):
+        return '1' if value else '0'
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
 
 
 @dataclass
