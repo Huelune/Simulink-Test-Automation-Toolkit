@@ -240,6 +240,9 @@ checker는 Result import, model load/save, Test Manager clear, 파일 생성을 
 - Harness와 Input이 만들어지기 **전에** 실패한 경우에는 보존을 보장하지 않습니다.
 - 모든 비트가 1이어도 `EXCEPT` 대상이 있으면 `PASS`가 아니라 `PARTIAL`입니다.
   커버리지 누락을 녹색 코드 뒤에 숨기지 않기 위한 의도적 정책입니다.
+- `EXCEPT` 대상이 있어도, 실행은 끝났지만 Test Case 판정이 Passed가 아닌
+  대상(`ExecutionStatus=WARN`)은 B1을 깨지 않습니다. 설명되지 않은 `FAIL`이나
+  `SKIP`은 여전히 B1을 0으로 만듭니다.
 
 필터가 적용돼 objective가 없어진 유효한 `0/0`, `N/A`와 Coverage 객체 자체의 누락은
 서로 다른 상황입니다.

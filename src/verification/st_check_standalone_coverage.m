@@ -737,8 +737,11 @@ end
 
 function tf = excepted_only(manifest)
 % WARN is acceptable only when every target that is not PASS raised an
-% execution exception. An unexplained FAIL, WARN or SKIP still breaks the
+% execution exception. An unexplained FAIL or SKIP still breaks the
 % contract, so a real packaging defect cannot hide behind this allowance.
+% A target WARN is a non-passing Test Case verdict or partial scenario
+% timing: result data that leaves the action OK when no target excepted,
+% so it must not break the contract once one does.
 tf = false;
 if ~isfield(manifest, 'Targets') || isempty(manifest.Targets), return; end
 targets = manifest.Targets;
@@ -747,7 +750,7 @@ for i = 1:numel(targets)
     status = upper(string(field_text(targets(i), 'ExecutionStatus')));
     if status == "EXCEPT"
         anyExcepted = true;
-    elseif status ~= "PASS"
+    elseif ~ismember(status, ["PASS","WARN"])
         return;
     end
 end

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **EXCEPT CUT이 하나 있어도 판정이 Passed가 아닌 CUT 때문에 standalone 검사 B1이 0이 되지 않습니다.**
+  `st_check_standalone_coverage`는 EXCEPT 대상이 있으면 나머지 대상이 모두 `PASS`여야
+  B1(M)을 1로 줬습니다. 그래서 Test Case 판정이 Passed가 아닌 대상(`ExecutionStatus=WARN`)이
+  하나라도 있으면, 모든 대상 비트가 1인데도 코드가 `0111111111`이 되고 모든 대상이
+  `FAIL`로 보였습니다. EXCEPT가 없을 때는 같은 WARN 대상을 문제 삼지 않으므로, 이제
+  EXCEPT가 있을 때도 WARN을 허용합니다. 설명되지 않은 `FAIL`·`SKIP`은 그대로 B1을 깹니다.
+
 - **엑셀 목록대로 파일을 폴더에 복사하는 Python 도구를 추가했습니다.**
   `python tools/python/copy_files_by_excel.py <목록.xlsx> <폴더 기준> <파일 기준>`은 행마다
   B열 파일(`<파일 기준>/<B열>`)을 A열 폴더(`<폴더 기준>/<A열>`)로 복사합니다. 폴더가 없으면
