@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Test File의 Model 이름을 한 번에 바꿀 수 있습니다.**
+  `st_rename_test_file_models(testFilePath, topModel)`은 Test File의 모든 Test Case(하위
+  Suite 포함)에서 Model 값 `A_B_C_D_E_Harness1`을 `{topModel}_Harness1`처럼 바꾸고 같은
+  경로에 저장합니다. `_Harness<번호>`는 그대로 두고 그 앞만 바꿉니다. Test File 안의
+  이름만 바꾸며, 모델 파일(.slx)과 Harness 필드는 건드리지 않습니다. `_Harness<번호>`로
+  끝나지 않는 Model은 WARN을 남기고 그대로 둡니다. 결과는 Test Case별 이전·새 이름 표로
+  출력합니다.
+
 - **SLDV 데이터의 Subsystem 경로가 CUT과 달라도 정해진 대로 처리합니다.**
   경로가 다르면 `AllowSldvSubsystemPathMismatch`(기본 `true`)를 보고 WARN 후 계속하거나
   거부해야 했습니다. 그런데 그 검사를 하는 함수가 `cfg`를 받지 못해 "Unrecognized
