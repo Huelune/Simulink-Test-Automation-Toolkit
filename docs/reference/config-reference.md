@@ -213,6 +213,24 @@ Template Harness 복제(`TestPreparationSource=HARNESS_CLONE`)에서 대상 Harn
 | `false` (기본) | 기존 Harness를 건드리지 않고 건너뜁니다 |
 | `true` | 복구용 clone을 먼저 저장한 뒤 교체합니다. 후처리가 실패하면 그 clone에서 복원합니다 |
 
+### `ValidateScenarioAlignment` — 기본 `false`
+
+`ALIGNMENT` 단계(`Validate Scenario Alignment`)를 돌릴지 정합니다. 이 단계는 앞 단계가
+만든 것을 다시 읽기만 합니다. 대신 CUT마다 Harness를 다시 열어 SLDV, Signal Editor, Test
+Assessment, Test Manager Iteration의 Scenario 이름을 비교하므로 CUT이 많으면 오래 걸립니다.
+
+| 값 | 동작 |
+| --- | --- |
+| `false` (기본) | 단계를 건너뜁니다. 콘솔에 `SKIP`이 찍히고, 재시작 준비 점검도 이 단계를 보지 않습니다 |
+| `true` | 테스트 실행 전에 검사하고, 이름이 맞지 않으면 멈춥니다 |
+
+건너뛰면 Scenario와 Iteration이 어긋났을 때 실행이나 기대값 갱신 중에야 드러납니다.
+입력 MAT을 바꾼 뒤 Test Manager 단계를 다시 하지 않았다면 직접 확인하십시오.
+
+```matlab
+R = st_validate_scenario_alignment();
+```
+
 ### `TestSuiteName` — 기본 `'New Test Suite 1'`
 
 Test Case를 담을 Test Suite 이름입니다. 기존 Test File을 쓸 때는 그 파일에 실제로

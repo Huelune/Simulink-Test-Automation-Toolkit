@@ -174,6 +174,22 @@ for s = 1:numel(stageNames)
     plan.(['Action' stage])(blocked) = "SKIP";
     plan.(['Reason' stage])(blocked) = "Clone preparation completed, skipped, or failed per target";
     selection = st_stage_selection(plan, stage);
+    % The alignment check reopens every Harness only to compare what the
+    % stages above built, so it runs only when the configuration asks.
+    if strcmp(stage, 'ALIGNMENT') && ~cfg.ValidateScenarioAlignment
+        st_log(cfg, 'INFO', ['Scenario alignment check skipped ' ...
+            '(cfg.ValidateScenarioAlignment=false) | Targets=%d'], ...
+            sum(selection.Run));
+        fprintf(['\n%s: SKIP (cfg.ValidateScenarioAlignment=false)\n' ...
+            'Check on demand with: st_validate_scenario_alignment\n'], ...
+            stageLabels{s});
+        plan.RunALIGNMENT(:) = false;
+        plan.ActionALIGNMENT(:) = "SKIP";
+        plan.ReasonALIGNMENT(:) = "cfg.ValidateScenarioAlignment=false";
+        stageResults{s} = table(repmat("SKIP", height(T), 1), ...
+            'VariableNames', {'Status'});
+        continue;
+    end
     if options.StrictRestart && ~any(selection.Run)
         stageResults{s} = table(repmat("CACHED",height(T),1),'VariableNames',{'Status'});
         st_log(cfg,'INFO','Restart reuses prerequisite | Stage=%s',stage);
@@ -230,7 +246,12 @@ st_save_workflow_state(state, cfg);
 
 % APPLY can legitimately change Assessment/Test Case state during execution.
 if executeTests
-    for stage = {'ASSESSMENT','TEST_MANAGER','ALIGNMENT'}
+    capturedStages = {'ASSESSMENT','TEST_MANAGER','ALIGNMENT'};
+    if ~cfg.ValidateScenarioAlignment
+        % ALIGNMENT did not run, so there is no readback to refresh.
+        capturedStages = setdiff(capturedStages, {'ALIGNMENT'}, 'stable');
+    end
+    for stage = capturedStages
         capturePlan = plan;
         capturePlan.(['Run' stage{1}]) = ~failedCloneRows;
         state = st_record_restart_stage(state,capturePlan,stage{1},cfg,'OK');

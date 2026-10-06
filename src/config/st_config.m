@@ -295,6 +295,18 @@ cfg.TestSuiteName = ...
 %   - Recreate Test Cases from Excel.
 cfg.OverwriteTestFile = false;
 
+% false (default):
+%   Skip the Validate Scenario Alignment stage. It only rereads what the
+%   earlier stages built, but it reopens every Harness to compare the
+%   SLDV, Signal Editor, Test Assessment and Test Manager Iteration
+%   scenario names. A mismatch then shows up later, during execution or
+%   the expected-value update. Run st_validate_scenario_alignment() to
+%   check on demand.
+%
+% true:
+%   Run the check before execution and stop on a mismatch.
+cfg.ValidateScenarioAlignment = false;
+
 % Replace existing clone destinations only after a recovery clone is saved.
 cfg.OverwriteHarness = false;
 

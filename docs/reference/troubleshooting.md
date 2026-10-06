@@ -283,6 +283,8 @@ MATLAB은 같은 이름의 모델을 두 개 로드할 수 없습니다. standal
 
 `ALIGNMENT` 단계에서 잡힙니다. 입력 Scenario가 3개면 Iteration도 3개여야 합니다.
 입력 MAT을 바꾼 뒤 Test Manager 단계를 다시 실행하지 않았을 때 자주 납니다.
+이 단계는 기본으로 건너뛰므로(`cfg.ValidateScenarioAlignment=false`), 의심되면
+`st_validate_scenario_alignment()`로 직접 확인하십시오.
 
 **대처:**
 

@@ -40,6 +40,29 @@ verifyError(testCase, @() st_parse_workflow_options( ...
     'IgnoreUnexpectedSldvInputs', 'yes'), 'MATLAB:InputParser:ArgumentFailedValidation');
 end
 
+function testScenarioAlignmentRunsOnlyOnRequest(testCase)
+% The alignment check reopens every Harness only to compare what earlier
+% stages built, so it is off unless cfg.ValidateScenarioAlignment asks.
+% Skipping it must also drop it from the post-run readback and from
+% readiness, or a restart would block on ALIGNMENT evidence that is never
+% refreshed.
+verifyFalse(testCase, st_config().ValidateScenarioAlignment);
+
+root = st_project_root();
+workflow = fileread(fullfile(root, 'src', 'workflow', 'st_run_workflow.m'));
+verifyNotEmpty(testCase, regexp(workflow, ...
+    'strcmp\(stage, ''ALIGNMENT''\) && ~cfg\.ValidateScenarioAlignment', ...
+    'once'));
+verifyNotEmpty(testCase, regexp(workflow, ...
+    'setdiff\(capturedStages, \{''ALIGNMENT''\}', 'once'));
+
+readiness = fileread(fullfile(root, 'src', 'verification', ...
+    'st_check_readiness.m'));
+verifyNotEmpty(testCase, regexp(readiness, ...
+    'strcmp\(stage,''ALIGNMENT''\) && ~cfg\.ValidateScenarioAlignment', ...
+    'once'));
+end
+
 function testRemovedCoverageFilterStageIsRejected(testCase)
 % Coverage filters lost their preparation stage; a restart aimed at it has
 % to say where to go instead of silently starting somewhere else.

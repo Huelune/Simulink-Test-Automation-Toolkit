@@ -250,7 +250,7 @@ st_collect_per_cut_results     % (2) 결과 정리 — 필수
 | `SIGNAL_EDITOR` | 입력 Scenario를 만들어 Harness에 연결 | Harness |
 | `ASSESSMENT` | `verify` 문장 구성 | Harness |
 | `TEST_MANAGER` | Test File, Test Case, Iteration 구성 | Test File |
-| `ALIGNMENT` | Scenario 이름이 서로 맞는지 검사만 | 없음 |
+| `ALIGNMENT` | Scenario 이름이 서로 맞는지 검사만. 기본으로 건너뜀(`cfg.ValidateScenarioAlignment`) | 없음 |
 | `EXECUTE` | 실행 → 실패 시 기대값 갱신 → 재실행 → 실행 기록 저장 | Harness, 실행 기록 |
 
 Harness가 **이미 전부 있으면** `st_run_after_harness`를 써도 됩니다. `HARNESS` 단계만

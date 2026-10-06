@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **`Validate Scenario Alignment` 단계를 기본으로 건너뜁니다.**
+  이 단계는 앞 단계가 만든 것을 다시 읽기만 하는데, CUT마다 Harness를 다시 열어 SLDV,
+  Signal Editor, Test Assessment, Test Manager Iteration의 Scenario 이름을 비교해서
+  CUT이 많으면 오래 걸렸습니다. 새 설정 `cfg.ValidateScenarioAlignment`(기본 `false`)가
+  꺼져 있으면 워크플로는 콘솔에 `SKIP`을 찍고 넘어갑니다. 실행 뒤 재시작 기록과
+  `st_check_readiness`도 이 단계를 보지 않으므로, 옛 검사 기록 때문에 재시작이 막히지
+  않습니다.
+  - 어긋남은 이제 실행이나 기대값 갱신 중에 드러납니다. 직접 확인하려면
+    `st_validate_scenario_alignment()`를 실행하거나 설정을 `true`로 두십시오.
+
 - **Harness에 없는 SLDV 입력을 기본으로 무시합니다.**
   `cfg.IgnoreUnexpectedSldvInputs`의 기본값을 `false`에서 `true`로 바꿨습니다. 바깥
   Data Store처럼 SLDV가 입력으로 넣지만 Harness Signal Editor에는 없는 신호가 있으면,

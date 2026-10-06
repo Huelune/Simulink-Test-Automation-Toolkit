@@ -94,7 +94,7 @@ CUT 사전 검증
 → SIGNAL_EDITOR    Scenario MAT 생성과 연결
 → ASSESSMENT       verify 문장 구성
 → TEST_MANAGER     Test File, Test Case, Iteration 구성
-→ ALIGNMENT        Scenario와 Iteration 정렬 검사 (검사만)
+→ ALIGNMENT        Scenario와 Iteration 정렬 검사 (검사만, 기본 건너뜀)
 → EXECUTE          테스트 실행 → 기대값 갱신 → 재실행 → 실행 기록 저장
 ```
 
@@ -213,6 +213,10 @@ verify 결과가 없거나 `Untested`이면 계속 실패로 처리합니다.
 
 입력 Scenario 수와 Iteration 수가 맞는지 확인합니다. 입력 MAT을 바꾼 뒤 Test Manager
 단계를 다시 실행하지 않았을 때 여기서 걸립니다.
+
+CUT마다 Harness를 다시 열기 때문에 기본으로는 건너뜁니다
+(`cfg.ValidateScenarioAlignment=false`). 워크플로 안에서 검사하려면 `true`로 두고,
+한 번만 확인하려면 `st_validate_scenario_alignment()`를 직접 실행합니다.
 
 ## 5. 증분 준비와 단계 재실행
 
