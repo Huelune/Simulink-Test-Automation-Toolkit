@@ -573,6 +573,51 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
 - 실패 CUT의 target-manifest.json과 filter 폴더
 - MATLAB 오류의 getReport extended 출력과 dbstack completenames 출력
 
+### 2026-09-16 변경분 1회 확인 (옛 runtime-verification.md에서 옮김)
+
+이번 변경은 MATLAB이 없는 환경에서 만들었습니다. 아래는 **한 번 확인하면 끝나는**
+항목이므로, 확인이 끝나면 이 절을 지웁니다.
+
+- [ ] **옵션 자동완성 파일** — MATLAB 스키마 검사를 아직 돌려보지 않았습니다.
+
+  ```matlab
+  for folder = {'workflow','pipeline','verification','exporting','execution'}
+      validateFunctionSignaturesJSON(fullfile(st_project_root(), ...
+          'src', folder{1}, 'functionSignatures.json'));
+  end
+  ```
+
+  이어서 명령창에 `st_run_standalone_coverage_pipeline('Action','` 까지 치고 Tab을
+  눌러 값 목록이 뜨는지 봅니다.
+
+- [ ] **제출물 이름 규칙** — 대상 폴더가 `{NUM}_UT_REQ_{TC}`인지, 각 폴더에
+  `UT_REQ_{TC}.cvf`/`.cvt`/`.html`과 `{HarnessName}.slx`가 있는지, 생성된 HTML을
+  열었을 때 표시되는 CVF 이름이 옆 파일명과 같은지.
+
+- [ ] **해시 속도** — 직전 측정에서 체커가 226초였습니다. 얼마로 줄었는지 기록합니다.
+
+  ```matlab
+  slx = '여기에_standalone_slx_경로';
+  tic; st_file_signature(slx); toc
+  ```
+
+- [ ] **경고 식별자 수집** — 무엇을 억제할지 정하려면 목록이 먼저 필요합니다.
+  `lastwarn`은 마지막 하나만 주므로 아래를 씁니다.
+
+  ```matlab
+  ids = st_collect_warning_ids(@() st_export_test_bundle( ...
+      'ExecutionModelMode','STANDALONE_HARNESS','AnalyzeProducts',false));
+  ```
+
+  파라미터화된 라이브러리 링크 경고처럼 의미 있는 것은 남겨 두는 편이 낫습니다.
+
+- [ ] **(선택) toolbox 제품 분석 소요시간** — 배송 번들의 기본값을 끌지 판단할
+  근거입니다. pipeline과 verification snapshot의 내부 번들은 이미 끕니다.
+
+  ```matlab
+  tic; dependencies.toolboxDependencyAnalysis({'여기에_standalone_slx_경로'}); toc
+  ```
+
 ## 다른 Codex의 시작 절차
 
 1. git fetch --prune origin을 실행한다.

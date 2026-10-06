@@ -233,8 +233,8 @@ st_setup
 results = runtests(fullfile(st_project_root(), 'tests', 'unit'));
 ```
 
-이후 절차는 [R2025b 배포 전 확인](docs/reference/runtime-verification.md)과
-[종합 검증](docs/reference/verification.md)을 따릅니다. 아직 결정되지 않은 항목은
+이후 절차는 [종합 검증](docs/reference/verification.md)을 따르고, 배포 전 실기 확인 목록은
+그 문서의 [13절](docs/reference/verification.md#13-r2025b-배포-전-실기-확인)에 있습니다. 아직 결정되지 않은 항목은
 [TODO](docs/design/TODO.md)에 있습니다.
 
 ## 라이선스

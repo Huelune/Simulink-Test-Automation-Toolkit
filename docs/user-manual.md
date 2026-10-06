@@ -466,7 +466,7 @@ st_open_standalone_test_manager('PipelineId', info.PipelineId)
 
 같은 이름의 Test File이 이미 열려 있다고 멈추면 `'ClearTestManager', true`를
 붙입니다. 열린 Test File과 Result를 모두 닫으니 저장할 것이 있으면 먼저 저장하십시오.
-수동으로 여는 방법은 [결과 열기](reference/open-results.md)에 있습니다.
+수동으로 여는 방법은 [Standalone Coverage 파이프라인 12절](reference/standalone-coverage-pipeline.md#12-제출물-열기)에 있습니다.
 
 ### 5.5 옵션
 
@@ -806,7 +806,7 @@ winopen(finalFile)
 | 명세서 Excel의 열 구성 | [테스트 명세서 추출](reference/test-specification.md) |
 | 최종 문서의 시트 구성과 판정 출처 | [최종 문서 추출](reference/final-document.md) |
 | standalone 파이프라인의 경계와 산출물 규칙 | [Standalone Coverage 파이프라인](reference/standalone-coverage-pipeline.md) |
-| 제출물을 수동으로 열기 | [결과 열기](reference/open-results.md) |
+| 제출물을 수동으로 열기 | [Standalone Coverage 파이프라인 12절](reference/standalone-coverage-pipeline.md#12-제출물-열기) |
 | 앞 단계를 보존한 채 중간부터 재시작, 결과 재생성 | [재시작](reference/restart.md) |
 | 전체 문서 목록 | [문서 지도](README.md) |
 

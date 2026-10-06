@@ -38,14 +38,12 @@ docs/
 | --- | --- |
 | [테스트 명세서 추출](reference/test-specification.md) | 실행 없이 명세서 Excel 뽑기 |
 | [최종 문서 추출](reference/final-document.md) | 고객 제출용 최종 문서의 시트 구성과 판정 출처 |
-| [Standalone Coverage 파이프라인](reference/standalone-coverage-pipeline.md) | 파이프라인의 경계, 산출물 구조, 예외 처리, PREPARE |
-| [결과 열기](reference/open-results.md) | 제출물을 Test Manager에서 수동으로 열기 |
+| [Standalone Coverage 파이프라인](reference/standalone-coverage-pipeline.md) | 파이프라인의 경계, 산출물 구조, 예외 처리, PREPARE, 제출물 열기 |
 | [재시작](reference/restart.md) | 앞 단계를 보존한 채 중간부터 재시작, 결과 재생성 |
 | [내보내기 번들](reference/export-bundle.md) | 다른 PC에서 재실행할 번들 만들기 |
 | [Template Harness clone](reference/harness-template-clone.md) | 기존 Harness를 본떠 새 Harness 만들기 |
 | [익명 예제 생성](reference/example.md) | 실제 모델 없이 예제로 연습 |
-| [종합 검증](reference/verification.md) | 도구 자체를 인증하기 |
-| [R2025b 배포 전 확인](reference/runtime-verification.md) | 배포 전 실제 MATLAB에서 확인할 것 |
+| [종합 검증](reference/verification.md) | 도구 자체를 인증하기, R2025b 배포 전 실기 확인 |
 
 ## design — 설계
 

@@ -157,7 +157,7 @@ Scenario가 3개면 Iteration도 3개가 되고, 서로 일대일로 연결되�
 
 CVF 규칙은 블록을 경로가 아니라 **SID**(모델 안에서 블록에 붙는 내부 식별자)로
 가리킵니다. 그래서 CVF 뷰어에서 모델이 열려 있지 않으면 이름 칸이 `n/a`로 보입니다.
-고장이 아닙니다. 자세한 이유는 [결과 열기](open-results.md)에 있습니다.
+고장이 아닙니다. 자세한 이유는 [Standalone Coverage 파이프라인](standalone-coverage-pipeline.md#cvf-내용을-볼-때-이름이-na로-나오는-경우)에 있습니다.
 
 ### CVT (`.cvt` 파일)
 

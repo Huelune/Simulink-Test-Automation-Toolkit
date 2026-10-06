@@ -452,7 +452,7 @@ Action의 역할:
 
 ### `st_open_standalone_test_manager`
 
-PACKAGE가 끝난 제출물을 Test Manager에서 엽니다. 기본 동작은 [결과 열기](open-results.md)의
+PACKAGE가 끝난 제출물을 Test Manager에서 엽니다. 기본 동작은 [결과 열기](standalone-coverage-pipeline.md#12-제출물-열기)의
 수동 절차와 같습니다: 대상 CUT 폴더 전부 `addpath` → `sltest.testmanager.TestFile(TestManagerFile)`
 → `sltest.testmanager.view`. **파일을 만들거나 바꾸지 않고, 모델도 로드하지 않습니다.**
 

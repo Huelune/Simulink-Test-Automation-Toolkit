@@ -24,7 +24,7 @@
 - [x] 해시 검증된 저장 증거에서 새 PipelineId로 PACKAGE/SUMMARY를 재생성한다.
 - [x] MATLAB을 모르는 사용자를 위한 입문 가이드, 용어집, Excel 열 사전, 설정 사전을
       추가한다.
-- [ ] `docs/manual/runtime-verification.md`를 R2025b에서 실행하고 예제 출력,
+- [ ] [종합 검증 13절](../reference/verification.md#13-r2025b-배포-전-실기-확인)을 R2025b에서 실행하고 예제 출력,
       재시작·readiness 증거, Test Manager 폴더 버튼 확인 결과를 보존한다.
 - [ ] workspace 이전이 안전해지면 로컬 작업 디렉터리 이름의 과거 오타를 정정한다.
 
