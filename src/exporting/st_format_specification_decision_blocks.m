@@ -3,7 +3,6 @@ function [specification, details] = st_format_specification_decision_blocks(spec
 % The main DecisionBlocks cell contains a block Name line followed by a
 % "D<number> [T/F]Type (expression)" line. The main cell prints T/F for every
 % branch kind so the sheet reads uniformly as "a branch lives here".
-% D numbers are unique across the whole document, not per row.
 % DecisionBlockDetails keeps the specific Outcome token together with the
 % structured fields and one JSON object per row, so downstream processing
 % does not depend on parsing the display.
@@ -40,12 +39,6 @@ end
 
 blockCount = 0;
 failureCount = 0;
-% D numbers run through the whole document instead of restarting on every
-% row. A CUT has one row per scenario and each lists the same branches, so a
-% branch keeps the number it got first: its block path plus its position
-% among that block's branches.
-decisionNumbers = containers.Map('KeyType', 'char', 'ValueType', 'double');
-lastDecision = 0;
 for row = 1:height(specification)
     raw = string(specification{row, decisionIndex});
     if ismissing(raw) || strlength(raw) == 0, raw = "[]"; end
@@ -79,21 +72,9 @@ for row = 1:height(specification)
     % once per block and the D lines below it follow branch order.
     lines = strings(0,1);
     previousPath = string(missing);
-    branchCounts = containers.Map('KeyType', 'char', 'ValueType', 'double');
     for k = 1:numel(decoded)
+        decision = "D" + string(k);
         itemJson = string(jsonencode(decoded(k)));
-        identity = decision_identity(decoded(k), itemJson);
-        if isKey(branchCounts, identity)
-            branchCounts(identity) = branchCounts(identity) + 1;
-        else
-            branchCounts(identity) = 1;
-        end
-        key = sprintf('%s#%d', identity, branchCounts(identity));
-        if ~isKey(decisionNumbers, key)
-            lastDecision = lastDecision + 1;
-            decisionNumbers(key) = lastDecision;
-        end
-        decision = "D" + string(decisionNumbers(key));
         try
             blockType = json_text(decoded(k), 'BlockType');
             name = json_text(decoded(k), 'Name');
@@ -183,19 +164,6 @@ end
 value = string(item.(field));
 if ~isscalar(value) || ismissing(value)
     value = "";
-end
-end
-
-function identity = decision_identity(item, itemJson)
-% An item whose Path cannot be read is still numbered, by its own JSON, so a
-% malformed branch repeated on several scenario rows keeps one number too.
-identity = char(itemJson);
-try
-    path = string(item.Path);
-    if isscalar(path) && ~ismissing(path) && strlength(path) > 0
-        identity = char(path);
-    end
-catch
 end
 end
 

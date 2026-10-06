@@ -154,10 +154,7 @@ BlockType, 분기 순서로 정렬하고 중복을 제거하며 빈 목록은 �
 | **명시적 분기** | `If`, `Switch`, `MinMax`, `MultiPortSwitch`, `SwitchCase` | 대화상자에 조건을 직접 적습니다 |
 | **암시적 분기** | `Saturate`, `Abs`, `DeadZone`, `RateLimiter`, `Relay`, `Lookup_n-D`, `Interpolation_n-D`, `PreLookup`, `Integrator`, `DiscreteIntegrator`, `ForIterator`, `WhileIterator`, `Logic` | 조건식은 없지만 저장된 파라미터 때문에 Coverage objective가 생깁니다 |
 
-D번호는 두 그룹을 구분하지 않고 정렬 결과에 연속으로 붙습니다. 행마다 D1부터 다시
-세지 않고 **문서 전체에서 이어집니다.** 첫 CUT이 D1~D3이면 다음 CUT은 D4부터입니다.
-같은 CUT의 Scenario 행들은 같은 분기를 나열하므로 처음 받은 번호를 그대로 씁니다.
-권위 있는 목록은
+D번호는 두 그룹을 구분하지 않고 정렬 결과에 연속으로 붙습니다. 권위 있는 목록은
 `src/exporting/st_specification_decision_catalog.m` 한 곳입니다. 블록 하나가 D를 여럿
 차지할 수 있다는 점은 아래 "D번호는 블록이 아니라 분기 단위"를 참고하세요.
 
