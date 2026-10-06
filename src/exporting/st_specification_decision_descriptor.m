@@ -7,7 +7,8 @@ function [outcome, expression] = st_specification_decision_descriptor( ...
 % type whose expression is a plain list of saved parameters is handled by
 % the generic formatter, so only an irregular type needs a case below.
 % An empty EXPRESSION means the saved settings give the block no Decision
-% objective at all. The scan then leaves the block out of the list.
+% objective at all, as the catalog DecisionWhen column describes. The scan
+% then leaves the block out of the list.
 if nargin < 3
     parameterReader = @get_param;
 end
@@ -28,6 +29,10 @@ if isempty(index)
         'Unsupported decision block type: %s', blockType);
 end
 outcome = string(catalog.Outcome(index));
+if ~has_decision(parameterReader, blockPath, catalog.DecisionWhen(index))
+    expression = strings(0,1);
+    return;
+end
 
 switch blockType
     case "If"
@@ -66,19 +71,6 @@ switch blockType
     case "SwitchCase"
         conditions = parameter_text(parameterReader, blockPath, 'CaseConditions');
         expression = "u1 in " + conditions;
-
-    case "DiscreteIntegrator"
-        % Simulink Coverage gives this block a reset decision only when
-        % External reset is not none, and limit decisions only when Limit
-        % output is on. With neither there is no Decision objective.
-        hasLimit = strcmpi(parameter_text(parameterReader, blockPath, 'LimitOutput'), "on");
-        hasReset = ~strcmpi(parameter_text(parameterReader, blockPath, 'ExternalReset'), "none");
-        if ~hasLimit && ~hasReset
-            expression = strings(0,1);
-            return;
-        end
-        expression = generic_expression( ...
-            parameterReader, blockPath, catalog(index,:));
 
     otherwise
         expression = generic_expression( ...
@@ -150,6 +142,28 @@ for k = 1:numel(optional)
     end
 end
 expression = strjoin(parts, '; ');
+end
+
+function tf = has_decision(reader, blockPath, rule)
+% Any one term is enough: each names a setting that adds a decision of its
+% own, such as the reset and the limits of a Discrete-Time Integrator. A
+% read failure propagates so the block is kept with a WARN status rather
+% than dropped on a guess.
+terms = name_list(rule);
+tf = isempty(terms);
+for k = 1:numel(terms)
+    parts = regexp(char(terms(k)), '^(\w+)\s*(!?=)\s*(.+)$', 'tokens', 'once');
+    if isempty(parts)
+        error('simtest:SpecificationDecisionRule', ...
+            'Malformed DecisionWhen term: %s', terms(k));
+    end
+    value = parameter_text(reader, blockPath, parts{1});
+    equal = strcmpi(value, strtrim(string(parts{3})));
+    if equal == strcmp(parts{2}, '=')
+        tf = true;
+        return;
+    end
+end
 end
 
 function names = name_list(text)

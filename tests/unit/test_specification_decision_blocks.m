@@ -206,6 +206,9 @@ for k = 1:height(catalog)
     required = split_names(catalog.Parameters(k));
     optional = split_names(catalog.OptionalParameters(k));
     verifyEmpty(testCase, intersect(required, optional), label);
+    rule = split_names(catalog.DecisionWhen(k));
+    verifyTrue(testCase, all(~cellfun(@isempty, ...
+        regexp(cellstr(rule), '^\w+\s*!?=\s*\S', 'once'))), label);
     if catalog.Formatter(k) == "GENERIC"
         hasSource = ~isempty(required) || ...
             strlength(strtrim(string(catalog.FixedText(k)))) > 0;
