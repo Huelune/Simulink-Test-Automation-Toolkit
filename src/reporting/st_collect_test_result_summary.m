@@ -52,7 +52,7 @@ for c = 1:numel(caseResults)
         IterationNo(end+1,1) = targetNo; %#ok<AGROW>
         IterationCUTName(end+1,1) = cutName; %#ok<AGROW>
         IterationTestCaseName(end+1,1) = caseName; %#ok<AGROW>
-        IterationName(end+1,1) = iteration_name(iterResult, i); %#ok<AGROW>
+        IterationName(end+1,1) = st_result_iteration_name(iterResult, i); %#ok<AGROW>
         IterationOutcome(end+1,1) = string(safe_property( ...
             iterResult, 'Outcome', 'UNKNOWN')); %#ok<AGROW>
         IterationDurationSec(end+1,1) = numeric_property( ...
@@ -74,23 +74,6 @@ try
     results = getIterationResults(tcResult);
 catch
     results = [];
-end
-end
-
-function name = iteration_name(iterResult, index)
-name = string(safe_property(iterResult, 'Name', ''));
-if strlength(name) > 0
-    return;
-end
-try
-    scenario = iterResult.TestSequenceScenario;
-    if isstruct(scenario) && isfield(scenario, 'TestSequenceScenario')
-        name = string(scenario.TestSequenceScenario);
-    end
-catch
-end
-if strlength(name) == 0
-    name = "Iteration " + string(index);
 end
 end
 

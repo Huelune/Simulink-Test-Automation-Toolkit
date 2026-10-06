@@ -248,7 +248,7 @@ if strlength(testCaseName) == 0
     reason = "NO_MATCHING_TEST_RESULT";
     return;
 end
-usable = is_real_iteration_name(iterationName);
+usable = st_is_real_iteration_name(iterationName);
 if usable && height(outcomes.Iterations) > 0
     rows = outcomes.Iterations.TestCaseName == testCaseName & ...
         outcomes.Iterations.IterationName == iterationName;
@@ -268,12 +268,6 @@ if height(outcomes.Cases) > 0
     end
 end
 reason = "NO_MATCHING_TEST_RESULT";
-end
-
-
-function tf = is_real_iteration_name(iterationName)
-tf = strlength(strtrim(iterationName)) > 0 && ...
-    ~ismember(strtrim(iterationName), ["<기본 설정>", "(단일 실행)", "연결 없음"]);
 end
 
 

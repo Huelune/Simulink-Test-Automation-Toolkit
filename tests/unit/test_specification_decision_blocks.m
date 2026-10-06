@@ -727,7 +727,7 @@ function testPortBlocksAreNotRecordedOnTheirOwn(testCase)
 % The port is a direct child of the subsystem that owns it, so a depth 1
 % walk sees both. Recording both would list the same branch twice.
 source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
-    'st_collect_decision_points.m'));
+    'st_decision_object_path.m'));
 verifyNotEmpty(testCase, regexp(source, ...
     "if any\(strcmp\(blockType, \{'EnablePort', 'TriggerPort', 'ResetPort'\}\)\)", 'once'));
 end
