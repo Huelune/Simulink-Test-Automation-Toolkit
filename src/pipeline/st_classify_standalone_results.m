@@ -1,4 +1,4 @@
-function info = st_classify_standalone_results(varargin)
+function varargout = st_classify_standalone_results(varargin)
 %ST_CLASSIFY_STANDALONE_RESULTS Copy a standalone pipeline into the team tree.
 %
 %   info = st_classify_standalone_results()                 % LATEST pipeline
@@ -28,7 +28,18 @@ function info = st_classify_standalone_results(varargin)
 %
 % tools/python/classify_standalone_results.py applies the same rules for
 % use without MATLAB. Change both together.
+%
+% Called directly it writes its own run log; called from
+% st_run_standalone_coverage_pipeline('ClassifyResults', true) it appends
+% to the pipeline's run log. The console gets one summary line.
 
+% max(nargout, 1) keeps a bare call showing its result as ans.
+[varargout{1:max(nargout, 1)}] = st_log_run(mfilename, ...
+    @() classify_body(varargin{:}));
+end
+
+
+function info = classify_body(varargin)
 p = inputParser;
 p.FunctionName = mfilename;
 addParameter(p, 'PipelineId', 'LATEST', @(x) ischar(x) || isstring(x));
@@ -74,7 +85,7 @@ info = struct( ...
     'Empty', {plan.Empty}, ...
     'Skipped', {plan.Skipped}, ...
     'DryRun', p.Results.DryRun);
-print_summary(info);
+log_summary(info, cfg);
 for i = 1:size(plan.Empty, 1)
     st_log(cfg, 'WARN', ...
         'Standalone result classification empty category | CUT=%s | Category=%s', ...
@@ -295,23 +306,20 @@ function value = canonical(path)
 value = char(java.io.File(char(path)).getCanonicalPath());
 end
 
-function print_summary(info)
-fprintf('\n============================================\n');
-fprintf('Standalone submission tree\n');
-fprintf('Model      : %s\n', info.ModelName);
-fprintf('Input      : %s\n', info.PipelineRoot);
-fprintf('Output     : %s\n', info.OutputDir);
-fprintf('CUT        : %d\n', numel(info.CutFolders));
-fprintf('테스트 케이스 : %d files\n', info.TestCaseFiles);
-fprintf('테스트 보고서 : %d files (+%d asset folders)\n', ...
-    info.ReportFiles, info.AssetFolders);
-fprintf('프로젝트     : %d files\n', info.ProjectFiles);
-for i = 1:size(info.Empty, 1)
-    fprintf('WARN empty : %s / %s\n', info.Empty{i, 1}, info.Empty{i, 2});
-end
-fprintf('Skipped    : %d\n', numel(info.Skipped));
+function log_summary(info, cfg)
+%LOG_SUMMARY One INFO line for the source, one STEP line for the result.
+% Empty categories are reported by the caller as WARN lines.
+st_log(cfg, 'INFO', ...
+    'Standalone submission tree | Model=%s | Input=%s', ...
+    info.ModelName, info.PipelineRoot);
+dryRunText = '';
 if info.DryRun
-    fprintf('[DRY-RUN] nothing was copied\n');
+    dryRunText = ' | DRY-RUN: nothing was copied';
 end
-fprintf('============================================\n');
+st_log(cfg, 'STEP', ...
+    ['Standalone submission tree | Output=%s | CUT=%d | TestCase=%d | ' ...
+     'Report=%d (+%d asset folders) | Project=%d | Skipped=%d%s'], ...
+    info.OutputDir, numel(info.CutFolders), info.TestCaseFiles, ...
+    info.ReportFiles, info.AssetFolders, info.ProjectFiles, ...
+    numel(info.Skipped), dryRunText);
 end

@@ -14,8 +14,12 @@
     `[StandalonePrepare i/n] start` 줄에만 찍힙니다.
   - 콘솔에 보인 내용 그대로는 같은 이름의 `.console.log`에, 명령 밖에서 찍힌 로그는
     `session_<yyyyMMdd>.log`에 남습니다. `st_run_from_harness`,
-    `st_generate_test_report` 등 직접 부르는 명령 12개가 각자 로그 파일을 열고,
+    `st_generate_test_report` 등 직접 부르는 명령 13개가 각자 로그 파일을 열고,
     단계 함수를 직접 부르면 session 로그로 갑니다.
+  - `st_classify_standalone_results`도 로그 파일을 열고, 콘솔에는 결과 한 줄
+    (`Standalone submission tree | Output=... | CUT=... | ...`)만 찍습니다. 예전의
+    여러 줄 요약 블록은 없어졌습니다. 파이프라인 `ALL`의 `ClassifyResults` 안에서
+    불리면 파이프라인 로그에 이어 씁니다.
     자세한 위치와 여는 법은 `docs/reference/troubleshooting.md`의 "로그는 어디에
     있나"에 있습니다. 콘솔에 보이는 줄의 뜻은 `docs/user-manual.md`의 "콘솔에 보이는
     줄과 실행 로그"에 있습니다.

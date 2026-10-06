@@ -108,12 +108,13 @@ info  = st_log_scope('current')              % st_log가 조회
 
 [user-manual.md](../../user-manual.md)에 나오는 명령 가운데 사용자가 직접
 부르는 것의 첫 줄에서 `st_log_run`(또는 `st_log_scope('enter', ...)`)으로 연다. 다음
-12개다.
+13개다.
 
 - `st_run_from_harness`, `st_run_after_harness`, `st_run_from_stage`: 각자 연다.
   이 명령들이 거치는 `st_run_workflow`는 따로 열지 않는다.
 - `st_run_standalone_coverage_pipeline`, `st_check_standalone_coverage`,
-  `st_open_standalone_test_manager`
+  `st_open_standalone_test_manager`, `st_classify_standalone_results`(main에서 들어온
+  팀 제출 트리 명령. 파이프라인 `ALL`의 `ClassifyResults` 안에서도 불린다)
 - `st_collect_per_cut_results`, `st_generate_test_report`,
   `st_export_test_specification`, `st_export_final_document`
 - `st_pre_validate_targets`, `st_select_target_model`
@@ -122,7 +123,7 @@ info  = st_log_scope('current')              % st_log가 조회
   `session_<yyyyMMdd>.log`로 간다.
 - 다른 명령 안에서 불린 명령은 안쪽 명령이므로 새 파일을 만들지 않는다. 예: 워크플로가
   부르는 `st_pre_validate_targets`, `st_collect_per_cut_results`,
-  `st_generate_test_report`.
+  `st_generate_test_report`, 파이프라인이 부르는 `st_classify_standalone_results`.
 
 ### 4.3 파일 쓰기
 

@@ -81,6 +81,18 @@ verifyFalse(testCase, isfolder(info.OutputDir));
 end
 
 
+function testConsoleShowsOneSummaryLine(testCase)
+% Inside pipeline ALL this step shares the pipeline's console, so its result
+% is one STEP summary line instead of a printed banner block.
+pipeline = testCase.TestData.Pipeline; %#ok<NASGU>
+out = evalc('st_classify_standalone_results(''PipelineRoot'', pipeline);');
+verifyEqual(testCase, numel(strfind(out, ...
+    'Standalone submission tree | Output=')), 1);
+verifyTrue(testCase, contains(out, '| CUT=2 |'));
+verifyFalse(testCase, contains(out, '===='));
+end
+
+
 function testOutputInsideThePipelineIsRejected(testCase)
 pipeline = testCase.TestData.Pipeline;
 verifyError(testCase, @() st_classify_standalone_results( ...

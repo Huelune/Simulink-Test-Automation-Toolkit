@@ -124,14 +124,14 @@ Command Window에는 명령, 단계, 대상 한 줄과 `WARN`·`ERROR`만 나옵
 실행 중에는 마지막 `START` 줄이 지금 진행 중인 대상입니다. Harness 생성과 SLDV
 `GENERATE`는 CUT 하나에 수 분이 걸리는 것이 정상입니다.
 
-다음 12개 명령은 부를 때마다 로그 파일을 하나씩 엽니다. 다른 명령 안에서 불리면
+다음 13개 명령은 부를 때마다 로그 파일을 하나씩 엽니다. 다른 명령 안에서 불리면
 바깥 명령의 로그에 이어 씁니다.
 
 `st_run_from_harness`, `st_run_after_harness`, `st_run_from_stage`,
 `st_pre_validate_targets`, `st_collect_per_cut_results`, `st_generate_test_report`,
 `st_run_standalone_coverage_pipeline`, `st_check_standalone_coverage`,
-`st_open_standalone_test_manager`, `st_export_test_specification`,
-`st_export_final_document`, `st_select_target_model`
+`st_open_standalone_test_manager`, `st_classify_standalone_results`,
+`st_export_test_specification`, `st_export_final_document`, `st_select_target_model`
 
 로그는 `result/logs/`에 있습니다.
 
@@ -576,6 +576,10 @@ tree = st_classify_standalone_results('PipelineId', info.PipelineId);
 disp(tree.OutputDir)
 ```
 
+콘솔에는 결과 한 줄(`Standalone submission tree | Output=<출력 폴더> | CUT=<개수> |
+TestCase=... | Report=... | Project=... | Skipped=...`)만 나오고, 파일이 하나도 없는
+범주가 있으면 CUT마다 `WARN` 줄이 붙습니다. 직접 부르면 로그 파일을 따로 엽니다.
+
 파이프라인 폴더 **옆에** `{TopModel}\`이 생깁니다.
 
 ```text
@@ -600,7 +604,7 @@ D:\model_result\<Top Model>\{TopModel}\
 | `PipelineRoot` | `''` | id 대신 파이프라인 폴더를 직접 지정 |
 | `OutputDir` | 파이프라인 폴더 옆 `{TopModel}` | 출력 폴더 |
 | `Replace` | `true` | 출력 폴더가 있으면 지우고 다시 만듭니다. `false`면 폴더가 있을 때 멈춥니다 |
-| `DryRun` | `false` | 계획만 출력하고 복사하지 않습니다 |
+| `DryRun` | `false` | 복사하지 않고 결과 줄에 개수와 `DRY-RUN: nothing was copied`만 찍습니다 |
 
 MATLAB이 없는 PC에서는 같은 규칙의 Python 스크립트를 씁니다(`--dry-run`, `--out`,
 `--overwrite`).

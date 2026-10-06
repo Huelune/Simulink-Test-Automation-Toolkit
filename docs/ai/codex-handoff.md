@@ -29,7 +29,10 @@
   `docs/superpowers/specs/2026-09-29-logging-design.md`, 계획은
   `docs/superpowers/plans/2026-09-29-logging.md`. `develop` `8029420`까지 합쳤고 아직
   `develop`에 들어가지 않았다. **정적 구현과 문서까지 끝났고 MATLAB 실행 검증은
-  미수행이다.** 미검증 항목은 아래 "로그 체계 개편" 절에 있다.
+  미수행이다.** 미검증 항목은 아래 "로그 체계 개편" 절에 있다. 실행 로그를 여는
+  명령은 13개이며 목록은 `docs/user-manual.md`의 "콘솔에 보이는 줄과 실행 로그"에
+  있다(13번째가 `st_classify_standalone_results`). `st_rename_test_file_models`는 로그
+  범위를 열지 않고 `disp`/`fprintf` 출력도 그대로다.
 
 ## 실물 미검증 목록
 
@@ -114,7 +117,9 @@
   `test_log_adoption.m`의 `testPerCutExpectedUpdateKeepsIterationsInTheLog`(PER_CUT
   대상 안 반복 줄), `testReportAndLateTargetLoopsShowProgress`.
 - `main`·`develop` 합치기 뒤: `test_progress_eta.m`, `test_log_progress.m`의
-  `testProgressLineCarriesEta`.
+  `testProgressLineCarriesEta`, `test_classify_standalone_results.m`(전체와
+  `testConsoleShowsOneSummaryLine`), `test_log_adoption.m`의
+  `testPublicCommandsOpenALogScope`.
 
 ## 활성 브랜치 지도
 

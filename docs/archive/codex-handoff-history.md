@@ -913,3 +913,8 @@ Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e
     이 파일로 옮겼다.
   - `reference/standalone-coverage-pipeline.md` 2절이 사용자 매뉴얼 링크로 줄어서,
     checker 화면 20줄 + 실행 로그 틀 4줄 설명은 같은 문서 6절로 옮겼다.
+- **합친 뒤 후속(R21).** `st_classify_standalone_results`는 파이프라인 `ALL`
+  (`ClassifyResults=true`) 안에서도 돌므로 공통 규칙으로 바꿨다. 공개 함수는
+  `st_log_run` 감싸기와 로컬 함수 `classify_body`, 여러 줄 요약 블록은 INFO 한 줄(Model,
+  Input)과 STEP 결과 한 줄(Output과 개수)이 되었다. 빈 범주는 원래 있던 WARN 줄만
+  남긴다. 실행 로그를 여는 13번째 명령이다. `st_rename_test_file_models`는 그대로 둔다.
