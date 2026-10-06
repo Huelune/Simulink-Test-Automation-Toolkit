@@ -199,7 +199,7 @@ verifyTrue(testCase, all(ismember(string(catalog.Formatter), ["CUSTOM","GENERIC"
 verifyTrue(testCase, all(ismember(string(catalog.Kind), ["EXPLICIT","IMPLICIT"])));
 verifyTrue(testCase, all(ismember(string(catalog.MainExpression), ["SHOW","HIDE"])));
 allowed = ["T/F","SELECT","CASE","LIMIT","BAND","RATE","ON/OFF", ...
-    "SIGN","LOOP"];
+    "SIGN","LOOP","ROW","RESET"];
 verifyTrue(testCase, all(ismember(string(catalog.Outcome), allowed)));
 for k = 1:height(catalog)
     label = char(blockTypes(k));
@@ -335,6 +335,36 @@ verifyEqual(testCase, count, 0);
 verifyEqual(testCase, note, "");
 end
 
+function testResetBlocksAreListedOnlyWithResetOrEnable(testCase)
+% Delay and the discrete filters receive Decision coverage only for an
+% External reset, and Delay and Discrete FIR also for an enable port.
+[~, expression] = st_specification_decision_descriptor( ...
+    'DelayPlainPath', 'Delay', @fixture_implicit_parameter);
+verifyEmpty(testCase, expression);
+[outcome, expression] = st_specification_decision_descriptor( ...
+    'DelayEnablePath', 'Delay', @fixture_implicit_parameter);
+verifyEqual(testCase, outcome, "RESET");
+verifyEqual(testCase, expression, "ExternalReset=None; ShowEnablePort=on");
+[~, expression] = st_specification_decision_descriptor( ...
+    'FilterPlainPath', 'DiscreteFilter', @fixture_implicit_parameter);
+verifyEmpty(testCase, expression);
+[outcome, expression] = st_specification_decision_descriptor( ...
+    'FilterResetPath', 'DiscreteFilter', @fixture_implicit_parameter);
+verifyEqual(testCase, outcome, "RESET");
+verifyEqual(testCase, expression, "ExternalReset=Rising");
+end
+
+function testSignAndCombinatorialLogicAreAlwaysListed(testCase)
+[outcome, expression] = st_specification_decision_descriptor( ...
+    'SignPath', 'Signum', @refusing_parameter);
+verifyEqual(testCase, outcome, "SIGN");
+verifyEqual(testCase, expression, "sign(u)");
+[outcome, expression] = st_specification_decision_descriptor( ...
+    'CombPath', 'CombinatorialLogic', @fixture_implicit_parameter);
+verifyEqual(testCase, outcome, "ROW");
+verifyEqual(testCase, expression, "TruthTable=[0;1]");
+end
+
 function testIntegratorWithLimitOrResetIsListed(testCase)
 [outcome, expression] = st_specification_decision_descriptor( ...
     'IntegratorLimitPath', 'DiscreteIntegrator', @fixture_implicit_parameter);
@@ -425,6 +455,20 @@ switch key
         value = '1';
     case "IntegratorLimitPath|LowerSaturationLimit"
         value = '-1';
+    case "DelayPlainPath|ExternalReset"
+        value = 'None';
+    case "DelayPlainPath|ShowEnablePort"
+        value = 'off';
+    case "DelayEnablePath|ExternalReset"
+        value = 'None';
+    case "DelayEnablePath|ShowEnablePort"
+        value = 'on';
+    case "FilterPlainPath|ExternalReset"
+        value = 'None';
+    case "FilterResetPath|ExternalReset"
+        value = 'Rising';
+    case "CombPath|TruthTable"
+        value = '[0;1]';
     case "IntegratorResetPath|LimitOutput"
         value = 'off';
     case "IntegratorResetPath|ExternalReset"
@@ -624,6 +668,10 @@ function testCatalogCarriesEnabledAndTriggeredSubsystems(testCase)
 catalog = st_specification_decision_catalog('ALL');
 verifyTrue(testCase, any(catalog.BlockType == "EnablePort"));
 verifyTrue(testCase, any(catalog.BlockType == "TriggerPort"));
+reset = catalog(catalog.BlockType == "ResetPort", :);
+verifyEqual(testCase, reset.DisplayType, "Reset");
+verifyEqual(testCase, reset.Parameters, "");
+verifyEqual(testCase, reset.MainExpression, "HIDE");
 enable = catalog(catalog.BlockType == "EnablePort", :);
 % The row points at the subsystem, whose own BlockType is SubSystem, so
 % the cell names the kind of branch instead of a block type that would
@@ -648,6 +696,7 @@ function testConditionalSubsystemsAreImplicitDecisions(testCase)
 explicit = st_specification_decision_catalog('EXPLICIT');
 verifyFalse(testCase, any(explicit.BlockType == "EnablePort"));
 verifyFalse(testCase, any(explicit.BlockType == "TriggerPort"));
+verifyFalse(testCase, any(explicit.BlockType == "ResetPort"));
 end
 
 function testScanReportsTheSubsystemNotThePortBlock(testCase)
@@ -680,7 +729,7 @@ function testPortBlocksAreNotRecordedOnTheirOwn(testCase)
 source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
     'st_collect_decision_points.m'));
 verifyNotEmpty(testCase, regexp(source, ...
-    "if any\(strcmp\(blockType, \{'EnablePort', 'TriggerPort'\}\)\)", 'once'));
+    "if any\(strcmp\(blockType, \{'EnablePort', 'TriggerPort', 'ResetPort'\}\)\)", 'once'));
 end
 
 function testStaticScanCrossesMaskAndLinkBoundaries(testCase)

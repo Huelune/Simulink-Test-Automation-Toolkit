@@ -24,11 +24,11 @@ if isempty(index) || index >= numel(args)
     return;
 end
 blockType = char(string(args{index + 1}));
-% Whether a subsystem is enabled or triggered is structural, so it is read
+% Whether a subsystem is enabled, triggered or resettable is structural, so it is read
 % from the model. Answering these from the recorded list would drop them
 % whenever the list was written before this was supported, or whenever
 % coverage attributed the branch somewhere this scan did not look.
-if any(strcmp(blockType, {'EnablePort', 'TriggerPort'}))
+if any(strcmp(blockType, {'EnablePort', 'TriggerPort', 'ResetPort'}))
     paths = st_conditional_cut(root, blockType);
     return;
 end

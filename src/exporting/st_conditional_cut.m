@@ -1,5 +1,5 @@
 function paths = st_conditional_cut(root, portType)
-%ST_CONDITIONAL_CUT The CUT itself when it is an Enabled or Triggered Subsystem.
+%ST_CONDITIONAL_CUT The CUT itself when it is an Enabled, Triggered or Resettable Subsystem.
 % Returns the CUT path when it carries the given port block, and nothing
 % otherwise. The return is a cell array so it can stand in for find_system.
 %

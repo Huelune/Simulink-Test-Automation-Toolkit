@@ -7,8 +7,8 @@ function points = st_collect_decision_points(cvd, root, cfg)
 %
 % A plain Subsystem is skipped: decisioninfo on it returns the total of
 % everything inside, so keeping it would report every ancestor as a
-% decision block. An Enabled or Triggered Subsystem is kept, because the
-% enable or trigger itself is a branch the CUT owns. Its objectives are
+% decision block. An Enabled, Triggered or Resettable Subsystem is kept,
+% because the enable, trigger or reset itself is a branch the CUT owns. Its objectives are
 % read from the port block rather than from the subsystem, which is what
 % keeps the inner total out.
 %
@@ -100,7 +100,7 @@ objectPath = blockPath;
 blockType = read_block_type(blockPath);
 % A port block is reported through the subsystem that owns it, so seeing
 % it on its own would record the same branch twice.
-if any(strcmp(blockType, {'EnablePort', 'TriggerPort'}))
+if any(strcmp(blockType, {'EnablePort', 'TriggerPort', 'ResetPort'}))
     blockType = '';
     return;
 end
@@ -113,7 +113,7 @@ if ~strcmp(blockType, 'SubSystem') || ~strcmp(blockPath, root)
     blockType = '';
     return;
 end
-for portType = {'EnablePort', 'TriggerPort'}
+for portType = {'EnablePort', 'TriggerPort', 'ResetPort'}
     port = conditional_port(blockPath, portType{1});
     if ~isempty(port)
         blockType = portType{1};

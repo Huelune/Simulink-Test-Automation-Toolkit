@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **명세서 `DecisionBlocks` 목록에 Decision을 받는데 빠져 있던 블록을 더합니다.**
+  Simulink Coverage가 Decision objective를 만드는데도 목록에 없어서, 이런 블록이
+  있는 CUT은 D 개수가 리포트보다 적었습니다. 최종 문서의 coverage 기반 목록도
+  같은 catalog를 거치므로 함께 나옵니다.
+  - Sign(`SIGN`), Combinatorial Logic(`ROW`): 항상 넣습니다.
+  - Delay, Discrete FIR Filter: External reset이 있거나 enable port가 켜져 있을
+    때만 넣습니다(`RESET`).
+  - Discrete Filter, Discrete Transfer Fcn: External reset이 있을 때만 넣습니다.
+  - Resettable Subsystem: CUT 자신이 Resettable Subsystem이면 Enabled/Triggered와
+    같은 방식으로 넣습니다.
+  - Truth Table과 MATLAB Function은 분기가 블록 안의 코드에 있어 여전히 넣지
+    않습니다.
+
 - **명세서 `DecisionBlocks` 목록에서 Decision을 받지 않는 블록을 뺍니다.**
   `'ALL'` 범위에서는 아래 블록이 D번호와 `[T/F]`를 받아 Decision 항목처럼
   보였지만, Simulink Coverage는 이 블록들에 Decision objective를 만들지 않아

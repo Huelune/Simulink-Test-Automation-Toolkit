@@ -565,9 +565,11 @@ cfg.OnlyEnabled = true;
 % 'ALL' (default):
 %   The blocks that carry a condition in their dialog, plus the blocks that
 %   create Simulink Coverage Decision objectives without one: Saturate,
-%   Abs, Dead Zone, Rate Limiter, Relay, Discrete-Time Integrator (only
-%   with Limit output on or an External reset), the iterators and
-%   Enabled / Triggered Subsystems. Blocks whose objectives
+%   Abs, Sign, Dead Zone, Rate Limiter, Relay, Discrete-Time Integrator
+%   (only with Limit output on or an External reset), the iterators,
+%   Combinatorial Logic, Delay and the discrete filters (only with an
+%   External reset or an enable port) and Enabled / Triggered / Resettable
+%   Subsystems. Blocks whose objectives
 %   are not Decision are not scanned: Logical Operator (Condition, MCDC),
 %   the lookup tables (Lookup Table), Prelookup and the continuous
 %   Integrator (none). This also explains Decision coverage reported for a

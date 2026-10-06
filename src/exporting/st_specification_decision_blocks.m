@@ -188,7 +188,7 @@ blockType = '';
 if ~isempty(index) && index < numel(varargin)
     blockType = char(string(varargin{index + 1}));
 end
-if ~any(strcmp(blockType, {'EnablePort', 'TriggerPort'}))
+if ~any(strcmp(blockType, {'EnablePort', 'TriggerPort', 'ResetPort'}))
     args = with_link_options(varargin);
     paths = find_system(root, args{:});
     return;
