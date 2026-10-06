@@ -52,11 +52,11 @@ cutName = string(target.CUTName);
 blocks = direct_children(root, cfg);
 [units, names] = result_units(tcResult);
 for u = 1:numel(units)
-    cvd = unit_coverage(units{u}, root);
+    [cvd, reason] = unit_coverage(units{u}, root);
     if isempty(cvd)
         st_log(cfg, 'WARN', ...
-            'Decision outcome scan found no coverage for a unit | TestCase=%s | Iteration=%s', ...
-            caseName, names(u));
+            'Decision outcome scan found no coverage for a unit | TestCase=%s | Iteration=%s | Reason=%s', ...
+            caseName, names(u), reason);
         continue;
     end
     scanned = scanned + 1;
@@ -107,13 +107,19 @@ end
 end
 
 
-function cvd = unit_coverage(unit, root)
+function [cvd, reason] = unit_coverage(unit, root)
 % A unit can carry coverage for several models. The CUT's own is the one
-% that answers for the CUT path.
+% that answers for the CUT path. REASON says why none did.
 cvd = [];
+reason = "no coverage object answers for the CUT";
 try
     objects = st_flatten_coverage_results(getCoverageResults(unit));
-catch
+catch ME
+    reason = "getCoverageResults failed: " + string(ME.message);
+    return;
+end
+if isempty(objects)
+    reason = "the unit carries no coverage results";
     return;
 end
 for i = 1:numel(objects)
@@ -139,8 +145,8 @@ if isempty(description), return; end
 [counts, texts] = st_decision_outcome_counts(description);
 if isempty(counts)
     st_log(cfg, 'DEBUG', ...
-        'Decision outcome scan skipped a block without two-way decisions | Path=%s | BlockType=%s', ...
-        blockPath, blockType);
+        'Decision outcome scan skipped a block without two-way decisions | Path=%s | BlockType=%s | Outcomes=%s', ...
+        blockPath, blockType, outcome_texts(description));
     return;
 end
 relative = st_cut_relative_path(blockPath, root);
@@ -178,6 +184,22 @@ catch ME
     st_log(cfg, 'WARN', ...
         'Decision outcome lookup failed | TestCase=%s | Iteration=%s | Path=%s | %s', ...
         caseName, iterationName, blockPath, ME.message);
+end
+end
+
+
+function text = outcome_texts(description)
+% Diagnostic only: the outcome texts of each decision, so a log reader can
+% see why a block was not two-way. Never throws; an odd shape reads "?".
+text = "?";
+try
+    parts = strings(1, 0);
+    for k = 1:numel(description.decision)
+        outcomes = description.decision(k).outcome;
+        parts(end+1) = strjoin(string({outcomes.text}), "/"); %#ok<AGROW>
+    end
+    text = strjoin(parts, "; ");
+catch
 end
 end
 
