@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Decision 번호(D번호)가 문서 전체에서 이어집니다.**
+  테스트 명세서와 최종 문서의 `DecisionBlocks`는 행마다 D1부터 다시 세서, CUT마다
+  D1, D2, ...가 반복되었습니다. 이제 문서 전체에서 번호를 이어 붙여 첫 CUT이 D1~D3이면
+  다음 CUT은 D4부터 시작합니다. 같은 CUT의 Scenario 행들은 같은 분기를 나열하므로
+  처음 받은 번호를 그대로 씁니다. `DecisionBlockDetails`의 `Decision` 열도 같은 번호를
+  씁니다.
+
 - **평소 실행은 재시작 기록을 남기지 않습니다.**
   재시작 기록은 `st_run_from_stage`만 읽습니다. 그런데 이 기록을 남기려고 매 실행마다
   `HARNESS_CONFIG`, `SIGNAL_EDITOR`, `ASSESSMENT` 뒤에 CUT별로 Harness를 다시 열었고,
