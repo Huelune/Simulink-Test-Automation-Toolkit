@@ -1,4 +1,4 @@
-function document = st_final_document_table(cfg, specification, outcomes, source)
+function document = st_final_document_table(cfg, specification, outcomes, source, rowReasons)
 %ST_FINAL_DOCUMENT_TABLE Build the customer sheet and its result sheet.
 % One specification row becomes one customer row. The customer form has no
 % remarks column, so every reason lives on the result sheet, which stays
@@ -8,6 +8,9 @@ function document = st_final_document_table(cfg, specification, outcomes, source
 % says which row to look at and which saved ResultSet to open, and no
 % .mldatx is read here.
 naText = string(config_value(cfg, 'FinalDocumentNAText', 'N/A'));
+if nargin < 5 || isempty(rowReasons)
+    rowReasons = repmat("", height(specification), 1);
+end
 
 count = height(specification);
 st_log(cfg, 'INFO', 'Final document table start | Rows=%d', count);
@@ -32,7 +35,7 @@ document.Sheet1 = table(identifier, caseId, blank, ...
     'Dash11','OutputValue','Judgement','TestData'});
 
 [judgement, results] = resolve_judgements( ...
-    cfg, specification, outcomes, source, identifier, idReasons);
+    cfg, specification, outcomes, source, identifier, idReasons, rowReasons);
 document.Sheet1.Judgement = judgement;
 document.Results = results;
 document.Results = append_source_notes(document.Results, outcomes.Notes);
@@ -137,7 +140,7 @@ number = string(token{2});
 end
 
 
-function [judgement, results] = resolve_judgements(cfg, specification, outcomes, source, identifier, idReasons)
+function [judgement, results] = resolve_judgements(cfg, specification, outcomes, source, identifier, idReasons, rowReasons)
 count = height(specification);
 judgement = repmat("", count, 1);
 testCaseName = column_text(specification, '테스트 케이스명');
@@ -174,6 +177,7 @@ for i = 1:count
     if extractStatus(i) == "FAIL" || extractStatus(i) == "WARN"
         reasons(i) = join_reasons(reasons(i), remarks(i));
     end
+    reasons(i) = join_reasons(reasons(i), rowReasons(i));
     if strlength(reasons(i)) > 0 && ~only_informational(reasons(i))
         needsReview(i) = "Y";
     end
@@ -212,9 +216,12 @@ end
 
 
 function tf = only_informational(reason)
-% MAXTIME_UNAVAILABLE on its own explains a blank cell that the exporter
-% already reported; it does not by itself send anyone to Test Manager.
-tf = strcmp(reason, "MAXTIME_UNAVAILABLE");
+% MAXTIME_UNAVAILABLE explains a blank cell the exporter already reported,
+% and the DECISION_OUTCOME codes explain a [T/F] left in Description.
+% Neither sends anyone to Test Manager on its own.
+informational = ["MAXTIME_UNAVAILABLE", "DECISION_OUTCOME_UNAVAILABLE", ...
+    "DECISION_OUTCOME_MISMATCH"];
+tf = all(ismember(strtrim(split(string(reason), "|")), informational));
 end
 
 

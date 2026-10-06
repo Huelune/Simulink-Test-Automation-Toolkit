@@ -1,4 +1,4 @@
-function [specification, details] = st_format_specification_decision_blocks(specification, cfg)
+function [specification, details, outcomeReasons] = st_format_specification_decision_blocks(specification, cfg, outcomeLookup)
 %ST_FORMAT_SPECIFICATION_DECISION_BLOCKS Make the main list readable in Excel.
 % The main DecisionBlocks cell contains a block Name line followed by a
 % "D<number> [T/F]Type (expression)" line. The main cell prints T/F for every
@@ -6,8 +6,15 @@ function [specification, details] = st_format_specification_decision_blocks(spec
 % DecisionBlockDetails keeps the specific Outcome token together with the
 % structured fields and one JSON object per row, so downstream processing
 % does not depend on parsing the display.
+%
+% The final document passes OUTCOMELOOKUP (st_final_document_decision_outcomes).
+% A two-way branch then shows what the row's test actually took: [T], [F],
+% [T/F] or [-]. OUTCOMEREASONS says, per row, why a [T/F] was left in place.
+% The specification export passes no lookup and its output is unchanged.
 if nargin < 2, cfg = []; end
+if nargin < 3, outcomeLookup = []; end
 mainOutcome = "T/F";
+outcomeReasons = repmat("", height(specification), 1);
 headers = {'TestSpecificationRow','TestCaseName','CUTPath','Decision', ...
     'Outcome','BlockType','Name','Expression','Path','JSON','ReadStatus','Message'};
 rows = strings(0, numel(headers));
@@ -70,6 +77,12 @@ for row = 1:height(specification)
 
     % One block can contribute several branches, so the Name line is written
     % once per block and the D lines below it follow branch order.
+    labels = repmat(mainOutcome, numel(decoded), 1);
+    if ~isempty(outcomeLookup)
+        [labels, outcomeReasons(row)] = outcome_labels(cfg, decoded, labels, ...
+            cutPath, testCaseName, table_text(specification, row, "Iteration명"), ...
+            outcomeLookup);
+    end
     lines = strings(0,1);
     previousPath = string(missing);
     for k = 1:numel(decoded)
@@ -96,7 +109,7 @@ for row = 1:height(specification)
                 lines(end+1,1) = displayName; %#ok<AGROW>
             end
             previousPath = path;
-            entry = decision + " [" + mainOutcome + "]" + displayType;
+            entry = decision + " [" + labels(k) + "]" + displayType;
             if showExpression
                 entry = entry + " " + parenthesize(expression);
             end
@@ -166,6 +179,74 @@ if ~isscalar(value) || ismissing(value)
     value = "";
 end
 end
+
+function [labels, reason] = outcome_labels(cfg, decoded, labels, cutPath, ...
+        testCaseName, iterationName, outcomeLookup)
+% A block's D lines are paired with its recorded decisions by position, so
+% a block whose counts differ keeps [T/F]: pairing anyway would put one
+% branch's result on another.
+reason = "";
+paths = strings(numel(decoded), 1);
+for k = 1:numel(decoded)
+    paths(k) = json_optional_text(decoded(k), 'Path');
+end
+unavailable = false;
+mismatch = false;
+for path = unique(paths(strlength(paths) > 0), 'stable').'
+    items = find(paths == path);
+    try
+        found = outcomeLookup(testCaseName, iterationName, ...
+            st_cut_relative_path(path, cutPath));
+    catch ME
+        log_message(cfg, 'WARN', ...
+            'Decision outcome lookup failed | Case=%s | Path=%s | %s', ...
+            testCaseName, path, ME.message);
+        continue;
+    end
+    if ~found.UnitFound
+        unavailable = true;
+        continue;
+    end
+    if isempty(found.Counts)
+        continue;
+    end
+    if size(found.Counts, 1) ~= numel(items)
+        mismatch = true;
+        log_message(cfg, 'WARN', ...
+            'Decision outcome count mismatch | Case=%s | Path=%s | Lines=%d | Decisions=%d', ...
+            testCaseName, path, numel(items), size(found.Counts, 1));
+        continue;
+    end
+    for j = 1:numel(items)
+        labels(items(j)) = outcome_label(found.Counts(j,:));
+    end
+end
+% Built without strjoin of an empty array, so no flag leaves "".
+codes = ["DECISION_OUTCOME_UNAVAILABLE", "DECISION_OUTCOME_MISMATCH"];
+if unavailable && mismatch
+    reason = codes(1) + " | " + codes(2);
+elseif unavailable
+    reason = codes(1);
+elseif mismatch
+    reason = codes(2);
+end
+end
+
+
+function label = outcome_label(counts)
+tookTrue = counts(1) > 0;
+tookFalse = counts(2) > 0;
+if tookTrue && tookFalse
+    label = "T/F";
+elseif tookTrue
+    label = "T";
+elseif tookFalse
+    label = "F";
+else
+    label = "-";
+end
+end
+
 
 function [value, known, showExpression] = display_type(blockType, displayCatalog)
 % An unknown type prints its own name and its expression, so re-formatting a

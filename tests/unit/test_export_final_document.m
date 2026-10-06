@@ -928,3 +928,23 @@ writetable(table(repmat(string(cutName), count, 1), ...
     {'CUTName','CUTPath','BlockPath','BlockType','ObjectiveCount'}), ...
     file, 'Sheet', 'DecisionPoints', 'UseExcel', false);
 end
+
+function testDecisionOutcomeReasonIsInformational(testCase)
+% A [T/F] left in Description is worth noting, but on its own it does not
+% send anyone to Test Manager.
+specification = sample_specification();
+outcomes = outcomes_with("Controller_12345", "Iteration 1", "Passed", "");
+document = st_final_document_table(base_config(), specification, outcomes, ...
+    empty_source(), "DECISION_OUTCOME_UNAVAILABLE");
+verifyEqual(testCase, document.Results.('확인 필요')(1), "");
+verifyTrue(testCase, contains(document.Results.('확인 사유')(1), ...
+    "DECISION_OUTCOME_UNAVAILABLE"));
+end
+
+function testDecisionOutcomeReasonDoesNotHideAFailure(testCase)
+specification = sample_specification();
+outcomes = outcomes_with("Controller_12345", "Iteration 1", "Failed", "");
+document = st_final_document_table(base_config(), specification, outcomes, ...
+    empty_source(), "DECISION_OUTCOME_MISMATCH");
+verifyEqual(testCase, document.Results.('확인 필요')(1), "Y");
+end

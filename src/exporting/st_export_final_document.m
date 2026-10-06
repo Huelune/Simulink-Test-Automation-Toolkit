@@ -89,17 +89,21 @@ try
     [rows, ~, verifyCells, maxTimes, decisionBlockLists] = ...
         st_collect_specification_rows(cfg, 'STEP2', decisionScope, finderFactory);
     specification = st_specification_table(rows, verifyCells, maxTimes, decisionBlockLists);
-    % Renders the DecisionBlocks JSON into the Description text.
-    specification = st_format_specification_decision_blocks(specification, cfg);
+    decisionOutcomes = st_final_document_decision_outcomes(cfg, source);
+    % Renders the DecisionBlocks JSON into the Description text, with the
+    % outcome each row's test took where the run recorded one.
+    [specification, ~, outcomeReasons] = st_format_specification_decision_blocks( ...
+        specification, cfg, decisionOutcomes.Lookup);
     outcomes = st_final_document_outcomes(cfg, source);
     coverage = st_final_document_coverage(cfg, coverageSource, ...
         char(string(p.Results.CoveragePipelineId)), source);
-    outcomes.Notes = [outcomes.Notes; coverage.Notes; decisions.Notes];
+    outcomes.Notes = [outcomes.Notes; coverage.Notes; decisions.Notes; ...
+        decisionOutcomes.Notes];
     require_results(p.Results.RequireTestResults, source, outcomes);
     require_coverage(p.Results.RequireCoverage, coverage);
-    document = st_final_document_table(cfg, specification, outcomes, source);
+    document = st_final_document_table(cfg, specification, outcomes, source, outcomeReasons);
     metadata = build_metadata(cfg, source, coverage, decisionScope, ...
-        height(specification), decisions);
+        height(specification), decisions, decisionOutcomes, outcomeReasons);
     usage = [];
     if includeUsage, usage = st_specification_usage_table(cfg); end
     document = st_write_final_document_workbook(document, coverage, metadata, ...
@@ -219,7 +223,7 @@ end
 end
 
 
-function metadata = build_metadata(cfg, source, coverage, decisionScope, rowCount, decisions)
+function metadata = build_metadata(cfg, source, coverage, decisionScope, rowCount, decisions, decisionOutcomes, outcomeReasons)
 % The verdicts and the coverage come from two different executions on
 % purpose, so both identities are recorded here.
 metaKeys = strings(0,1);
@@ -260,6 +264,11 @@ add('CoverageSummarySHA256', coverage.SummarySHA256);
 add('DecisionBlockScope', decisionScope);
 add('DecisionSourceWorkbooks', numel(decisions.Workbooks));
 add('DecisionSourceCUTs', decisions.ByCut.Count);
+add('DecisionOutcomeUnits', decisionOutcomes.Units);
+add('DecisionOutcomeUnavailableRows', ...
+    sum(contains(outcomeReasons, "DECISION_OUTCOME_UNAVAILABLE")));
+add('DecisionOutcomeMismatchRows', ...
+    sum(contains(outcomeReasons, "DECISION_OUTCOME_MISMATCH")));
 metadata = table(metaKeys, metaValues, 'VariableNames', {'Key','Value'});
 end
 
