@@ -121,6 +121,20 @@ catch ME
         'FAIL', ME.message);
 end
 
+step('Collecting decision outcomes');
+initialOutcomes = st_collect_decision_outcomes( ...
+    runContext.InitialResult, targetConfig, 'INITIAL', cfg);
+if logical(runContext.RerunPerformed)
+    finalOutcomes = st_collect_decision_outcomes( ...
+        runContext.FinalResult, targetConfig, 'FINAL', cfg);
+else
+    % Without a rerun both labels name the same ResultSet, as with the
+    % coverage rows above, so the walk is not repeated.
+    finalOutcomes = initialOutcomes;
+    finalOutcomes.Run(:) = "FINAL";
+end
+decisionOutcomes = [initialOutcomes; finalOutcomes];
+
 step('Exporting the raw ResultSets');
 initialRaw = fullfile(rawDirectory, 'InitialResults.mldatx');
 artifacts = export_result_artifact(artifacts, ...
@@ -147,7 +161,7 @@ try
     write_summary_workbook(summaryPath, targets, iterations, coverage, ...
         coverageFilters, runContext.ExpectedUpdateResult, ...
         workflowResult, workflowPlan, ...
-        cfg, runId, runDirectory, artifacts);
+        cfg, runId, runDirectory, artifacts, decisionOutcomes);
     artifacts = record_artifact(artifacts, 'EXCEL', summaryPath, ...
         'OK', 'Integrated workbook created');
 catch ME
@@ -288,7 +302,7 @@ end
 
 function write_summary_workbook(path, targets, iterations, coverage, ...
         coverageFilters, expectedUpdates, workflowResult, workflowPlan, ...
-        cfg, runId, runDirectory, artifacts)
+        cfg, runId, runDirectory, artifacts, decisionOutcomes)
 if isfile(path)
     delete(path);
 end
@@ -313,6 +327,7 @@ writetable(targets, path, 'Sheet', 'Targets');
 writetable(iterations, path, 'Sheet', 'Iterations');
 writetable(coverage, path, 'Sheet', 'Coverage');
 writetable(coverageFilters, path, 'Sheet', 'CoverageFilters');
+writetable(decisionOutcomes, path, 'Sheet', 'DecisionOutcomes');
 
 if isempty(expectedUpdates) || width(expectedUpdates) == 0
     expectedUpdates = table("NONE", "No expected-value update rows", ...
