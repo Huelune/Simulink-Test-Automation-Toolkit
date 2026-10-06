@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **최종 문서의 `Description`에 분기의 실제 결과를 적습니다.** true/false 두 결과인
+  분기는 그 행의 테스트가 탄 쪽에 따라 `[T]`, `[F]`, `[T/F]`(둘 다), `[-]`(평가 안
+  됨)로 적습니다. 결과 정리(BATCH `st_generate_test_report`, PER_CUT
+  `st_collect_per_cut_results`)가 결과 워크북에 `DecisionOutcomes` 시트를 새로
+  씁니다. 그 밖의 분기와 결과를 구할 수 없는 행은 `[T/F]` 그대로이며,
+  `TestResults`에 정보성 사유 `DECISION_OUTCOME_UNAVAILABLE` /
+  `DECISION_OUTCOME_MISMATCH`가 남습니다.
+  - **기존 결과에는 시트가 없습니다.** 이 버전 전에 정리한 결과로 최종 문서를 뽑으면
+    모든 행이 `DECISION_OUTCOME_UNAVAILABLE`입니다. 결과 정리를 다시 하십시오.
+  - 명세서 export 출력은 바뀌지 않습니다.
 - **명세서 `DecisionBlocks` 목록에 Decision을 받는데 빠져 있던 블록을 더합니다.**
   Simulink Coverage가 Decision objective를 만드는데도 목록에 없어서, 이런 블록이
   있는 CUT은 D 개수가 리포트보다 적었습니다. 최종 문서의 coverage 기반 목록도

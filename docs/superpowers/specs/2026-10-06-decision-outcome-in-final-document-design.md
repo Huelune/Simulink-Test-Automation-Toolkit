@@ -1,7 +1,7 @@
 # 최종 문서의 분기 결과 표기 설계
 
 - 작성일: 2026-10-06
-- 상태: 설계 검토 중
+- 상태: 구현됨 (실기 미확인)
 - 대상 브랜치: develop
 
 ## 1. 배경
@@ -91,10 +91,14 @@ rows = st_collect_decision_outcomes(resultObj, cutName, root, cfg)
   | `Run` | `INITIAL` 또는 `FINAL` (호출자가 넘긴다) |
   | `CUTName`, `CUTPath` | 대상 |
   | `TestCaseName`, `IterationName` | 판정 시트와 같은 키 |
-  | `BlockPath` | 블록 전체 경로. 최종 문서가 CUT 기준 상대 경로로 바꾼다 |
-  | `DecisionIndex` | 블록 안 결정 순서 (1부터) |
+  | `Kind` | `UNIT`(수집된 단위 한 개당 한 행) 또는 `DECISION`(결정 한 개당 한 행) |
+  | `RelativePath` | CUT 기준 상대 경로. 공백이 이어지면 한 칸으로 줄이고, CUT 자신은 `.`. `UNIT` 행은 비운다 |
+  | `DecisionIndex` | 블록 안 결정 순서 (1부터). `UNIT` 행은 0 |
   | `DecisionText` | `description.decision(k).text`. 사람이 대조할 때 쓴다 |
-  | `TrueCount`, `FalseCount` | 결과별 `executionCount` |
+  | `TrueCount`, `FalseCount` | 결과별 `executionCount`. `UNIT` 행은 0 |
+
+  `UNIT` 행은 "이 단위를 훑었다"는 표시다. 훑은 단위에 `DECISION` 행이 없으면 그 행에
+  T/F 분기가 없다는 뜻이고, `UNIT` 행조차 없으면 결과가 기록되지 않았다는 뜻이다.
 
 - **로그.** 시작과 끝에 `st_log` INFO
   (`Decision outcome scan start/end | CUT=... | Units=... | Rows=... | elapsed=...`).
@@ -109,8 +113,8 @@ rows = st_collect_decision_outcomes(resultObj, cutName, root, cfg)
 | PER_CUT | `st_export_result_set_report`가 `DecisionPoints` 옆에 `DecisionOutcomes` 시트를 쓴다 | 대상 하나, run 하나의 workbook |
 | BATCH | `st_generate_test_report`가 `TestSummary.xlsx`에 `DecisionOutcomes` 시트를 쓴다 | INITIAL과 FINAL 행이 한 workbook에 함께 들어간다 |
 
-- coverage를 수집하지 않는 `Scope='VERDICT'`(LEAN)에서는 수집하지 않고 시트도 쓰지
-  않는다.
+- `Scope='VERDICT'`(LEAN)에서도 수집한다. LEAN은 최종 문서가 읽는 시트만 쓰는데 이
+  시트도 그중 하나다.
 - BATCH에는 지금 `DecisionPoints` 시트가 없다. 이번 범위는 `DecisionOutcomes`만
   더한다. 블록 목록은 지금처럼 정적 scan이 정한다.
 - BATCH에서 Test Case별 CUT 경로는 `st_generate_test_report`가 이미 갖고 있는 대상
@@ -157,8 +161,8 @@ rows = st_collect_decision_outcomes(resultObj, cutName, root, cfg)
   T/F가 아니라서 기록이 없는 블록(Saturate 등)은 사유를 남기지 않는다. 처음부터
   범위 밖이기 때문이다.
 
-- Metadata 시트에 `DecisionOutcomeRows`(결과를 하나라도 붙인 행 수)와
-  `DecisionOutcomeUnavailableRows`를 더한다.
+- Metadata 시트에 `DecisionOutcomeUnits`(읽은 단위 수), `DecisionOutcomeUnavailableRows`,
+  `DecisionOutcomeMismatchRows`를 더한다.
 - 시작과 끝에 `st_log` INFO, 키를 못 찾은 행은 DEBUG, 불일치는 WARN.
 
 ## 8. 테스트

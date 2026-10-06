@@ -198,6 +198,29 @@ Triggered Subsystem은 `'EXPLICIT'`에서 빠지기 때문입니다. 명세서 �
 
 `'NONE'`을 주면 커버리지가 있어도 열을 비웁니다.
 
+### 분기 결과 — `[T]`, `[F]`, `[T/F]`, `[-]`
+
+모든 결정이 true/false 두 결과인 블록(If의 조건마다, Switch, For/While Iterator,
+Enabled/Triggered/Resettable Subsystem 등)은 **그 행의 테스트가 실제로 탄 결과**를
+적습니다.
+
+| 표기 | 뜻 |
+| --- | --- |
+| `[T]` | true만 탔습니다 |
+| `[F]` | false만 탔습니다 |
+| `[T/F]` | 둘 다 탔습니다 |
+| `[-]` | 그 행에서 한 번도 평가되지 않았습니다 |
+
+값은 결과 정리 때 iteration마다 기록한 결과 워크북의 `DecisionOutcomes` 시트에서
+옵니다. 판정과 같은 워크북·같은 실행(INITIAL/FINAL)을 읽습니다.
+
+- Saturate, MinMax, MultiPortSwitch, SwitchCase, Sign처럼 결정이 둘 이상이거나 결과가
+  셋 이상인 블록은 정적 표기 `[T/F]` 그대로입니다.
+- 결과를 붙이지 못하면 `[T/F]`로 두고 `TestResults`의 `확인 사유`에 이유를 남깁니다.
+  이 사유만으로 `확인 필요`가 `Y`가 되지는 않습니다.
+- 이 기능 이전에 정리한 결과는 시트가 없어 모든 행이
+  `DECISION_OUTCOME_UNAVAILABLE`입니다. 결과 정리를 다시 하면 채워집니다.
+
 ### `Pre Condition`
 
 명세서의 `MaxTime`을 그대로 씁니다. 다시 계산하지 않습니다.
@@ -348,6 +371,9 @@ manifest에 적힌 체크섬과 실제 `CoverageSummary.xlsx`가 다르면 **중
 | `NO_RESULT_RUN` | 실행 이력이 하나도 없습니다 |
 | `RESULT_WORKBOOK_SHAPE_UNEXPECTED` | 결과 워크북의 시트나 열이 예상과 다릅니다 |
 | `MAXTIME_UNAVAILABLE` | `Pre Condition`이 빈 칸인 이유입니다 |
+| `DECISION_OUTCOME_UNAVAILABLE` | 이 행의 분기 결과가 기록되지 않아 `Description`에 `[T/F]`를 남겼습니다. 정보성이며 `확인 필요`를 켜지 않습니다 |
+| `DECISION_OUTCOME_MISMATCH` | 블록의 D 줄 수와 기록된 결정 수가 달라 `[T/F]`를 남겼습니다. 정보성입니다 |
+| `DECISION_OUTCOME_AMBIGUOUS` | 같은 행·블록에 서로 다른 결과가 기록돼 그 블록을 `[T/F]`로 두었습니다 |
 | `DUPLICATE_TEST_CASE_ID` | 같은 `Test Case ID`가 여러 행에 있습니다. 값은 바꾸지 않습니다 |
 | `TESTCASE_ID_PATTERN_UNMATCHED` | 이름이 `{CUT}_{ID}` / `UT_REQ_{CUT}_{NUM}` 규칙과 달라 ID를 나누지 못했습니다. 1·2열은 원문입니다 |
 | `COVERAGE_ROW_MISSING` | 그 CUT의 커버리지 행이 없습니다 |
@@ -384,6 +410,7 @@ manifest에 적힌 체크섬과 실제 `CoverageSummary.xlsx`가 다르면 **중
 | 원본 | `ModelFile`, `TestFile`, `ManagementExcel`과 각각의 `...SHA256` |
 | 판정 출처 | `ResultRunRequested`, `ResultRunMode`, `ResultRunId`, `ResultRunDirectory`, `ResultRunUpdatedAt`, `ResultWorkbooks`, `ResultSets` |
 | 커버리지 출처 | `CoverageSource`, `CoveragePipelineId`, `CoverageSummary`, `CoverageSummarySHA256` |
+| 분기 결과 출처 | `DecisionOutcomeUnits`, `DecisionOutcomeUnavailableRows`, `DecisionOutcomeMismatchRows` |
 | 설정 | `DecisionBlockScope` |
 
 **판정과 커버리지가 서로 다른 실행에서 왔다는 사실이 여기서 드러납니다.**

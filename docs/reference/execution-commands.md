@@ -536,7 +536,7 @@ info = st_collect_per_cut_results('Mode', 'LEAN');
 저장된 ResultSet이 없으므로 `SKIP`으로 보고합니다.
 
 `Mode='LEAN'`은 최종 문서(`st_export_final_document`)가 읽는 `TestSummary.xlsx`의
-판정(`Iterations`, `Targets`)과 `DecisionPoints`만 씁니다. 재실행한 CUT은 `final/`만,
+판정(`Iterations`, `Targets`)과 `DecisionPoints`, `DecisionOutcomes`만 씁니다. 재실행한 CUT은 `final/`만,
 아니면 `initial/`만 만듭니다. MLDATX 사본, CUT 커버리지 추출, PDF, CVT·CVF 사본·커버리지
 HTML은 만들지 않습니다(실행 로그의 `[ResultReport]` DEBUG 줄에 `SKIP`. 기본 콘솔
 설정에서는 보이지 않습니다). CVF 생성과 부착은 그대로 해서
