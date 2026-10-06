@@ -72,4 +72,4 @@ docs/
 | [커밋 규칙](ai/commit-convention.md) | 커밋 단위와 메시지 형식. 사람이 커밋할 때도 따릅니다 |
 
 `superpowers/`는 AI 에이전트의 설계·계획 도구가 파일을 만드는 위치라서 이름을
-바꾸지 않았습니다. [archive/](archive/)는 과거 인수인계 기록입니다.
+바꾸지 않았습니다. [archive/](archive/)에는 codex-handoff에서 옮긴 날짜별 [작업 기록](archive/codex-handoff-history.md)만 있습니다.
