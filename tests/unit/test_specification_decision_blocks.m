@@ -198,6 +198,7 @@ verifyTrue(testCase, all(strlength(string(catalog.DisplayType)) > 0));
 verifyTrue(testCase, all(ismember(string(catalog.Formatter), ["CUSTOM","GENERIC"])));
 verifyTrue(testCase, all(ismember(string(catalog.Kind), ["EXPLICIT","IMPLICIT"])));
 verifyTrue(testCase, all(ismember(string(catalog.MainExpression), ["SHOW","HIDE"])));
+verifyTrue(testCase, all(ismember(string(catalog.TwoWay), ["YES","NO"])));
 allowed = ["T/F","SELECT","CASE","LIMIT","BAND","RATE","ON/OFF", ...
     "SIGN","LOOP","ROW","RESET"];
 verifyTrue(testCase, all(ismember(string(catalog.Outcome), allowed)));
@@ -626,6 +627,16 @@ verifyEqual(testCase, string(decoded.Expression), "조건식 읽기 실패");
 verifyEqual(testCase, string(decoded.ExpressionStatus), "WARN");
 verifyEqual(testCase, string(decoded.Outcome), "T/F");
 verifyTrue(testCase, contains(note, "branch count mismatch"));
+end
+
+function testCatalogMarksExactlyTheTrueFalseTypesAsTwoWay(testCase)
+% The final document prints the outcome a row took only for these types.
+% Every other type keeps [T/F] without a reason, so this set also decides
+% which blocks can ever be reported as unrecorded.
+catalog = st_specification_decision_catalog('ALL');
+verifyEqual(testCase, string(catalog.BlockType(string(catalog.TwoWay) == "YES")), ...
+    ["If"; "Switch"; "Abs"; "ForIterator"; "WhileIterator"; ...
+     "EnablePort"; "TriggerPort"; "ResetPort"]);
 end
 
 function testCatalogHidesOnlySwitchCaseExpressionInTheMainCell(testCase)

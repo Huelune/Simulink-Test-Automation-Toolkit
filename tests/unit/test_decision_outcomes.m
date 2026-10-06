@@ -49,6 +49,19 @@ description = struct('decision', fake_decision('loop', ["False","TRUE"], [3 30])
 verifyEqual(testCase, st_decision_outcome_counts(description), [30 3]);
 end
 
+function testCountsAcceptOutcomeTextsThatGoOnAfterTrueOrFalse(testCase)
+% Simulink Coverage names the port a Switch passes after the word.
+description = struct('decision', fake_decision('switch', ...
+    ["true (output is from 1st input port)", "false (output is from 3rd input port)"], ...
+    [4 1]));
+verifyEqual(testCase, st_decision_outcome_counts(description), [4 1]);
+end
+
+function testCountsRejectWordsThatOnlyBeginWithTrueOrFalse(testCase)
+description = struct('decision', fake_decision('x', ["trueish","falsehood"], [1 1]));
+verifyEmpty(testCase, st_decision_outcome_counts(description));
+end
+
 function testBlockWithAThreeWayDecisionIsNotDescribed(testCase)
 description = struct('decision', fake_decision('max', ["in1","in2","in3"], [1 0 2]));
 verifyEmpty(testCase, st_decision_outcome_counts(description));
@@ -187,6 +200,34 @@ lookup = fake_lookup(struct());
     one_row_specification(item), base_config(), lookup);
 verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T/F]Saturate"));
 verifyEqual(testCase, reasons(1), "");
+end
+
+function testTwoWayBlockScannedWithoutCountsSaysUnavailable(testCase)
+% The unit was scanned but nothing was recorded for a Switch. A silent
+% [T/F] would read as "both taken".
+lookup = fake_lookup(struct());
+[formatted, ~, reasons] = st_format_specification_decision_blocks( ...
+    one_row_specification(switch_item("TOP/CUT/Sw")), base_config(), lookup);
+verifyEqual(testCase, formatted.DecisionBlocks(1), "Sw" + newline + "D1 [T/F]Switch (u > 0)");
+verifyEqual(testCase, reasons(1), "DECISION_OUTCOME_UNAVAILABLE");
+end
+
+function testBlockTypeOutsideTheTwoWaySetIsNeverLookedUp(testCase)
+% Saturate prints one D line for two decisions. Asking would pair them as
+% a mismatch on every row, so the type alone keeps it out.
+item = struct('BlockType', 'Saturate', 'Name', 'Sat', 'Path', 'TOP/CUT/Sat', ...
+    'Outcome', 'LIMIT', 'Expression', 'UpperLimit=1', 'ExpressionStatus', 'OK', 'Message', '');
+calls = 0;
+[formatted, ~, reasons] = st_format_specification_decision_blocks( ...
+    one_row_specification(item), base_config(), @counting_lookup);
+verifyEqual(testCase, calls, 0);
+verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T/F]Saturate"));
+verifyEqual(testCase, reasons(1), "");
+
+    function found = counting_lookup(~, ~, ~)
+        calls = calls + 1;
+        found = struct('UnitFound', true, 'Counts', [1 0; 0 1]);
+    end
 end
 
 function testConditionalCutIsLookedUpAsDot(testCase)

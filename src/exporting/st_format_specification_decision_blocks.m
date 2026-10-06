@@ -9,7 +9,9 @@ function [specification, details, outcomeReasons] = st_format_specification_deci
 %
 % The final document passes OUTCOMELOOKUP (st_final_document_decision_outcomes).
 % A two-way branch then shows what the row's test actually took: [T], [F],
-% [T/F] or [-]. OUTCOMEREASONS says, per row, why a [T/F] was left in place.
+% [T/F] or [-]. Which blocks are two-way is the catalog TwoWay column, so a
+% block of any other type keeps [T/F] and is never looked up.
+% OUTCOMEREASONS says, per row, why a two-way block's [T/F] was left in place.
 % The specification export passes no lookup and its output is unchanged.
 if nargin < 2, cfg = []; end
 if nargin < 3, outcomeLookup = []; end
@@ -18,11 +20,11 @@ outcomeReasons = repmat("", height(specification), 1);
 headers = {'TestSpecificationRow','TestCaseName','CUTPath','Decision', ...
     'Outcome','BlockType','Name','Expression','Path','JSON','ReadStatus','Message'};
 rows = strings(0, numel(headers));
-displayCatalog = table(strings(0,1), strings(0,1), strings(0,1), ...
-    'VariableNames', {'BlockType','DisplayType','MainExpression'});
+displayCatalog = table(strings(0,1), strings(0,1), strings(0,1), strings(0,1), ...
+    'VariableNames', {'BlockType','DisplayType','MainExpression','TwoWay'});
 try
     fullCatalog = st_specification_decision_catalog();
-    displayCatalog = fullCatalog(:, {'BlockType','DisplayType','MainExpression'});
+    displayCatalog = fullCatalog(:, {'BlockType','DisplayType','MainExpression','TwoWay'});
     log_message(cfg, 'DEBUG', ...
         'Specification decision block display catalog loaded | Types=%d', ...
         height(displayCatalog));
@@ -81,7 +83,7 @@ for row = 1:height(specification)
     if ~isempty(outcomeLookup)
         [labels, outcomeReasons(row)] = outcome_labels(cfg, decoded, labels, ...
             cutPath, testCaseName, table_text(specification, row, "Iteration명"), ...
-            outcomeLookup);
+            outcomeLookup, displayCatalog);
     end
     lines = strings(0,1);
     previousPath = string(missing);
@@ -181,19 +183,32 @@ end
 end
 
 function [labels, reason] = outcome_labels(cfg, decoded, labels, cutPath, ...
-        testCaseName, iterationName, outcomeLookup)
+        testCaseName, iterationName, outcomeLookup, displayCatalog)
 % A block's D lines are paired with its recorded decisions by position, so
 % a block whose counts differ keeps [T/F]: pairing anyway would put one
 % branch's result on another.
+%
+% Only a two-way type is looked up. Another type can still have true/false
+% decisions in coverage (Saturate has two for one D line), and asking for
+% it would report a mismatch on every row. A two-way block that was scanned
+% but has no counts is unavailable, not silently [T/F], because [T/F] would
+% read as "both taken".
 reason = "";
 paths = strings(numel(decoded), 1);
+types = strings(numel(decoded), 1);
 for k = 1:numel(decoded)
     paths(k) = json_optional_text(decoded(k), 'Path');
+    types(k) = json_optional_text(decoded(k), 'BlockType');
 end
+twoWayTypes = string(displayCatalog.BlockType(string(displayCatalog.TwoWay) == "YES"));
 unavailable = false;
 mismatch = false;
+unitLogged = false;
 for path = unique(paths(strlength(paths) > 0), 'stable').'
     items = find(paths == path);
+    if ~all(ismember(types(items), twoWayTypes))
+        continue;
+    end
     try
         found = outcomeLookup(testCaseName, iterationName, ...
             st_cut_relative_path(path, cutPath));
@@ -205,9 +220,19 @@ for path = unique(paths(strlength(paths) > 0), 'stable').'
     end
     if ~found.UnitFound
         unavailable = true;
+        if ~unitLogged
+            unitLogged = true;
+            log_message(cfg, 'DEBUG', ...
+                'Decision outcome unit not found | Case=%s | Iteration=%s', ...
+                testCaseName, iterationName);
+        end
         continue;
     end
     if isempty(found.Counts)
+        unavailable = true;
+        log_message(cfg, 'DEBUG', ...
+            'Decision outcome not recorded for a two-way block | Case=%s | Iteration=%s | Path=%s', ...
+            testCaseName, iterationName, path);
         continue;
     end
     if size(found.Counts, 1) ~= numel(items)
