@@ -687,6 +687,48 @@ disp(tree.OutputDir)
 winopen(finalFile)
 ```
 
+### 빠른 방식 — 준비가 끝난 뒤 다시 돌릴 때
+
+Harness, SLDV, Test Case 준비가 이미 끝났고 **그 뒤로 Excel과 모델을 고치지 않았을 때**
+쓰는 코드입니다. 기대값이 확정됐다면 먼저 Excel의 `ExpectedUpdateMode` 열을 `OFF`로
+두십시오([2.3절](#23-실행-전-주의--모델이-바뀝니다)). 3단계부터는 위와 같습니다.
+
+```matlab
+%% 준비 — MATLAB을 켤 때마다
+st_setup
+st_set_standalone_coverage_root  % 필수. 3단계 결과를 D:\model_result\<Top Model>에 둡니다
+
+%% 1단계 — 준비 단계는 건너뛰고 실행 → 최종 문서에 필요한 것만 정리
+st_run_from_harness('FromStage','EXECUTE')
+st_collect_per_cut_results('Mode','LEAN')
+
+%% 3단계 — 원본 Top Model과 Harness는 파이프라인이 저장하고 닫습니다
+info = st_run_standalone_coverage_pipeline();
+disp(info.PipelineId)
+
+[code, summary, details] = st_check_standalone_coverage();
+disp(code)                       % 1111111111 이어야 합니다
+disp(summary)
+
+%% 4단계 — 팀 제출 트리
+tree = st_classify_standalone_results('PipelineId', info.PipelineId);
+disp(tree.OutputDir)
+
+%% 5단계 — 고객 제출용 최종 문서
+[T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
+winopen(finalFile)
+```
+
+| 바뀐 곳 | 줄어드는 것 | 대신 잃는 것 |
+| --- | --- | --- |
+| `'FromStage','EXECUTE'` | Harness 생성부터 Test Manager까지 준비 단계 전체. 툴킷을 새로 받은 뒤 `AUTO`가 298개 준비를 전부 다시 하는 일도 없습니다 | 준비 상태를 다시 확인하지 않습니다. Excel이나 모델을 고쳤다면 쓰지 마십시오 |
+| `'Mode','LEAN'` | CUT별 MLDATX 사본, 커버리지 추출, PDF, CVT·커버리지 HTML. 재실행한 CUT은 `initial/` 보고서도 만들지 않습니다 | 1단계 실행의 CUT별 커버리지 HTML·CVT. 제출 커버리지는 3단계 결과를 쓰므로 최종 문서는 같습니다 |
+| `ExpectedUpdateMode` = `OFF` | CUT마다 Top Model·Test File 저장, 기대값 갱신 뒤 재실행, `final/` 보고서 | 기대값 자동 갱신 |
+| `st_pre_validate_targets` 생략 | Excel 검사 | Excel을 고쳤다면 위의 전체 코드를 쓰십시오 |
+
+3단계의 원본 재확인 단축과 진행 줄의 남은 시간(`eta=`)은 어느 방식에서든 자동으로
+적용됩니다.
+
 ## 10. 상황별로 무엇을 부를까
 
 | 상황 | 코드 |
@@ -698,6 +740,7 @@ winopen(finalFile)
 | Assessment를 바꿨다 | `st_run_from_harness('PreparationMode','FORCE','FromStage','ASSESSMENT')` |
 | 준비만 하고 실행은 나중에 | `st_run_from_harness('ExecuteTests', false)` |
 | 준비는 그대로 두고 실행만 | `st_run_from_harness('FromStage','EXECUTE')` |
+| 1단계 결과를 최종 문서에 필요한 것만 빨리 정리 | `st_collect_per_cut_results('Mode','LEAN')` |
 | 실행과 결과 정리를 한 번에 | `st_run_from_harness('AutoCollect', true)` |
 | Harness에 없는 SLDV 입력을 버리지 말고 멈춰야 한다 | `st_run_from_harness('IgnoreUnexpectedSldvInputs', false)` |
 | 하나라도 실패하면 멈춰야 한다 | `st_run_from_harness('FailOnNonPass', true)` |
