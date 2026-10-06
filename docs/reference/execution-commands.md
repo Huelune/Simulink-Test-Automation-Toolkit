@@ -452,7 +452,7 @@ Action의 역할:
 
 ### `st_open_standalone_test_manager`
 
-PACKAGE가 끝난 제출물을 Test Manager에서 엽니다. 기본 동작은 [결과 열기](open-results.md)의
+PACKAGE가 끝난 제출물을 Test Manager에서 엽니다. 기본 동작은 [제출물 열기](standalone-coverage-pipeline.md#12-제출물-열기)의
 수동 절차와 같습니다: 대상 CUT 폴더 전부 `addpath` → `sltest.testmanager.TestFile(TestManagerFile)`
 → `sltest.testmanager.view`. **파일을 만들거나 바꾸지 않고, 모델도 로드하지 않습니다.**
 
@@ -605,6 +605,7 @@ standalone 결과를 10비트 코드와 최대 20줄 화면으로 검사합니�
 
 전체 통과 코드는 `1111111111`입니다. 아직 적용할 수 없는 비트는 `-`로 표시하고
 전체 상태는 `PARTIAL`을 반환합니다.
+자리별 검사 내용은 [Standalone Coverage 파이프라인 6절](standalone-coverage-pipeline.md#6-한-화면-검사-비트)에 있습니다.
 
 ### `st_check_per_cut_cvf`
 

@@ -2,6 +2,8 @@
 
 구현이 끝난 항목과, 아직 결정되지 않았거나 runtime 검증이 남은 항목을 구분합니다.
 `[x]`는 구현과 정적 검토가 끝난 것이며 **R2025b 인증 완료를 뜻하지 않습니다.**
+R2025b에서 확인할 세부 항목과 지금의 실물 미검증 목록은
+[codex-handoff](../ai/codex-handoff.md)에 있고, 여기에는 결정이나 작업 단위만 둡니다.
 
 ## 안전성과 기대값
 
@@ -18,26 +20,26 @@
 
 - [x] `st_create_example`로 익명 모델, Dataset MAT, 예제 관리 Excel을 로컬 생성한다.
 - [x] 기본 예제는 FILE/MAT를 쓰고 SLDV GENERATE를 요구하지 않는다.
-- [x] `docs/manual/` 아래에 작업 중심의 한국어 복사용 runbook을 둔다.
+- [x] 처음 보는 사람이 따라갈 메인 매뉴얼(`docs/user-manual.md`)과 참조 문서(`docs/reference/`)를 둔다.
 - [x] 읽기 전용 readiness 검사와, 선택 단계부터 workflow 끝까지 실행하는 엄격한
       재시작을 추가한다.
 - [x] 해시 검증된 저장 증거에서 새 PipelineId로 PACKAGE/SUMMARY를 재생성한다.
 - [x] MATLAB을 모르는 사용자를 위한 입문 가이드, 용어집, Excel 열 사전, 설정 사전을
       추가한다.
-- [ ] `docs/manual/runtime-verification.md`를 R2025b에서 실행하고 예제 출력,
+- [ ] [종합 검증 13절](../reference/verification.md#13-r2025b-배포-전-실기-확인)을 R2025b에서 실행하고 예제 출력,
       재시작·readiness 증거, Test Manager 폴더 버튼 확인 결과를 보존한다.
 - [ ] workspace 이전이 안전해지면 로컬 작업 디렉터리 이름의 과거 오타를 정정한다.
 
 ## Package 이전
 
-- [ ] `docs/architecture.md`에 기술한 `src/+simtest` 공개 API를 도입한다.
+- [ ] [저장소 구조](architecture.md)에 기술한 `src/+simtest` 공개 API를 도입한다.
 - [ ] 현재 루트 `st_*` 진입점의 호환 기간을 정의한다.
 - [ ] 큰 Signal Editor, SLDV 준비, 경로 탐색, 기대값 갱신 파일을 책임 단위로
       분할한다.
 - [x] 진단 유틸리티를 `diagnostics/matlab` 아래의 공개 `st_*` 명령으로 유지한다.
-- [x] `WORK_HANDOFF.md`, `PATCH_NOTES.txt`, `README_REPLACEMENT_FILES.txt`를
-      `docs/archive`에 보존한다.
-- [ ] archive의 유용한 내용을 현재 문서로 통합한 뒤 archive 파일을 제거한다.
+- [x] 옛 archive 파일(`WORK_HANDOFF.md`, `PATCH_NOTES.txt`,
+      `README_REPLACEMENT_FILES.txt`)을 제거한다. 내용은 git 기록에 남아 있다.
+      `docs/archive/`에는 codex-handoff에서 옮긴 작업 기록만 둔다.
 
 ## 호환성과 검증
 

@@ -305,15 +305,10 @@ CUT이면 분모가 0이 되어 백분율을 계산할 수 없습니다. 이것�
 
 ### CVF 뷰어에서 이름이 `n/a`로 보인다
 
-**정상입니다.** CVF 규칙은 블록을 경로가 아니라 SID로 가리키고, 뷰어는 그 SID를
-**로드된 모델에 대조해서** 이름을 풉니다. 모델이 열려 있지 않으면 풀 수 없습니다.
-
-해당 CVF를 만든 standalone 모델을 먼저 여십시오. 그 모델은 CVF 바로 옆에 있습니다.
-**원본 Top Model을 열어서는 안 됩니다.** standalone 모델은 원본의 SID를 재사용하지
-않습니다. 자세한 설명은 [결과 열기](open-results.md)에 있습니다.
-
-rule의 rationale이 `none`으로 보이는 것도 의도된 값입니다. 규칙 분류는 rationale
-문구가 아니라 selector 경로로 판정합니다.
+**정상입니다.** CVF 규칙은 블록을 SID로 가리키고, 뷰어는 로드된 모델에 대조해 이름을
+풉니다. 그 CVF 옆의 standalone 모델을 먼저 여십시오(원본 Top Model 아님). 이유와 규칙
+확인 코드는 [Standalone Coverage 파이프라인](standalone-coverage-pipeline.md#cvf-내용을-볼-때-이름이-na로-나오는-경우)에
+있습니다.
 
 ## 5. Test Manager 오류
 

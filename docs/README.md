@@ -38,14 +38,24 @@ docs/
 | --- | --- |
 | [테스트 명세서 추출](reference/test-specification.md) | 실행 없이 명세서 Excel 뽑기 |
 | [최종 문서 추출](reference/final-document.md) | 고객 제출용 최종 문서의 시트 구성과 판정 출처 |
-| [Standalone Coverage 파이프라인](reference/standalone-coverage-pipeline.md) | 파이프라인의 경계, 산출물 구조, 예외 처리, PREPARE |
-| [결과 열기](reference/open-results.md) | 제출물을 Test Manager에서 수동으로 열기 |
+| [Standalone Coverage 파이프라인](reference/standalone-coverage-pipeline.md) | 파이프라인의 경계, 산출물 구조, 예외 처리, PREPARE, 제출물 열기 |
 | [재시작](reference/restart.md) | 앞 단계를 보존한 채 중간부터 재시작, 결과 재생성 |
 | [내보내기 번들](reference/export-bundle.md) | 다른 PC에서 재실행할 번들 만들기 |
 | [Template Harness clone](reference/harness-template-clone.md) | 기존 Harness를 본떠 새 Harness 만들기 |
 | [익명 예제 생성](reference/example.md) | 실제 모델 없이 예제로 연습 |
-| [종합 검증](reference/verification.md) | 도구 자체를 인증하기 |
-| [R2025b 배포 전 확인](reference/runtime-verification.md) | 배포 전 실제 MATLAB에서 확인할 것 |
+| [종합 검증](reference/verification.md) | 도구 자체를 인증하기, R2025b 배포 전 실기 확인 |
+
+**주제별 원본 문서** — 같은 내용은 한 곳에만 적고 나머지는 링크합니다.
+
+| 주제 | 원본 |
+| --- | --- |
+| 절차, 기본 옵션, 상황별 조합 | [사용자 매뉴얼](user-manual.md) |
+| 모든 명령의 옵션 전체 | [실행 명령 사전](reference/execution-commands.md) |
+| Excel 열 / 설정값 | [관리 Excel 열 사전](reference/workbook-reference.md) / [설정 사전](reference/config-reference.md) |
+| 단계 내부 동작 | [운영자 매뉴얼](reference/operator-manual.md) |
+| 재시작, 결과 재생성 | [재시작](reference/restart.md) |
+| standalone 경계·산출물·검사 비트·제출물 열기 | [Standalone Coverage 파이프라인](reference/standalone-coverage-pipeline.md) |
+| 오류 대처, 상태 초기화 | [문제 해결](reference/troubleshooting.md) |
 
 ## design — 설계
 
@@ -62,4 +72,4 @@ docs/
 | [커밋 규칙](ai/commit-convention.md) | 커밋 단위와 메시지 형식. 사람이 커밋할 때도 따릅니다 |
 
 `superpowers/`는 AI 에이전트의 설계·계획 도구가 파일을 만드는 위치라서 이름을
-바꾸지 않았습니다. [archive/](archive/)는 과거 인수인계 기록입니다.
+바꾸지 않았습니다. [archive/](archive/)에는 codex-handoff에서 옮긴 날짜별 [작업 기록](archive/codex-handoff-history.md)만 있습니다.

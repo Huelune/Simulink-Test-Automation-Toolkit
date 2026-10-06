@@ -41,9 +41,9 @@ TestManagement.xlsx
 | 보고서 | Excel, JSON manifest, MLDATX, HTML, 선택적 공식 PDF |
 | 현장 점검 | 환경·실행·CVF 상태를 전달 가능한 고정 비트 코드로 요약 |
 
-선택 기능으로 테스트 명세서 Excel 추출, 다른 PC용 재실행 번들, 여러 모델을 위한
-이름별 profile, 중간 단계 재시작과 결과 재생성, `QUICK`/`RUNTIME`/`CERTIFY` 종합
-검증이 있습니다.
+선택 기능으로 테스트 명세서 Excel 추출, 고객 제출용 최종 문서, 팀 제출 트리 재배치,
+다른 PC용 재실행 번들, 중간 단계 재시작과 결과 재생성, `QUICK`/`RUNTIME`/`CERTIFY`
+종합 검증이 있습니다.
 
 ## 요구 환경
 
@@ -91,64 +91,28 @@ Git에서 제외된 `runtime_target.mat`에만 저장되므로 저장소를 pull
 
 ## 관리 Excel
 
-기본 파일은 저장소 루트의 `TestManagement.xlsx`, 시트 이름은 `Targets`입니다.
-최소로 필요한 열은 네 개입니다.
-
-| 열 | 뜻 |
-| --- | --- |
-| `CUTName` | 대상 Subsystem 이름 |
-| `CUTPath` | Top Model부터의 전체 경로 |
-| `HarnessName` | 만들거나 재사용할 Harness 이름 |
-| `TestCaseName` | Test Manager에 만들 Test Case 이름 |
-
-나머지 열(SLDV 입력, 기대값 정책, Coverage 필터, 준비 재실행, Harness 복제)은 전부
-선택입니다. 모든 열의 역할·기본값·잘못 적었을 때의 동작은
-**[관리 Excel 열 사전](docs/reference/workbook-reference.md)** 한 곳에 정리되어 있습니다.
-
-전역 기본값은 **[설정 사전](docs/reference/config-reference.md)**, 명령과 그 옵션은
-**[실행 명령 사전](docs/reference/execution-commands.md)** 을 보십시오.
+입력은 저장소 루트의 `TestManagement.xlsx`, `Targets` 시트 한 장입니다. 한 행이 CUT
+하나이고, 필수 열은 `CUTName`, `CUTPath`, `HarnessName`, `TestCaseName` 네 개입니다.
+작성 요령은 [사용자 매뉴얼 2.4절](docs/user-manual.md#24-testmanagementxlsx-작성)에,
+모든 열의 역할·기본값·잘못 적었을 때의 동작은
+[관리 Excel 열 사전](docs/reference/workbook-reference.md)에 있습니다.
 
 ## 실행 모드
 
-기본값은 `PER_CUT`이며, 보통 그대로 두면 됩니다.
-
-| 모드 | 동작 |
-| --- | --- |
-| `PER_CUT` (기본) | 모든 활성 Test Case를 Excel 순서로 개별 실행하고 결과도 CUT별로 저장 |
-| `BATCH` | 모든 활성 Test Case를 `run(tf)`로 한 번에 실행 |
-
-Test Case가 서로 영향을 주지 않고, 기대값을 고친 뒤에도 그 Test Case만 다시
-돌기 때문에 `PER_CUT`을 기본으로 둡니다. 전부 한 번에 돌려 통합 보고서 하나로
-끝내고 싶으면 `st_run_after_harness('ExecutionMode','BATCH')`로 지정합니다.
-
-커버리지 필터는 이 선택과 무관합니다. 실행은 커버리지를 **필터 없이** 수집하고,
-CVF는 결과물을 만들 때 결과 데이터에 붙습니다 — `PER_CUT`은
-`st_collect_per_cut_results`, `BATCH`는 `st_generate_test_report`가 합니다.
-
-> 예전 `AUTO`는 없어졌습니다. 활성 CVF가 있으면 `PER_CUT`을 골랐는데, 필터가
-> 결과물 단계로 옮겨가면서 근거가 사라졌습니다. 넘기면
-> `simtest:RemovedExecutionMode`로 막습니다.
+기본은 `PER_CUT`(Test Case마다 따로 실행하고 결과도 CUT별로 저장)이며, 보통 그대로
+두면 됩니다. 한 번에 돌려 통합 보고서 하나로 끝내려면 `'ExecutionMode','BATCH'`를
+줍니다. 두 모드의 차이는 [사용자 매뉴얼 3.5절](docs/user-manual.md#35-옵션)에
+있습니다.
 
 ## 결과가 저장되는 곳
 
-```text
-result/
-├── reports/          # 단계별 INI 결과
-├── sldv/             # SLDV 생성 데이터와 manifest
-├── state/            # 증분 준비 checkpoint
-├── runs/             # BATCH 실행 보고서
-├── per_cut_runs/     # PER_CUT 실행 보고서 (CUT별 폴더)
-├── exports/          # 자산 번들과 재실행 번들
-├── standalone_coverage/  # standalone 제출물
-├── verification/     # QUICK/RUNTIME/CERTIFY 결과
-├── latest.json       # 최신 BATCH 실행 위치
-├── per_cut_latest.json   # 최신 PER_CUT 실행 위치
-└── TestSummary.xlsx  # 최신 BATCH 실행 요약
-```
+생성물은 전부 툴킷 클론의 `result/` 아래에 쌓이고, standalone 제출물은
+`st_set_standalone_coverage_root`로 정한 결과 루트(기본 `D:\model_result\<Top Model>`)에
+만들어집니다. 폴더별 역할은 [설정 사전 13절](docs/reference/config-reference.md#13-경로-설정-보통-그대로-둡니다)에
+있습니다.
 
 `result/`는 다시 만들 수 있는 생성물 영역이지만, 인증 증거나 전달한 제출물은
 지우기 전에 따로 보관하십시오. 정리는 기본 dry-run인 `st_cleanup_results`로 합니다.
-
 보고서는 전부 로컬 파일이며 외부 시스템으로 자동 전송하지 않습니다. 공유 전에는
 모델 경로, CUT 이름, 진단 오류에 민감정보가 없는지 검토해야 합니다.
 
@@ -218,13 +182,7 @@ result/
 `PACKAGE` → `SUMMARY` → checker 경로를 처음 통과했습니다. 그 밖의 경로는 아직
 R2025b 실기 결과가 없습니다. 실행하지 않은 검증을 통과로 기록하지 않습니다.
 
-미검증으로 남은 주요 항목:
-
-- `SUBSYSTEM+JUSTIFY`, `ALL_CONTENT+EXCLUDE`, `OFF` CUT의 순차 실행과 필터 무누출
-- 기대값 최초 실패 → 갱신 → 같은 CVF 재실행 → 최종 PASS
-- SLDV·일반 MAT `FILE`/`GENERATE`의 Scenario·Iteration과 `Tmax` timing
-- `QUICK → RUNTIME → CERTIFY` 전체 인증과 재실행 번들 반복 실행
-- 단계 재시작과 결과 재생성(PACKAGE/SUMMARY)
+미검증으로 남은 항목과 결정이 필요한 작업은 [TODO](docs/design/TODO.md)에 있습니다.
 
 R2025b 장비에서는 먼저 단위 테스트를 실행하십시오.
 
@@ -233,9 +191,8 @@ st_setup
 results = runtests(fullfile(st_project_root(), 'tests', 'unit'));
 ```
 
-이후 절차는 [R2025b 배포 전 확인](docs/reference/runtime-verification.md)과
-[종합 검증](docs/reference/verification.md)을 따릅니다. 아직 결정되지 않은 항목은
-[TODO](docs/design/TODO.md)에 있습니다.
+이후 절차는 [종합 검증](docs/reference/verification.md)을 따르고, 배포 전 실기 확인 목록은
+그 문서의 [13절](docs/reference/verification.md#13-r2025b-배포-전-실기-확인)에 있습니다.
 
 ## 라이선스
 

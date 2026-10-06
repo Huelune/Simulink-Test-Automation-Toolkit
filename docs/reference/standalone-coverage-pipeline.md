@@ -34,22 +34,11 @@ CoverageFilterRationale = (비어 있지 않은 사유)
 
 ## 2. 기본 실행
 
-```matlab
-info = st_run_standalone_coverage_pipeline( ...
-    'Action', 'ALL', ...
-    'ContinueOnFailure', true, ...
-    'FailOnNonPass', false);
-
-% 결과를 읽기 전용으로 한 화면에서 확인
-[code, summary, details] = st_check_standalone_coverage();
-```
-
-`Action='ALL'`이 기본값이므로 `st_run_standalone_coverage_pipeline()`만 써도 같지만,
-`ContinueOnFailure`와 `FailOnNonPass`를 명시해 두면 한 대상이 실패해도 나머지가
-처리되고 MATLAB 오류 대신 결과 표로 판정하게 됩니다.
-
-전체 계약을 통과한 코드만 `1111111111`입니다. 검사 결과 화면은 최대 20줄이며(직접
-부르면 실행 로그 틀 4줄이 더 붙습니다) 전체 CUT 결과는 `details` 표에서 확인합니다.
+평소에는 `st_run_standalone_coverage_pipeline()`을 옵션 없이 부르고
+`st_check_standalone_coverage()`로 검사합니다. 절차와 확인 방법은
+[사용자 매뉴얼 5절](../user-manual.md#5-3단계--standalone-제출물)에, 옵션 전체는
+[실행 명령 사전](execution-commands.md#st_run_standalone_coverage_pipeline)에
+있습니다. 검사 코드의 자리별 뜻은 [6절](#6-한-화면-검사-비트)에 있습니다.
 
 ## 3. Action별 실행과 재개
 
@@ -124,10 +113,7 @@ lifecycle 횟수를 보존하기 위해 **각 PipelineId의 `PACKAGE`와 `SUMMAR
 `open_standalone_coverage_test_manager.m` launcher가 함께 생성됩니다. launcher는
 편의 기능이며 필수가 아닙니다.
 
-이 PC에서 제출물을 Test Manager에서 열려면 `st_open_standalone_test_manager`를
-부릅니다. 대상 폴더를 path에 올리고 재배선된 MLDATX를 열어 창을 띄우는 수동 절차를
-명령 하나로 묶은 것이며, 파일은 만들거나 바꾸지 않습니다. 자세한 여는 방법은
-[결과 열기](open-results.md)에 있습니다.
+제출물을 Test Manager에서 여는 방법은 [12절](#12-제출물-열기)에 있습니다.
 
 ### 일부러 만들지 않는 것
 
@@ -142,36 +128,12 @@ Coverage 보고서 하나만 보존하며, 렌더링에 필요한 부속 asset�
 
 ### 팀 제출 트리로 재배치
 
-팀 내부 제출은 위 폴더를 파일 종류별 세 갈래로 나눈 형태를 씁니다.
-`Action='ALL'`이 끝난 뒤 `st_classify_standalone_results`로 재배치합니다(기존 트리는
-지우고 다시 만듦). 파이프라인에 `'ClassifyResults', true`를 주면 끝날 때 자동으로
-재배치하고 위치를 `info.SubmissionTree`에 돌려주며, 이때 재배치에 실패해도
-파이프라인은 실패로 끝나지 않고 WARN만 남깁니다. MATLAB이 없는 PC에서는 같은
-규칙의 Python 스크립트를 씁니다.
-
-```matlab
-st_classify_standalone_results('PipelineId', id)
-```
-
-```bash
-python tools/python/classify_standalone_results.py result/standalone_coverage/{PipelineId}
-```
-
-파이프라인 폴더 옆에 `{TopModel}/` 폴더(이름은 `TestManager/{TopModel}.mldatx`의
-stem)를 만들고 파일 이름은 바꾸지 않은 채 복사합니다. 원본 폴더는 그대로 남으므로
-`st_open_standalone_test_manager` 같은 툴킷 명령은 계속 원본에 대해 동작합니다.
-
-```text
-{TopModel}/
-├── 테스트 케이스/{NUM}_UT_REQ_{TC_NAME}/   Input .mat
-├── 테스트 보고서/{TopModel}.mldatx
-├── 테스트 보고서/{NUM}_UT_REQ_{TC_NAME}/   .cvf .cvt .html + 부속 asset 폴더
-└── 프로젝트/{NUM}_UT_REQ_{TC_NAME}/        standalone 모델 .slx
-```
-
-`CoverageSummary.xlsx`, manifest, 로그, `target-manifest.json`, launcher와 CUT 폴더
-안의 `scv_images` 폴더는 복사하지 않고 건너뛴 목록으로만 출력합니다. `--dry-run`은 계획만 보여 주고, `--out`으로 출력
-위치를 바꾸며, 출력 폴더가 이미 있으면 `--overwrite` 없이는 멈춥니다.
+팀 내부 제출은 위 폴더를 파일 종류별 세 갈래(테스트 케이스·테스트 보고서·프로젝트)로
+나눈 형태를 씁니다. `st_classify_standalone_results`가 파이프라인 폴더 옆에
+`{TopModel}/`을 만들어 파일 이름을 바꾸지 않고 복사하며, 원본 폴더는 그대로 둡니다.
+트리 구조와 옵션은 [사용자 매뉴얼 6절](../user-manual.md#6-4단계--팀-제출-트리)에
+있습니다. 파이프라인에 `'ClassifyResults', true`를 주면 `ALL` 끝에 자동으로
+재배치하며, 이때 재배치가 실패해도 파이프라인은 실패로 끝나지 않고 WARN만 남깁니다.
 
 ## 5. `CoverageSummary.xlsx`
 
@@ -224,7 +186,9 @@ metric source는 Result coverage API와 standalone CUT path가 **정확히 하�
 `-`로 표시하고 전체 상태는 `PARTIAL`을 반환합니다.
 
 checker는 Result import, model load/save, Test Manager clear, 파일 생성을 하지
-않습니다.
+않습니다. 검사 결과 화면은 최대 20줄이고, 직접 부르면 실행 로그 틀 4줄(`==>`,
+`<==`, `log:` 두 줄)이 더 붙습니다. 다른 명령 안에서 부르면 틀이 붙지 않습니다. 전체
+CUT 결과는 `details` 표에 있습니다.
 
 > B9는 **현재** 원본이 그대로인지 봅니다. 원본 모델이 나중에 바뀐 뒤 과거 결과를
 > 재생성하면, 재생성 자체가 성공해도 B9는 실패할 수 있습니다.
@@ -338,3 +302,100 @@ sltest.testmanager.view
   `st_open_standalone_test_manager()`의 `LATEST`는 마지막 `EXECUTE`/`ALL`을
   계속 가리킵니다. PREPARE 결과를 checker에 넘기면 `FAIL`이 정상입니다.
 - `SaveTestResult`는 지정할 수 없습니다. 실행이 없어 저장할 Result가 없습니다.
+
+## 12. 제출물 열기
+
+파이프라인을 돌린 PC(저장소와 `runtime_target.mat`이 있는 곳)에서는
+`st_open_standalone_test_manager` 하나로 엽니다. manifest를 읽어 대상 폴더를 전부
+`addpath`하고, 재배선된 Test File을 열고, Test Manager 창을 엽니다. 모델은 로드하지
+않고 파일도 만들거나 바꾸지 않습니다. 옵션은
+[실행 명령 사전](execution-commands.md#st_open_standalone_test_manager)에 있습니다.
+
+```matlab
+st_open_standalone_test_manager                                  % 가장 최근 제출물
+st_open_standalone_test_manager('PipelineId', '여기에_PipelineId')
+```
+
+제출물 폴더를 다른 위치로 옮겼거나 다른 PC라면 manifest의 절대 경로가 맞지 않으므로
+아래 수동 방법을 씁니다.
+
+### 수동으로 열기
+
+launcher를 반드시 사용할 필요는 없습니다. **Model 폴더 버튼으로 standalone `.slx`를
+선택하는 방식**을 지원합니다. 이 파일은 원본 Top Model의 내부 Harness가 아니라 독립 Model입니다.
+Test Harness 항목에는 원본 Top Model/Harness 연결을 다시 지정하지 않습니다.
+
+### 현재 PC에서 모든 대상 폴더 연결
+
+```matlab
+st_setup
+cfg = st_config();
+pipelineId = '여기에_PipelineId';   % 생략하려면 'LATEST'
+m = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir,pipelineId);
+for k = 1:numel(m.Targets)
+    folder = m.Targets(k).OutputDirectory;
+    assert(isfolder(folder), 'Packaged target folder is missing.');
+    addpath(folder);
+end
+sltest.testmanager.TestFile(m.TestManagerFile);
+sltest.testmanager.view;
+```
+
+Test Manager에서 각 TC의 Model 폴더 버튼 → 해당 대상 폴더의 `.slx` 선택 → Model 열기.
+Signal Editor 파일은 모델 옆의 Input MAT을 사용합니다. 동명 다른 모델이 로드돼 있으면
+사용자가 저장/닫기 후 다시 선택해야 합니다. CVF 경로도 옆의
+`UT_REQ_{TC_NAME}.cvf`인지 확인하십시오.
+경로 설정은 MATLAB 세션마다, 다른 PC에서도 필요합니다. `savepath`를 강제하지 않습니다.
+
+전체 결과 폴더를 다른 위치로 복사했다면 manifest의 예전 절대 경로를 그대로 쓰지 말고
+새 위치의 TC 폴더들을 Add to Path 한 뒤 `TestManager/*.mldatx`를 직접 여십시오.
+모델·Input·CVF·CVT·HTML 부속 파일을 함께 보관합니다. `.work` 없이 제출 파일을 여는 것과
+PACKAGE 재생성이 가능한지는 서로 다른 조건입니다.
+
+### 선택 사항: 자동 연결 launcher
+
+```matlab
+st_setup
+cfg = st_config();
+pipelineId = '여기에_PipelineId';
+m = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir,pipelineId);
+assert(isfile(m.TestManagerLauncher));
+run(m.TestManagerLauncher);
+```
+
+launcher는 모델 경로와 CVF readback을 준비하는 편의 기능입니다. launcher에서
+filter readback 오류가 나면 해당 오류를 숨기지 말고 CVF 파일·대상 model·저장 경로를 확인합니다.
+이전에 한 번 열었다고 다른 PC의 MATLAB 경로까지 자동으로 연결되지는 않습니다.
+
+### CVF 내용을 볼 때 이름이 n/a로 나오는 경우
+
+정상 동작이며 CVF가 잘못 만들어진 것이 아닙니다. 규칙은 블록을 경로가 아니라
+**SID**로 지정하고, 뷰어의 Name 칸은 그 SID를 **로드된 모델에 대조해서** 이름을
+풀어냅니다. 모델이 열려 있지 않으면 풀 수가 없어 `n/a`로 표시됩니다.
+
+해당 CVF를 만든 standalone 모델을 먼저 열면 이름이 나옵니다. 그 모델은 CVF 바로
+옆에 `{HarnessName}.slx`로 들어 있습니다.
+
+```matlab
+folder = '여기에_대상_폴더';
+model = dir(fullfile(folder, '*.slx'));
+load_system(fullfile(folder, model(1).name));
+```
+
+이 상태에서 CVF를 열면 Name 칸이 채워집니다. 규칙이 가리키는 블록을 명령으로
+확인하려면 아래를 씁니다.
+
+```matlab
+f = slcoverage.Filter(fullfile(folder, '여기에_CVF_파일명'));
+r = getRules(f);
+for k = 1:numel(r)
+    fprintf('%s\n', getfullname(Simulink.ID.getHandle(char(r(k).Selector.Id))));
+end
+```
+
+**원본 Top Model을 열어서는 안 됩니다.** standalone 모델은 원본의 SID를 재사용하지
+않으므로, 그 CVF가 만들어진 바로 그 standalone 모델이어야 이름이 풀립니다.
+launcher가 Test Manager를 열기 전에 모든 standalone 모델을 로드하는 이유가 이것입니다.
+
+rule의 rationale이 `none`으로 보이는 것도 의도된 값입니다. 규칙 분류는 rationale
+문구가 아니라 selector 경로로 판정하므로 진단에 영향을 주지 않습니다.

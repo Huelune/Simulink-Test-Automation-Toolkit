@@ -4,7 +4,7 @@ function varargout = st_open_standalone_test_manager(varargin)
 %   st_open_standalone_test_manager()                      % LATEST
 %   st_open_standalone_test_manager('PipelineId', id)
 %
-% One command for the manual steps in docs/reference/open-results.md:
+% One command for the manual steps in docs/reference/standalone-coverage-pipeline.md (section 12):
 %
 %   m = st_load_standalone_pipeline_manifest(root, pipelineId);
 %   for k = 1:numel(m.Targets), addpath(m.Targets(k).OutputDirectory); end
