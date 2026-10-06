@@ -71,3 +71,28 @@ verifyError(testCase, @() st_select_sldv_test_cases('TestCase_1', 3), ...
 verifyError(testCase, @() st_select_sldv_test_cases(',', 3), ...
     'simtest:InvalidSldvTestCases');
 end
+
+
+function testInputFilterKeepsTheTestCaseSelection(testCase)
+% inspect_sldv_data once wrote the kept input positions into the variable
+% that held the selected TestCase numbers. Every TestCase after the first
+% was then filtered by input position, so a CUT with 3 inputs and 12
+% TestCases kept only TestCases 1-3 without a warning. The variable the
+% loop tests must be assigned once, by st_select_sldv_test_cases.
+source = fileread(fullfile(st_project_root(), ...
+    'src', 'sldv', 'st_prepare_sldv_targets.m'));
+body = extractBetween(source, ...
+    'function meta = inspect_sldv_data(', [newline 'function ']);
+assertNumElements(testCase, body, 1);
+body = body{1};
+
+loopVariable = regexp(body, ...
+    'if ~ismember\(sourceIndex, (\w+)\)', 'tokens', 'once');
+assertNumElements(testCase, loopVariable, 1);
+name = loopVariable{1};
+
+assignments = regexp(body, ['(\[[^\]\n]*\<' name '\>[^\]\n]*\]|\<' ...
+    name '\>)\s*=[^=]'], 'match');
+verifyNumElements(testCase, assignments, 1);
+verifyTrue(testCase, contains(assignments{1}, 'selectionIsExplicit'));
+end

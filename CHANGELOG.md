@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **SLDV TestCase가 일부만 Scenario로 만들어지던 문제를 고쳤습니다.**
+  SLDV 데이터를 읽을 때, 고른 TestCase 번호를 담은 변수에 첫 TestCase의 입력 신호
+  위치가 덮어써졌습니다. 그래서 두 번째 TestCase부터는 TestCase 번호를 입력 위치와
+  비교했고, 예를 들어 입력 3개·TestCase 12개인 CUT은 1~3번만 Scenario가 되고 나머지는
+  경고 없이 빠졌습니다. `SldvTestCases` 열을 넣은 뒤로 `GENERATE`와 `FILE`+`SLDV`에
+  모두 있던 문제입니다. 이제 두 값을 다른 변수에 둡니다.
+  - 툴킷 코드가 바뀌었으므로 다음 실행에서 SLDV 단계부터 자동으로 다시 준비합니다.
+    `SldvGenerationResult`의 `ScenarioCount`가 늘었는지 확인하십시오.
+
 - **EXCEPT CUT이 하나 있어도 판정이 Passed가 아닌 CUT 때문에 standalone 검사 B1이 0이 되지 않습니다.**
   `st_check_standalone_coverage`는 EXCEPT 대상이 있으면 나머지 대상이 모두 `PASS`여야
   B1(M)을 1로 줬습니다. 그래서 Test Case 판정이 Passed가 아닌 대상(`ExecutionStatus=WARN`)이
