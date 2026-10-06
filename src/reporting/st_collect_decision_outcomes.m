@@ -133,7 +133,8 @@ function rows = block_rows(cvd, blockPath, root, label, cutName, caseName, itera
 rows = empty_rows();
 [blockType, objectPath] = st_decision_object_path(char(blockPath), root);
 if isempty(blockType), return; end
-description = block_description(cvd, objectPath, char(blockPath));
+description = block_description(cvd, objectPath, char(blockPath), ...
+    caseName, iterationName, cfg);
 if isempty(description), return; end
 [counts, texts] = st_decision_outcome_counts(description);
 if isempty(counts)
@@ -150,24 +151,44 @@ end
 end
 
 
-function description = block_description(cvd, objectPath, blockPath)
-% A conditional CUT's branch sits on its port block on some releases and on
-% the subsystem on others, as st_collect_decision_points found. The
-% subsystem is asked with descendants ignored so inner blocks stay out.
+function description = block_description(cvd, objectPath, blockPath, caseName, iterationName, cfg)
+% Mirrors st_collect_decision_points: ask the object path first, and when
+% that carries no decision objectives ask the block itself with descendants
+% ignored. Some releases attribute a conditional subsystem's branch to the
+% subsystem rather than to its port block, and keeping the two scans in
+% step is what lets a DecisionPoints row find its outcome row.
 description = [];
 try
-    [values, description] = decisioninfo(cvd, objectPath);
-    if ~isempty(values), return; end
+    [values, found] = decisioninfo(cvd, objectPath);
+    if has_objectives(values)
+        description = found;
+        return;
+    end
 catch
+    % The fallback below answers, or reports its own failure.
 end
-description = [];
-if strcmp(objectPath, blockPath), return; end
 try
-    [values, description] = decisioninfo(cvd, blockPath, 1);
-    if isempty(values), description = []; end
-catch
-    description = [];
+    [values, found] = decisioninfo(cvd, blockPath, 1);
+    if has_objectives(values)
+        description = found;
+    end
+catch ME
+    % The unit keeps its UNIT row, so a block that vanishes here would read
+    % in the final document as "no two-way branch" without a reason.
+    st_log(cfg, 'WARN', ...
+        'Decision outcome lookup failed | TestCase=%s | Iteration=%s | Path=%s | %s', ...
+        caseName, iterationName, blockPath, ME.message);
 end
+end
+
+
+function yes = has_objectives(values)
+% decisioninfo returns [covered total], or empty for a block with no
+% decision. A total of zero or an unreadable one is no decision either.
+yes = false;
+if isempty(values) || numel(values) < 2, return; end
+total = double(values(2));
+yes = isscalar(total) && isfinite(total) && total > 0;
 end
 
 
