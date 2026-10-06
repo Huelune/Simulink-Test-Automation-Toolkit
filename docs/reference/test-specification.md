@@ -152,7 +152,7 @@ BlockType, 분기 순서로 정렬하고 중복을 제거하며 빈 목록은 �
 | 그룹 | 블록 | 설명 |
 | --- | --- | --- |
 | **명시적 분기** | `If`, `Switch`, `MinMax`, `MultiPortSwitch`, `SwitchCase` | 대화상자에 조건을 직접 적습니다 |
-| **암시적 분기** | `Saturate`, `Abs`, `DeadZone`, `RateLimiter`, `Relay`, `Lookup_n-D`, `Interpolation_n-D`, `PreLookup`, `Integrator`, `DiscreteIntegrator`, `ForIterator`, `WhileIterator` | 조건식은 없지만 저장된 파라미터 때문에 Coverage objective가 생깁니다 |
+| **암시적 분기** | `Saturate`, `Abs`, `DeadZone`, `RateLimiter`, `Relay`, `DiscreteIntegrator`, `ForIterator`, `WhileIterator`, Enabled/Triggered Subsystem | 조건식은 없지만 저장된 파라미터 때문에 Decision objective가 생깁니다 |
 
 D번호는 두 그룹을 구분하지 않고 정렬 결과에 연속으로 붙습니다. 번호는 **CUT마다
 D1부터** 시작합니다. 한 CUT 안에서는 블록이 달라도 번호가 겹치지 않고, 같은 CUT의
@@ -170,11 +170,11 @@ Scenario 행들은 같은 분기를 나열하므로 같은 번호를 씁니다. 
 
 | 값 | 포함 대상 | 쓰는 때 |
 | --- | --- | --- |
-| `ALL` (기본) | 명시적 + 암시적 19종 | 평소. `If`/`Switch`가 없는데 Decision coverage가 나오는 이유도 여기서 보입니다 |
+| `ALL` (기본) | 명시적 + 암시적 15종 | 평소. `If`/`Switch`가 없는데 Decision coverage가 나오는 이유도 여기서 보입니다 |
 | `EXPLICIT` | 명시적 분기 5종 | 목록을 짧게 보고 싶을 때 |
 | `NONE` | 없음 (셀이 빕니다) | 분기 목록이 필요 없고 export를 가볍게 하고 싶을 때 |
 
-`ALL`은 목록이 크게 길어집니다. Lookup 테이블이 많은 CUT은 `DecisionBlocks` 셀이 길이
+`ALL`은 목록이 길어집니다. 암시적 분기 블록이 많은 CUT은 `DecisionBlocks` 셀이 길이
 한도를 넘어 `OverflowDetails` 참조로 대체될 수 있습니다. 그때도 구조화된 값은
 `DecisionBlockDetails`에 그대로 남습니다.
 
@@ -238,12 +238,11 @@ D6 [T/F]Saturate (UpperLimit=1; LowerLimit=-1)
 | `T/F` | If, Switch | 참/거짓 2분기 |
 | `SELECT` | MinMax, MultiPortSwitch | N개 입력 중 선택 |
 | `CASE` | SwitchCase | case 값 분배 |
-| `LIMIT` | Saturate, Integrator, DiscreteIntegrator | 상/하한 포화, 외부 reset |
+| `LIMIT` | Saturate, DiscreteIntegrator | 상/하한 포화, 외부 reset |
 | `BAND` | DeadZone | 구간 아래/안/위 |
 | `RATE` | RateLimiter | 상승/하강/제한 내 |
 | `ON/OFF` | Relay | 히스테리시스 on/off |
 | `SIGN` | Abs | 음수/비음수 |
-| `INTERVAL` | Lookup_n-D, Interpolation_n-D, PreLookup | breakpoint 구간 선택과 외삽 |
 | `LOOP` | ForIterator, WhileIterator | 루프 진입/지속/종료 |
 
 ### 괄호 안 내용
@@ -255,15 +254,15 @@ D6 [T/F]Saturate (UpperLimit=1; LowerLimit=-1)
 | `MinMax`, `MultiPortSwitch`, `SwitchCase` | 저장된 입력 선택 또는 case 설정 |
 | `Saturate` | `UpperLimit` / `LowerLimit` |
 | `Relay` | `OnSwitchValue` / `OffSwitchValue` |
-| `Integrator` 계열 | `LimitOutput` / `ExternalReset` |
+| `DiscreteIntegrator` | `LimitOutput` / `ExternalReset` |
 | `Abs` | 파라미터를 읽지 않고 `u < 0`으로 표시 |
 
 암시적 분기 블록은 catalog가 지정한 파라미터를 `이름=값; 이름=값` 형태로 이어
-붙입니다. Lookup 계열의 breakpoint 값은 workspace에서 평가하지 않고 저장된 문자열을
-그대로 옮기므로, 변수로 지정한 테이블은 변수 이름이 보입니다.
+붙입니다. 값은 workspace에서 평가하지 않고 저장된 문자열을 그대로 옮기므로, 변수로
+지정한 한계값은 변수 이름이 보입니다.
 
 파라미터가 비활성이어도 목록에서 빼지 않습니다. 예를 들어 `LimitOutput=off;
-ExternalReset=none`인 `Integrator`도 그대로 남기고 상태를 표시합니다.
+ExternalReset=none`인 `DiscreteIntegrator`도 그대로 남기고 상태를 표시합니다.
 
 ### 이 값으로 할 수 없는 것
 
@@ -271,10 +270,9 @@ ExternalReset=none`인 `Integrator`도 그대로 남기고 상태를 표시합�
   파라미터뿐 아니라 데이터 타입과 최적화 설정도 관여하므로, 저장된 파라미터만으로
   거르면 틀릴 수 있습니다.
 - 메인 시트의 `[T/F]`는 실행 Coverage 결과가 아니라 저장된 블록에 분기가 있다는
-  **정적 표기**이며, Decision objective를 뜻하지도 않습니다.
-- `Lookup_n-D`/`PreLookup`/`Interpolation_n-D`(`INTERVAL`)는 Lookup Table 지표로
-  집계되므로 이 행들은 Decision objective 수와 일치하지 않습니다. **커버리지
-  숫자와 대조할 때는 반드시 세부 시트의 `Outcome` 열을 보십시오.**
+  **정적 표기**입니다. 목록의 블록은 모두 Decision objective를 받지만, 한 블록이
+  Decision을 여럿 가질 수 있어(Saturate의 상한과 하한 등) D 개수가 리포트의
+  Decision 개수와 1:1로 맞지는 않습니다.
 
 모델에 `If`나 `Switch`가 하나도 없는데 Simulink Coverage가 Decision을 보고하는 이유가
 바로 암시적 분기 블록입니다.
@@ -327,9 +325,17 @@ Enabled/Triggered Subsystem은 **포함합니다.** 자세한 것은 위
    (`LookUnderMasks`는 경계를 넘게 할 뿐이고, 그 안쪽 블록은 깊이 2라 직계
    범위 밖입니다.)
 2. Stateflow와 MATLAB Function 블록 내부 분기.
-3. Logical Operator(`Logic`). 분기처럼 보이지만 Simulink Coverage는 이 블록에
-   Condition과 MCDC objective만 만들고 Decision objective는 만들지 않습니다.
-   D번호를 주면 Decision 개수와 대조할 때 숫자가 어긋나므로 목록에 넣지 않습니다.
+3. Decision objective를 받지 않는 블록. 분기처럼 보이지만 D번호를 주면 커버리지
+   리포트의 Decision 개수와 대조할 때 숫자가 어긋나므로 넣지 않습니다. 기준은
+   MathWorks의 *Model Objects That Receive Coverage* 표입니다.
+
+   | 블록 | Simulink Coverage가 주는 지표 |
+   | --- | --- |
+   | Logical Operator(`Logic`) | Condition, MCDC |
+   | 1-D/2-D/n-D Lookup Table(`Lookup_n-D`) | Lookup Table |
+   | Interpolation Using Prelookup(`Interpolation_n-D`) | Lookup Table |
+   | Prelookup(`PreLookup`) | 없음 |
+   | 연속 Integrator(`Integrator`) | 없음. Discrete-Time Integrator만 Decision을 받습니다 |
 
 ## 7. `OverflowDetails` 시트
 

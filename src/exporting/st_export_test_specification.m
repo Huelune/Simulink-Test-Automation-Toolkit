@@ -15,8 +15,8 @@ function varargout = st_export_test_specification(varargin)
 %   outcomes, expressions, types, paths, and JSON.
 %   DecisionBlockScope: 'ALL' (default) lists the blocks that carry a
 %   condition in their dialog and the blocks that create coverage
-%   objectives without one, such as Saturate, Relay and the lookup table
-%   family. 'EXPLICIT' keeps only the first group. 'NONE' leaves the
+%   objectives without one, such as Saturate, Relay and the iterators.
+%   'EXPLICIT' keeps only the first group. 'NONE' leaves the
 %   column empty. Omit it to use cfg.DecisionBlockScope.
 %
 %   Called directly it writes its own run log; called from another command

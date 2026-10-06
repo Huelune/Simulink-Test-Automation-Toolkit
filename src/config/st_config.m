@@ -564,14 +564,15 @@ cfg.OnlyEnabled = true;
 %
 % 'ALL' (default):
 %   The blocks that carry a condition in their dialog, plus the blocks that
-%   create Simulink Coverage objectives without one: Saturate, Abs, Dead
-%   Zone, Rate Limiter, Relay, the lookup table family, the integrators,
-%   the iterators and Enabled / Triggered Subsystems. Logical Operator is
-%   not scanned: it receives Condition and MCDC coverage, not Decision.
-%   This also explains Decision coverage reported for a model that
-%   contains no If or Switch block at all, and matches the scope
-%   st_export_final_document always uses. The column gets much longer, and
-%   a lookup table heavy CUT can push the cell into the OverflowDetails
+%   create Simulink Coverage Decision objectives without one: Saturate,
+%   Abs, Dead Zone, Rate Limiter, Relay, Discrete-Time Integrator, the
+%   iterators and Enabled / Triggered Subsystems. Blocks whose objectives
+%   are not Decision are not scanned: Logical Operator (Condition, MCDC),
+%   the lookup tables (Lookup Table), Prelookup and the continuous
+%   Integrator (none). This also explains Decision coverage reported for a
+%   model that contains no If or Switch block at all, and matches the scope
+%   st_export_final_document always uses. The column gets longer, and a
+%   CUT with many such blocks can push the cell into the OverflowDetails
 %   sheet.
 %
 % 'EXPLICIT':

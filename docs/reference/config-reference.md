@@ -471,11 +471,11 @@ ASSESSMENT부터 시작하라고 알려 줍니다. 그 단계부터 한 번 재�
 
 | 값 | 포함 대상 | 쓰는 때 |
 | --- | --- | --- |
-| `'ALL'` (기본) | 아래 5종에 더해 조건식 없이 Coverage objective를 만드는 블록 13종 (Saturate, Abs, Lookup 계열, Integrator 계열 등)과 Enabled / Triggered Subsystem | 평소. If/Switch가 없는데 Decision 커버리지가 나오는 이유도 여기서 보입니다 |
+| `'ALL'` (기본) | 아래 5종에 더해 조건식 없이 Decision objective를 만드는 블록 8종 (Saturate, Abs, DeadZone, RateLimiter, Relay, Discrete-Time Integrator, For/While Iterator)과 Enabled / Triggered Subsystem | 평소. If/Switch가 없는데 Decision 커버리지가 나오는 이유도 여기서 보입니다 |
 | `'EXPLICIT'` | 대화상자에 조건을 적는 블록 5종 (If, Switch, MinMax, MultiPortSwitch, SwitchCase) | 목록을 짧게 보고 싶을 때 |
 | `'NONE'` | 없음. 열이 비고 스캔도 건너뜁니다 | 목록이 필요 없을 때 |
 
-`'ALL'`은 목록이 크게 길어집니다. Lookup 테이블이 많은 CUT은 셀이 길이 한도를 넘어
+`'ALL'`은 목록이 길어집니다. 그런 블록이 많은 CUT은 셀이 길이 한도를 넘어
 `OverflowDetails` 시트 참조로 대체될 수 있습니다.
 
 실행마다 덮어쓰려면 `st_export_test_specification('DecisionBlockScope','EXPLICIT')`를

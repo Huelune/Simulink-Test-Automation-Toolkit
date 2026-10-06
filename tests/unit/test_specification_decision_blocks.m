@@ -199,7 +199,7 @@ verifyTrue(testCase, all(ismember(string(catalog.Formatter), ["CUSTOM","GENERIC"
 verifyTrue(testCase, all(ismember(string(catalog.Kind), ["EXPLICIT","IMPLICIT"])));
 verifyTrue(testCase, all(ismember(string(catalog.MainExpression), ["SHOW","HIDE"])));
 allowed = ["T/F","SELECT","CASE","LIMIT","BAND","RATE","ON/OFF", ...
-    "SIGN","INTERVAL","LOOP"];
+    "SIGN","LOOP"];
 verifyTrue(testCase, all(ismember(string(catalog.Outcome), allowed)));
 for k = 1:height(catalog)
     label = char(blockTypes(k));
@@ -280,11 +280,14 @@ verifyEqual(testCase, outcome, "RATE");
 verifyEqual(testCase, expression, "RisingSlewLimit=1; FallingSlewLimit=-1");
 end
 
-function testLogicalOperatorIsNotADecisionBlock(testCase)
-% Simulink Coverage gives Logical Operator Condition and MCDC objectives
-% only, so it must not take a D number next to real Decision branches.
+function testBlocksWithoutDecisionCoverageAreNotListed(testCase)
+% Simulink Coverage gives these no Decision objective: Logical Operator gets
+% Condition and MCDC, the lookup tables get Lookup Table coverage, and
+% Prelookup and the continuous Integrator get none. A D number next to
+% them would not match the Decision count in the coverage report.
 catalog = st_specification_decision_catalog('ALL');
-verifyFalse(testCase, ismember("Logic", string(catalog.BlockType)));
+excluded = ["Logic"; "Lookup_n-D"; "Interpolation_n-D"; "PreLookup"; "Integrator"];
+verifyFalse(testCase, any(ismember(excluded, string(catalog.BlockType))));
 end
 
 function testParameterlessBlockUsesFixedTextWithoutReadingParameters(testCase)
@@ -296,12 +299,10 @@ end
 
 function testOptionalParameterAbsenceKeepsTheRowHealthy(testCase)
 [outcome, expression] = st_specification_decision_descriptor( ...
-    'LookupPath', 'Lookup_n-D', @fixture_implicit_parameter);
-verifyEqual(testCase, outcome, "INTERVAL");
-verifyEqual(testCase, expression, ...
-    "NumberOfTableDimensions=2; InterpMethod=Linear point-slope; " + ...
-    "ExtrapMethod=Clip; BreakpointsSpecification=Explicit values");
-verifyFalse(testCase, contains(expression, "BreakpointsForDimension1"));
+    'ForPath', 'ForIterator', @fixture_implicit_parameter);
+verifyEqual(testCase, outcome, "LOOP");
+verifyEqual(testCase, expression, "IterationSource=external");
+verifyFalse(testCase, contains(expression, "IterationLimit"));
 end
 
 function testRequiredParameterFailureStillFallsBackToCatalogOutcome(testCase)
@@ -361,7 +362,7 @@ function paths = single_integrator_finder(~, varargin)
 if depth ~= 1
     error('fixture:SearchDepth', 'Expected SearchDepth=1.');
 end
-if strcmp(blockType, 'Integrator')
+if strcmp(blockType, 'DiscreteIntegrator')
     paths = "IntegratorOffPath";
 else
     paths = strings(0,1);
@@ -388,15 +389,9 @@ switch key
         value = '1';
     case "RateLimiterPath|FallingSlewLimit"
         value = '-1';
-    case "LookupPath|NumberOfTableDimensions"
-        value = '2';
-    case "LookupPath|InterpMethod"
-        value = 'Linear point-slope';
-    case "LookupPath|ExtrapMethod"
-        value = 'Clip';
-    case "LookupPath|BreakpointsSpecification"
-        value = 'Explicit values';
-    case "LookupPath|BreakpointsForDimension1"
+    case "ForPath|IterationSource"
+        value = 'external';
+    case "ForPath|IterationLimit"
         error('fixture:AbsentParameter', ...
             'Parameter is absent in this dialog state: %s', key);
     case "IntegratorOffPath|LimitOutput"

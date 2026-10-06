@@ -2,12 +2,17 @@
 
 ## Unreleased
 
-- **명세서 `DecisionBlocks` 목록에서 Logical Operator를 뺍니다.** Simulink
-  Coverage는 Logical Operator에 Condition/MCDC objective만 만들고 Decision
-  objective는 만들지 않습니다. 그런데 `'ALL'` 범위에서는 이 블록이 D번호와
-  `[T/F]`를 받아 Decision 항목처럼 보였고, Decision 개수와 대조하면 숫자가
-  맞지 않았습니다. 이제 이 블록은 메인 셀에도 `DecisionBlockDetails`에도 나오지
-  않습니다. 같은 CUT의 다른 블록 D번호는 하나씩 당겨질 수 있습니다.
+- **명세서 `DecisionBlocks` 목록에서 Decision을 받지 않는 블록을 뺍니다.**
+  `'ALL'` 범위에서는 아래 블록이 D번호와 `[T/F]`를 받아 Decision 항목처럼
+  보였지만, Simulink Coverage는 이 블록들에 Decision objective를 만들지 않아
+  커버리지 리포트의 Decision 개수와 맞지 않았습니다. 이제 메인 셀에도
+  `DecisionBlockDetails`에도 나오지 않고, 같은 CUT의 다른 블록 D번호가 그만큼
+  당겨질 수 있습니다.
+  - Logical Operator: Condition/MCDC만 받습니다.
+  - 1-D/2-D/n-D Lookup Table, Interpolation Using Prelookup: Lookup Table 지표만
+    받습니다. `Outcome`의 `INTERVAL` 토큰도 함께 없어집니다.
+  - Prelookup, 연속 Integrator: 커버리지를 받지 않습니다. Discrete-Time
+    Integrator는 그대로 남습니다.
 
 - **콘솔에는 진행만 남기고, 모든 로그는 실행마다 파일에 남깁니다.**
   지금까지는 `cfg.VerboseLogging`의 기본값(`true`) 때문에 DEBUG까지 전부 콘솔에
@@ -207,11 +212,11 @@
 
 - **테스트 명세서의 `DecisionBlocks`가 기본으로 암시적 분기까지 담습니다.**
   `cfg.DecisionBlockScope` 기본값을 `'EXPLICIT'`에서 `'ALL'`로 바꿨습니다. 이제
-  Saturate, Abs, Lookup 계열, Integrator 계열, Enabled / Triggered Subsystem처럼
+  Saturate, Abs, Discrete-Time Integrator, Enabled / Triggered Subsystem처럼
   조건식 없이 Coverage objective를 만드는 블록도 명세서에 나옵니다. 최종 문서는
   원래 `'ALL'`이었으므로 두 문서의 범위가 같아집니다.
   - **명세서 출력이 달라집니다.** 그런 블록이 있는 CUT은 `DecisionBlocks` 셀이
-    길어지고 D번호가 다시 매겨집니다. Lookup 테이블이 많은 CUT은 셀이
+    길어지고 D번호가 다시 매겨집니다. 그런 블록이 많은 CUT은 셀이
     `OverflowDetails` 참조로 바뀔 수 있습니다.
   - 예전 목록이 필요하면 `cfg.DecisionBlockScope = 'EXPLICIT'`로 두거나
     `st_export_test_specification('DecisionBlockScope','EXPLICIT')`로 뽑습니다.
