@@ -175,16 +175,18 @@ cfg.AutoConvertSldvTargetsToAtomic = true;
 %   when AutoConvertSldvTargetsToAtomic is also true.
 cfg.DisableLibraryLinkForSldvTargets = false;
 
-% false (default):
-%   Fail when an SLDV Dataset contains input signals that are not present
-%   in the target Harness Signal Editor ActiveScenario.
-%
-% true:
-%   Ignore those unexpected SLDV input signals. Only signals that also
-%   exist in the Harness input interface are copied into generated
-%   Signal Editor scenarios. Ignored names are recorded in the SLDV
+% true (default):
+%   Ignore SLDV input signals that are not present in the target Harness
+%   Signal Editor ActiveScenario. Only signals that also exist in the
+%   Harness input interface are copied into generated Signal Editor
+%   scenarios. Ignored names are logged as WARN and recorded in the SLDV
 %   preparation result and manifest.
-cfg.IgnoreUnexpectedSldvInputs = false;
+%
+% false:
+%   Fail when an SLDV Dataset contains such input signals. Use this to
+%   catch a Harness signal whose name differs from the SLDV input name,
+%   which true would drop in favor of the original Harness value.
+cfg.IgnoreUnexpectedSldvInputs = true;
 
 % true (temporary compatibility mode):
 %   Continue FILE+SLDV preparation when the source MAT was generated for a

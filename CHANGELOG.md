@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Harness에 없는 SLDV 입력을 기본으로 무시합니다.**
+  `cfg.IgnoreUnexpectedSldvInputs`의 기본값을 `false`에서 `true`로 바꿨습니다. 바깥
+  Data Store처럼 SLDV가 입력으로 넣지만 Harness Signal Editor에는 없는 신호가 있으면,
+  예전에는 그 행이 "Unexpected=[...]"로 멈췄습니다. 이제 그 신호를 빼고 공통 입력만
+  교체하며, 뺀 신호는 WARN 로그와 `IgnoredSldvInputs` 열에 남깁니다.
+  - 값이 SLDV 단계 지문에 들어가므로, 다음 실행에서 SLDV 단계부터 다시 준비합니다.
+  - Harness 신호 이름이 SLDV 입력 이름과 다르면 그 신호도 빠지고 Harness의 원래 값으로
+    돕니다. 예전처럼 멈추게 하려면 `st_run_from_harness('IgnoreUnexpectedSldvInputs',
+    false)`로 실행하거나 cfg 값을 `false`로 두십시오.
+
 - **SLDV TestCase가 일부만 Scenario로 만들어지던 문제를 고쳤습니다.**
   SLDV 데이터를 읽을 때, 고른 TestCase 번호를 담은 변수에 첫 TestCase의 입력 신호
   위치가 덮어써졌습니다. 그래서 두 번째 TestCase부터는 TestCase 번호를 입력 위치와

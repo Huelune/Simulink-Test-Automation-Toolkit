@@ -24,10 +24,10 @@ verifyFalse(testCase, cfg.CheckSharedSignalEditorDataFile);
 end
 
 
-function testUnexpectedSldvInputsAreRejectedByDefault(testCase)
+function testUnexpectedSldvInputsAreIgnoredByDefault(testCase)
 cfg = st_config();
 
-verifyFalse(testCase, cfg.IgnoreUnexpectedSldvInputs);
+verifyTrue(testCase, cfg.IgnoreUnexpectedSldvInputs);
 end
 
 
@@ -47,11 +47,11 @@ function testConfigScopeOverridesOnlyWhileHeld(testCase)
 % A workflow option reaches every stage through st_config() and must not
 % outlive the command that set it.
 guard = st_config_scope('enter', ...
-    struct('IgnoreUnexpectedSldvInputs', true));
-verifyTrue(testCase, st_config().IgnoreUnexpectedSldvInputs);
+    struct('IgnoreUnexpectedSldvInputs', false));
+verifyFalse(testCase, st_config().IgnoreUnexpectedSldvInputs);
 
 clear guard;
-verifyFalse(testCase, st_config().IgnoreUnexpectedSldvInputs);
+verifyTrue(testCase, st_config().IgnoreUnexpectedSldvInputs);
 end
 
 

@@ -303,18 +303,24 @@ Harness를 한 번 지운 뒤 다시 돌려야 합니다. `docs/troubleshooting.
 `SldvLibraryLinkDisableFailed`로 중단하며, 이때는 모델을 저장하지 말고 닫아야 합니다.
 값을 바꾸면 `SLDV` 단계 지문이 달라져 그 단계부터 다시 준비합니다.
 
-### `IgnoreUnexpectedSldvInputs` — 기본 `false`
+### `IgnoreUnexpectedSldvInputs` — 기본 `true`
 
 SLDV MAT에 Harness의 ActiveScenario에는 없는 입력 신호가 들어 있을 때의 동작입니다.
 
 | 값 | 동작 |
 | --- | --- |
-| `false` (기본) | 준비 단계를 실패로 처리합니다 |
-| `true` | 그 신호를 무시하고, Harness에도 있는 공통 입력만 교체합니다 |
+| `true` (기본) | 그 신호를 무시하고, Harness에도 있는 공통 입력만 교체합니다 |
+| `false` | 준비 단계를 실패로 처리합니다 |
 
-`true`로 바꾸는 것은 그 입력이 이 테스트에 필요 없다는 것을 사람이 확인한 뒤에만
-하십시오. 무시한 신호 목록은 `SldvGenerationResult`의 `IgnoredSldvInputs` 열에
-남습니다.
+무시한 신호는 WARN 로그와 `SldvGenerationResult`의 `IgnoredSldvInputs` 열에 남습니다.
+SLDV는 그 신호의 값까지 정한다고 보고 TestCase를 만들었으므로, 신호를 빼면 TestCase가
+노린 커버리지 목표를 맞추지 못할 수 있습니다. `IgnoredSldvInputs`가 비어 있지 않으면
+그 신호가 이 테스트에 필요 없는지 확인하십시오.
+
+**이름만 다른 신호는 무시하면 안 됩니다.** Harness 신호 이름이 SLDV 입력 이름과 다르면
+같은 신호라도 Harness에 없는 입력으로 판정되어, SLDV 값 대신 Harness의 원래 값으로
+테스트가 돕니다. 이때 `SldvDrivenInputCount`가 기대보다 작습니다. 이런 경우를 잡으려면
+`false`로 돌리십시오.
 
 **예외: 함수 호출 트리거.** CUT이 함수 호출(function-call) Subsystem이면 SLDV는 호출
 트리거를 `FcnTriggerPort`라는 입력으로 넣습니다. Harness는 스케줄러 블록으로 직접
@@ -326,7 +332,7 @@ SLDV TestCase가 가정한 시점과 다를 수 있습니다.
 우선합니다.
 
 ```matlab
-st_run_from_harness('IgnoreUnexpectedSldvInputs', true);
+st_run_from_harness('IgnoreUnexpectedSldvInputs', false);
 ```
 
 ### `AllowSldvSubsystemPathMismatch` — 기본 `true`

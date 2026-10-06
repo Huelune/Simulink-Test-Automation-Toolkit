@@ -341,7 +341,7 @@ winopen(latest.Summary)      % CUT별 결과 요약 Excel
 | `FailOnNonPass` | `false` | `true`면 끝난 뒤 FAIL·EXCEPT·WARN인 CUT이 있을 때 MATLAB 오류를 냅니다 |
 | `ReportMode` | `'SUMMARY'` | CUT별 보고서 수준. `FULL`은 공식 Test Manager PDF와 전체 Coverage HTML을 더합니다 |
 | `AutoCollect` | `false` | `true`면 실행 끝에 `st_collect_per_cut_results`까지 이어서 합니다 |
-| `IgnoreUnexpectedSldvInputs` | `false` | SLDV가 만든 입력 중 Harness에 없는 신호를 버립니다. 이 실행에만 적용되며, 값이 SLDV 단계 지문에 들어가므로 붙였다 뗐다 하면 SLDV부터 다시 준비합니다 |
+| `IgnoreUnexpectedSldvInputs` | `true` | SLDV가 만든 입력 중 Harness에 없는 신호를 버립니다. `false`면 그 행을 실패로 멈춥니다. 이 실행에만 적용되며, 값이 SLDV 단계 지문에 들어가므로 붙였다 뗐다 하면 SLDV부터 다시 준비합니다 |
 | `StrictRestart` | `false` | 앞 단계를 건드리지 않는 엄격 재시작. `st_run_from_stage`가 쓰므로 직접 줄 일은 없습니다 |
 
 `PER_CUT`과 `BATCH`의 차이입니다.
@@ -699,7 +699,7 @@ winopen(finalFile)
 | 준비만 하고 실행은 나중에 | `st_run_from_harness('ExecuteTests', false)` |
 | 준비는 그대로 두고 실행만 | `st_run_from_harness('FromStage','EXECUTE')` |
 | 실행과 결과 정리를 한 번에 | `st_run_from_harness('AutoCollect', true)` |
-| SLDV 입력이 Harness와 안 맞는다 | `st_run_from_harness('IgnoreUnexpectedSldvInputs', true)` |
+| Harness에 없는 SLDV 입력을 버리지 말고 멈춰야 한다 | `st_run_from_harness('IgnoreUnexpectedSldvInputs', false)` |
 | 하나라도 실패하면 멈춰야 한다 | `st_run_from_harness('FailOnNonPass', true)` |
 | Coverage 필터 설정만 바꿨다 | 준비는 그대로. `st_collect_per_cut_results`만 다시 |
 | 3단계에서 팀 제출 트리까지 한 번에 | `st_run_standalone_coverage_pipeline('ClassifyResults', true)` |
