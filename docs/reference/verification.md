@@ -191,19 +191,8 @@ summary = st_verify_all( ...
 
 ## 5. 옵션
 
-```matlab
-summary = st_verify_all( ...
-    'Profile','QUICK', 'Target','CURRENT', 'ManualEvidence','', ...
-    'KeepWorkspace','ON_FAILURE', 'FailOnNonPass', true);
-```
-
-| 옵션 | 기본값 | 역할 |
-| --- | --- | --- |
-| `Profile` | `'QUICK'` | 검사 깊이 |
-| `Target` | `'CURRENT'` | 실제 모델, fixture 또는 둘 다 |
-| `ManualEvidence` | `''` | `CERTIFY + CURRENT/BOTH`에서 수동 증거 JSON 경로 |
-| `KeepWorkspace` | `'ON_FAILURE'` | 격리 workspace 보존 정책 |
-| `FailOnNonPass` | `true` | `FAIL`/`BLOCKED`에서 MATLAB 오류를 낼지 |
+옵션과 기본값 목록은 [실행 명령 사전](execution-commands.md#st_verify_all)에 있습니다.
+여기서는 그 표에 다 적지 못한 `KeepWorkspace`만 자세히 적습니다.
 
 `KeepWorkspace` 값의 의미:
 

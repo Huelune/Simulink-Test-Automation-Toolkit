@@ -391,20 +391,10 @@ manifest에 적힌 체크섬과 실제 `CoverageSummary.xlsx`가 다르면 **중
 
 ## 9. 옵션
 
-```matlab
-[T, file] = st_export_final_document( ...
-    'OutputFile',         '', ...      % 기본 result/final_document_<ts>.xlsx
-    'DecisionBlockScope', '', ...      % '' → 'ALL' | 'EXPLICIT' | 'NONE'
-    'CoverageSource',     '', ...      % '' → cfg | 'STANDALONE' | 'TEST_RUN' | 'NONE'
-    'CoveragePipelineId', 'LATEST', ...
-    'ResultRun',          '', ...      % '' → cfg | 'AUTO' | 'BATCH' | 'PER_CUT' | 경로
-    'RequireTestResults', false, ...
-    'RequireCoverage',    false, ...
-    'IncludeUsageSheet',  []);
-```
-
-빈 값을 주면 `cfg`의 값을 씁니다. 기본값은
-[설정 사전](config-reference.md)의 `FinalDocument*` 항목에 있습니다.
+옵션과 기본값 전체는 [실행 명령 사전](execution-commands.md#st_export_final_document)에
+있습니다. 빈 값을 주면 `cfg`의 값을 쓰며, 그 기본값은
+[설정 사전 9절](config-reference.md#9-명세서와-최종-문서-추출)의 `FinalDocument*`
+항목에 있습니다.
 
 ## 10. 오류와 경계 동작
 

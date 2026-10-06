@@ -56,31 +56,8 @@ MATLAB을 새로 시작하십시오.
 
 ## 3. 기본 실행 순서
 
-```matlab
-st_setup
-st_pre_validate_targets
-st_run_from_harness
-
-st_run_standalone_coverage_pipeline( ...
-    'Action', 'ALL', ...
-    'ContinueOnFailure', true, ...
-    'FailOnNonPass', false);
-```
-
-처음이거나 대상 모델을 바꿀 때만 `st_select_target_model`을 사이에 넣습니다.
-
-Harness가 이미 전부 있으면 생성 단계를 건너뜁니다.
-
-```matlab
-st_setup
-st_validate_targets
-st_run_after_harness
-```
-
-기존 SLDV MAT로 Test Case까지만 만들고 실행하지 않으려면:
-
-1. Excel의 `SldvMode`를 `FILE`, `SldvDataFile`에 MAT 경로를 적습니다.
-2. `st_run_after_harness('ExecuteTests', false)`를 실행합니다.
+기본 순서와 복사용 코드는 [사용자 매뉴얼](../user-manual.md#9-복사용-전체-코드)에
+있습니다. 이 문서는 그 순서의 각 단계가 안에서 무엇을 하는지 설명합니다.
 
 ## 4. Workflow 단계별 동작
 
@@ -241,21 +218,9 @@ result/state/workflow_state.json
 
 ### 5.2 다시 실행하기
 
-평소에는 이것으로 충분합니다.
-
-```matlab
-st_run_from_harness('PreparationMode','FORCE');                      % 전부 다시
-st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');  % 그 단계부터
-```
-
-| 무엇이 바뀌었나 | `FromStage` |
-| --- | --- |
-| 입력 MAT 또는 SLDV 설정 | `SLDV` |
-| Harness StopTime 등 설정 | `HARNESS_CONFIG` |
-| verify 대상 또는 Assessment 구성 | `ASSESSMENT` |
-| Coverage 필터 설정 | `TEST_MANAGER` |
-| Test Case 이름 또는 Iteration | `TEST_MANAGER` |
-| 아무것도 안 바뀜, 테스트만 다시 | `EXECUTE` |
+무엇을 고쳤을 때 어느 단계부터 다시 하는지는
+[사용자 매뉴얼 3.4절](../user-manual.md#34-다시-돌려야-할-때)에 있습니다. 여기서는
+그때 계획이 어떻게 세워지는지만 설명합니다.
 
 > **`FromStage`는 앞 단계를 "건너뛰라"는 뜻이 아닙니다.** (`'EXECUTE'`는 예외입니다.
 > 준비 단계를 하나도 실행하지 않고 바로 테스트로 갑니다.) `st_build_execution_plan`은
@@ -273,29 +238,19 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');  % 그 단�
 
 ### 5.3 checkpoint만 지우기
 
-```matlab
-st_cleanup_results('Scope','STATE')              % 계획만
-st_cleanup_results('Scope','STATE','Apply',true) % 실제 삭제
-```
+`st_cleanup_results('Scope','STATE')`로 지웁니다. 범위별 사용법은
+[문제 해결 11절](troubleshooting.md#11-상태를-초기화하고-싶을-때)에 있습니다.
 
 ## 6. 기대값 갱신
 
-기본값은 다음과 같습니다.
-
-```matlab
-cfg.ExpectedUpdateMode = 'APPLY';
-cfg.ExpectedValueSampleTime = 0.01;
-cfg.RerunAfterExpectedUpdate = true;
-```
+설정값의 뜻과 Iteration 일부만 실패했을 때의 판정은
+[설정 사전 3절](config-reference.md#3-기대값-갱신)에 있습니다. 여기서는 갱신이 무엇을
+고치는지만 적습니다.
 
 `APPLY`는 실패한 Iteration만 처리하고, 실제값과 현재 기대값이 다를 때만
 `verify(... == 기대값)`을 고칩니다. 자동 갱신 대상은 실수 스칼라와 logical
 스칼라입니다. 배열과 Bus Assessment를 **생성**할 수 있다는 것이 배열·Bus 기대값의
 **자동 갱신**까지 된다는 뜻은 아닙니다.
-
-값이 하나라도 바뀌고 `RerunAfterExpectedUpdate=true`이면 같은 범위를 다시
-실행합니다. `PER_CUT`에서는 같은 CVF를 유지한 채 그 Test Case만 재실행한 뒤 필터를
-복원합니다.
 
 후보를 사람이 검토한 뒤 승인하는 `REVIEW` 모드는 아직 없습니다.
 
@@ -466,7 +421,7 @@ blocking API 내부의 실제 진행률은 알 수 없으므로 **마지막 `STA
 경고가 너무 많이 나오면 `cfg.SuppressedWarnings`에 식별자를 등록할 수 있습니다.
 숨긴 경고도 한 번은 기록되고 끝나면 복원됩니다.
 
-## 10. 자주 쓰는 조합
+## 10. 사용자 매뉴얼에 없는 조합
 
 ### 기존 Harness + 기존 SLDV MAT + Test Case까지만
 
@@ -481,12 +436,6 @@ st_setup
 st_run_after_harness('ExecuteTests', false);
 ```
 
-### 준비 상태를 무시하고 SLDV부터 다시
-
-```matlab
-st_run_after_harness('PreparationMode','FORCE', 'FromStage','SLDV');
-```
-
 ### checkpoint만 지우고 다시 판단
 
 ```matlab
@@ -494,32 +443,14 @@ st_cleanup_results('Scope','STATE','Apply',true)
 st_run_after_harness
 ```
 
-### 제출물만 다시 만들기
-
-준비와 테스트 실행은 그대로 두고 standalone 제출물만 새로 만듭니다.
-
-```matlab
-st_run_standalone_coverage_pipeline( ...
-    'Action', 'ALL', 'ContinueOnFailure', true, 'FailOnNonPass', false);
-[code, summary, details] = st_check_standalone_coverage();
-```
-
-원본 Top Model과 열린 Harness는 파이프라인이 저장하고 닫습니다
-(`CloseSourceModel` 기본 `true`).
-
 ### 실행 후 빠른 점검
 
 ```matlab
 summary = st_check_actual_system();
 ```
 
-### 앞 단계를 보존한 채 중간부터 (선택 기능)
-
-```matlab
-[ready, checks] = st_check_readiness('Workflow','AFTER_HARNESS','FromStage','ASSESSMENT');
-disp(checks)
-st_run_from_stage('Workflow','AFTER_HARNESS','FromStage','ASSESSMENT');
-```
+나머지 조합(단계부터 다시, 제출물만 다시, 앞 단계를 보존한 재시작)은
+[사용자 매뉴얼 10절](../user-manual.md#10-상황별로-무엇을-부를까)에 있습니다.
 
 ## 11. 안전 경계 요약
 
@@ -540,8 +471,5 @@ st_run_from_stage('Workflow','AFTER_HARNESS','FromStage','ASSESSMENT');
 
 ## 12. 실패했을 때
 
-확인 순서와 오류별 대처는 [문제 해결](troubleshooting.md)에 정리했습니다.
-
-`Ctrl+C`로 중단했다면 열린 Harness와 모델의 Dirty 상태를 먼저 확인하고, 저장 여부를
-판단한 뒤 다시 실행하십시오. 증분 checkpoint는 성공한 단계만 재사용하므로 중단된
-단계는 다시 실행됩니다.
+확인 순서, 오류별 대처, `Ctrl+C`로 중단했을 때의 정리는
+[문제 해결](troubleshooting.md)에 있습니다.

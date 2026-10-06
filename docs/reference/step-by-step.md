@@ -338,10 +338,9 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','TEST_MANAGER');
 
 지정한 단계부터 끝까지 강제로 실행하고 checkpoint도 남깁니다.
 
-> **`FromStage`는 앞 단계를 "건너뛰라"는 뜻이 아닙니다.** 지정한 단계부터 강제로
-> 다시 하라는 뜻일 뿐이고, 그보다 앞 단계는 여전히 fingerprint로 판정됩니다.
-> 단계 명령을 직접 불러서 checkpoint가 없는 상태라면 **앞 단계도 함께
-> 실행됩니다.** 앞 단계 재실행을 확실히 막으려면 방법 C를 쓰십시오.
+단계 명령을 직접 불러 checkpoint가 없는 상태라면 **앞 단계도 함께 실행됩니다.**
+`FromStage`가 계획을 어떻게 세우는지는
+[운영자 매뉴얼 5.2절](operator-manual.md#52-다시-실행하기)에 있습니다.
 
 `FromStage`에 넣을 수 있는 값:
 
@@ -352,29 +351,16 @@ TEST_MANAGER, ALIGNMENT
 
 ### 방법 C — 앞 단계를 절대 다시 돌리지 않기
 
-```matlab
-[ready, checks] = st_check_readiness( ...
-    'Workflow','FROM_HARNESS', 'FromStage','TEST_MANAGER');
-disp(checks)
-assert(ready.Ready, 'checks의 RequiredFromStage를 확인하십시오.');
+`st_check_readiness`로 앞 단계 산출물을 읽기 전용으로 검증하고, 유효할 때만
+`st_run_from_stage`로 그 단계부터 실행합니다. 유효하지 않으면 자동으로 고치지 않고
+멈춥니다. Harness 생성이나 SLDV `GENERATE`처럼 오래 걸리는 앞 단계를 보존해야 할 때
+씁니다. 코드와 판정 읽는 법은 [재시작 1절](restart.md#1-준비-중간-단계부터)에
+있습니다.
 
-info = st_run_from_stage('Workflow','FROM_HARNESS', 'FromStage','TEST_MANAGER');
-```
+## 6. 단계 명령으로 하는 조합
 
-동작이 방법 B와 다릅니다.
-
-1. `st_check_readiness`가 앞 단계 산출물을 **읽기 전용으로 검증**합니다.
-2. 유효하지 않으면 자동으로 고치지 않고 `RestartBlocked`로 **중단**합니다.
-   `checks.RequiredFromStage`에 어디부터 시작해야 하는지가 적혀 있습니다.
-3. 유효하면 지정 단계 앞은 `CACHED`로 못 박고 그 단계부터만 실행합니다.
-
-Harness 생성이나 SLDV `GENERATE`처럼 오래 걸리는 앞 단계를 보존해야 할 때
-이 방법을 쓰십시오.
-
-`Workflow`는 `FROM_HARNESS`(Harness 생성 포함)와 `AFTER_HARNESS`(Harness 생성 제외)
-중에서 고릅니다.
-
-## 6. 자주 쓰는 조합
+`st_run_from_harness` 옵션만으로 되는 조합은
+[사용자 매뉴얼 10절](../user-manual.md#10-상황별로-무엇을-부를까)에 있습니다.
 
 ### Harness만 먼저 만들어 두기
 
@@ -389,20 +375,6 @@ st_create_harnesses
 ```matlab
 st_setup
 st_run_from_harness   % Harness는 이미 있으므로 건너뛰고 나머지를 진행합니다
-```
-
-### 준비만 하고 실행은 Test Manager에서 직접
-
-```matlab
-st_setup
-st_run_from_harness('ExecuteTests', false);
-sltest.testmanager.view
-```
-
-### 입력 MAT을 바꾼 뒤 2단계부터
-
-```matlab
-st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');
 ```
 
 ### Assessment만 다시 만들기

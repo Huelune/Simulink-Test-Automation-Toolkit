@@ -45,6 +45,18 @@ docs/
 | [익명 예제 생성](reference/example.md) | 실제 모델 없이 예제로 연습 |
 | [종합 검증](reference/verification.md) | 도구 자체를 인증하기, R2025b 배포 전 실기 확인 |
 
+**주제별 원본 문서** — 같은 내용은 한 곳에만 적고 나머지는 링크합니다.
+
+| 주제 | 원본 |
+| --- | --- |
+| 절차, 기본 옵션, 상황별 조합 | [사용자 매뉴얼](user-manual.md) |
+| 모든 명령의 옵션 전체 | [실행 명령 사전](reference/execution-commands.md) |
+| Excel 열 / 설정값 | [관리 Excel 열 사전](reference/workbook-reference.md) / [설정 사전](reference/config-reference.md) |
+| 단계 내부 동작 | [운영자 매뉴얼](reference/operator-manual.md) |
+| 재시작, 결과 재생성 | [재시작](reference/restart.md) |
+| standalone 경계·산출물·검사 비트·제출물 열기 | [Standalone Coverage 파이프라인](reference/standalone-coverage-pipeline.md) |
+| 오류 대처, 상태 초기화 | [문제 해결](reference/troubleshooting.md) |
+
 ## design — 설계
 
 | 문서 | 내용 |

@@ -34,22 +34,11 @@ CoverageFilterRationale = (비어 있지 않은 사유)
 
 ## 2. 기본 실행
 
-```matlab
-info = st_run_standalone_coverage_pipeline( ...
-    'Action', 'ALL', ...
-    'ContinueOnFailure', true, ...
-    'FailOnNonPass', false);
-
-% 결과를 읽기 전용으로 한 화면에서 확인
-[code, summary, details] = st_check_standalone_coverage();
-```
-
-`Action='ALL'`이 기본값이므로 `st_run_standalone_coverage_pipeline()`만 써도 같지만,
-`ContinueOnFailure`와 `FailOnNonPass`를 명시해 두면 한 대상이 실패해도 나머지가
-처리되고 MATLAB 오류 대신 결과 표로 판정하게 됩니다.
-
-전체 계약을 통과한 코드만 `1111111111`입니다. 화면 출력은 최대 20줄이며 전체 CUT
-결과는 `details` 표에서 확인합니다.
+평소에는 `st_run_standalone_coverage_pipeline()`을 옵션 없이 부르고
+`st_check_standalone_coverage()`로 검사합니다. 절차와 확인 방법은
+[사용자 매뉴얼 5절](../user-manual.md#5-3단계--standalone-제출물)에, 옵션 전체는
+[실행 명령 사전](execution-commands.md#st_run_standalone_coverage_pipeline)에
+있습니다. 검사 코드의 자리별 뜻은 [6절](#6-한-화면-검사-비트)에 있습니다.
 
 ## 3. Action별 실행과 재개
 
@@ -139,36 +128,12 @@ Coverage 보고서 하나만 보존하며, 렌더링에 필요한 부속 asset�
 
 ### 팀 제출 트리로 재배치
 
-팀 내부 제출은 위 폴더를 파일 종류별 세 갈래로 나눈 형태를 씁니다.
-`Action='ALL'`이 끝난 뒤 `st_classify_standalone_results`로 재배치합니다(기존 트리는
-지우고 다시 만듦). 파이프라인에 `'ClassifyResults', true`를 주면 끝날 때 자동으로
-재배치하고 위치를 `info.SubmissionTree`에 돌려주며, 이때 재배치에 실패해도
-파이프라인은 실패로 끝나지 않고 WARN만 남깁니다. MATLAB이 없는 PC에서는 같은
-규칙의 Python 스크립트를 씁니다.
-
-```matlab
-st_classify_standalone_results('PipelineId', id)
-```
-
-```bash
-python tools/python/classify_standalone_results.py result/standalone_coverage/{PipelineId}
-```
-
-파이프라인 폴더 옆에 `{TopModel}/` 폴더(이름은 `TestManager/{TopModel}.mldatx`의
-stem)를 만들고 파일 이름은 바꾸지 않은 채 복사합니다. 원본 폴더는 그대로 남으므로
-`st_open_standalone_test_manager` 같은 툴킷 명령은 계속 원본에 대해 동작합니다.
-
-```text
-{TopModel}/
-├── 테스트 케이스/{NUM}_UT_REQ_{TC_NAME}/   Input .mat
-├── 테스트 보고서/{TopModel}.mldatx
-├── 테스트 보고서/{NUM}_UT_REQ_{TC_NAME}/   .cvf .cvt .html + 부속 asset 폴더
-└── 프로젝트/{NUM}_UT_REQ_{TC_NAME}/        standalone 모델 .slx
-```
-
-`CoverageSummary.xlsx`, manifest, 로그, `target-manifest.json`, launcher와 CUT 폴더
-안의 `scv_images` 폴더는 복사하지 않고 건너뛴 목록으로만 출력합니다. `--dry-run`은 계획만 보여 주고, `--out`으로 출력
-위치를 바꾸며, 출력 폴더가 이미 있으면 `--overwrite` 없이는 멈춥니다.
+팀 내부 제출은 위 폴더를 파일 종류별 세 갈래(테스트 케이스·테스트 보고서·프로젝트)로
+나눈 형태를 씁니다. `st_classify_standalone_results`가 파이프라인 폴더 옆에
+`{TopModel}/`을 만들어 파일 이름을 바꾸지 않고 복사하며, 원본 폴더는 그대로 둡니다.
+트리 구조와 옵션은 [사용자 매뉴얼 6절](../user-manual.md#6-4단계--팀-제출-트리)에
+있습니다. 파이프라인에 `'ClassifyResults', true`를 주면 `ALL` 끝에 자동으로
+재배치하며, 이때 재배치가 실패해도 파이프라인은 실패로 끝나지 않고 WARN만 남깁니다.
 
 ## 5. `CoverageSummary.xlsx`
 
