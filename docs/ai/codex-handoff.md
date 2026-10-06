@@ -228,7 +228,9 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
     Outcome/Expression/ReadStatus가 실제 블록 설정과 일치하는지 확인한다. 메인 시트가
     전부 `[T/F]`이고 세부 시트 `Outcome`만 종류별로 갈리는지 확인한다. 각 암시적
     블록의 `BlockType` 문자열과 파라미터 이름이 실제 `get_param` 결과와 일치하는지,
-    철자가 틀려 조용히 0건으로 나오지 않는지 확인한다.
+    철자가 틀려 조용히 0건으로 나오지 않는지 확인한다. `LimitOutput=off;
+    ExternalReset=none`인 DiscreteIntegrator가 목록에서 빠지고, 둘 중 하나가 켜진
+    블록은 남는지 확인한다.
 17. FILE+MAT 단일/복수 Dataset, 명시적 MatVariableName, Scenario 간 및 Harness
     interface mismatch, Dataset 없음·시간 없음, nested dataNoEffect를 확인하고 MAT
     실행에서 sldvsimdata와 parameter override가 호출되지 않는 증거를 보관한다.

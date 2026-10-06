@@ -13,6 +13,9 @@
     받습니다. `Outcome`의 `INTERVAL` 토큰도 함께 없어집니다.
   - Prelookup, 연속 Integrator: 커버리지를 받지 않습니다. Discrete-Time
     Integrator는 그대로 남습니다.
+  - Discrete-Time Integrator 중 Limit output이 꺼져 있고 External reset이
+    `none`인 블록: Decision objective가 없으므로 뺍니다. 둘 중 하나라도 켜져
+    있으면 남습니다.
 
 - **콘솔에는 진행만 남기고, 모든 로그는 실행마다 파일에 남깁니다.**
   지금까지는 `cfg.VerboseLogging`의 기본값(`true`) 때문에 DEBUG까지 전부 콘솔에

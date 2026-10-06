@@ -261,14 +261,18 @@ D6 [T/F]Saturate (UpperLimit=1; LowerLimit=-1)
 붙입니다. 값은 workspace에서 평가하지 않고 저장된 문자열을 그대로 옮기므로, 변수로
 지정한 한계값은 변수 이름이 보입니다.
 
-파라미터가 비활성이어도 목록에서 빼지 않습니다. 예를 들어 `LimitOutput=off;
-ExternalReset=none`인 `DiscreteIntegrator`도 그대로 남기고 상태를 표시합니다.
+파라미터가 비활성이어도 목록에서 빼지 않는 것이 원칙입니다. 예외는
+`DiscreteIntegrator` 하나입니다. Simulink Coverage는 External reset이 `none`이 아닐 때
+reset 결정을, Limit output이 켜져 있을 때 상한·하한 결정을 만들기 때문에, 둘 다 꺼진
+블록(`LimitOutput=off; ExternalReset=none`)은 Decision objective가 없어 목록에서
+뺍니다. 이 경우는 실행 로그에 `Reason=NoDecisionObjective`로 남습니다.
 
 ### 이 값으로 할 수 없는 것
 
 - **objective 개수를 세지 않습니다.** 실제 objective 생성 여부는 대화상자
   파라미터뿐 아니라 데이터 타입과 최적화 설정도 관여하므로, 저장된 파라미터만으로
-  거르면 틀릴 수 있습니다.
+  거르면 틀릴 수 있습니다. MathWorks 문서가 조건을 명시한 `DiscreteIntegrator`만
+  파라미터로 거릅니다.
 - 메인 시트의 `[T/F]`는 실행 Coverage 결과가 아니라 저장된 블록에 분기가 있다는
   **정적 표기**입니다. 목록의 블록은 모두 Decision objective를 받지만, 한 블록이
   Decision을 여럿 가질 수 있어(Saturate의 상한과 하한 등) D 개수가 리포트의

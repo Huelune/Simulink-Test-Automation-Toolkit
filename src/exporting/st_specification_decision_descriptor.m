@@ -6,6 +6,8 @@ function [outcome, expression] = st_specification_decision_descriptor( ...
 % The outcome token comes from st_specification_decision_catalog. A block
 % type whose expression is a plain list of saved parameters is handled by
 % the generic formatter, so only an irregular type needs a case below.
+% An empty EXPRESSION means the saved settings give the block no Decision
+% objective at all. The scan then leaves the block out of the list.
 if nargin < 3
     parameterReader = @get_param;
 end
@@ -64,6 +66,19 @@ switch blockType
     case "SwitchCase"
         conditions = parameter_text(parameterReader, blockPath, 'CaseConditions');
         expression = "u1 in " + conditions;
+
+    case "DiscreteIntegrator"
+        % Simulink Coverage gives this block a reset decision only when
+        % External reset is not none, and limit decisions only when Limit
+        % output is on. With neither there is no Decision objective.
+        hasLimit = strcmpi(parameter_text(parameterReader, blockPath, 'LimitOutput'), "on");
+        hasReset = ~strcmpi(parameter_text(parameterReader, blockPath, 'ExternalReset'), "none");
+        if ~hasLimit && ~hasReset
+            expression = strings(0,1);
+            return;
+        end
+        expression = generic_expression( ...
+            parameterReader, blockPath, catalog(index,:));
 
     otherwise
         expression = generic_expression( ...

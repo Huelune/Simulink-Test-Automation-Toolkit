@@ -319,18 +319,30 @@ verifyEqual(testCase, string(decoded.ExpressionStatus), "WARN");
 verifyTrue(testCase, contains(note, "Expression unavailable"));
 end
 
-function testIntegratorListsParameterStateInsteadOfBeingSkipped(testCase)
+function testIntegratorWithoutLimitOrResetIsSkipped(testCase)
+% With Limit output off and External reset none, Simulink Coverage gives a
+% Discrete-Time Integrator no Decision objective, so it takes no D number.
 cfg = struct('VerboseLogging', false);
 descriptor = @(path, blockType) st_specification_decision_descriptor( ...
     path, blockType, @fixture_implicit_parameter);
-[text, count, ~] = st_specification_decision_blocks( ...
+[text, count, note] = st_specification_decision_blocks( ...
     'Top/CUT', cfg, @single_integrator_finder, @(~) "Integrator", descriptor);
-decoded = jsondecode(char(text));
-verifyEqual(testCase, count, 1);
-verifyEqual(testCase, string(decoded.Outcome), "LIMIT");
-verifyEqual(testCase, string(decoded.Expression), ...
-    "LimitOutput=off; ExternalReset=none");
-verifyEqual(testCase, string(decoded.ExpressionStatus), "OK");
+verifyEqual(testCase, text, "[]");
+verifyEqual(testCase, count, 0);
+verifyEqual(testCase, note, "");
+end
+
+function testIntegratorWithLimitOrResetIsListed(testCase)
+[outcome, expression] = st_specification_decision_descriptor( ...
+    'IntegratorLimitPath', 'DiscreteIntegrator', @fixture_implicit_parameter);
+verifyEqual(testCase, outcome, "LIMIT");
+verifyEqual(testCase, expression, "LimitOutput=on; ExternalReset=none; " + ...
+    "UpperSaturationLimit=1; LowerSaturationLimit=-1");
+
+[outcome, expression] = st_specification_decision_descriptor( ...
+    'IntegratorResetPath', 'DiscreteIntegrator', @fixture_implicit_parameter);
+verifyEqual(testCase, outcome, "LIMIT");
+verifyEqual(testCase, expression, "LimitOutput=off; ExternalReset=rising");
 end
 
 function testUnknownBlockTypeIsRejectedByTheCatalogLookup(testCase)
@@ -401,6 +413,22 @@ switch key
     case "IntegratorOffPath|UpperSaturationLimit"
         value = '';
     case "IntegratorOffPath|LowerSaturationLimit"
+        value = '';
+    case "IntegratorLimitPath|LimitOutput"
+        value = 'on';
+    case "IntegratorLimitPath|ExternalReset"
+        value = 'none';
+    case "IntegratorLimitPath|UpperSaturationLimit"
+        value = '1';
+    case "IntegratorLimitPath|LowerSaturationLimit"
+        value = '-1';
+    case "IntegratorResetPath|LimitOutput"
+        value = 'off';
+    case "IntegratorResetPath|ExternalReset"
+        value = 'rising';
+    case "IntegratorResetPath|UpperSaturationLimit"
+        value = '';
+    case "IntegratorResetPath|LowerSaturationLimit"
         value = '';
     otherwise
         error('fixture:UnknownParameter', 'Unexpected parameter: %s', key);

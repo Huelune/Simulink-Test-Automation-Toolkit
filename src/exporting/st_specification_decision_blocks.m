@@ -62,6 +62,7 @@ for k = 1:numel(blockTypes)
         paths = paths(strlength(paths) > 0);
         paths = unique(paths);
         typeRecords = strings(0,8);
+        skipped = 0;
         for n = 1:numel(paths)
             name = "";
             try
@@ -79,6 +80,13 @@ for k = 1:numel(blockTypes)
             try
                 [outcome, expression] = ...
                     descriptorReader(char(paths(n)), char(blockType));
+                if isempty(expression)
+                    skipped = skipped + 1;
+                    st_log(cfg, 'DEBUG', ...
+                        'Specification decision block skipped | Path=%s | BlockType=%s | Reason=NoDecisionObjective', ...
+                        paths(n), blockType);
+                    continue;
+                end
                 [outcome, expression] = normalize_branches( ...
                     outcome, expression, blockType, paths(n));
                 status = repmat("OK", numel(expression), 1);
@@ -110,8 +118,8 @@ for k = 1:numel(blockTypes)
             end
         end
         records = [records; typeRecords]; %#ok<AGROW>
-        st_log(cfg, 'DEBUG', 'Specification decision block type scan end | CUT=%s | BlockType=%s | Blocks=%d | Branches=%d', ...
-            cutPath, blockType, numel(paths), size(typeRecords,1));
+        st_log(cfg, 'DEBUG', 'Specification decision block type scan end | CUT=%s | BlockType=%s | Blocks=%d | Skipped=%d | Branches=%d', ...
+            cutPath, blockType, numel(paths), skipped, size(typeRecords,1));
     catch ME
         message = string(sprintf('%s: %s', blockType, ME.message));
         notes(end+1,1) = message; %#ok<AGROW>
