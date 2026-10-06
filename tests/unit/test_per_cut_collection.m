@@ -131,3 +131,37 @@ verifyNotEmpty(testCase, regexp(deferredBranch, ...
 verifyEqual(testCase, ...
     numel(regexp(source, 'st_collect_per_cut_results\(\)')), 1);
 end
+
+function testLeanCollectRejectsAnUnknownMode(testCase)
+verifyError(testCase, @() st_collect_per_cut_results('Mode', 'TINY'), ...
+    'MATLAB:InputParser:ArgumentFailedValidation');
+end
+
+function testVerdictReportRejectsAnUnknownScope(testCase)
+verifyError(testCase, @() st_export_result_set_report( ...
+    [], struct(), tempname, 'x', 'Scope', 'TINY'), ...
+    'MATLAB:InputParser:ArgumentFailedValidation');
+end
+
+function testLeanCollectBuildsOnlyWhatTheFinalDocumentReads(testCase)
+% The final document reads the Iterations, Targets and DecisionPoints
+% sheets of one workbook per CUT: FINAL when the run reran, else INITIAL.
+% LEAN writes just that. The CVF is still attached so the decision points
+% are the ones a FULL collect would record.
+collect = fileread(fullfile(st_project_root(), 'src', 'execution', ...
+    'st_collect_per_cut_results.m'));
+verifyTrue(testCase, contains(collect, "addParameter(p, 'Mode', 'FULL'"));
+verifyTrue(testCase, contains(collect, "if ~(lean && isfile(finalSaved))"));
+verifyTrue(testCase, contains(collect, "'Scope', reportScope"));
+verifyTrue(testCase, contains(collect, 'simtest:CollectLeanWithoutCoverage'));
+report = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
+    'st_export_result_set_report.m'));
+verifyTrue(testCase, contains(report, "addParameter(p, 'Scope', 'FULL'"));
+verdictAt = strfind(report, 'if verdictOnly');
+decisionAt = strfind(report, 'decisionPoints = collect_decision_points(');
+summaryAt = strfind(report, 'write_summary(summaryPath');
+verifyNotEmpty(testCase, verdictAt);
+verifyNumElements(testCase, decisionAt, 1);
+verifyLessThan(testCase, max(verdictAt), decisionAt);
+verifyLessThan(testCase, decisionAt, summaryAt);
+end

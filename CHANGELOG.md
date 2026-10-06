@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **`st_collect_per_cut_results('Mode','LEAN')`으로 최종 문서에 필요한 것만 정리할 수 있습니다.**
+  최종 문서는 CUT별 `TestSummary.xlsx`의 판정과 `DecisionPoints`만 읽고, 커버리지는
+  standalone 파이프라인에서 가져옵니다. `LEAN`은 그 통합 문서만 씁니다. 재실행한 CUT은
+  `final/`만, 아니면 `initial/`만 만들고, MLDATX 사본·CUT 커버리지 추출·PDF·CVT·커버리지
+  HTML은 건너뜁니다. CVF 생성과 부착은 그대로 해서 DecisionPoints는 `FULL`과 같습니다.
+  기본값은 지금처럼 `FULL`이고, `cfg.FinalDocumentCoverageSource='TEST_RUN'`이면 `LEAN`은
+  `simtest:CollectLeanWithoutCoverage`로 멈춥니다.
+  `st_export_result_set_report`에는 이를 위한 `'Scope','VERDICT'`가 생겼습니다.
+
 - **standalone 파이프라인이 원본을 다시 확인할 때 Harness를 열지 않습니다.**
   `Action=ALL`은 원본이 그대로인지 시작 때와 EXECUTE·PACKAGE·SUMMARY 뒤에 확인합니다.
   지금까지는 매번 Top Model을 세 번 열고, 모든 Harness를 하나씩 열어 Signal Editor 입력
