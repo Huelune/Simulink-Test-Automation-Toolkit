@@ -39,7 +39,11 @@ Simulink-Test-Automation-Toolkit/
 ├── examples/
 ├── resources/
 └── docs/
-    ├── manual/
+    ├── user-manual.md
+    ├── reference/
+    ├── design/
+    ├── ai/
+    ├── superpowers/
     └── archive/
 ```
 
@@ -49,8 +53,8 @@ Simulink-Test-Automation-Toolkit/
 | `config`, `targets` | 프로젝트 설정, workbook 파싱, 모델/CUT 탐색과 검증 |
 | `harness`, `sldv`, `signal_editor` | 비용이 큰 모델 준비와 시나리오 데이터 생성 |
 | `assessment`, `coverage`, `test_manager` | 검증 로직, Test Case별 커버리지 필터, Test Case·Iteration·정렬 관리 |
-| `execution` | 테스트 실행과 기대값 갱신 |
-| `pipeline` | standalone Coverage 파이프라인과 결과 재생성 |
+| `execution` | 테스트 실행과 기대값 갱신, PER_CUT 결과 정리, 짧은 빌드 폴더(`st_enter_short_build_directory`) |
+| `pipeline` | standalone Coverage 파이프라인, 결과 재생성, 팀 제출 트리 재배치 |
 | `exporting` | 불변 template 번들, dependency와 입력 수집, 테스트 명세서, 최종 문서 |
 | `verification` | QUICK/RUNTIME/CERTIFY 조율, 상태 집계, 수동 증거, Excel/JSON/JUnit writer, readiness 검사 |
 | `maintenance` | 알려진 생성물의 dry-run 우선 정리 |
@@ -66,8 +70,8 @@ Simulink-Test-Automation-Toolkit/
 - 진단 명령은 공개 명령이지만 제품 소스 밖(`diagnostics/`)에 둡니다.
 - MATLAB 없이 결과물만 다루는 팀 내부 스크립트는 `tools/`에 둡니다. `st_setup`이
   등록하지 않으며 툴킷 소스에 의존하지 않습니다.
-- `docs/archive/`의 인수인계 문서는 과거 증거를 보존하는 것이며 **현재 구현 지침이
-  아닙니다.**
+- `docs/archive/`의 작업 기록은 과거 판단을 보존하는 것이며 **현재 구현 지침이
+  아닙니다.** 문서 폴더의 역할은 [문서 지도](../README.md)에 있습니다.
 
 ## 3. 설정 우선순위
 
