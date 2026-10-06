@@ -640,6 +640,11 @@ end
 
 function value = source_snapshot(cfg)
 assert_saved_source(cfg);
+% The three inventories below each need the Top Model. Load it once here so
+% they do not load and close a large model three times in a row.
+loadedHere = ~bdIsLoaded(cfg.TopModel);
+if loadedHere, load_system(cfg.ModelFile); end
+cleanup = onCleanup(@() close_loaded_model(cfg.TopModel, loadedHere)); %#ok<NASGU>
 value = struct( ...
     'Model', st_file_signature(cfg.ModelFile), ...
     'TestFile', st_file_signature(cfg.TestFile), ...
@@ -860,7 +865,7 @@ end
 end
 
 function after = assert_source_unchanged(cfg, before)
-after = source_snapshot(cfg);
+after = source_recheck(cfg, before);
 fields = {'Model','TestFile','ManagementExcel'};
 for i = 1:numel(fields)
     name = fields{i};
@@ -878,6 +883,56 @@ if before.ModelDirty ~= after.ModelDirty || ...
         ~isequal(input_keys(before.Inputs), input_keys(after.Inputs))
     error('simtest:StandalonePipelineSourceStateChanged', ...
         'Source Dirty state, Harness inventory, or Input checksum changed.');
+end
+end
+
+function after = source_recheck(cfg, before)
+%SOURCE_RECHECK Snapshot the source again without reloading what cannot change.
+% Harnesses this toolkit creates live inside the model file, and so do the
+% Signal Editor file names in them. While the model checksum is the
+% recorded one, the Harness list and the input paths are the recorded ones,
+% so only the input files need hashing again. That spares loading the Top
+% Model and every Harness after EXECUTE, PACKAGE and SUMMARY. A changed
+% model or an external Harness file takes the full snapshot.
+timerValue = tic;
+model = st_file_signature(cfg.ModelFile);
+if ~recorded_inventory_holds(before, model)
+    after = source_snapshot(cfg);
+    st_log(cfg, 'INFO', ...
+        'Standalone source recheck | Mode=FULL | elapsed=%.3f sec', ...
+        toc(timerValue));
+    return;
+end
+assert_saved_source(cfg);
+inputs = before.Inputs;
+for i = 1:numel(inputs)
+    inputs(i).SHA256 = st_file_signature(inputs(i).Path).SHA256;
+end
+after = struct( ...
+    'Model', model, ...
+    'TestFile', st_file_signature(cfg.TestFile), ...
+    'ManagementExcel', st_file_signature(cfg.ManagementExcel), ...
+    'ModelDirty', model_dirty(cfg), ...
+    'TestFileDirty', test_file_dirty(cfg), ...
+    'HarnessInventory', {before.HarnessInventory}, ...
+    'Harnesses', {before.Harnesses}, ...
+    'Inputs', {inputs});
+st_log(cfg, 'INFO', ...
+    'Standalone source recheck | Mode=REHASH | Inputs=%d | elapsed=%.3f sec', ...
+    numel(inputs), toc(timerValue));
+end
+
+function tf = recorded_inventory_holds(before, model)
+% A snapshot read back from JSON may have lost its struct shape; anything
+% unexpected simply takes the full snapshot.
+tf = false;
+try
+    harnesses = before.Harnesses;
+    inputs = before.Inputs;
+    tf = strcmpi(char(string(before.Model.SHA256)), model.SHA256) && ...
+        all(string({harnesses.Storage}) == "INTERNAL_MODEL") && ...
+        (isempty(inputs) || isfield(inputs, 'Path'));
+catch
 end
 end
 

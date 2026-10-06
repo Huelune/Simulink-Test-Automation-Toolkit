@@ -475,3 +475,25 @@ verifyTrue(testCase, contains(controller, "'AnalyzeProducts', false, ..."));
 snapshot = source('verification', 'st_create_verification_snapshot.m');
 verifyTrue(testCase, contains(snapshot, "'AnalyzeProducts', false, ..."));
 end
+
+function testSourceRecheckHashesInsteadOfReloadingHarnesses(testCase)
+% The source is checked again after EXECUTE, PACKAGE and SUMMARY. While the
+% model checksum holds, the Harness list and the Signal Editor file names
+% stored in the model hold too, so a recheck only hashes the recorded files
+% instead of loading the Top Model and every Harness again.
+text = source('pipeline', 'st_run_standalone_coverage_pipeline.m');
+verifyTrue(testCase, contains(text, 'after = source_recheck(cfg, before);'));
+verifyTrue(testCase, contains(text, 'Mode=REHASH'));
+% An external Harness file is not covered by the model checksum.
+verifyTrue(testCase, contains(text, '"INTERNAL_MODEL"'));
+end
+
+function testSourceSnapshotLoadsTheTopModelOnce(testCase)
+% Three inventories need the Top Model; loading it for each one tripled the
+% cost of every full snapshot on a large model.
+text = source('pipeline', 'st_run_standalone_coverage_pipeline.m');
+body = extractBetween(text, 'function value = source_snapshot(cfg)', ...
+    'function assert_saved_source(cfg)');
+verifyNumElements(testCase, body, 1);
+verifyNumElements(testCase, strfind(body{1}, 'load_system(cfg.ModelFile)'), 1);
+end

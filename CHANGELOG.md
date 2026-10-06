@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **standalone 파이프라인이 원본을 다시 확인할 때 Harness를 열지 않습니다.**
+  `Action=ALL`은 원본이 그대로인지 시작 때와 EXECUTE·PACKAGE·SUMMARY 뒤에 확인합니다.
+  지금까지는 매번 Top Model을 세 번 열고, 모든 Harness를 하나씩 열어 Signal Editor 입력
+  파일을 찾았습니다(298개 CUT이면 약 1,200번). 이 툴킷이 만드는 Harness와 그 입력 파일 이름은
+  모델 파일 안에 있으므로, 모델 체크섬이 같으면 시작 때 기록한 목록을 그대로 쓰고 파일
+  해시만 다시 계산합니다. 모델이 바뀌었거나 외부 Harness 파일이 있으면 예전처럼 전부
+  확인합니다. 처음 확인할 때도 Top Model은 한 번만 엽니다. 로그에
+  `Standalone source recheck | Mode=REHASH` 또는 `Mode=FULL`이 찍힙니다.
+
 - **대상별 진행 줄에 경과 시간과 남은 시간이 붙습니다.**
   Harness 생성, SLDV 준비, Harness 설정, Signal Editor, Assessment, Test Manager,
   PER_CUT 실행, `st_collect_per_cut_results`, standalone Harness export·실행 준비·PACKAGE의
