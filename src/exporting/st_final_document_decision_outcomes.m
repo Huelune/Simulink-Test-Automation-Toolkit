@@ -21,18 +21,26 @@ decisions = containers.Map('KeyType', 'char', 'ValueType', 'any');
 conflicts = strings(0,1);
 for i = 1:height(source.Workbooks)
     entry = source.Workbooks(i,:);
-    rows = read_rows(cfg, entry.File);
-    if isempty(rows), continue; end
-    rows = select_stage(rows, entry.Stage);
-    for r = 1:height(rows)
-        unit = unit_key(rows.TestCaseName(r), rows.IterationName(r));
-        if rows.Kind(r) == "UNIT"
-            units(char(unit)) = true;
+    % A workbook that cannot be read is skipped whole, so its rows read as
+    % unavailable and the export goes on.
+    try
+        rows = read_rows(cfg, entry.File);
+        if isempty(rows), continue; end
+        entries = workbook_entries(select_stage(rows, entry.Stage));
+    catch ME
+        st_log(cfg, 'WARN', ...
+            'Final document decision outcomes workbook skipped | File=%s | %s', ...
+            entry.File, ME.message);
+        continue;
+    end
+    for r = 1:numel(entries.Unit)
+        if entries.IsUnit(r)
+            units(char(entries.Unit(r))) = true;
             continue;
         end
-        key = char(unit + "|" + squash(rows.RelativePath(r)));
-        index = rows.DecisionIndex(r);
-        value = [rows.TrueCount(r) rows.FalseCount(r)];
+        key = char(entries.Key(r));
+        index = entries.Index(r);
+        value = entries.Value(r,:);
         current = nan(0,2);
         if isKey(decisions, key), current = decisions(key); end
         if size(current, 1) >= index && ~any(isnan(current(index,:))) && ...
@@ -76,6 +84,29 @@ result = struct('UnitFound', isKey(units, char(unit)), 'Counts', zeros(0,2));
 key = char(unit + "|" + squash(relativePath));
 if isKey(decisions, key)
     result.Counts = decisions(key);
+end
+end
+
+
+function entries = workbook_entries(rows)
+% Every row is checked before any is kept, so a bad row drops its whole
+% workbook instead of leaving half of it behind.
+count = height(rows);
+entries = struct('Unit', strings(count,1), 'IsUnit', false(count,1), ...
+    'Key', strings(count,1), 'Index', zeros(count,1), 'Value', zeros(count,2));
+for r = 1:count
+    entries.Unit(r) = unit_key(rows.TestCaseName(r), rows.IterationName(r));
+    entries.IsUnit(r) = rows.Kind(r) == "UNIT";
+    if entries.IsUnit(r), continue; end
+    index = double(rows.DecisionIndex(r));
+    if ~isscalar(index) || ~isfinite(index) || index < 1 || index ~= fix(index)
+        error('simtest:DecisionOutcomeIndex', ...
+            'DecisionIndex must be a positive integer | TestCase=%s | Path=%s', ...
+            rows.TestCaseName(r), rows.RelativePath(r));
+    end
+    entries.Key(r) = entries.Unit(r) + "|" + squash(rows.RelativePath(r));
+    entries.Index(r) = index;
+    entries.Value(r,:) = double([rows.TrueCount(r) rows.FalseCount(r)]);
 end
 end
 

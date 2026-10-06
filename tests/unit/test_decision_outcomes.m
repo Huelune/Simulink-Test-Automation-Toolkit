@@ -164,6 +164,19 @@ verifyEqual(testCase, formatted.DecisionBlocks(1), "Sw" + newline + "D1 [T/F]Swi
 verifyEqual(testCase, reasons(1), "DECISION_OUTCOME_UNAVAILABLE");
 end
 
+function testWorkbookWithABadRowIsSkippedWhole(testCase)
+% DecisionIndex 0 cannot be placed. The export goes on, and the UNIT row
+% of the same workbook is dropped too, so the row reads as unavailable
+% rather than as "scanned, no two-way branch".
+file = outcome_workbook(testCase, ["FINAL","FINAL"], ["UNIT","DECISION"], ...
+    ["","If1"], [0 0], [0 3], [0 0]);
+outcomes = st_final_document_decision_outcomes(base_config(), source_with(file, "ANY"));
+verifyEqual(testCase, outcomes.Units, 0);
+found = outcomes.Lookup("Case1", "Iteration 1", "If1");
+verifyFalse(testCase, found.UnitFound);
+verifyEmpty(testCase, found.Counts);
+end
+
 function testFormatterWritesTheActualOutcome(testCase)
 lookup = fake_lookup(struct('Sw', [4 0]));
 [formatted, ~, reasons] = st_format_specification_decision_blocks( ...
