@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **대상별 진행 줄에 경과 시간과 남은 시간이 붙습니다.**
+  Harness 생성, SLDV 준비, Harness 설정, Signal Editor, Assessment, Test Manager,
+  PER_CUT 실행, `st_collect_per_cut_results`, standalone Harness export·실행 준비·PACKAGE의
+  대상별 줄 끝에 `elapsed=40m00s eta=1h49m`처럼 찍습니다. 남은 시간은 그 단계에서 지금까지
+  끝난 대상의 평균 시간으로 계산하므로, 캐시로 건너뛴 대상이 많으면 처음에는 짧게
+  나왔다가 점점 맞아 갑니다. 첫 대상에서는 아직 계산할 수 없어 `eta=--`입니다.
+
 - **평소 실행은 재시작 기록을 남기지 않습니다.**
   재시작 기록은 `st_run_from_stage`만 읽습니다. 그런데 이 기록을 남기려고 매 실행마다
   `HARNESS_CONFIG`, `SIGNAL_EDITOR`, `ASSESSMENT` 뒤에 CUT별로 Harness를 다시 열었고,

@@ -27,6 +27,7 @@ st_log(cfg, 'INFO', ...
     n, ...
     cfg.HarnessStopTime);
 
+loopTimer = tic;
 for i = 1:n
 
     if ~selection.Run(i)
@@ -56,8 +57,9 @@ for i = 1:n
     StopTime(i) = string(targetStopTime);
 
     st_log(cfg, 'DEBUG', ...
-        '[HarnessConfig %d/%d] start | CUT=%s | Harness=%s', ...
-        i, n, ownerPath, harnessName);
+        '[HarnessConfig %d/%d] start | CUT=%s | Harness=%s | %s', ...
+        i, n, ownerPath, harnessName, ...
+        st_progress_eta(toc(loopTimer), i - 1, n));
 
     try
 

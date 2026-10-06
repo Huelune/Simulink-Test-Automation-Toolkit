@@ -45,6 +45,7 @@ fprintf('============================================\n');
 % create and save calls go back to the caller's folder, see run_in_folder.
 callerDirectory = pwd;
 shortBuildDirectory = st_enter_short_build_directory(cfg, 'HARNESS');
+loopTimer = tic;
 for i = 1:n
 
     if ~selection.Run(i)
@@ -75,10 +76,11 @@ for i = 1:n
 
     fprintf('\n');
     fprintf('--------------------------------------------\n');
-    fprintf('[%d/%d] START %s\n', ...
+    fprintf('[%d/%d] START %s | %s\n', ...
         i, ...
         n, ...
-        cutName);
+        cutName, ...
+        st_progress_eta(toc(loopTimer), i - 1, n));
     fprintf('  Time    : %s\n', st_now_text());
     fprintf('  CUT     : %s\n', ownerPath);
     fprintf('  Harness : %s\n', harnessName);

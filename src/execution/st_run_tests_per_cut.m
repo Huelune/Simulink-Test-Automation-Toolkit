@@ -196,6 +196,7 @@ abortError = [];
 % Run the Test Cases from a short folder so Simulink and Stateflow builds
 % below pwd stay inside the Windows path limit. Cleared after the loop.
 shortBuildDirectory = st_enter_short_build_directory(cfg, 'PER_CUT');
+loopTimer = tic;
 for i = 1:n
     rowTimer = tic;
     StartedAt(i) = timestamp_text();
@@ -219,9 +220,9 @@ for i = 1:n
     modelPathCleanup = register_execution_model_folder(row, cfg); %#ok<NASGU>
 
     st_log(cfg, 'INFO', ...
-        '[PER_CUT %d/%d] start | No=%g | CUT=%s | TestCase=%s | CVF=%s', ...
+        '[PER_CUT %d/%d] start | No=%g | CUT=%s | TestCase=%s | CVF=%s | %s', ...
         i, n, No(i), char(CUTName(i)), char(TestCaseName(i)), ...
-        char(FilterMode(i)));
+        char(FilterMode(i)), st_progress_eta(toc(loopTimer), i - 1, n));
     append_event(logPath, i, 'TARGET_START', char(TestCaseName(i)));
 
     try

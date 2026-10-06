@@ -34,6 +34,7 @@ st_log(cfg, 'INFO', ...
     'Configure Signal Editor start | count=%d', ...
     n);
 
+loopTimer = tic;
 for i = 1:n
 
     if ~selection.Run(i)
@@ -66,8 +67,9 @@ for i = 1:n
     timerValue = tic;
 
     st_log(cfg, 'DEBUG', ...
-        '[SignalEditor %d/%d] start | CUT=%s | Harness=%s | Scenario=%s', ...
-        i, n, ownerPath, harnessName, scenarioName);
+        '[SignalEditor %d/%d] start | CUT=%s | Harness=%s | Scenario=%s | %s', ...
+        i, n, ownerPath, harnessName, scenarioName, ...
+        st_progress_eta(toc(loopTimer), i - 1, n));
 
     try
 

@@ -72,7 +72,8 @@ for i = 1:height(targets)
         continue;
     end
 
-    fprintf('[%d/%d] %s\n', i, height(targets), testCaseName);
+    fprintf('[%d/%d] %s | %s\n', i, height(targets), testCaseName, ...
+        st_progress_eta(toc(totalTimer), i - 1, height(targets)));
     % A ResultSet read back from a file carries block paths, not handles.
     % Simulink Coverage rebuilds that map on first access, and with the
     % models unloaded the walk does not finish in any useful time.

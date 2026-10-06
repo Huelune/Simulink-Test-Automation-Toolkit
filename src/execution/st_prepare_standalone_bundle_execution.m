@@ -41,6 +41,7 @@ AssessmentReadbackStatus = repmat("FAIL", n, 1);
 Status = repmat("FAIL", n, 1);
 Message = strings(n,1);
 
+loopTimer = tic;
 for i = 1:n
     itemTimer = tic;
     item = manifest.Targets(i);
@@ -49,8 +50,9 @@ for i = 1:n
     testCaseName = string(item.TestCaseName);
     st_log(cfg, 'DEBUG', ...
         ['[StandalonePrepare %d/%d] start | No=%g | ' ...
-         'TestCase=%s | Model=%s'], ...
-        i, n, targetNo, char(testCaseName), char(item.StandaloneModel));
+         'TestCase=%s | Model=%s | %s'], ...
+        i, n, targetNo, char(testCaseName), char(item.StandaloneModel), ...
+        st_progress_eta(toc(loopTimer), i - 1, n));
     try
         targetMatch = find(double(sourceTargets.No) == targetNo & ...
             string(sourceTargets.TestCaseName) == testCaseName);
