@@ -143,6 +143,12 @@ cfg.SldvManifestFile = ...
 % before the source TestCase does. Set to [] to preserve raw end times.
 cfg.SldvTmaxResolution = 0.01;
 
+% Maximum analysis time of one GENERATE target [s]. [] (default) keeps the
+% model's own Design Verifier setting (MaxProcessTime, 300 s unless the
+% model changes it). A run that reaches the limit returns status -1 and the
+% target fails; raise this to give large CUTs more time.
+cfg.SldvMaxProcessTime = [];
+
 % true (default):
 %   Before FILE+SLDV validation or GENERATE execution, convert a non-atomic
 %   unlinked target Subsystem to TreatAsAtomicUnit=on and keep that model
@@ -169,16 +175,18 @@ cfg.AutoConvertSldvTargetsToAtomic = true;
 %   when AutoConvertSldvTargetsToAtomic is also true.
 cfg.DisableLibraryLinkForSldvTargets = false;
 
-% false (default):
-%   Fail when an SLDV Dataset contains input signals that are not present
-%   in the target Harness Signal Editor ActiveScenario.
-%
-% true:
-%   Ignore those unexpected SLDV input signals. Only signals that also
-%   exist in the Harness input interface are copied into generated
-%   Signal Editor scenarios. Ignored names are recorded in the SLDV
+% true (default):
+%   Ignore SLDV input signals that are not present in the target Harness
+%   Signal Editor ActiveScenario. Only signals that also exist in the
+%   Harness input interface are copied into generated Signal Editor
+%   scenarios. Ignored names are logged as WARN and recorded in the SLDV
 %   preparation result and manifest.
-cfg.IgnoreUnexpectedSldvInputs = false;
+%
+% false:
+%   Fail when an SLDV Dataset contains such input signals. Use this to
+%   catch a Harness signal whose name differs from the SLDV input name,
+%   which true would drop in favor of the original Harness value.
+cfg.IgnoreUnexpectedSldvInputs = true;
 
 % true (temporary compatibility mode):
 %   Continue FILE+SLDV preparation when the source MAT was generated for a
@@ -287,6 +295,18 @@ cfg.TestSuiteName = ...
 %   - Recreate Test Cases from Excel.
 cfg.OverwriteTestFile = false;
 
+% false (default):
+%   Skip the Validate Scenario Alignment stage. It only rereads what the
+%   earlier stages built, but it reopens every Harness to compare the
+%   SLDV, Signal Editor, Test Assessment and Test Manager Iteration
+%   scenario names. A mismatch then shows up later, during execution or
+%   the expected-value update. Run st_validate_scenario_alignment() to
+%   check on demand.
+%
+% true:
+%   Run the check before execution and stop on a mismatch.
+cfg.ValidateScenarioAlignment = false;
+
 % Replace existing clone destinations only after a recovery clone is saved.
 cfg.OverwriteHarness = false;
 
@@ -359,6 +379,19 @@ cfg.PreparationMode = 'AUTO';
 % Earliest stage used by FORCE. START resolves to HARNESS for the full
 % workflow and SLDV for the existing-Harness workflow.
 cfg.PreparationFromStage = 'START';
+
+% false (default):
+%   Do not record restart evidence. Only st_run_from_stage reads it, to
+%   prove that the stages it will not rerun still hold what they built.
+%   Recording rereads every Harness after HARNESS_CONFIG, SIGNAL_EDITOR and
+%   ASSESSMENT, and the Assessment and Test File again after execution.
+%   AUTO reuse does not need it; it compares input signatures.
+%
+% true:
+%   Record it on every run. st_run_from_stage turns this on for its own
+%   run regardless, so a restart that finds no evidence asks for one
+%   restart from that stage and records it there.
+cfg.RecordRestartEvidence = false;
 
 cfg.WorkflowStateFile = ...
     fullfile(rootDir, 'result', 'state', 'workflow_state.mat');
@@ -492,13 +525,17 @@ if isfile(cfg.RuntimeTargetFile)
     end
 end
 
-% Where the standalone pipeline's bundle runner lets Simulink build. The
-% execution workspace is already ~150 characters deep, and Stateflow
-% simulation targets nest slprj/_sfprj/<Harness>/... below pwd, so building
-% there fails on Windows before any coverage is recorded. Empty (default)
-% builds under tempdir; set a short path such as 'D:\stt_build' to keep the
-% build on a specific drive. Each execution gets its own subfolder and
-% removes it when the run ends.
+% Where the standalone pipeline's bundle runner runs and lets Simulink
+% build. The recorded execution workspace is ~150 characters deep, and
+% Stateflow simulation targets nest slprj/_sfprj/<Harness>/... below pwd, so
+% running there fails on Windows before any coverage is recorded. The runner
+% therefore executes in <dir>/<id>_ws with its build cache in <dir>/<id>,
+% copies the workspace (without build products) to its recorded place, and
+% removes both. Empty (default) uses tempdir/stt_build; set a short path
+% such as 'D:\stt_build' to keep it on a specific drive. SLDV preparation,
+% Harness creation, and PER_CUT run their loops from <dir>/<stage>_<id> for
+% the same reason (st_enter_short_build_directory), and SLDV stages its
+% output in <dir>/sldvout_<id>.
 cfg.StandaloneBuildCacheDir = '';
 
 % Standalone verification runs and latest pointers are stored separately
@@ -523,27 +560,29 @@ cfg.OnlyEnabled = true;
 
 % How much of the DecisionBlocks inventory st_export_test_specification
 % writes. Override per run with
-% st_export_test_specification('DecisionBlockScope','ALL').
+% st_export_test_specification('DecisionBlockScope','EXPLICIT').
+%
+% 'ALL' (default):
+%   The blocks that carry a condition in their dialog, plus the blocks that
+%   create Simulink Coverage objectives without one: Saturate, Abs, Dead
+%   Zone, Rate Limiter, Relay, the lookup table family, the integrators,
+%   the iterators, Logical Operator and Enabled / Triggered Subsystems.
+%   This also explains Decision coverage reported for a model that
+%   contains no If or Switch block at all, and matches the scope
+%   st_export_final_document always uses. The column gets much longer, and
+%   a lookup table heavy CUT can push the cell into the OverflowDetails
+%   sheet.
 %
 % 'EXPLICIT':
 %   Only blocks that carry a condition in their dialog, that is If, Switch,
 %   MinMax, Multiport Switch and Switch Case. The shortest list.
-%
-% 'ALL':
-%   Also the blocks that create Simulink Coverage objectives without
-%   carrying a condition: Saturate, Abs, Dead Zone, Rate Limiter, Relay,
-%   the lookup table family, the integrators, the iterators and Logical
-%   Operator. Use this to explain Decision coverage reported for a model
-%   that contains no If or Switch block at all. The column gets much
-%   longer, and a lookup table heavy CUT can push the cell into the
-%   OverflowDetails sheet.
 %
 % 'NONE':
 %   Leave the DecisionBlocks column empty and skip the scan.
 %
 % The scanned types for each level are defined in
 % src/exporting/st_specification_decision_catalog.m.
-cfg.DecisionBlockScope = 'EXPLICIT';
+cfg.DecisionBlockScope = 'ALL';
 
 
 %% ============================================================

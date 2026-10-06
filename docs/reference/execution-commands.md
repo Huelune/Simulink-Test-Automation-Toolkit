@@ -5,7 +5,7 @@
 
 - Excel 열의 역할: [관리 Excel 열 사전](workbook-reference.md)
 - 전역 설정의 역할: [설정 사전](config-reference.md)
-- 복사해서 바로 쓸 코드: [수동 실행 안내](manual/README.md)
+- 복사해서 바로 쓸 코드: [사용자 매뉴얼](../user-manual.md)
 
 `st_export_test_specification`이 만드는 Excel의 첫 번째 `사용법` 탭에도 같은 기준의
 표가 들어갑니다.
@@ -307,7 +307,7 @@ info = st_run_from_stage('Workflow','FROM_HARNESS', 'FromStage','ASSESSMENT');
 | `SourcePipelineId` | `''` | `STANDALONE`의 `PACKAGE`/`SUMMARY` 재생성 원본 |
 
 `st_check_readiness`로 먼저 검사한 뒤 같은 인자로 이 명령을 실행하는 것이 표준
-절차입니다. 자세한 제한은 [재시작](manual/restart.md)에 있습니다.
+절차입니다. 자세한 제한은 [재시작](restart.md)에 있습니다.
 
 ## 6. 테스트 실행
 
@@ -359,14 +359,14 @@ Excel로 뽑습니다.
 | --- | --- | --- |
 | `OutputFile` | `result/test_specification_<timestamp>.xlsx` | 저장할 파일 경로. **이미 있으면 덮어쓰지 않고 실패합니다** |
 | `VerifyMode` | `'STEP2'` | `'STEP2'`는 각 시나리오의 직계 Step 2만, `'ALL_STEPS_COLUMNS'`는 verify가 있는 모든 스텝을 오른쪽 열에 나눠 씁니다 |
-| `DecisionBlockScope` | `cfg.DecisionBlockScope` (`'EXPLICIT'`) | `DecisionBlocks` 열에 어디까지 담을지. `'EXPLICIT'`/`'ALL'`/`'NONE'` |
+| `DecisionBlockScope` | `cfg.DecisionBlockScope` (`'ALL'`) | `DecisionBlocks` 열에 어디까지 담을지. `'ALL'`/`'EXPLICIT'`/`'NONE'` |
 
 ```matlab
 % 모든 스텝의 verify를 스텝별 열로
 [T, file] = st_export_test_specification('VerifyMode','ALL_STEPS_COLUMNS');
 
-% If/Switch가 없는데 Decision coverage가 나오는 이유를 찾을 때
-[T, file] = st_export_test_specification('DecisionBlockScope','ALL');
+% 조건이 적힌 블록(If, Switch 등)만 짧게 볼 때
+[T, file] = st_export_test_specification('DecisionBlockScope','EXPLICIT');
 ```
 
 모델을 읽기 위해 로드하지만 시뮬레이션·테스트 실행·SLDV 생성·기대값 갱신은 하지
@@ -452,7 +452,7 @@ Action의 역할:
 
 ### `st_open_standalone_test_manager`
 
-PACKAGE가 끝난 제출물을 Test Manager에서 엽니다. 기본 동작은 [결과 열기](manual/open-results.md)의
+PACKAGE가 끝난 제출물을 Test Manager에서 엽니다. 기본 동작은 [결과 열기](open-results.md)의
 수동 절차와 같습니다: 대상 CUT 폴더 전부 `addpath` → `sltest.testmanager.TestFile(TestManagerFile)`
 → `sltest.testmanager.view`. **파일을 만들거나 바꾸지 않고, 모델도 로드하지 않습니다.**
 
@@ -522,16 +522,27 @@ ResultSet만 저장합니다.
 ```matlab
 info = st_collect_per_cut_results;
 info = st_collect_per_cut_results('RunId', 'LATEST', 'ReportMode', 'FULL');
+info = st_collect_per_cut_results('Mode', 'LEAN');
 ```
 
 | 옵션 | 기본값 | 역할 |
 | --- | --- | --- |
 | `RunId` | `'LATEST'` | 저장된 PER_CUT run의 id |
 | `ReportMode` | run의 기록값 | `'SUMMARY'` 또는 `'FULL'` |
+| `Mode` | `'FULL'` | `'LEAN'`이면 최종 문서가 읽는 것만 만듭니다 (아래) |
 
 각 CUT 폴더의 `filter/`에 CVF를 만들고, 저장된 결과에 부착한 뒤 `initial/`과
 `final/`에 보고서를 씁니다. 이미 실행 중에 산출물을 만든 run(standalone 번들)은
 저장된 ResultSet이 없으므로 `SKIP`으로 보고합니다.
+
+`Mode='LEAN'`은 최종 문서(`st_export_final_document`)가 읽는 `TestSummary.xlsx`의
+판정(`Iterations`, `Targets`)과 `DecisionPoints`만 씁니다. 재실행한 CUT은 `final/`만,
+아니면 `initial/`만 만듭니다. MLDATX 사본, CUT 커버리지 추출, PDF, CVT·CVF 사본·커버리지
+HTML은 만들지 않습니다(`[ResultReport]` 줄에 `SKIP`). CVF 생성과 부착은 그대로 해서
+DecisionPoints가 `FULL`과 같게 나옵니다. 커버리지를 standalone 파이프라인에서 가져오는
+기본 흐름(`cfg.FinalDocumentCoverageSource='STANDALONE'`)용이며, `'TEST_RUN'`이면
+`simtest:CollectLeanWithoutCoverage`로 멈춥니다. 1단계 실행의 CUT별 커버리지 HTML을
+검토해야 할 때는 `FULL`로 정리하십시오.
 
 ### `st_export_test_asset_bundle`
 
@@ -748,7 +759,7 @@ plan = st_cleanup_results('Scope','STATE','Apply',true);  % 실제 삭제
 부분 재현이 필요할 때** 직접 실행합니다. 앞 단계 산출물이 없으면 실패합니다.
 
 실행 순서와 각 단계의 확인 방법은
-[단계별로 끊어서 실행하기](manual/step-by-step.md)에 있습니다. 전부 인자 없이
+[단계별로 끊어서 실행하기](step-by-step.md)에 있습니다. 전부 인자 없이
 부르며 관리 Excel의 활성 행 전체를 대상으로 합니다.
 
 > 단계 명령을 직접 부르면 **checkpoint를 남기지 않습니다.** 이후

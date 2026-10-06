@@ -24,10 +24,22 @@ verifyFalse(testCase, cfg.CheckSharedSignalEditorDataFile);
 end
 
 
-function testUnexpectedSldvInputsAreRejectedByDefault(testCase)
+function testUnexpectedSldvInputsAreIgnoredByDefault(testCase)
 cfg = st_config();
 
-verifyFalse(testCase, cfg.IgnoreUnexpectedSldvInputs);
+verifyTrue(testCase, cfg.IgnoreUnexpectedSldvInputs);
+end
+
+
+function testSldvTimeLimitDefaultsToTheModelSetting(testCase)
+cfg = st_config();
+
+verifyEmpty(testCase, cfg.SldvMaxProcessTime);
+
+source = fileread(fullfile(st_project_root(), ...
+    'src', 'sldv', 'st_prepare_sldv_targets.m'));
+verifyTrue(testCase, contains(source, ...
+    "opts.MaxProcessTime = max_process_time(cfg.SldvMaxProcessTime);"));
 end
 
 
@@ -35,11 +47,11 @@ function testConfigScopeOverridesOnlyWhileHeld(testCase)
 % A workflow option reaches every stage through st_config() and must not
 % outlive the command that set it.
 guard = st_config_scope('enter', ...
-    struct('IgnoreUnexpectedSldvInputs', true));
-verifyTrue(testCase, st_config().IgnoreUnexpectedSldvInputs);
+    struct('IgnoreUnexpectedSldvInputs', false));
+verifyFalse(testCase, st_config().IgnoreUnexpectedSldvInputs);
 
 clear guard;
-verifyFalse(testCase, st_config().IgnoreUnexpectedSldvInputs);
+verifyTrue(testCase, st_config().IgnoreUnexpectedSldvInputs);
 end
 
 
@@ -58,6 +70,11 @@ source = fileread(fullfile(st_project_root(), ...
     'src', 'sldv', 'st_prepare_sldv_targets.m'));
 verifyTrue(testCase, contains(source, ...
     "if ~allowPathMismatch"));
+% The check runs inside inspect_sldv_data, which must receive cfg.
+verifyTrue(testCase, contains(source, ...
+    "harnessInput, ignoreUnexpectedSldvInputs, sldvTestCases, cfg)"));
+verifyEqual(testCase, numel(regexp(source, ...
+    'meta = inspect_sldv_data\([^;]*\<cfg\);')), 2);
 verifyTrue(testCase, contains(source, ...
     "SLDV subsystem mismatch allowed by temporary compatibility"));
 verifyTrue(testCase, contains(source, ...

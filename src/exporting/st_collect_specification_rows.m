@@ -7,7 +7,7 @@ function [rows, details, verifyCells, maxTimes, decisionBlockLists] = ...
 % remaining targets still run. Callers turn the returned arrays into a table
 % with st_specification_table.
 if nargin < 2 || isempty(verifyMode), verifyMode = 'STEP2'; end
-if nargin < 3 || isempty(decisionScope), decisionScope = 'EXPLICIT'; end
+if nargin < 3 || isempty(decisionScope), decisionScope = 'ALL'; end
 if nargin < 4, decisionFinderFactory = []; end
 initialModels = string(find_system('SearchDepth', 0, 'Type', 'block_diagram'));
 initialModels = initialModels(:);

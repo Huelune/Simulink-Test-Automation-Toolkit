@@ -70,6 +70,10 @@ st_log(cfg, 'INFO', ...
     'Prepare FILE / Simulink Design Verifier Data | Model=%s | Count=%d', ...
     cfg.TopModel, n);
 
+% SLDV compiles the model and builds below pwd; run from a short folder so
+% that stays inside the Windows path limit. Cleared after the loop.
+shortBuildDirectory = st_enter_short_build_directory(cfg, 'SLDV');
+loopTimer = tic;
 for i = 1:n
     timerValue = tic;
     ownerPath = st_normalize_cut_path(T.CUTPath(i), cfg.TopModel);
@@ -180,11 +184,13 @@ for i = 1:n
         Timestamp(i) = current_timestamp();
         st_log_progress(cfg, i, n, Status(i), label, ...
             'Elapsed', ElapsedSec(i), 'Message', Message(i), ...
-            'Detail', ownerPath);
+            'Detail', ownerPath, ...
+            'Eta', st_progress_eta(toc(loopTimer), i, n));
         continue;
     end
 
-    st_log_progress(cfg, i, n, 'START', label, 'Detail', ownerPath);
+    st_log_progress(cfg, i, n, 'START', label, 'Detail', ownerPath, ...
+        'Eta', st_progress_eta(toc(loopTimer), i - 1, n));
 
     try
         if ~ismember(mode, {'OFF','FILE','GENERATE'})
@@ -245,7 +251,7 @@ for i = 1:n
                             dataFile, ownerPath, T.CUTName(i), ...
                             cfg.SldvTmaxResolution, harnessInput, ...
                             cfg.IgnoreUnexpectedSldvInputs, ...
-                            sldvTestCases);
+                            sldvTestCases, cfg);
                     case 'MAT'
                         meta = st_inspect_mat_data( ...
                             dataFile, T.CUTName(i), ...
@@ -421,8 +427,10 @@ for i = 1:n
 
     st_log_progress(cfg, i, n, Status(i), label, ...
         'Elapsed', ElapsedSec(i), 'Message', Message(i), ...
-        'Detail', ownerPath);
+        'Detail', ownerPath, ...
+        'Eta', st_progress_eta(toc(loopTimer), i, n));
 end
+clear shortBuildDirectory
 
 % Signal Editor MAT ownership is checked only after every target data file
 % has passed its source-side validation. This stage does not modify models.
@@ -752,7 +760,11 @@ if ~isfolder(targetDir)
     mkdir(targetDir);
 end
 
-stagingDir = tempname(targetDir);
+% sldvrun nests its own folders below OutputDir, so stage in the short
+% build base rather than under the result tree.
+[~, stagingToken] = fileparts(tempname);
+stagingDir = fullfile(st_short_build_base(cfg), ...
+    ['sldvout_' stagingToken(end-7:end)]);
 mkdir(stagingDir);
 
 cleanup = onCleanup( ...
@@ -766,12 +778,18 @@ opts.MakeOutputFilesUnique = 'off';
 opts.DataFileName = 'candidate_sldvdata';
 opts.SaveReport = 'off';
 opts.SaveHarnessModel = 'off';
+% Not part of the SLDV stage signature: a target that already completed
+% would not change with more time, so only failed rows run again.
+if isfield(cfg, 'SldvMaxProcessTime') && ~isempty(cfg.SldvMaxProcessTime)
+    opts.MaxProcessTime = max_process_time(cfg.SldvMaxProcessTime);
+end
 
 st_log( ...
     cfg, ...
     'INFO', ...
-    '[SLDV] sldvrun start | CUT=%s', ...
-    ownerPath);
+    '[SLDV] sldvrun start | CUT=%s | MaxProcessTime=%g s', ...
+    ownerPath, ...
+    double(opts.MaxProcessTime));
 
 runTimer = tic;
 
@@ -799,6 +817,17 @@ st_log( ...
 
 latestFile = '';
 meta = [];
+
+if double(status) == -1
+    st_log(cfg, 'WARN', ...
+        ['[SLDV] analysis reached MaxProcessTime | CUT=%s | ' ...
+         'MaxProcessTime=%g s | elapsed=%.1f s'], ...
+        ownerPath, double(opts.MaxProcessTime), runElapsed);
+    message = append_message(message, sprintf( ...
+        ['SLDV stopped at MaxProcessTime=%g s. Raise ' ...
+         'cfg.SldvMaxProcessTime to give this CUT more time.'], ...
+        double(opts.MaxProcessTime)));
+end
 
 if double(status) ~= 1
     return;
@@ -840,7 +869,8 @@ try
         cfg.SldvTmaxResolution, ...
         harnessInput, ...
         cfg.IgnoreUnexpectedSldvInputs, ...
-        sldvTestCases);
+        sldvTestCases, ...
+        cfg);
 
     validate_harness_input_interface( ...
         harnessInput, ...
@@ -881,6 +911,17 @@ end
 end
 
 
+function value = max_process_time(value)
+
+if ~(isnumeric(value) && isscalar(value) && isfinite(value) && value > 0)
+    error('simtest:InvalidSldvMaxProcessTime', ...
+        'cfg.SldvMaxProcessTime must be [] or a positive number of seconds.');
+end
+value = double(value);
+
+end
+
+
 function dataFile = resolve_generated_data_file(value, stagingDir)
 
 reported = char(string(value));
@@ -904,11 +945,10 @@ end
 
 function meta = inspect_sldv_data( ...
         dataFile, ownerPath, cutName, tmaxResolution, ...
-        harnessInput, ignoreUnexpectedSldvInputs, sldvTestCases)
-
-if nargin < 7
-    sldvTestCases = '';
-end
+        harnessInput, ignoreUnexpectedSldvInputs, sldvTestCases, cfg)
+% cfg carries AllowSldvSubsystemPathMismatch and the log settings for the
+% subsystem path check below. Without it that branch stopped with an
+% undefined-variable error instead of warning or rejecting the file.
 
 loaded = load(dataFile, 'sldvData');
 
@@ -972,6 +1012,7 @@ inputNames = cell(0,1);
 inputTypes = cell(0,1);
 inputDimensions = cell(0,1);
 ignoredInputNames = cell(0,1);
+harnessDrivenNames = st_harness_driven_sldv_inputs(ownerPath);
 
 % sourceIndex stays the position in sldvData.TestCases even when the
 % operator picked a subset, because every later stage reads the source MAT
@@ -1029,15 +1070,18 @@ for sourceIndex = 1:numel(data.TestCases)
     [signature, names, types, dimensions] = ...
         st_dataset_signature(dataset);
 
-    [selectedIndices, names, ignoredNames] = ...
+    % inputIndices must not reuse selectedIndices: the loop above still
+    % filters TestCases by that selection on every later iteration.
+    [inputIndices, names, ignoredNames] = ...
         st_select_sldv_input_indices( ...
             names, ...
             harnessInput.Names, ...
-            ignoreUnexpectedSldvInputs);
+            ignoreUnexpectedSldvInputs, ...
+            harnessDrivenNames);
 
-    signature = signature(selectedIndices);
-    types = types(selectedIndices);
-    dimensions = dimensions(selectedIndices);
+    signature = signature(inputIndices);
+    types = types(inputIndices);
+    dimensions = dimensions(inputIndices);
     ignoredInputNames = unique( ...
         [ignoredInputNames; ignoredNames], ...
         'stable');

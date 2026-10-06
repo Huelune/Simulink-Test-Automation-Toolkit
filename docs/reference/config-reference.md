@@ -213,6 +213,24 @@ Template Harness 복제(`TestPreparationSource=HARNESS_CLONE`)에서 대상 Harn
 | `false` (기본) | 기존 Harness를 건드리지 않고 건너뜁니다 |
 | `true` | 복구용 clone을 먼저 저장한 뒤 교체합니다. 후처리가 실패하면 그 clone에서 복원합니다 |
 
+### `ValidateScenarioAlignment` — 기본 `false`
+
+`ALIGNMENT` 단계(`Validate Scenario Alignment`)를 돌릴지 정합니다. 이 단계는 앞 단계가
+만든 것을 다시 읽기만 합니다. 대신 CUT마다 Harness를 다시 열어 SLDV, Signal Editor, Test
+Assessment, Test Manager Iteration의 Scenario 이름을 비교하므로 CUT이 많으면 오래 걸립니다.
+
+| 값 | 동작 |
+| --- | --- |
+| `false` (기본) | 단계를 건너뜁니다. 콘솔에 `SKIP`이 찍히고, 재시작 준비 점검도 이 단계를 보지 않습니다 |
+| `true` | 테스트 실행 전에 검사하고, 이름이 맞지 않으면 멈춥니다 |
+
+건너뛰면 Scenario와 Iteration이 어긋났을 때 실행이나 기대값 갱신 중에야 드러납니다.
+입력 MAT을 바꾼 뒤 Test Manager 단계를 다시 하지 않았다면 직접 확인하십시오.
+
+```matlab
+R = st_validate_scenario_alignment();
+```
+
 ### `TestSuiteName` — 기본 `'New Test Suite 1'`
 
 Test Case를 담을 Test Suite 이름입니다. 기존 Test File을 쓸 때는 그 파일에 실제로
@@ -303,24 +321,36 @@ Harness를 한 번 지운 뒤 다시 돌려야 합니다. `docs/troubleshooting.
 `SldvLibraryLinkDisableFailed`로 중단하며, 이때는 모델을 저장하지 말고 닫아야 합니다.
 값을 바꾸면 `SLDV` 단계 지문이 달라져 그 단계부터 다시 준비합니다.
 
-### `IgnoreUnexpectedSldvInputs` — 기본 `false`
+### `IgnoreUnexpectedSldvInputs` — 기본 `true`
 
 SLDV MAT에 Harness의 ActiveScenario에는 없는 입력 신호가 들어 있을 때의 동작입니다.
 
 | 값 | 동작 |
 | --- | --- |
-| `false` (기본) | 준비 단계를 실패로 처리합니다 |
-| `true` | 그 신호를 무시하고, Harness에도 있는 공통 입력만 교체합니다 |
+| `true` (기본) | 그 신호를 무시하고, Harness에도 있는 공통 입력만 교체합니다 |
+| `false` | 준비 단계를 실패로 처리합니다 |
 
-`true`로 바꾸는 것은 그 입력이 이 테스트에 필요 없다는 것을 사람이 확인한 뒤에만
-하십시오. 무시한 신호 목록은 `SldvGenerationResult`의 `IgnoredSldvInputs` 열에
-남습니다.
+무시한 신호는 WARN 로그와 `SldvGenerationResult`의 `IgnoredSldvInputs` 열에 남습니다.
+SLDV는 그 신호의 값까지 정한다고 보고 TestCase를 만들었으므로, 신호를 빼면 TestCase가
+노린 커버리지 목표를 맞추지 못할 수 있습니다. `IgnoredSldvInputs`가 비어 있지 않으면
+그 신호가 이 테스트에 필요 없는지 확인하십시오.
+
+**이름만 다른 신호는 무시하면 안 됩니다.** Harness 신호 이름이 SLDV 입력 이름과 다르면
+같은 신호라도 Harness에 없는 입력으로 판정되어, SLDV 값 대신 Harness의 원래 값으로
+테스트가 돕니다. 이때 `SldvDrivenInputCount`가 기대보다 작습니다. 이런 경우를 잡으려면
+`false`로 돌리십시오.
+
+**예외: 함수 호출 트리거.** CUT이 함수 호출(function-call) Subsystem이면 SLDV는 호출
+트리거를 `FcnTriggerPort`라는 입력으로 넣습니다. Harness는 스케줄러 블록으로 직접
+호출하므로 이 입력이 없습니다. 그래서 이 입력 하나는 설정이 `false`여도 빼고,
+WARN 로그와 `IgnoredSldvInputs` 열에 남깁니다. 호출 시점은 Harness 스케줄러가 정하므로
+SLDV TestCase가 가정한 시점과 다를 수 있습니다.
 
 파일을 고치지 않고 한 번만 바꾸려면 명령 옵션을 쓰십시오. 옵션이 이 설정보다
 우선합니다.
 
 ```matlab
-st_run_from_harness('IgnoreUnexpectedSldvInputs', true);
+st_run_from_harness('IgnoreUnexpectedSldvInputs', false);
 ```
 
 ### `AllowSldvSubsystemPathMismatch` — 기본 `true`
@@ -354,6 +384,24 @@ Harness 입력 인터페이스 검증은 어느 쪽이든 그대로 수행합니
 각 CUT의 SLDV 종료 시각을 올림할 격자[초]입니다. `1.060000001` 같은 부동소수점
 꼬리를 흡수하면서, Harness가 원본 TestCase보다 먼저 끝나지 않게 합니다. `[]`로
 두면 원본 종료 시각을 그대로 씁니다.
+
+### `SldvMaxProcessTime` — 기본 `[]`
+
+`SldvMode=GENERATE` 대상 하나에 SLDV가 쓸 수 있는 최대 분석 시간[초]입니다.
+
+| 값 | 동작 |
+| --- | --- |
+| `[]` (기본) | 모델의 Design Verifier 설정(`MaxProcessTime`, 바꾸지 않았으면 300초)을 씁니다 |
+| 양수 | 모든 GENERATE 대상에 이 시간을 씁니다. 모델 파일은 바꾸지 않습니다 |
+
+시간 안에 끝나지 않으면 `sldvrun`이 `status=-1`을 돌려주고 그 행은 실패로
+처리됩니다. 메시지 끝에 `SLDV stopped at MaxProcessTime=...`이 붙습니다. 큰 CUT이
+이렇게 실패하면 값을 늘리고 다시 실행하십시오. 이미 성공한 행은 다시 분석하지
+않습니다.
+
+```matlab
+cfg.SldvMaxProcessTime = 1800;   % st_config.m에서 30분으로
+```
 
 ## 7. 커버리지
 
@@ -398,22 +446,39 @@ workflow에서 `SLDV`로 해석됩니다.
 따지지 않고 모든 준비 단계를 `CACHED`로 두고 테스트만 실행하므로, 이 값일 때는
 `RunGeneratedTests=false`여도 테스트가 실행됩니다.
 
+### `RecordRestartEvidence` — 기본 `false`
+
+`st_run_from_stage`가 쓰는 재시작 기록을 평소 실행에서도 남길지 정합니다. 이 기록은
+단계가 끝날 때마다 결과물을 다시 읽어 해시로 남긴 것입니다. 재시작할 때 다시 돌리지 않는
+앞 단계가 그대로인지 증명하는 데 씁니다. 결과물을 다시 읽으려고 `HARNESS_CONFIG`,
+`SIGNAL_EDITOR`, `ASSESSMENT` 뒤마다 CUT별로 Harness를 다시 열고, 실행 뒤에도 한 번 더
+엽니다.
+
+| 값 | 동작 |
+| --- | --- |
+| `false` (기본) | 남기지 않습니다. `AUTO` 재사용은 입력 지문으로 판단하므로 영향이 없습니다 |
+| `true` | 매 실행마다 남깁니다 |
+
+`st_run_from_stage`는 설정과 상관없이 자기 실행에서는 기록을 남깁니다. 기록이 없는
+상태에서 처음 재시작하면 준비 점검이 "No verifiable checkpoint"로 막고 SLDV나
+ASSESSMENT부터 시작하라고 알려 줍니다. 그 단계부터 한 번 재시작하면 기록이 생깁니다.
+
 ## 9. 명세서와 최종 문서 추출
 
-### `DecisionBlockScope` — 기본 `'EXPLICIT'`
+### `DecisionBlockScope` — 기본 `'ALL'`
 
 `st_export_test_specification`이 `DecisionBlocks` 열에 어디까지 적을지 정합니다.
 
 | 값 | 포함 대상 | 쓰는 때 |
 | --- | --- | --- |
-| `'EXPLICIT'` (기본) | 대화상자에 조건을 적는 블록 5종 (If, Switch, MinMax, MultiPortSwitch, SwitchCase) | 평소 |
-| `'ALL'` | 위에 더해 조건식 없이 Coverage objective를 만드는 블록 13종 (Saturate, Abs, Lookup 계열, Integrator 계열 등) | If/Switch가 없는데 Decision 커버리지가 나오는 이유를 찾을 때 |
+| `'ALL'` (기본) | 아래 5종에 더해 조건식 없이 Coverage objective를 만드는 블록 13종 (Saturate, Abs, Lookup 계열, Integrator 계열 등)과 Enabled / Triggered Subsystem | 평소. If/Switch가 없는데 Decision 커버리지가 나오는 이유도 여기서 보입니다 |
+| `'EXPLICIT'` | 대화상자에 조건을 적는 블록 5종 (If, Switch, MinMax, MultiPortSwitch, SwitchCase) | 목록을 짧게 보고 싶을 때 |
 | `'NONE'` | 없음. 열이 비고 스캔도 건너뜁니다 | 목록이 필요 없을 때 |
 
 `'ALL'`은 목록이 크게 길어집니다. Lookup 테이블이 많은 CUT은 셀이 길이 한도를 넘어
 `OverflowDetails` 시트 참조로 대체될 수 있습니다.
 
-실행마다 덮어쓰려면 `st_export_test_specification('DecisionBlockScope','ALL')`을
+실행마다 덮어쓰려면 `st_export_test_specification('DecisionBlockScope','EXPLICIT')`를
 쓰십시오. 어느 범위로 뽑았는지는 실행 로그의 `DecisionBlockScope=` 항목에 남습니다.
 
 ### `FinalDocumentResultRun` — 기본 `'AUTO'`
@@ -483,10 +548,12 @@ Command Window에 어디까지 보일지 정합니다. **로그 파일에는 이
 
 MATLAB이 지금 어느 API에서 기다리는지는 blocking 호출 안을 들여다볼 수 없으므로
 알 수 없습니다. **콘솔의 마지막 `START` 줄이 현재 대기 중인 대상입니다.** `START`
-줄은 대상 하나가 오래 걸리는 Harness 생성, SLDV, PER_CUT 실행, PER_CUT 결과 정리에서만
-나옵니다.
+줄은 대상 하나가 오래 걸리는 Harness 생성, SLDV, PER_CUT 실행, PER_CUT 결과 정리,
+standalone Harness export에서만 나옵니다. 대상 줄 끝의 `elapsed=... eta=...`는 그
+단계의 경과 시간과 남은 시간이며, 이 값과 상관없이 늘 보입니다.
 
-로그 파일이 어디에 생기고 어떻게 여는지는
+줄의 모양은 [사용자 매뉴얼](../user-manual.md#콘솔에-보이는-줄과-실행-로그)에, 로그
+파일이 어디에 생기고 어떻게 여는지는
 [문제 해결](troubleshooting.md#로그는-어디에-있나)에 있습니다.
 
 ### `SuppressedWarnings` — 기본 `{}`
@@ -635,7 +702,7 @@ cfg.ReportMatchCoverageObjects = true;
 | `CoverageFilterDir` | `result/coverage_filters/` | 자동 생성 CVF |
 | `ExportRootDir` | `result/exports/` | 내보내기 번들 |
 | `StandaloneCoverageRootDir` | `result/standalone_coverage/` | standalone 제출물 |
-| `StandaloneBuildCacheDir` | `''` (임시 폴더) | standalone 실행 중 Simulink 빌드(`slprj`) 위치 |
+| `StandaloneBuildCacheDir` | `''` (임시 폴더) | standalone 실행 작업 폴더, PER_CUT 실행 중 현재 폴더, Simulink 빌드(`slprj`) 위치 |
 | `VerificationRootDir` | `result/verification/` | 종합 검증 결과 |
 | `LatestReportPointer` | `result/latest.json` | 최신 BATCH 실행 위치 |
 | `LatestRunRecordPointer` | `result/run_record_latest.json` | 최신 실행 기록 위치 |
@@ -646,13 +713,25 @@ cfg.ReportMatchCoverageObjects = true;
 
 > **Windows 경로 길이 주의:** standalone pipeline은 폴더를 여러 겹 만들기 때문에
 > 저장소가 깊은 경로에 있으면 Windows의 260자 제한에 걸릴 수 있습니다. 이때는
-> `st_set_standalone_coverage_root`로 짧은 경로(예: 다른 드라이브 루트)를 지정하십시오.
+> `st_set_standalone_coverage_root`로 짧은 경로를 지정하십시오. 인자 없이 부르면
+> 지금 선택한 Top Model 이름으로 `D:\model_result\<Top Model>`을 만들어 씁니다.
 > 이 값은 `runtime_target.mat`에 로컬로 저장되며 Git에 올라가지 않습니다.
 >
-> Simulink 빌드 산출물(`slprj`)은 실행 workspace가 아니라 `StandaloneBuildCacheDir`
-> 아래(비우면 `tempdir`)에 만듭니다. workspace 경로는 짧은 루트를 써도 150자에
-> 가깝고, Stateflow 빌드는 그 밑에 `slprj\_sfprj\<Harness>\...`를 더 만들어
-> 260자를 넘기기 때문입니다. 실행마다 하위 폴더를 하나 만들고 끝나면 지웁니다.
+> standalone 실행은 기록 위치(`.work\<bundle>\executions\<id>\workspace`)가 아니라
+> `StandaloneBuildCacheDir`(비우면 `tempdir\stt_build`) 아래 `<id>_ws` 폴더에서
+> 돌고, Simulink 빌드 산출물은 같은 곳의 `<id>` 폴더에 만듭니다. 기록 위치는 짧은
+> 루트를 써도 150자에 가깝고, Stateflow 빌드는 작업 폴더 밑에
+> `slprj\_sfprj\<Harness>\...`를 더 만들어 260자를 넘기기 때문입니다. 실행이
+> 끝나면 작업 폴더를 빌드 산출물 없이 기록 위치로 복사하고 두 폴더를 지웁니다.
+> 실행이 실패하면 복사는 하되 짧은 폴더를 남기고 WARN 로그에 위치를 적습니다.
+>
+> 1단계의 SLDV 준비, Harness 생성, PER_CUT 실행도 대상 루프를 도는 동안에는 현재
+> 폴더와 Simulink 빌드 폴더를 같은 곳의 `<단계>_<id>` 폴더(`sldv_`, `harness_`,
+> `per_cut_`)로 옮깁니다. 원래 현재 폴더와 모델 폴더는 그동안 MATLAB path 앞에 넣어
+> 두므로 이름으로 찾던 파일은 그대로 찾습니다. 루프가 끝나면 현재 폴더, 빌드 폴더
+> 설정, path를 되돌리고 그 폴더를 지웁니다. SLDV의 임시 출력(`sldvrun` OutputDir)도
+> `result\sldv` 대신 같은 곳의 `sldvout_<id>`에 만들고, 결과 파일
+> `latest_sldvdata.mat`만 `result\sldv\<대상>`으로 옮깁니다.
 
 ## 14. 모델 선택 관련 (코드에 적지 않는 값)
 

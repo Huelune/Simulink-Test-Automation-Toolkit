@@ -136,6 +136,7 @@ st_log(cfg, 'INFO', ...
 % CUT 반복
 %% ============================================================
 
+loopTimer = tic;
 for i = 1:n
 
     if ~selection.Run(i)
@@ -516,7 +517,8 @@ for i = 1:n
                 'yyyy-MM-dd HH:mm:ss'));
 
     st_log_progress(cfg, i, n, Status(i), harnessName, ...
-        'Elapsed', ElapsedSec(i), 'Message', Message(i), 'Detail', ownerPath);
+        'Elapsed', ElapsedSec(i), 'Message', Message(i), 'Detail', ownerPath, ...
+        'Eta', st_progress_eta(toc(loopTimer), i, n));
 end
 
 

@@ -78,10 +78,18 @@ end
 function relative = relative_path(blockPath, cutPath)
 % A block recorded outside its own CUT cannot be rebuilt under it, so it is
 % dropped rather than guessed at.
+%
+% readtable trims every text cell, so a CUT named 'X ' comes back from the
+% sheet as '.../X' while its blocks still read '.../X /...'. Whitespace
+% before the separator is therefore accepted.
 relative = "";
+if ismissing(blockPath) || ismissing(cutPath) || strlength(cutPath) == 0
+    return;
+end
 blockPath = strtrim(blockPath);
-prefix = cutPath + "/";
-if strlength(cutPath) == 0 || ~startsWith(blockPath, prefix)
+prefix = regexp(char(blockPath), ...
+    ['^' regexptranslate('escape', char(cutPath)) '\s*/'], 'match', 'once');
+if isempty(prefix)
     return;
 end
 relative = extractAfter(blockPath, strlength(prefix));

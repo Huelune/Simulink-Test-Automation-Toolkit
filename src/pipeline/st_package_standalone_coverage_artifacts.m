@@ -20,6 +20,7 @@ manifest.ResultImportCount = importCount;
 manifest.PackageResultSource = resultSource;
 manifest = package_test_file(manifest, pipelineRoot, cfg);
 
+loopTimer = tic;
 for i = 1:numel(manifest.Targets)
     item = manifest.Targets(i);
     folderName = sprintf('%03d_%s', round(double(item.No)), ...
@@ -32,8 +33,9 @@ for i = 1:numel(manifest.Targets)
     targetTimer = tic;
     progressMessage = '';
     st_log(cfg, 'INFO', ...
-        '[PACKAGE %d/%d] start | CUT=%s', ...
-        i, numel(manifest.Targets), item.CUTName);
+        '[PACKAGE %d/%d] start | CUT=%s | %s', ...
+        i, numel(manifest.Targets), item.CUTName, ...
+        st_progress_eta(toc(loopTimer), i - 1, numel(manifest.Targets)));
     try
         % Preserve the standalone harness and its local input even when
         % this target's Test Manager execution ended in an exception.
@@ -72,7 +74,8 @@ for i = 1:numel(manifest.Targets)
     st_write_standalone_pipeline_manifest(outputRoot, manifest);
     st_log_progress(cfg, i, numel(manifest.Targets), item.PackageStatus, ...
         target_label(item), 'Elapsed', toc(targetTimer), ...
-        'Message', progressMessage, 'Detail', item.CUTPath);
+        'Message', progressMessage, 'Detail', item.CUTPath, ...
+        'Eta', st_progress_eta(toc(loopTimer), i, numel(manifest.Targets)));
 end
 
 status = target_action_status(manifest.Targets, 'PackageStatus');

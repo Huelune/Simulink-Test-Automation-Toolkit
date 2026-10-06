@@ -193,7 +193,8 @@ st_run_standalone_coverage_pipeline('Action','ALL', ...
 따르지 않습니다.** 고객 문서는 CUT이 가진 분기를 다 적어야 하고, Enabled /
 Triggered Subsystem은 `'EXPLICIT'`에서 빠지기 때문입니다. 명세서 설정을
 물려받으면 커버리지가 있을 때만 보이는 들쭉날쭉한 결과가 됩니다. 명세서
-쪽(`st_export_test_specification`)의 기본값은 그대로 `'EXPLICIT'`입니다.
+쪽(`st_export_test_specification`)도 기본값이 `'ALL'`이지만, 그쪽은
+`cfg.DecisionBlockScope`를 따르므로 설정을 바꾸면 두 문서의 범위가 달라집니다.
 
 `'NONE'`을 주면 커버리지가 있어도 열을 비웁니다.
 

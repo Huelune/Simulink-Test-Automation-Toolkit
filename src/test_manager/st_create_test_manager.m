@@ -240,8 +240,9 @@ for i = 1:n
     timerValue = tic;
 
     st_log(cfg, 'DEBUG', ...
-        '[TestManager %d/%d] start | TestCase=%s | Harness=%s | Scenario=%s', ...
-        i, n, testCaseName, harnessName, scenarioName);
+        '[TestManager %d/%d] start | TestCase=%s | Harness=%s | Scenario=%s | %s', ...
+        i, n, testCaseName, harnessName, scenarioName, ...
+        st_progress_eta(toc(totalTimer), i - 1, n));
 
 
     try
@@ -323,7 +324,8 @@ for i = 1:n
 
             st_log_progress(cfg, i, n, Status(i), harnessName, ...
                 'Elapsed', ElapsedSec(i), 'Message', Message(i), ...
-                'Detail', ownerPath);
+                'Detail', ownerPath, ...
+                'Eta', st_progress_eta(toc(totalTimer), i, n));
 
             continue;
         end
@@ -634,7 +636,8 @@ for i = 1:n
                 'yyyy-MM-dd HH:mm:ss'));
 
     st_log_progress(cfg, i, n, Status(i), harnessName, ...
-        'Elapsed', ElapsedSec(i), 'Message', Message(i), 'Detail', ownerPath);
+        'Elapsed', ElapsedSec(i), 'Message', Message(i), 'Detail', ownerPath, ...
+        'Eta', st_progress_eta(toc(totalTimer), i, n));
 end
 
 

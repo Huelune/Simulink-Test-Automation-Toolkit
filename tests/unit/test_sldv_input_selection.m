@@ -24,6 +24,29 @@ verifyEqual(testCase, ignored, {'NewSignal'});
 end
 
 
+function testHarnessDrivenInputIsDroppedInStrictMode(testCase)
+% A function-call CUT's FcnTriggerPort is made by the Harness scheduler,
+% so strict mode drops it instead of failing the target.
+[indices, selected, ignored] = ...
+    st_select_sldv_input_indices( ...
+        {'InputA'; 'FcnTriggerPort'}, {'InputA'}, false, ...
+        {'FcnTriggerPort'});
+
+verifyEqual(testCase, indices, 1);
+verifyEqual(testCase, selected, {'InputA'});
+verifyEqual(testCase, ignored, {'FcnTriggerPort'});
+end
+
+
+function testOtherUnexpectedInputsStillFailBesideAHarnessDrivenOne(testCase)
+verifyError(testCase, ...
+    @() st_select_sldv_input_indices( ...
+        {'InputA'; 'FcnTriggerPort'; 'NewSignal'}, {'InputA'}, false, ...
+        {'FcnTriggerPort'}), ...
+    'simtest:UnexpectedSldvInputs');
+end
+
+
 function testDuplicateSldvInputsStillFailInIgnoreMode(testCase)
 verifyError(testCase, ...
     @() st_select_sldv_input_indices( ...

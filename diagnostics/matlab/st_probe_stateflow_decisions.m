@@ -3,6 +3,7 @@ function info = st_probe_stateflow_decisions(targetNumber, cvtFile)
 % Read only. Prints the Stateflow objects under one CUT and, when a saved
 % coverage file is given, what decisioninfo answers for them.
 %
+%   st_probe_stateflow_decisions()      % Chart를 가진 대상부터 찾는다
 %   st_probe_stateflow_decisions(21)
 %   st_probe_stateflow_decisions(21, 'C:\...\CoverageResult.cvt')
 %
@@ -10,11 +11,22 @@ function info = st_probe_stateflow_decisions(targetNumber, cvtFile)
 % decisioninfo returns for one, cannot be read out of the documentation
 % with enough confidence to build against. Run it once and the exporter can
 % be written against the real output instead of an assumption.
-if nargin < 1, targetNumber = 1; end
+if nargin < 1, targetNumber = []; end
 if nargin < 2, cvtFile = ''; end
 
 cfg = st_config();
+if ~cfg.HasRuntimeTarget
+    error('simtest:ProbeTargetMissing', ...
+        'Select and save a runtime target first: st_select_target_model');
+end
+% find_system needs the model in memory. Close again only what was opened
+% here, so a model the user already had open is left alone.
+cleanup = load_top_model(cfg); %#ok<NASGU>
 targets = st_load_targets(cfg.OnlyEnabled);
+if isempty(targetNumber)
+    info = survey_targets(targets, cfg);
+    return;
+end
 row = pick_target(targets, targetNumber);
 cut = char(st_normalize_cut_path(row.CUTPath, cfg.TopModel));
 fprintf('\n==== CUT ====\n%s\n', cut);
@@ -26,6 +38,47 @@ if ~isempty(cvtFile)
 end
 end
 
+
+function cleanup = load_top_model(cfg)
+cleanup = [];
+if bdIsLoaded(cfg.TopModel)
+    return;
+end
+fprintf('모델을 여는 중: %s\n', cfg.TopModel);
+load_system(cfg.ModelFile);
+cleanup = onCleanup(@() close_system(cfg.TopModel, 0));
+end
+
+
+function info = survey_targets(targets, cfg)
+%SURVEY_TARGETS Which targets have a Stateflow chart at all.
+fprintf('\n==== Chart를 가진 대상 찾기 ====\n');
+info = table(zeros(0,1), strings(0,1), zeros(0,1), 'VariableNames', ...
+    {'No', 'CUTName', 'Charts'});
+for i = 1:height(targets)
+    cut = char(st_normalize_cut_path(targets.CUTPath(i), cfg.TopModel));
+    count = 0;
+    try
+        count = numel(charts_under(cut));
+    catch ME
+        fprintf('  No=%g %s: %s\n', targets.No(i), targets.CUTName(i), ...
+            ME.message);
+        continue;
+    end
+    if count == 0
+        continue;
+    end
+    info = [info; table(double(targets.No(i)), string(targets.CUTName(i)), ...
+        count, 'VariableNames', info.Properties.VariableNames)]; %#ok<AGROW>
+end
+if height(info) == 0
+    fprintf('  Chart를 가진 대상이 없습니다.\n');
+    return;
+end
+disp(info);
+fprintf('위 No 하나를 골라 다시 부르십시오:\n');
+fprintf('  info = st_probe_stateflow_decisions(%g);\n', info.No(1));
+end
 
 function row = pick_target(targets, targetNumber)
 match = targets.No == targetNumber;
@@ -64,31 +117,33 @@ end
 
 
 function found = stateflow_charts(cut)
+found = charts_under(cut);
+fprintf('  CUT 아래 Chart 수: %d\n', numel(found));
+end
+
+
+function found = charts_under(cut)
 % A chart's Simulink path is the block path, so charts under this CUT are
 % the ones whose Path starts with it.
 found = {};
-try
-    root = sfroot;
-    all = root.find('-isa', 'Stateflow.Chart');
-catch ME
-    fprintf('  sfroot 조회 실패: %s\n', ME.message);
-    return;
-end
-for i = 1:numel(all)
-    chart = all(i);
+root = sfroot;
+everything = root.find('-isa', 'Stateflow.Chart');
+for i = 1:numel(everything)
+    chart = everything(i);
     path = '';
     try
         path = char(string(chart.Path));
     catch
         % Older releases spell it differently; the describe step reports it.
     end
+    if isempty(path)
+        continue;
+    end
     if startsWith([path '/'], [cut '/']) || strcmp(path, cut)
         found{end+1,1} = chart; %#ok<AGROW>
     end
 end
-fprintf('  CUT 아래 Chart 수: %d (전체 %d 중)\n', numel(found), numel(all));
 end
-
 
 function summary = describe_chart(chart, cut)
 summary = struct('Name', '', 'Path', '', 'Transitions', [], 'States', []);

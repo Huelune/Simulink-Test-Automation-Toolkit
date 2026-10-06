@@ -384,6 +384,139 @@
   (호출 4곳과 정의 1곳). 이제 네 작업 이름(`Toolbox products`, `Bundle SHA-256`,
   `Source unchanged check`, `ZIP archive`)의 호출을 하나씩, 그리고 호출이 모두 4곳인지를
   확인한다. main의 같은 검사는 이 브랜치가 들어갈 때 함께 고쳐진다.
+- **main `893d55b` 합치기(2026-10-06).** main의 짧은 빌드 폴더, SLDV·LEAN·분류 단계 등
+  기능 변경은 그대로 두고 그 위에 이 개편의 로그 변환을 다시 얹었다.
+  - main `42544a5`의 경과·남은 시간은 `st_log_progress`의 새 이름-값 `'Eta'`로 옮겼다.
+    콘솔 대상 줄 끝(메시지 뒤 공백 두 칸)과 DEBUG detail 줄에 붙는다. START 줄은
+    `st_progress_eta(toc(loopTimer), i - 1, n)`, 결과 줄은 `i`를 쓴다. main이 INFO/DEBUG
+    시작 줄에 넣은 eta는 그대로 둔다. standalone 실행 준비는 진행 줄이 없어 DEBUG 시작
+    줄에만 있다.
+  - `st_create_harnesses`는 `st_call_quiet(cfg, 'sltest.harness.create', @() run_in_folder(
+    callerDirectory, @() sltest.harness.create(...)))`로 감쌌다. `evalc` 안에서 `cd`와
+    `onCleanup`이 도는 것은 실물 미확인이다.
+  - main이 새로 넣은 `st_run_workflow`의 ALIGNMENT `SKIP` `fprintf`는 STEP 로그로 바꿨다.
+    main의 새 명령 `st_classify_standalone_results`(결과 요약 `fprintf` 배너)와
+    `st_rename_test_file_models`는 로그 범위를 열지 않고 출력도 그대로다(이 개편 범위 밖).
+  - 문서: 지운 `getting-started`·`team-workflow`·`team-commands`의 로그 내용은
+    `docs/user-manual.md`의 "콘솔에 보이는 줄과 실행 로그"와 5.3·11절로 옮겼다.
+  - MATLAB에서 돌릴 것: `test_progress_eta.m`, `test_log_progress.m`의
+    `testProgressLineCarriesEta`, 그리고 위 목록 전체. 합친 뒤 MATLAB 실행은 하지 않았다.
+  - 합치는 동안 origin/main은 문서 위주 커밋 7개(`e24d793`~`8029420`, 코드는
+    `st_open_standalone_test_manager` 도움말 한 줄과 그 테스트)로 더 나아갔다. 이
+    합치기에는 들어 있지 않으므로 다음에 다시 합쳐야 한다.
+
+## 2026-09-30 문서 폴더 재구성
+
+- 사용자 진입점은 `docs/user-manual.md` 하나다. 준비부터 최종 문서까지 단계마다
+  코드·확인 방법·옵션 표를 적는다. 이 이름은 2026-09-16에 지운 옛
+  `user-manual.md`(검증 문서)와 다른 문서다.
+- `docs/`를 역할별 폴더로 나눴다. `reference/`(Excel 열·설정·명령 사전, 용어,
+  문제 해결, 운영자 매뉴얼, 단계별 실행, 선택 기능), `design/`(architecture, TODO),
+  `ai/`(이 문서, commit-convention). `superpowers/`는 도구가 쓰는 위치라 그대로 둔다.
+  `AGENTS.md`의 두 경로도 `docs/ai/`로 바꿨다.
+- 삭제하고 `user-manual.md`로 합친 문서: `getting-started`, `team-workflow`,
+  `team-commands`, `workflow-options`, `manual/README`, `manual/prepare`,
+  `manual/standalone-run`. standalone-run의 실패 상세·PREPARE 절은
+  `reference/standalone-coverage-pipeline.md` 10·11절로 옮겼다.
+- `docs/manual/`은 없어졌다. 남은 파일(step-by-step, open-results, restart, example,
+  runtime-verification)은 `reference/`에 있다.
+- 이 문서의 위쪽 날짜 기록에 나오는 옛 경로는 당시 기록이라 고치지 않았다.
+- 매뉴얼이 같은 내용을 여러 문서에 나눠 적지 않게 한다. 절차와 기본 옵션은
+  `user-manual.md`, 옵션 전체는 `reference/execution-commands.md`, Excel 열은
+  `reference/workbook-reference.md`, 설정은 `reference/config-reference.md`가 원본이다.
+
+## 2026-10-01 PER_CUT 병렬 실행 실험 종료
+
+PER_CUT을 Test Manager 병렬 실행(`run(...,'Parallel',true)`)으로 빠르게 할 수 있는지
+확인하고 **접었다**. 같은 실험을 다시 하지 않도록 결과를 남긴다.
+
+- 브랜치 `exp/per-cut-parallel`(`3fb563f`)에 진단 두 개만 있다. PER_CUT 코드는
+  바꾸지 않았다. `st_probe_per_cut_parallel`은 Test Case 하나의 순차/병렬 비교이고,
+  `st_probe_cross_cut_parallel`은 여러 CUT 일괄 병렬 설계의 전제를 잰다.
+- 코드로 확인한 것: 여러 CUT을 동시에 돌리는 것은 지금 구조로 불가하다. CUT마다
+  `saveToFile(tf)`(필터 복원)와 `save_system`(기대값 로깅 준비·갱신)으로 공유 파일을
+  저장한다.
+- 사용자 PC 실측(R2025b, 테스트 프로젝트 OBC_DM_SNAP_SWC, 2026-10-01):
+  - `run(tc,'Parallel',true)`는 이 툴킷의 Harness로 동작한다. 워커 2개에서 판정, 출력
+    run, 커버리지(Decision 14/21, Execution 27/27)가 순차와 같았다.
+  - 워커는 저장하지 않은 Test File 변경을 본다. 메모리에서만 붙인 표식 CVF가 병렬
+    결과에도 있었다. PER_CUT의 REPLACE 격리는 병렬에서도 유지된다.
+  - CUT마다 Iteration이 1개라 나눌 것이 없다. 순차 16.1초, 병렬 54.6초(0.29배)였고,
+    차이는 워커가 모델을 처음 불러오는 비용이다.
+  - 기본 풀(코어 수, 워커 12개)로는 워커 5~11개가 실행 중에 죽는다. 원인은 메모리다.
+    전체 63.2GB 중 풀을 띄우기 전 여유가 23~24GB였다. 유휴 워커 하나가 약 0.9GB를
+    쓰고, 실행 중 여유가 5.2GB까지 내려갔다.
+  - 덤프는 `std::terminate`(`sltp_sync`/`mf0` 경로) 또는 `m_parser.dll` 접근 위반이며
+    죽은 위치가 매번 다르다. 워커마다 `Simulink.fileGenControl` 캐시 폴더를 따로 줘도
+    죽었으므로 공유 폴더 경쟁은 원인이 아니다.
+- 접은 이유: Iteration 병렬은 이득이 없다. 여러 CUT 일괄 병렬은 이 PC에서 워커가
+  4개 안팎으로 제한된다. 반면 `st_run_tests_per_cut` 반복 구조 재작성, 로그 개편과의
+  충돌, 사용자 문서의 "병렬 CUT 실행 안 함" 원칙 변경이 필요하다. 줄어드는 시간은
+  실행 한 번에 몇 분 수준으로 추정되어 비용에 비해 작다.
+- 다시 시작할 때(CUT이 매우 많거나 메모리가 넉넉한 PC):
+  - `st_probe_cross_cut_parallel`부터 실행한다. 한 번도 실행되지 않았다.
+  - 남은 미확인 항목은 세 가지다. 기대값을 갱신하고 저장한 모델을 재실행 때 워커가
+    다시 읽는지(MODEL), 여러 Test Case 결과를 CUT별 MLDATX로 나눌 수 있는지(SPLIT),
+    실제 이득(GAIN).
+  - 워커 수는 코어 수가 아니라 메모리로 정한다.
+
+## 2026-10-01 Harness 입력 MAT 유실 수정
+
+- 사용자 보고(R2025b): No=292 Harness의 Signal Editor 단계가
+  `SignalEditorActiveScenarioInvalid`로 멈췄다. `Active=InputScenario`인데
+  `Available=[Scenario]`(라이브러리 기본값)이었고, Harness를 열 때 LoadFcn이
+  `{Harness}_HarnessInputs.mat`이 MATLAB 경로에 없다고 경고했다.
+- 원인: `9b491f2`가 `st_create_harnesses` 루프를 `st_enter_short_build_directory`
+  안으로 옮겼다. 그 파일은 pwd에 생기고, 블록에는 파일 이름만 남는다. 단계가 끝나면
+  짧은 폴더를 `rmdir(folder,'s')`로 지우므로 입력 파일이 함께 사라졌다.
+- 수정: `sltest.harness.create`와 바로 뒤의 `save_system`은 호출한 폴더에서 돌린다.
+  `CacheFolder`/`CodeGenFolder`는 짧은 폴더 그대로다. HARNESS_CLONE 경로는 입력을
+  `result\harness_clone\<transaction>\input.mat` 절대 경로로 두므로 영향이 없다.
+- 사용자는 "CUT 이름 끝 공백"을 원인으로 의심했다. 로그의
+  `failed [Low_HVDC_Voltage_OperationRange]`에는 끝 공백이 없다. `readtable`의 기본
+  `WhitespaceRule='trim'`이 Excel 셀 앞뒤 공백을 읽는 순간 지우기 때문이다.
+  `st_load_targets` 주석과 문서의 "공백 보존"은 사실이 아니었다.
+- 미검증: 입력 파일이 create 때 생기는지 save 때 생기는지는 확인하지 않았다. 그래서 둘
+  다 호출한 폴더에서 돌린다. `9b491f2` 이후 만든 Harness는 입력 파일이 없으므로
+  사용자가 지우고 다시 만들어야 한다. 재생성 후 Signal Editor 단계 통과를 아직 보지
+  못했다.
+- 후속(같은 날): 다시 만든 Harness292가 Signal Editor는 통과하고 Test Manager
+  `setProperty(...,'HarnessOwner',...)`에서 "A harness with owner
+  '.../Low_HVDC_Voltage_OperationRange /' and name ..."으로 멈췄다. owner 글자가
+  공백 + `/`로 끝난다. 그런데도 `getSimulinkBlockHandle`·`sltest.harness.create/load`는
+  통과했다. 실제 블록 이름이 공백으로 끝나고 CUTPath 셀이 `... /`로 적혔다고
+  추정하지만, 셀 원문과 블록 이름은 확인하지 못했다.
+- 수정: `st_normalize_cut_path`가 찾은 블록의 `getfullname`을 돌려준다. Test Manager,
+  SLDV 공유 검사(`ownerFullPath` strcmp), clone owner 확인, 명세서 `HarnessOwner`
+  비교가 모두 이 값을 쓴다. Simulink 쪽 경로를 자르던 곳 두 곳도 고쳤다:
+  `st_coverage_object_path`의 `StandaloneCUTPath` strtrim, 최종 문서의
+  DecisionPoints 접두사 비교(readtable이 CUTPath 셀 끝 공백을 지움).
+- 후속 2: Test Manager를 통과한 뒤 PER_CUT 기대값 갱신에서 Harness를 열 때 다시
+  `{Harness}_HarnessInputs.mat`이 path에 없다는 경고가 났다. 결과는
+  `output run count=0`이었다. 사용자가 연 Harness에서는 입력 선이 빨간 점선이었다.
+  원인 추정: `st_enter_short_build_directory`가 `addpath(호출 폴더)` 다음에
+  `Simulink.fileGenControl('set',...)`을 불렀다. 이 호출은 기본
+  `keepPreviousPath=false`로 이전 캐시 폴더를 path에서 지운다(문서 확인). 이전 캐시
+  폴더가 호출 폴더라면 입력 MAT이 path에서 빠진다. 그 상태로
+  `st_prepare_expected_value_logging_for_targets`가 Harness를 열고 저장해서 끊긴 선이
+  모델에 남았다. 사용자의 이전 CacheFolder 값은 확인하지 못했다.
+- 수정: `keepPreviousPath=true`, 그리고 `addpath`를 set 다음으로 옮겼다. 끊긴 선이
+  저장된 Harness292는 다시 만들어야 한다.
+- 2026-10-02 SLDV: 대상 1(`RNB_..._sys`, GENERATE)이 `status=-1`
+  (`Sldv:SldvRun:CanExtendTime`, MaxProcessTime 초과)로 끝났다. 사용자 결정에 따라
+  시간 초과는 계속 실패로 두고 `cfg.SldvMaxProcessTime`만 추가했다(`b8551f8`).
+  SLDV 단계 signature에는 넣지 않았다.
+- 2026-10-02 SLDV: No=304(함수 호출 CUT)가 `Unexpected=[FcnTriggerPort]`로 실패했다.
+  사용자 결정은 "호출 트리거만 자동 제외"다. `st_harness_driven_sldv_inputs`가 CUT 최상위
+  TriggerPort의 `TriggerType='function-call'`을 보고 `{'FcnTriggerPort'}`를 돌려준다.
+  `st_select_sldv_input_indices`의 4번째 인자로 이 이름만 엄격 모드에서도 뺀다.
+  Signal Editor 병합은 manifest의 `IgnoredSldvInputNames`를 같은 인자로 넘긴다.
+  미검증: SLDV가 이 입력을 항상 `FcnTriggerPort`로 부르는지(관측 1건),
+  `Simulink.io.SLDVMatFile` import 결과도 같은 이름인지, Harness 스케줄러의 호출 시점이
+  SLDV TestCase와 얼마나 다른지.
+- 미검증: 끝 `/`를 붙인 경로가 R2025b에서 해석되는지는 단위 테스트가 assume으로만
+  다룬다. 이름이 공백으로 끝나는 CUT의 PER_CUT·standalone 커버리지와 최종 문서는
+  실행해 보지 않았다.
 
 ## 변경 불가 핵심 결정
 
@@ -411,12 +544,14 @@ f60601e는 CUT 자신을 선택하므로 현재 요구사항의 기준으로 사
 
 ## 활성 브랜치 지도
 
-2026-09-22 기준 원격에는 아래 두 브랜치만 있다.
+2026-09-22 기준 원격에는 아래 두 브랜치만 있었다. 2026-10-01에 참고용 실험 브랜치
+하나가 더해졌다.
 
 | 브랜치 | 기준 커밋 | 역할과 처리 방침 |
 | --- | --- | --- |
 | main | 54ae3ca | Harness Workflow v2 전체가 fast-forward로 들어온 기준. 사용자의 MATLAB 클론은 이 브랜치를 `git pull`한다. 직접 커밋하지 않고 develop에서 ff 통합한다. |
 | develop | main에서 분기 | 이후 모든 개발의 활성 브랜치. 검증된 묶음 단위로 main에 fast-forward 통합한다. |
+| exp/per-cut-parallel | 3fb563f | 종료한 PER_CUT 병렬 실험의 진단 두 개. 참고용으로만 남기며 develop·main에 합치지 않는다. 내용은 위 "2026-10-01 PER_CUT 병렬 실행 실험 종료" |
 
 ## 정리된 과거 브랜치
 
@@ -714,7 +849,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
   `case`를 추가로 필요로 한다(`Formatter` 열이 그 구분을 명시한다). 파라미터가
   비활성이어도 행을 거르지 않고 상태를 표현식에 남긴다. breakpoint 등 값은 workspace
   에서 평가하지 않고 저장된 문자열 그대로 옮긴다.
-- 수집 범위는 `DecisionBlockScope`(`EXPLICIT` 기본 / `ALL` / `NONE`)로 고른다. 기본값은
+- 수집 범위는 `DecisionBlockScope`(`ALL` 기본 / `EXPLICIT` / `NONE`)로 고른다. 기본값은
   `cfg.DecisionBlockScope`, 실행별 덮어쓰기는 `st_export_test_specification`의 동명
   name-value다. 범위는 catalog의 `Kind` 열로 걸러진 **view**로 구현했고,
   `st_specification_decision_catalog(scope)`가 그 view를 돌려준다. 따라서

@@ -11,12 +11,14 @@ function T = st_load_targets(onlyEnabled)
 %   PreparationMode, PreparationFromStage
 %
 % Important:
-% - CUTName and CUTPath preserve their original whitespace because trailing
-%   whitespace can be part of a real Simulink block name/path.
-% - HarnessName and TestCaseName are generated identifiers and keep the
-%   legacy strtrim behavior.
-% - Empty-row detection still uses trimmed copies, so whitespace-only rows
-%   are treated as empty.
+% - readtable trims leading and trailing whitespace from every text cell
+%   (WhitespaceRule defaults to 'trim'), so CUTName and CUTPath arrive
+%   trimmed. A stray space at the end of a cell is harmless, but a block
+%   whose real name ends in a space cannot be reached from the workbook:
+%   its CUTPath fails pre-validation.
+% - HarnessName and TestCaseName are trimmed again explicitly.
+% - Empty-row detection uses trimmed copies, so whitespace-only rows are
+%   treated as empty.
 
 if nargin < 1
     cfg = st_config();
@@ -99,7 +101,7 @@ CUTPath = string(raw{:, idxCUTPath});
 HarnessName = string(raw{:, idxHarness});
 TestCaseName = string(raw{:, idxTestCase});
 
-% Preserve CUTName/CUTPath whitespace exactly, but normalize missing values.
+% readtable already trimmed these; only normalize missing values.
 CUTName(ismissing(CUTName)) = '';
 CUTPath(ismissing(CUTPath)) = '';
 

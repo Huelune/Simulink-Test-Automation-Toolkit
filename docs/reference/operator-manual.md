@@ -94,7 +94,7 @@ CUT 사전 검증
 → SIGNAL_EDITOR    Scenario MAT 생성과 연결
 → ASSESSMENT       verify 문장 구성
 → TEST_MANAGER     Test File, Test Case, Iteration 구성
-→ ALIGNMENT        Scenario와 Iteration 정렬 검사 (검사만)
+→ ALIGNMENT        Scenario와 Iteration 정렬 검사 (검사만, 기본 건너뜀)
 → EXECUTE          테스트 실행 → 기대값 갱신 → 재실행 → 실행 기록 저장
 ```
 
@@ -214,6 +214,10 @@ verify 결과가 없거나 `Untested`이면 계속 실패로 처리합니다.
 입력 Scenario 수와 Iteration 수가 맞는지 확인합니다. 입력 MAT을 바꾼 뒤 Test Manager
 단계를 다시 실행하지 않았을 때 여기서 걸립니다.
 
+CUT마다 Harness를 다시 열기 때문에 기본으로는 건너뜁니다
+(`cfg.ValidateScenarioAlignment=false`). 워크플로 안에서 검사하려면 `true`로 두고,
+한 번만 확인하려면 `st_validate_scenario_alignment()`를 직접 실행합니다.
+
 ## 5. 증분 준비와 단계 재실행
 
 ### 5.1 어떻게 재사용하는가
@@ -262,10 +266,10 @@ st_run_from_harness('PreparationMode','FORCE', 'FromStage','SLDV');  % 그 단�
 > 앞 단계 재실행을 **확실히 막는** 것은 선택 기능인 `st_check_readiness` +
 > `st_run_from_stage`뿐입니다. 앞 단계를 읽기 전용으로 검증한 뒤 유효하면 그보다 앞을
 > `CACHED`로 못 박고, 유효하지 않으면 자동으로 고치지 않고 중단합니다. 절차는
-> [재시작](manual/restart.md)에 있습니다.
+> [재시작](restart.md)에 있습니다.
 
 단계를 하나씩 끊어서 실행하려면
-[단계별로 끊어서 실행하기](manual/step-by-step.md)를 보십시오.
+[단계별로 끊어서 실행하기](step-by-step.md)를 보십시오.
 
 ### 5.3 checkpoint만 지우기
 
@@ -457,9 +461,10 @@ cfg.ConsoleLogLevel = 'STEP';   % 기본값. 'INFO', 'DEBUG', 'TRACE'로 갈수�
 로그 파일 `result/logs/<시각>_<명령>.log`에는 어느 값에서든 모든 레벨이 남습니다.
 
 기본값 `'STEP'`에서는 명령(`==>`/`<==`), 단계(`-->`/`<--`), 대상별 진행 줄
-(`[ 3/26] OK ...`)과 `WARN`, `ERROR`만 보입니다. blocking API 내부의 실제 진행률은 알
-수 없으므로 **콘솔의 마지막 `START` 줄이 현재 대기 위치입니다.** 줄의 모양은
-[팀 작업 절차](team-workflow.md)에, 로그 파일 위치와 여는 법은
+(`[ 3/26] OK ...`)과 `WARN`, `ERROR`만 보입니다. 대상별 진행 줄 끝의
+`elapsed=... eta=...`는 그 단계의 경과 시간과 남은 시간입니다. blocking API 내부의 실제
+진행률은 알 수 없으므로 **콘솔의 마지막 `START` 줄이 현재 대기 위치입니다.** 줄의 모양은
+[사용자 매뉴얼](../user-manual.md#콘솔에-보이는-줄과-실행-로그)에, 로그 파일 위치와 여는 법은
 [문제 해결](troubleshooting.md#로그는-어디에-있나)에 있습니다.
 
 `PER_CUT`의 상세 순서는 각 실행의 `logs/execution.log`에서 확인합니다.

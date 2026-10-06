@@ -1,5 +1,10 @@
 function state = st_record_restart_stage(state, plan, stage, cfg, status)
 %ST_RECORD_RESTART_STAGE Persist stage-scoped readbacks, including failure.
+% Only st_run_from_stage reads this evidence, and the readback reopens every
+% Harness, so nothing is recorded unless cfg.RecordRestartEvidence is set.
+if ~(isfield(cfg,'RecordRestartEvidence') && logical(cfg.RecordRestartEvidence))
+    return;
+end
 if ~isfield(state,'RestartEvidence'), state.RestartEvidence = struct([]); end
 state.Version = 2;
 for i = 1:height(plan)

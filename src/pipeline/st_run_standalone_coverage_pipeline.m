@@ -19,6 +19,13 @@ function info = st_run_standalone_coverage_pipeline(varargin)
 %   export, because the exported bundle loads its own copy under the same
 %   model name. With false the pipeline keeps the older contract: a loaded
 %   source model stops it with StandaloneModelStillLoadedBeforeRun.
+%
+%   'ClassifyResults' (default false) set to true makes Action=ALL finish
+%   by copying the pipeline into the team submission tree with
+%   st_classify_standalone_results, replacing the tree an earlier run left
+%   next to it. info.SubmissionTree names the tree, or is empty when the
+%   copy was skipped or failed; a failure is logged as WARN and does not
+%   fail the pipeline, whose own artifacts are already complete.
 
 p = inputParser;
 p.FunctionName = mfilename;
@@ -32,6 +39,8 @@ addParameter(p, 'ContinueOnFailure', true, ...
 addParameter(p, 'FailOnNonPass', false, ...
     @(x) islogical(x) && isscalar(x));
 addParameter(p, 'CloseSourceModel', true, ...
+    @(x) islogical(x) && isscalar(x));
+addParameter(p, 'ClassifyResults', false, ...
     @(x) islogical(x) && isscalar(x));
 % Parse removed options only to return an actionable migration error.
 addParameter(p, 'RunMode', '', @(x) ischar(x) || isstring(x));
@@ -112,6 +121,11 @@ try
     manifestPath = st_write_standalone_pipeline_manifest( ...
         outputRoot, manifest);
     info = public_info(manifest, manifestPath);
+    info.SubmissionTree = '';
+    if strcmp(action, 'ALL') && p.Results.ClassifyResults
+        info.SubmissionTree = classify_submission_tree( ...
+            fileparts(manifestPath), cfg);
+    end
     st_log(cfg, 'STEP', ...
         ['Standalone coverage pipeline complete | Action=%s | ' ...
          'PipelineId=%s | elapsed=%.3f sec'], ...
@@ -633,6 +647,11 @@ end
 
 function value = source_snapshot(cfg)
 assert_saved_source(cfg);
+% The three inventories below each need the Top Model. Load it once here so
+% they do not load and close a large model three times in a row.
+loadedHere = ~bdIsLoaded(cfg.TopModel);
+if loadedHere, load_system(cfg.ModelFile); end
+cleanup = onCleanup(@() close_loaded_model(cfg.TopModel, loadedHere)); %#ok<NASGU>
 value = struct( ...
     'Model', st_file_signature(cfg.ModelFile), ...
     'TestFile', st_file_signature(cfg.TestFile), ...
@@ -853,7 +872,7 @@ end
 end
 
 function after = assert_source_unchanged(cfg, before)
-after = source_snapshot(cfg);
+after = source_recheck(cfg, before);
 fields = {'Model','TestFile','ManagementExcel'};
 for i = 1:numel(fields)
     name = fields{i};
@@ -871,6 +890,56 @@ if before.ModelDirty ~= after.ModelDirty || ...
         ~isequal(input_keys(before.Inputs), input_keys(after.Inputs))
     error('simtest:StandalonePipelineSourceStateChanged', ...
         'Source Dirty state, Harness inventory, or Input checksum changed.');
+end
+end
+
+function after = source_recheck(cfg, before)
+%SOURCE_RECHECK Snapshot the source again without reloading what cannot change.
+% Harnesses this toolkit creates live inside the model file, and so do the
+% Signal Editor file names in them. While the model checksum is the
+% recorded one, the Harness list and the input paths are the recorded ones,
+% so only the input files need hashing again. That spares loading the Top
+% Model and every Harness after EXECUTE, PACKAGE and SUMMARY. A changed
+% model or an external Harness file takes the full snapshot.
+timerValue = tic;
+model = st_file_signature(cfg.ModelFile);
+if ~recorded_inventory_holds(before, model)
+    after = source_snapshot(cfg);
+    st_log(cfg, 'INFO', ...
+        'Standalone source recheck | Mode=FULL | elapsed=%.3f sec', ...
+        toc(timerValue));
+    return;
+end
+assert_saved_source(cfg);
+inputs = before.Inputs;
+for i = 1:numel(inputs)
+    inputs(i).SHA256 = st_file_signature(inputs(i).Path).SHA256;
+end
+after = struct( ...
+    'Model', model, ...
+    'TestFile', st_file_signature(cfg.TestFile), ...
+    'ManagementExcel', st_file_signature(cfg.ManagementExcel), ...
+    'ModelDirty', model_dirty(cfg), ...
+    'TestFileDirty', test_file_dirty(cfg), ...
+    'HarnessInventory', {before.HarnessInventory}, ...
+    'Harnesses', {before.Harnesses}, ...
+    'Inputs', {inputs});
+st_log(cfg, 'INFO', ...
+    'Standalone source recheck | Mode=REHASH | Inputs=%d | elapsed=%.3f sec', ...
+    numel(inputs), toc(timerValue));
+end
+
+function tf = recorded_inventory_holds(before, model)
+% A snapshot read back from JSON may have lost its struct shape; anything
+% unexpected simply takes the full snapshot.
+tf = false;
+try
+    harnesses = before.Harnesses;
+    inputs = before.Inputs;
+    tf = strcmpi(char(string(before.Model.SHA256)), model.SHA256) && ...
+        all(string({harnesses.Storage}) == "INTERNAL_MODEL") && ...
+        (isempty(inputs) || isfield(inputs, 'Path'));
+catch
 end
 end
 
@@ -1166,6 +1235,20 @@ end
 
 function value = append_message(existing, added)
 if isempty(existing), value = added; else, value = [existing ' | ' added]; end
+end
+
+function tree = classify_submission_tree(pipelineRoot, cfg)
+%CLASSIFY_SUBMISSION_TREE Team submission tree for a finished ALL run.
+tree = '';
+try
+    result = st_classify_standalone_results('PipelineRoot', pipelineRoot);
+    tree = result.OutputDir;
+catch ME
+    st_log(cfg, 'WARN', ...
+        ['Standalone submission tree was not created | %s: %s | ' ...
+         'Rerun st_classify_standalone_results(''PipelineRoot'', ''%s'')'], ...
+        ME.identifier, ME.message, pipelineRoot);
+end
 end
 
 function info = public_info(manifest, manifestPath)

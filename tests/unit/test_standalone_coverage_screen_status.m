@@ -490,6 +490,34 @@ verifyEqual(testCase, char(details.B7(2)), '-');
 verifyEqual(testCase, char(details.B10(2)), '1');
 end
 
+function testExceptedTargetToleratesNonPassingOutcome(testCase)
+% A Test Case whose verdict is not Passed ends as ExecutionStatus=WARN. That
+% is result data: with no EXCEPT target it never breaks B1, so one EXCEPT
+% target elsewhere must not turn it into a manifest defect either.
+[root, manifest] = complete_fixture(testCase, 3);
+manifest.Targets(2).ExecutionStatus = 'WARN';
+delete(manifest.Targets(3).PackagedCVF);
+delete(manifest.Targets(3).CoverageResult);
+delete(manifest.Targets(3).ReportHTML);
+manifest.Targets(3).ExecutionStatus = 'EXCEPT';
+manifest.Targets(3).PackageStatus = 'FAIL';
+manifest.Targets(3).PackagedCVF = '';
+manifest.Targets(3).PackagedCVFSHA256 = '';
+manifest.Targets(3).CoverageResult = '';
+manifest.Targets(3).CoverageResultSHA256 = '';
+manifest.Targets(3).ReportHTML = '';
+manifest.Actions.EXECUTE.Status = 'WARN';
+manifest.Actions.PACKAGE.Status = 'WARN';
+manifest.Actions.SUMMARY.Status = 'WARN';
+manifest.Status = 'PARTIAL';
+st_write_standalone_pipeline_manifest(root, manifest);
+evalc('[code, summary, details] = st_check_standalone_coverage(''OutputRoot'', root);');
+verifyEqual(testCase, code, '1111111111');
+verifyEqual(testCase, summary.Status, 'PARTIAL');
+verifyEqual(testCase, char(details.B1(2)), '1');
+verifyEqual(testCase, char(details.Status(3)), 'EXCEPT');
+end
+
 function testExceptedTargetStillNeedsCleanup(testCase)
 % The EXCEPT allowance must not excuse a leaked execution model.
 [root, manifest] = complete_fixture(testCase, 2);
@@ -523,4 +551,19 @@ st_write_standalone_pipeline_manifest(root, manifest);
 evalc('[code, summary] = st_check_standalone_coverage(''OutputRoot'', root);');
 verifyNotEqual(testCase, code, '1111111111');
 verifyEqual(testCase, summary.Status, 'FAIL');
+end
+
+function testExceptedTargetDoesNotExcuseFailedLifecycle(testCase)
+% Tolerating WARN must stay that narrow: a lifecycle FAIL next to an EXCEPT
+% target is still a defect the allowance cannot explain.
+[root, manifest] = complete_fixture(testCase, 3);
+manifest.Targets(2).ExecutionStatus = 'FAIL';
+manifest.Targets(3).ExecutionStatus = 'EXCEPT';
+manifest.Actions.EXECUTE.Status = 'WARN';
+manifest.Actions.PACKAGE.Status = 'WARN';
+manifest.Actions.SUMMARY.Status = 'WARN';
+manifest.Status = 'PARTIAL';
+st_write_standalone_pipeline_manifest(root, manifest);
+evalc('code = st_check_standalone_coverage(''OutputRoot'', root);');
+verifyEqual(testCase, code(1), '0');
 end

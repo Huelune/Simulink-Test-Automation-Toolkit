@@ -8,12 +8,17 @@
   알아보기 어려웠습니다. 이제 Command Window에는 명령(`==>`/`<==`), 단계
   (`-->`/`<--`), 대상(`[ 3/26] FAIL ...`)의 한 줄 진행과 `WARN`·`ERROR`만 나옵니다.
   모든 레벨은 `result/logs/<yyyyMMdd_HHmmss>_<명령>.log`에 남습니다.
+  - 대상 한 줄 끝에는 그 단계의 경과 시간과 남은 시간(`elapsed=1m33s eta=11m53s`)이
+    붙습니다. 오래 걸리는 단계의 `START` 줄은 그 대상을 시작할 때의 값, 결과 줄은 그
+    대상이 끝난 뒤의 값입니다. 진행 줄이 없는 standalone 실행 준비는 실행 로그의
+    `[StandalonePrepare i/n] start` 줄에만 찍힙니다.
   - 콘솔에 보인 내용 그대로는 같은 이름의 `.console.log`에, 명령 밖에서 찍힌 로그는
     `session_<yyyyMMdd>.log`에 남습니다. `st_run_from_harness`,
     `st_generate_test_report` 등 직접 부르는 명령 12개가 각자 로그 파일을 열고,
     단계 함수를 직접 부르면 session 로그로 갑니다.
-    자세한 위치와 여는 법은 `docs/troubleshooting.md`의 "로그는 어디에 있나"에
-    있습니다.
+    자세한 위치와 여는 법은 `docs/reference/troubleshooting.md`의 "로그는 어디에
+    있나"에 있습니다. 콘솔에 보이는 줄의 뜻은 `docs/user-manual.md`의 "콘솔에 보이는
+    줄과 실행 로그"에 있습니다.
   - 명령의 끝 줄은 정상이면 `<== <명령> done`, 오류면 `FAILED`, Ctrl+C로 끊었으면
     `INTERRUPTED`입니다. 끊긴 실행이 `done`으로 기록되지 않습니다.
   - **설정이 바뀝니다.** `cfg.VerboseLogging`이 없어지고 `cfg.ConsoleLogLevel`
@@ -37,6 +42,210 @@
   - R2025b 실물 확인이 남아 있습니다. `evalc`가 경고 출력을 받는지, `diary`가
     콘솔 내용을 그대로 받는지, 감싼 API가 `evalc` 안에서도 같은 동작과 속도를 내는지
     입니다.
+
+- **`st_collect_per_cut_results('Mode','LEAN')`으로 최종 문서에 필요한 것만 정리할 수 있습니다.**
+  최종 문서는 CUT별 `TestSummary.xlsx`의 판정과 `DecisionPoints`만 읽고, 커버리지는
+  standalone 파이프라인에서 가져옵니다. `LEAN`은 그 통합 문서만 씁니다. 재실행한 CUT은
+  `final/`만, 아니면 `initial/`만 만들고, MLDATX 사본·CUT 커버리지 추출·PDF·CVT·커버리지
+  HTML은 건너뜁니다. CVF 생성과 부착은 그대로 해서 DecisionPoints는 `FULL`과 같습니다.
+  기본값은 지금처럼 `FULL`이고, `cfg.FinalDocumentCoverageSource='TEST_RUN'`이면 `LEAN`은
+  `simtest:CollectLeanWithoutCoverage`로 멈춥니다.
+  `st_export_result_set_report`에는 이를 위한 `'Scope','VERDICT'`가 생겼습니다.
+
+- **standalone 파이프라인이 원본을 다시 확인할 때 Harness를 열지 않습니다.**
+  `Action=ALL`은 원본이 그대로인지 시작 때와 EXECUTE·PACKAGE·SUMMARY 뒤에 확인합니다.
+  지금까지는 매번 Top Model을 세 번 열고, 모든 Harness를 하나씩 열어 Signal Editor 입력
+  파일을 찾았습니다(298개 CUT이면 약 1,200번). 이 툴킷이 만드는 Harness와 그 입력 파일 이름은
+  모델 파일 안에 있으므로, 모델 체크섬이 같으면 시작 때 기록한 목록을 그대로 쓰고 파일
+  해시만 다시 계산합니다. 모델이 바뀌었거나 외부 Harness 파일이 있으면 예전처럼 전부
+  확인합니다. 처음 확인할 때도 Top Model은 한 번만 엽니다. 로그에
+  `Standalone source recheck | Mode=REHASH` 또는 `Mode=FULL`이 찍힙니다.
+
+- **대상별 진행 줄에 경과 시간과 남은 시간이 붙습니다.**
+  Harness 생성, SLDV 준비, Harness 설정, Signal Editor, Assessment, Test Manager,
+  PER_CUT 실행, `st_collect_per_cut_results`, standalone Harness export·실행 준비·PACKAGE의
+  대상별 줄 끝에 `elapsed=40m00s eta=1h49m`처럼 찍습니다. 남은 시간은 그 단계에서 지금까지
+  끝난 대상의 평균 시간으로 계산하므로, 캐시로 건너뛴 대상이 많으면 처음에는 짧게
+  나왔다가 점점 맞아 갑니다. 첫 대상에서는 아직 계산할 수 없어 `eta=--`입니다.
+
+- **평소 실행은 재시작 기록을 남기지 않습니다.**
+  재시작 기록은 `st_run_from_stage`만 읽습니다. 그런데 이 기록을 남기려고 매 실행마다
+  `HARNESS_CONFIG`, `SIGNAL_EDITOR`, `ASSESSMENT` 뒤에 CUT별로 Harness를 다시 열었고,
+  실행 뒤에도 Assessment와 Test File을 다시 읽었습니다. 새 설정
+  `cfg.RecordRestartEvidence`(기본 `false`)가 꺼져 있으면 이 작업을 하지 않습니다.
+  `AUTO` 재사용은 입력 지문으로 판단하므로 영향이 없습니다.
+  - `st_run_from_stage`는 자기 실행에서는 항상 기록합니다. 기록 없이 처음 재시작하면
+    SLDV나 ASSESSMENT부터 한 번 시작하라고 막고, 그 실행이 기록을 남깁니다.
+
+- **`Validate Scenario Alignment` 단계를 기본으로 건너뜁니다.**
+  이 단계는 앞 단계가 만든 것을 다시 읽기만 하는데, CUT마다 Harness를 다시 열어 SLDV,
+  Signal Editor, Test Assessment, Test Manager Iteration의 Scenario 이름을 비교해서
+  CUT이 많으면 오래 걸렸습니다. 새 설정 `cfg.ValidateScenarioAlignment`(기본 `false`)가
+  꺼져 있으면 워크플로는 콘솔에 `SKIP`을 찍고 넘어갑니다. 실행 뒤 재시작 기록과
+  `st_check_readiness`도 이 단계를 보지 않으므로, 옛 검사 기록 때문에 재시작이 막히지
+  않습니다.
+  - 어긋남은 이제 실행이나 기대값 갱신 중에 드러납니다. 직접 확인하려면
+    `st_validate_scenario_alignment()`를 실행하거나 설정을 `true`로 두십시오.
+
+- **Harness에 없는 SLDV 입력을 기본으로 무시합니다.**
+  `cfg.IgnoreUnexpectedSldvInputs`의 기본값을 `false`에서 `true`로 바꿨습니다. 바깥
+  Data Store처럼 SLDV가 입력으로 넣지만 Harness Signal Editor에는 없는 신호가 있으면,
+  예전에는 그 행이 "Unexpected=[...]"로 멈췄습니다. 이제 그 신호를 빼고 공통 입력만
+  교체하며, 뺀 신호는 WARN 로그와 `IgnoredSldvInputs` 열에 남깁니다.
+  - 값이 SLDV 단계 지문에 들어가므로, 다음 실행에서 SLDV 단계부터 다시 준비합니다.
+  - Harness 신호 이름이 SLDV 입력 이름과 다르면 그 신호도 빠지고 Harness의 원래 값으로
+    돕니다. 예전처럼 멈추게 하려면 `st_run_from_harness('IgnoreUnexpectedSldvInputs',
+    false)`로 실행하거나 cfg 값을 `false`로 두십시오.
+
+- **SLDV TestCase가 일부만 Scenario로 만들어지던 문제를 고쳤습니다.**
+  SLDV 데이터를 읽을 때, 고른 TestCase 번호를 담은 변수에 첫 TestCase의 입력 신호
+  위치가 덮어써졌습니다. 그래서 두 번째 TestCase부터는 TestCase 번호를 입력 위치와
+  비교했고, 예를 들어 입력 3개·TestCase 12개인 CUT은 1~3번만 Scenario가 되고 나머지는
+  경고 없이 빠졌습니다. `SldvTestCases` 열을 넣은 뒤로 `GENERATE`와 `FILE`+`SLDV`에
+  모두 있던 문제입니다. 이제 두 값을 다른 변수에 둡니다.
+  - 툴킷 코드가 바뀌었으므로 다음 실행에서 SLDV 단계부터 자동으로 다시 준비합니다.
+    `SldvGenerationResult`의 `ScenarioCount`가 늘었는지 확인하십시오.
+
+- **EXCEPT CUT이 하나 있어도 판정이 Passed가 아닌 CUT 때문에 standalone 검사 B1이 0이 되지 않습니다.**
+  `st_check_standalone_coverage`는 EXCEPT 대상이 있으면 나머지 대상이 모두 `PASS`여야
+  B1(M)을 1로 줬습니다. 그래서 Test Case 판정이 Passed가 아닌 대상(`ExecutionStatus=WARN`)이
+  하나라도 있으면, 모든 대상 비트가 1인데도 코드가 `0111111111`이 되고 모든 대상이
+  `FAIL`로 보였습니다. EXCEPT가 없을 때는 같은 WARN 대상을 문제 삼지 않으므로, 이제
+  EXCEPT가 있을 때도 WARN을 허용합니다. 설명되지 않은 `FAIL`·`SKIP`은 그대로 B1을 깹니다.
+
+- **엑셀 목록대로 파일을 폴더에 복사하는 Python 도구를 추가했습니다.**
+  `python tools/python/copy_files_by_excel.py <목록.xlsx> <폴더 기준> <파일 기준>`은 행마다
+  B열 파일(`<파일 기준>/<B열>`)을 A열 폴더(`<폴더 기준>/<A열>`)로 복사합니다. 폴더가 없으면
+  만들고, 같은 이름의 파일이 이미 있으면 건너뜁니다(`--overwrite`로 덮어씀). 실패한 행은
+  사유와 함께 남기고 나머지 행은 계속 처리합니다. 첫 행은 제목 행으로 건너뜁니다
+  (`--no-header`). `--sheet`, `--dry-run`을 지원합니다. 표준 라이브러리만 쓰므로 설치할 것이
+  없습니다. 회사 DRM(SoftCamp)이 암호화한 목록 파일은 zip으로 열리지 않으므로, PowerShell로
+  Excel을 보이지 않게 띄워 읽기 전용으로 읽습니다(Windows와 Excel 필요).
+
+- **Test File의 Model 이름을 한 번에 바꿀 수 있습니다.**
+  `st_rename_test_file_models(testFilePath, topModel)`은 Test File의 모든 Test Case(하위
+  Suite 포함)에서 Model 값 `A_B_C_D_E_Harness1`을 `{topModel}_Harness1`처럼 바꾸고 같은
+  경로에 저장합니다. `_Harness<번호>`는 그대로 두고 그 앞만 바꿉니다. Test File 안의
+  이름만 바꾸며, 모델 파일(.slx)과 Harness 필드는 건드리지 않습니다. `_Harness<번호>`로
+  끝나지 않는 Model은 WARN을 남기고 그대로 둡니다. 결과는 Test Case별 이전·새 이름 표로
+  출력합니다.
+
+- **SLDV 데이터의 Subsystem 경로가 CUT과 달라도 정해진 대로 처리합니다.**
+  경로가 다르면 `AllowSldvSubsystemPathMismatch`(기본 `true`)를 보고 WARN 후 계속하거나
+  거부해야 했습니다. 그런데 그 검사를 하는 함수가 `cfg`를 받지 못해 "Unrecognized
+  function or variable 'cfg'"로 멈췄습니다. 이제 `cfg`를 넘깁니다.
+
+- **함수 호출 Subsystem도 SLDV 입력으로 준비됩니다.**
+  SLDV는 함수 호출 CUT의 호출 트리거를 Dataset 입력 `FcnTriggerPort`로 넣습니다.
+  그런데 Harness는 Test Sequence 스케줄러로 직접 호출하므로 Signal Editor에 그 입력이
+  없습니다. 그래서 `IgnoreUnexpectedSldvInputs=false`인 SLDV 준비가 "SLDV Dataset
+  contains signals that are not present in the Harness input interface.
+  Unexpected=[FcnTriggerPort]"로 멈췄습니다. 이제 CUT에 함수 호출 TriggerPort가 있으면
+  그 이름 하나만 빼고 WARN과 `IgnoredSldvInputs` 열에 남깁니다. 다른 예상 밖 입력은
+  계속 실패합니다. Signal Editor 단계는 SLDV 단계가 남긴 같은 목록을 씁니다.
+  - 호출 시점은 Harness 스케줄러가 정하므로 SLDV TestCase가 가정한 시점과 다를 수
+    있습니다.
+
+- **SLDV 최대 분석 시간을 설정할 수 있습니다.**
+  `cfg.SldvMaxProcessTime`(초)을 새로 두었습니다. 비워 두면(기본) 예전처럼 모델의
+  Design Verifier 설정(기본 300초)을 쓰고, 값을 주면 GENERATE 대상마다 그 시간을
+  씁니다. 시간 안에 끝나지 않은 행은 계속 실패로 처리합니다. 메시지에는 쓴 시간과 이
+  설정을 늘리라는 안내가 붙고, WARN 로그가 남습니다.
+
+- **짧은 빌드 폴더에서도 Harness 입력 MAT을 찾습니다.**
+  `st_enter_short_build_directory`는 호출한 폴더와 모델 폴더를 MATLAB path에 넣은
+  뒤 `Simulink.fileGenControl('set', ...)`을 불렀습니다. 이 호출은 기본값
+  (`keepPreviousPath=false`)으로 이전 캐시 폴더를 path에서 지웁니다. 이전 캐시
+  폴더가 호출한 폴더였다면 거기 있는 `{Harness}_HarnessInputs.mat`도 path에서
+  빠졌습니다. 그러면 PER_CUT 실행 중 Signal Editor가 입력을 못 읽어 포트를 잃고, 출력
+  run이 생기지 않았습니다. 기대값 로깅 준비의 저장 때문에 끊긴 선이 모델에
+  저장되기도 했습니다. 이제 `keepPreviousPath=true`로 설정하고, 폴더는 그 뒤에
+  path에 넣습니다.
+  - **끊긴 선이 저장된 Harness는 다시 만들어야 합니다.** Harness를 열었을 때 입력
+    쪽 선이 빨간 점선이면 지우고 `st_run_from_harness`를 다시 실행하십시오.
+
+- **CUT 경로를 Simulink가 쓰는 표기로 넘깁니다.**
+  `st_normalize_cut_path`는 블록을 찾으면 이제 Excel에 적힌 글자 대신
+  `getfullname` 결과를 돌려줍니다. 경로 조회는 여러 표기를 받아 주지만 Test
+  Manager의 `HarnessOwner`는 글자로 비교합니다. 그래서 이름이 공백으로 끝나는 CUT을
+  `.../Name /`처럼 적으면 사전 검증·Harness 생성·Signal Editor는 통과하고 Test
+  Manager 단계에서 "A harness with owner ..."로 멈췄습니다. 같은 비교를 하는 SLDV 입력
+  공유 검사, Harness 복제 확인, 명세서의 Test Case 연결 확인도 함께 맞춰집니다.
+  - 그 뒤 단계에서 이 경로의 끝 공백을 다시 자르던 두 곳도 고쳤습니다. standalone
+    커버리지가 CUT을 찾는 `StandaloneCUTPath`, 그리고 최종 문서가 DecisionPoints
+    시트에서 CUT 아래 블록을 고르는 접두사 비교입니다. 후자는 `readtable`이
+    CUTPath 셀 끝 공백을 지우므로 구분자 앞 공백을 허용합니다.
+  - 보통의 경로는 결과가 그대로입니다. 표기가 달랐던 행은 SLDV manifest의 경로와
+    달라지므로 다음 실행에서 SLDV 단계부터 다시 준비됩니다.
+
+- **새로 만든 Harness의 Signal Editor 입력 파일이 지워지지 않습니다.**
+  Harness 생성을 짧은 폴더로 옮긴 뒤로 `sltest.harness.create`가 현재 폴더에 쓰는
+  `{Harness}_HarnessInputs.mat`이 그 짧은 폴더에 생겼고, 단계가 끝날 때 폴더째
+  지워졌습니다. 그래서 Signal Editor 단계가 `SignalEditorActiveScenarioInvalid`
+  (`Active=InputScenario | Available=[Scenario]`)로 멈췄습니다. 이제 생성과 저장은
+  호출한 폴더에서 하고, 빌드 캐시만 짧은 폴더에 둡니다.
+  - **이미 만든 Harness는 다시 만들어야 합니다.** 이 문제가 있던 버전으로 만든
+    Harness는 입력 파일이 없습니다. 그 Harness를 지우고
+    `st_run_from_harness`를 다시 실행하십시오.
+
+- **`SignalEditorActiveScenarioInvalid` 메시지가 입력 MAT 파일을 가리킵니다.**
+  Signal Editor 단계의 메시지에 블록의 `Filename`을 함께 적습니다. 그 파일을 찾지
+  못하면 Harness를 다시 만들라는 안내를 덧붙입니다. 입력 파일이 없으면 블록이
+  라이브러리 기본값 `Scenario`만 보여 주므로, 예전 메시지는 Scenario 이름 문제처럼
+  읽혔습니다.
+
+- **테스트 명세서의 `DecisionBlocks`가 기본으로 암시적 분기까지 담습니다.**
+  `cfg.DecisionBlockScope` 기본값을 `'EXPLICIT'`에서 `'ALL'`로 바꿨습니다. 이제
+  Saturate, Abs, Lookup 계열, Integrator 계열, Enabled / Triggered Subsystem처럼
+  조건식 없이 Coverage objective를 만드는 블록도 명세서에 나옵니다. 최종 문서는
+  원래 `'ALL'`이었으므로 두 문서의 범위가 같아집니다.
+  - **명세서 출력이 달라집니다.** 그런 블록이 있는 CUT은 `DecisionBlocks` 셀이
+    길어지고 D번호가 다시 매겨집니다. Lookup 테이블이 많은 CUT은 셀이
+    `OverflowDetails` 참조로 바뀔 수 있습니다.
+  - 예전 목록이 필요하면 `cfg.DecisionBlockScope = 'EXPLICIT'`로 두거나
+    `st_export_test_specification('DecisionBlockScope','EXPLICIT')`로 뽑습니다.
+
+- **팀 제출 트리 재배치를 MATLAB에서 합니다.**
+  `tools/python/classify_standalone_results.py`와 같은 규칙의
+  `st_classify_standalone_results`를 추가했습니다. `st_run_standalone_coverage_pipeline`
+  에 `'ClassifyResults', true`(기본 `false`)를 주면 `Action='ALL'`이 끝날 때 이 함수를
+  불러 파이프라인 폴더 옆 `{TopModel}\`을 새로 만들고 위치를 `info.SubmissionTree`에
+  돌려줍니다. 기존 트리는 기본으로
+  지우고 다시 만들되(`Replace` 기본 `true`), 세 갈래 폴더만 있을 때만 지웁니다. 재배치 실패는 WARN으로 남고 파이프라인을
+  실패시키지 않습니다. Python
+  스크립트는 MATLAB 없는 PC용으로 남습니다.
+
+- **SLDV 준비와 Harness 생성도 짧은 폴더에서 돕니다.**
+  PER_CUT 실행과 같은 방식으로 `st_prepare_sldv_targets`와 `st_create_harnesses`의
+  대상 루프 동안 현재 폴더와 빌드 폴더를 `StandaloneBuildCacheDir`(비우면
+  `tempdir\stt_build`) 아래 `sldv_<id>`, `harness_<id>`로 옮깁니다. SLDV 임시
+  출력도 `result\sldv\<대상>\tp<GUID>` 대신 `sldvout_<id>`에 만들고, 최종
+  `latest_sldvdata.mat`만 예전 위치로 옮깁니다. PER_CUT 폴더 이름은 `pc_<id>`에서
+  `per_cut_<id>`로 바뀌었습니다.
+
+- **`st_set_standalone_coverage_root`를 인자 없이 부를 수 있습니다.**
+  인자가 없으면 `st_select_target_model`로 고른 Top Model 이름으로
+  `D:\model_result\<Top Model>`을 만들어 standalone 결과 루트로 저장합니다. 경로를
+  주면 예전처럼 그 경로를 씁니다. Top Model을 고르지 않았으면
+  `simtest:StandaloneCoverageRootNoTarget`으로 멈춥니다.
+
+- **1단계 PER_CUT 실행도 짧은 폴더에서 Test Case를 돌립니다.**
+  원본 모델 폴더가 깊으면 Stateflow 빌드(`slprj\_sfprj\...`)가 260자를 넘겨
+  커버리지가 남지 않을 수 있었습니다. `st_run_tests_per_cut`은 실행 루프 동안
+  현재 폴더와 `CacheFolder`/`CodeGenFolder`를 `StandaloneBuildCacheDir`(비우면
+  `tempdir\stt_build`) 아래 `pc_<id>`로 옮기고, 원래 현재 폴더와 모델 폴더를
+  MATLAB path에 넣어 둡니다. 루프가 끝나면 모두 되돌리고 폴더를 지웁니다.
+  standalone 러너 안에서 부를 때는 이미 짧은 폴더에 있으므로 그대로 둡니다.
+
+- **standalone 실행을 `%TEMP%` 아래 짧은 작업 폴더에서 돌립니다.**
+  기록 위치(`.work\<bundle>\executions\<id>\workspace`)는 짧은 출력 루트를 써도
+  150자에 가까워, Stateflow 빌드가 그 밑에 `slprj\_sfprj\...`를 만들면 260자를
+  넘겨 빌드가 실패하고 커버리지가 남지 않았습니다. 이제 러너는
+  `StandaloneBuildCacheDir`(비우면 `tempdir\stt_build`) 아래 `<id>_ws`에서 실행하고,
+  끝나면 빌드 산출물(`slprj`, `*.slxc`, `*.mex*`)을 뺀 작업 폴더를 기록 위치로
+  복사한 뒤 짧은 폴더를 지웁니다. manifest의 `Workspace`/`TestManagerWorkFile`은
+  그대로 기록 위치를 가리킵니다. 실행이 실패하면 짧은 폴더를 남기고 WARN 로그에
+  위치를 적습니다.
 
 - **`IgnoreUnexpectedSldvInputs`를 명령 옵션으로 줄 수 있습니다.**
   `st_run_from_harness('IgnoreUnexpectedSldvInputs', true)`처럼 부르면 그 실행에서만

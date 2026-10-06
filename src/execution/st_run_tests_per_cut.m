@@ -193,6 +193,10 @@ else
 end
 
 abortError = [];
+% Run the Test Cases from a short folder so Simulink and Stateflow builds
+% below pwd stay inside the Windows path limit. Cleared after the loop.
+shortBuildDirectory = st_enter_short_build_directory(cfg, 'PER_CUT');
+loopTimer = tic;
 for i = 1:n
     rowTimer = tic;
     StartedAt(i) = timestamp_text();
@@ -216,9 +220,9 @@ for i = 1:n
     modelPathCleanup = register_execution_model_folder(row, cfg); %#ok<NASGU>
 
     st_log(cfg, 'INFO', ...
-        '[PER_CUT %d/%d] start | No=%g | CUT=%s | TestCase=%s | CVF=%s', ...
+        '[PER_CUT %d/%d] start | No=%g | CUT=%s | TestCase=%s | CVF=%s | %s', ...
         i, n, No(i), char(CUTName(i)), char(TestCaseName(i)), ...
-        char(FilterMode(i)));
+        char(FilterMode(i)), st_progress_eta(toc(loopTimer), i - 1, n));
     append_event(logPath, i, 'TARGET_START', char(TestCaseName(i)));
 
     try
@@ -260,7 +264,8 @@ for i = 1:n
                 char(TestCaseName(i)));
         end
         st_log_progress(cfg, i, n, 'START', char(TestCaseName(i)), ...
-            'Detail', char(CUTPath(i)));
+            'Detail', char(CUTPath(i)), ...
+            'Eta', st_progress_eta(toc(loopTimer), i - 1, n));
         st_log(cfg, 'DEBUG', ...
             '[PER_CUT %d/%d] run(testCase) initial start', i, n);
         append_event(logPath, i, 'RUN_START', char(TestCaseName(i)));
@@ -629,7 +634,8 @@ for i = 1:n
 
     st_log_progress(cfg, i, n, Status(i), char(TestCaseName(i)), ...
         'Elapsed', DurationSec(i), 'Message', Message(i), ...
-        'Detail', char(CUTPath(i)));
+        'Detail', char(CUTPath(i)), ...
+        'Eta', st_progress_eta(toc(loopTimer), i, n));
 
     if ~isempty(abortError)
         st_log(cfg, 'ERROR', ...
@@ -639,6 +645,7 @@ for i = 1:n
     end
     append_event(logPath, i, 'TARGET_COMPLETE', char(Status(i)));
 end
+clear shortBuildDirectory
 
 processed = strlength(CompletedAt) > 0;
 Status(~processed) = "SKIP";

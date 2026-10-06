@@ -105,6 +105,12 @@ try
                 'HarnessName',char(row.HarnessName),'TestCaseName',char(row.TestCaseName)));
             for s = 1:limit
                 stage = char(allStages(s));
+                % A skipped ALIGNMENT stage leaves no fresh readback, so
+                % checking it here would block every restart on stale evidence.
+                if strcmp(stage,'ALIGNMENT') && ~cfg.ValidateScenarioAlignment
+                    checks(end+1,:) = {row.No,row.TestCaseName,"ALIGNMENT","SKIP","cfg.ValidateScenarioAlignment=false",""}; %#ok<AGROW>
+                    continue;
+                end
                 try
                     output = st_inspect_preparation_stage(stage,row,cfg);
                     validate_record(state,key,stage,inputs.(stage),st_hash_value(output),row);

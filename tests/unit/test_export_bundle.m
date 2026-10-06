@@ -317,6 +317,32 @@ verifyTrue(testCase, contains(text, ...
     "'BuildCacheFolder', buildCacheFolder"));
 end
 
+function testStandaloneRunnerExecutesInAShortWorkspace(testCase)
+% A build redirect alone did not keep Stateflow's slprj/_sfprj out of the
+% deep workspace, so a standalone run executes in a short folder and copies
+% the workspace back to the recorded path without build products.
+root = st_project_root();
+text = fileread(fullfile(root, 'resources', 'export_bundle', ...
+    'run_exported_tests.m'));
+verifyTrue(testCase, contains(text, ...
+    "workRoot = fullfile(shortBase, [build_cache_token(executionId) '_ws']);"));
+verifyTrue(testCase, contains(text, ...
+    "recordedWorkRoot = fullfile(executionRoot, 'workspace');"));
+verifyTrue(testCase, contains(text, ...
+    "{'.', '..', 'slprj', 'sfprj'}"));
+verifyTrue(testCase, contains(text, ...
+    'testFilePath = rebase_path(testFilePath, workRoot, recordedWorkRoot);'));
+% The copy-back runs after the copied session is closed and before the
+% execution record names the workspace.
+closePosition = regexp(text, ...
+    'sessionCleanupInfo = cleanup_standalone_execution_session\(', 'once');
+copyPosition = regexp(text, ...
+    '\n    copy_workspace_back\(workRoot, recordedWorkRoot, cfg\);', 'once');
+recordPosition = regexp(text, "'Workspace', workRoot", 'once');
+verifyTrue(testCase, closePosition < copyPosition);
+verifyTrue(testCase, copyPosition < recordPosition);
+end
+
 function testVerificationSnapshotCanOmitReferenceReport(testCase)
 root = st_project_root();
 exportText = fileread(fullfile(root, 'src', 'exporting', ...

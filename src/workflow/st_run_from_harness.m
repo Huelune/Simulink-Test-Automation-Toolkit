@@ -5,7 +5,7 @@ function varargout = st_run_from_harness(varargin)
 % st_run_from_harness('PreparationMode','FORCE','FromStage','SLDV')
 % st_run_from_harness('ExecutionMode','PER_CUT','ReportMode','FULL')
 % st_run_from_harness('FromStage','EXECUTE')   % preparation stays, run only
-% st_run_from_harness('IgnoreUnexpectedSldvInputs',true)  % this run only
+% st_run_from_harness('IgnoreUnexpectedSldvInputs',false) % this run only
 
 [varargout{1:nargout}] = st_log_run(mfilename, ...
     @() st_run_workflow('FULL', varargin{:}));

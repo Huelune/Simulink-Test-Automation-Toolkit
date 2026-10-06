@@ -104,7 +104,7 @@ summary = st_check_actual_system();
 ```
 
 중간 단계부터 실행할 때 앞 단계가 멀쩡한지 미리 보려면 선택 기능인
-`st_check_readiness`를 쓸 수 있습니다. [재시작](manual/restart.md)을 보십시오.
+`st_check_readiness`를 쓸 수 있습니다. [재시작](restart.md)을 보십시오.
 
 ## 3. 준비 단계 오류
 
@@ -205,6 +205,20 @@ st_run_from_harness('PreparationMode','FORCE')
 **대처:** Harness를 열어 Signal Editor 블록의 파일 경로와 선택된 Scenario를
 확인하십시오. 파일이 다른 위치로 옮겨졌거나 지워졌을 수 있습니다.
 
+메시지 끝에 `Input MAT not found`가 붙고 `Available=[Scenario]`이면 입력 MAT 파일
+자체가 없습니다. 블록이 파일을 읽지 못하면 라이브러리 기본값 `Scenario`만 보여
+줍니다. 2026-09-30 ~ 10-01 버전으로 새로 만든 Harness가 이렇습니다. 생성 중
+입력 파일이 임시 빌드 폴더에 생겼다가 함께 지워졌기 때문입니다. 그 Harness를 지우고
+다시 만드십시오.
+
+```matlab
+cfg = st_require_runtime_target();
+owner = st_normalize_cut_path("<CUTPath>", cfg.TopModel);
+sltest.harness.delete(owner, "<HarnessName>");
+save_system(cfg.TopModel);
+st_run_from_harness
+```
+
 ### `MatHarnessInterfaceMismatch`
 
 **뜻:** `DataFileFormat=MAT`으로 지정한 Dataset의 입력 구성이 Harness의 입력
@@ -296,7 +310,7 @@ CUT이면 분모가 0이 되어 백분율을 계산할 수 없습니다. 이것�
 
 해당 CVF를 만든 standalone 모델을 먼저 여십시오. 그 모델은 CVF 바로 옆에 있습니다.
 **원본 Top Model을 열어서는 안 됩니다.** standalone 모델은 원본의 SID를 재사용하지
-않습니다. 자세한 설명은 [결과 열기](manual/open-results.md)에 있습니다.
+않습니다. 자세한 설명은 [결과 열기](open-results.md)에 있습니다.
 
 rule의 rationale이 `none`으로 보이는 것도 의도된 값입니다. 규칙 분류는 rationale
 문구가 아니라 selector 경로로 판정합니다.
@@ -324,6 +338,8 @@ MATLAB은 같은 이름의 모델을 두 개 로드할 수 없습니다. standal
 
 `ALIGNMENT` 단계에서 잡힙니다. 입력 Scenario가 3개면 Iteration도 3개여야 합니다.
 입력 MAT을 바꾼 뒤 Test Manager 단계를 다시 실행하지 않았을 때 자주 납니다.
+이 단계는 기본으로 건너뛰므로(`cfg.ValidateScenarioAlignment=false`), 의심되면
+`st_validate_scenario_alignment()`로 직접 확인하십시오.
 
 **대처:**
 
@@ -371,7 +387,7 @@ Harness와 Input이 만들어지기 **전에** 실패한 경우에는 보존을 
 허용합니다.
 
 **대처:** 다시 만들려면 `st_run_from_stage`를 쓰십시오. 저장된 증거를 검증한 뒤
-**새 PipelineId**로 재생성합니다. [재시작](manual/restart.md)에 절차가 있습니다.
+**새 PipelineId**로 재생성합니다. [재시작](restart.md)에 절차가 있습니다.
 
 ### `StandalonePipelineHarnessFileMissing`
 
@@ -424,13 +440,16 @@ Windows의 260자 제한에 걸립니다. 두 가지 모양으로 나타납니�
 **대처:**
 
 ```matlab
-st_set_standalone_coverage_root('D:\st_out')
+st_set_standalone_coverage_root              % D:\model_result\<Top Model>
+st_set_standalone_coverage_root('E:\st_out') % 다른 경로를 쓰려면
 ```
 
-짧은 경로를 지정하면 `runtime_target.mat`에 로컬로 저장됩니다.
+인자 없이 부르면 지금 선택한 Top Model 이름으로 `D:\model_result\<Top Model>`을
+만들어 씁니다. 지정한 경로는 `runtime_target.mat`에 로컬로 저장됩니다.
 
-빌드 산출물은 기본적으로 workspace가 아니라 `tempdir` 아래 짧은 폴더에 만들어지므로
-두 번째 오류는 보통 나지 않습니다. 그래도 나면 `cfg.StandaloneBuildCacheDir`에
+standalone 실행과 1단계의 SLDV 준비·Harness 생성·PER_CUT 실행은 기본적으로
+`tempdir\stt_build` 아래 짧은 폴더에서 돌고 빌드 산출물도 그곳에 만들므로 두 번째
+오류는 보통 나지 않습니다. 그래도 나면 `cfg.StandaloneBuildCacheDir`에
 `'D:\stt_build'`처럼 짧은 경로를 지정하십시오([설정 참조](config-reference.md)).
 
 ## 7. 명세서 추출 오류
@@ -475,8 +494,9 @@ Harness를 Dirty로 표시하는데, 이전에는 아무도 되돌리지 않았�
 ### 셀 내용이 `OverflowDetails` 참조로 바뀌었다
 
 Excel 셀의 문자 수나 줄바꿈 수 한도를 넘었습니다. 전체 내용은 `OverflowDetails`
-시트에 순번별로 나뉘어 있습니다. 특히 `DecisionBlockScope='ALL'`에서 Lookup 테이블이
-많은 CUT에 자주 발생합니다.
+시트에 순번별로 나뉘어 있습니다. 특히 `DecisionBlockScope='ALL'`(기본)에서 Lookup
+테이블이 많은 CUT에 자주 발생합니다. 분기 목록이 짧아도 되면
+`st_export_test_specification('DecisionBlockScope','EXPLICIT')`로 뽑으십시오.
 
 ## 8. 검증(`st_verify_all`) 오류
 

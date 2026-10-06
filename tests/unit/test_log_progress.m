@@ -23,6 +23,23 @@ verifyTrue(testCase, contains(out, 'OBC_Harness'));
 verifyTrue(testCase, contains(out, '30.9s'));
 end
 
+function testProgressLineCarriesEta(testCase)
+% The loop's elapsed and remaining time close the console line, after the
+% message, and also reach the detail line in the run log.
+guard = st_log_scope('enter', 'eta_cmd', testCase.TestData.Dir); %#ok<NASGU>
+cfg = struct('ConsoleLogLevel', 'STEP'); %#ok<NASGU>
+out = evalc(['st_log_progress(cfg, 4, 5, ''OK'', ''OBC_Harness'', ' ...
+    '''Elapsed'', 30.94, ''Message'', ''done'', ''Detail'', ''Top/CUT'', ' ...
+    '''Eta'', st_progress_eta(100, 4, 5));']);
+verifyTrue(testCase, contains(out, 'done  elapsed=1m40s eta=25.0s'));
+startOut = evalc(['st_log_progress(cfg, 1, 5, ''START'', ''OBC_Harness'', ' ...
+    '''Eta'', st_progress_eta(0, 0, 5));']);
+verifyTrue(testCase, contains(startOut, 'eta=--'));
+state = st_log_scope('current');
+text = fileread(state.LogPath);
+verifyTrue(testCase, contains(text, 'detail | Top/CUT | done | elapsed=1m40s eta=25.0s'));
+end
+
 function testFailProgressIsErrorClippedOnConsoleFullInLog(testCase)
 guard = st_log_scope('enter', 'progress_cmd', testCase.TestData.Dir); %#ok<NASGU>
 cfg = struct('ConsoleLogLevel', 'STEP'); %#ok<NASGU>

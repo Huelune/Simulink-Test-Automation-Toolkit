@@ -4,6 +4,7 @@ function varargout = st_collect_per_cut_results(varargin)
 % st_collect_per_cut_results
 % st_collect_per_cut_results('RunId', 'LATEST')
 % st_collect_per_cut_results('RunId', runId, 'ReportMode', 'FULL')
+% st_collect_per_cut_results('Mode', 'LEAN')   % only what the final document reads
 %
 % PER_CUT runs a Test Case alone because some Test Cases only work alone.
 % The coverage filter is not part of that: it shapes the coverage data of
@@ -29,9 +30,23 @@ p.FunctionName = mfilename;
 addParameter(p, 'RunId', 'LATEST', @(x) ischar(x) || isstring(x));
 addParameter(p, 'ReportMode', '', ...
     @(x) isempty(x) || ismember(upper(string(x)), ["SUMMARY","FULL"]));
+% 'LEAN' writes only the workbook the final document reads, per CUT: the
+% FINAL stage when the run reran, otherwise INITIAL, with verdicts and
+% decision points but no coverage review artifacts.
+addParameter(p, 'Mode', 'FULL', ...
+    @(x) ismember(upper(string(x)), ["FULL","LEAN"]));
 parse(p, varargin{:});
 
 cfg = st_require_runtime_target();
+lean = strcmpi(char(string(p.Results.Mode)), 'LEAN');
+if lean && strcmpi(char(string(cfg.FinalDocumentCoverageSource)), 'TEST_RUN')
+    error('simtest:CollectLeanWithoutCoverage', ...
+        ['Mode=LEAN writes no coverage, but cfg.FinalDocumentCoverageSource' ...
+         '=''TEST_RUN'' reads the final document''s coverage from this run. ' ...
+         'Collect with Mode=FULL, or use the STANDALONE coverage source.']);
+end
+reportScope = 'FULL';
+if lean, reportScope = 'VERDICT'; end
 [runId, runDirectory, manifest] = resolve_run(cfg, p.Results.RunId);
 reportMode = upper(strtrim(char(string(p.Results.ReportMode))));
 if isempty(reportMode)
@@ -42,8 +57,8 @@ targets = struct2table(manifest.Targets, 'AsArray', true);
 config = st_resolve_target_cut_paths(st_load_targets(cfg.OnlyEnabled), cfg);
 
 st_log(cfg, 'INFO', ...
-    'PER_CUT collect start | RunId=%s | Targets=%d | ReportMode=%s', ...
-    runId, height(targets), reportMode);
+    'PER_CUT collect start | RunId=%s | Targets=%d | ReportMode=%s | Mode=%s', ...
+    runId, height(targets), reportMode, upper(char(string(p.Results.Mode))));
 
 st_log(cfg, 'INFO', 'Collect PER_CUT Results | RunId=%s | Directory=%s', ...
     runId, runDirectory);
@@ -71,7 +86,8 @@ for i = 1:height(targets)
              'run against the workbook it was produced from.'], ...
             testCaseName);
     end
-    targetDirectory = st_per_cut_target_directory(runDirectory, row);
+    targetDirectory = recorded_target_directory( ...
+        runDirectory, targets(i,:), row);
     initialSaved = fullfile(targetDirectory, 'initial', 'Results.mldatx');
     cutPath = char(string(row.CUTPath));
     if ~isfile(initialSaved)
@@ -79,12 +95,14 @@ for i = 1:height(targets)
         Message(i) = "No saved ResultSet; this run built its artifacts inline";
         st_log_progress(cfg, i, height(targets), Collected(i), ...
             char(testCaseName), 'Elapsed', toc(rowTimer), ...
-            'Message', Message(i), 'Detail', cutPath);
+            'Message', Message(i), 'Detail', cutPath, ...
+            'Eta', st_progress_eta(toc(totalTimer), i, height(targets)));
         continue;
     end
 
     st_log_progress(cfg, i, height(targets), 'START', char(testCaseName), ...
-        'Detail', cutPath);
+        'Detail', cutPath, ...
+        'Eta', st_progress_eta(toc(totalTimer), i - 1, height(targets)));
     % A ResultSet read back from a file carries block paths, not handles.
     % Simulink Coverage rebuilds that map on first access, and with the
     % models unloaded the walk does not finish in any useful time.
@@ -98,12 +116,16 @@ for i = 1:height(targets)
             fullfile(targetDirectory, 'filter'), cfg);
     end
 
-    collect_one(initialSaved, row, fullfile(targetDirectory, 'initial'), ...
-        'INITIAL', filterPath, reportMode, cfg);
     finalSaved = fullfile(targetDirectory, 'final', 'Results.mldatx');
+    % The final document reads FINAL whenever the run reran, so LEAN leaves
+    % the INITIAL report out in that case.
+    if ~(lean && isfile(finalSaved))
+        collect_one(initialSaved, row, fullfile(targetDirectory, 'initial'), ...
+            'INITIAL', filterPath, reportMode, reportScope, cfg);
+    end
     if isfile(finalSaved)
         collect_one(finalSaved, row, fullfile(targetDirectory, 'final'), ...
-            'FINAL', filterPath, reportMode, cfg);
+            'FINAL', filterPath, reportMode, reportScope, cfg);
     end
     update_target_manifest(targets.TargetManifest(i), ...
         filterPath, ruleCount);
@@ -111,7 +133,8 @@ for i = 1:height(targets)
     Message(i) = "Reports built from the saved ResultSet";
     st_log_progress(cfg, i, height(targets), Collected(i), ...
         char(testCaseName), 'Elapsed', toc(rowTimer), ...
-        'Message', Message(i), 'Detail', cutPath);
+        'Message', Message(i), 'Detail', cutPath, ...
+        'Eta', st_progress_eta(toc(totalTimer), i, height(targets)));
 end
 
 result = table(targets.No, string(targets.TestCaseName), ...
@@ -123,6 +146,7 @@ info = struct( ...
     'RunId', runId, ...
     'RunDirectory', runDirectory, ...
     'ReportMode', reportMode, ...
+    'Mode', upper(char(string(p.Results.Mode))), ...
     'Result', result, ...
     'CollectedCount', sum(Collected == "OK"), ...
     'SkippedCount', sum(Collected == "SKIP"));
@@ -134,7 +158,7 @@ end
 
 
 function collect_one( ...
-        savedFile, row, folder, label, filterPath, reportMode, cfg)
+        savedFile, row, folder, label, filterPath, reportMode, reportScope, cfg)
 %COLLECT_ONE Attach the CVF to one saved ResultSet and report on it.
 imported = sltest.testmanager.importResults(savedFile);
 if isempty(imported)
@@ -163,7 +187,8 @@ reportInfo = st_export_result_set_report( ...
     'IncludeOfficialReport', strcmp(reportMode, 'FULL'), ...
     'IncludePortableCoverageDetail', true, ...
     'LogConfig', cfg, ...
-    'ResultLabel', label);
+    'ResultLabel', label, ...
+    'Scope', reportScope);
 if ~strcmp(reportInfo.Status, 'OK')
     error('simtest:CollectReportIncomplete', ...
         '%s report is incomplete: %s', label, reportInfo.Summary);
@@ -320,5 +345,26 @@ runDirectory = char(string(manifest.RunDirectory));
 if ~isfolder(runDirectory)
     error('simtest:CollectRunMissing', ...
         'PER_CUT run directory is missing: %s', runDirectory);
+end
+end
+
+
+function directory = recorded_target_directory(runDirectory, target, row)
+%RECORDED_TARGET_DIRECTORY Use the folder the run wrote, not a recomputed one.
+% The folder name hashes CUTPath, and how CUTPath is resolved can change
+% between the run and the collect. The run manifest records the folder, so
+% only a run without that record falls back to recomputing it. Only the
+% folder name is taken so a moved run directory still resolves.
+directory = '';
+if ismember('TargetManifest', target.Properties.VariableNames)
+    manifestPath = char(string(target.TargetManifest));
+    if ~isempty(manifestPath)
+        [recorded, ~, ~] = fileparts(manifestPath);
+        [~, folder, extension] = fileparts(recorded);
+        directory = fullfile(runDirectory, 'targets', [folder extension]);
+    end
+end
+if isempty(directory)
+    directory = st_per_cut_target_directory(runDirectory, row);
 end
 end

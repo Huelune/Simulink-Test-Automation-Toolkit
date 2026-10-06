@@ -106,7 +106,7 @@ info  = st_log_scope('current')              % st_log가 조회
 
 ### 4.2 범위를 여는 명령
 
-[team-commands.md](../../team-commands.md)에 나오는 명령 가운데 사용자가 직접
+[user-manual.md](../../user-manual.md)에 나오는 명령 가운데 사용자가 직접
 부르는 것의 첫 줄에서 `st_log_run`(또는 `st_log_scope('enter', ...)`)으로 연다. 다음
 12개다.
 
@@ -220,13 +220,22 @@ st_log_stage(cfg, 'fail',  label, 'Exception', ME, 'Elapsed', sec)
 ### 6.2 `st_log_progress`
 
 ```matlab
-st_log_progress(cfg, i, n, status, label, 'Elapsed', sec, 'Message', msg, 'Detail', detail)
+st_log_progress(cfg, i, n, status, label, 'Elapsed', sec, 'Message', msg, 'Detail', detail, ...
+    'Eta', st_progress_eta(toc(loopTimer), i, n))
 ```
 
-- 콘솔 예: `    [ 3/26] FAIL   OBC_DIAG_..._Harness     30.9s  Port mismatch ...`
+- 콘솔 예: `    [ 3/26] FAIL   OBC_DIAG_..._Harness     30.9s  Port mismatch ...  elapsed=1m33s eta=11m53s`
 - 대상 하나가 오래 걸리는 곳에는 시작 줄 `    [ 3/26] START  <label>`을 먼저 찍는다.
   Harness 생성, SLDV, PER_CUT 실행, PER_CUT 결과 정리가 해당하며, 그곳에서는 대상
   하나에 콘솔 줄이 최대 두 줄이 된다.
+- `Eta`(문자열, 기본 `''`)는 main `42544a5`의 경과·남은 시간이다. 콘솔 줄 맨 끝, 잘린
+  메시지 뒤에 공백 두 칸을 두고 자르지 않고 붙이며, DEBUG detail 줄에도 붙인다. main이
+  손댄 긴 대상 반복(Harness 생성, SLDV 준비, Harness 설정, Signal Editor, Assessment,
+  Test Manager, PER_CUT 실행·결과 정리, standalone Harness export, PACKAGE)이
+  `loopTimer = tic`(Test Manager와 PER_CUT 결과 정리는 반복 직전의 `totalTimer`)으로
+  START 줄에는 `st_progress_eta(toc(loopTimer), i - 1, n)`, 결과 줄에는
+  `st_progress_eta(toc(loopTimer), i, n)`을 넘긴다. START 줄이 없는 반복은 결과 줄에만
+  붙는다.
 - `status`가 FAIL·EXCEPT이면 ERROR, WARN·PARTIAL이면 WARN, 그 밖에는 STEP으로 찍는다.
 - 콘솔에서는 `label`을 40자, `Message`를 60자로 자르고 줄바꿈을 없앤다. 파일에는
   `Detail`(CUT 경로 등)과 전체 메시지를 그대로 남긴다.
@@ -273,7 +282,7 @@ MATLAB이 없는 편집 클론이므로 정적 계약 테스트와 순수 함수
 
 ## 9. 커밋 순서
 
-[commit-convention.md](../../commit-convention.md)에 따라 목적 하나당 커밋 하나로
+[commit-convention.md](../../ai/commit-convention.md)에 따라 목적 하나당 커밋 하나로
 나눈다.
 
 1. `feat(log)`: `st_log` 파일 기록, `st_log_scope`, `ConsoleLogLevel`,

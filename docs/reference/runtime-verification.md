@@ -44,7 +44,7 @@ assert(all([results.Passed]), 'Some tests failed or were incomplete; preserve th
 2. readiness 전후 원본 model/Excel/Test File SHA-256, `pwd`, `path`, 열린 모델을 비교.
 3. ASSESSMENT부터 재시작: HARNESS/SLDV/입력 준비가 다시 실행되지 않는지 로그 확인.
 4. 입력 MAT 변경 후 늦은 단계 재시작: BLOCKED와 SLDV 권고 확인. 원본을 복구한 뒤 재검사.
-5. [Standalone](standalone-run.md) EXECUTE → PACKAGE → SUMMARY와 ALL 경로 확인.
+5. [Standalone](../user-manual.md) EXECUTE → PACKAGE → SUMMARY와 ALL 경로 확인.
 6. [재생성](restart.md) PACKAGE → SUMMARY, SUMMARY만 실행. 새 id, 원본 불변,
    `LocalExecutionCount=0`, PACKAGE import 1회 / SUMMARY import 0회 확인.
 7. 두 실행 경로와 정상 파생 결과에서 `1111111111 PASS`, TC별 HTML 생성,

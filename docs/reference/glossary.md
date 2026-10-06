@@ -25,7 +25,7 @@ CUT은 두 값으로 지정합니다.
 | 값 | 의미 | 예 |
 | --- | --- | --- |
 | `CUTName` | Subsystem 블록의 이름 | `Controller` |
-| `CUTPath` | Top Model부터 시작하는 전체 경로 | `TopModel/Logic/Controller` |
+| `CUTPath` | Top Model부터 시작하는 전체 경로. Top Model 이름은 생략할 수 있습니다 | `TopModel/Logic/Controller` |
 
 이름만으로는 같은 이름의 Subsystem이 여러 개일 때 구분할 수 없으므로 경로가
 필요합니다. 경로를 채우는 보조 명령은 [운영자 매뉴얼](operator-manual.md)에
@@ -157,7 +157,7 @@ Scenario가 3개면 Iteration도 3개가 되고, 서로 일대일로 연결되�
 
 CVF 규칙은 블록을 경로가 아니라 **SID**(모델 안에서 블록에 붙는 내부 식별자)로
 가리킵니다. 그래서 CVF 뷰어에서 모델이 열려 있지 않으면 이름 칸이 `n/a`로 보입니다.
-고장이 아닙니다. 자세한 이유는 [결과 열기](manual/open-results.md)에 있습니다.
+고장이 아닙니다. 자세한 이유는 [결과 열기](open-results.md)에 있습니다.
 
 ### CVT (`.cvt` 파일)
 

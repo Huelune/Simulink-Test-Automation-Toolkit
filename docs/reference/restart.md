@@ -1,6 +1,6 @@
 # 선택한 단계부터 재시작 (선택 사항)
 
-> **평소에는 필요 없습니다.** 다시 실행할 때는 [준비 및 실행](prepare.md)의
+> **평소에는 필요 없습니다.** 다시 실행할 때는 [사용자 매뉴얼](../user-manual.md)의
 > `st_run_from_harness('PreparationMode','FORCE','FromStage',...)`으로 충분합니다.
 >
 > 이 문서는 **오래 걸리는 앞 단계를 절대 다시 실행하면 안 되는 경우**와, 이미 끝난
@@ -30,6 +30,12 @@ info = st_run_from_stage('Workflow',workflow,'FromStage',fromStage);
 `st_check_readiness`는 **아무것도 바꾸지 않고** 검사만 합니다. `BLOCKED`이면
 `checks.Message`와 `checks.RequiredFromStage`에 어느 단계부터 시작해야 하는지가
 적혀 있습니다.
+
+평소 실행(`st_run_from_harness` 등)은 기본으로 재시작 기록을 남기지 않습니다
+(`cfg.RecordRestartEvidence=false`). 그래서 처음 재시작할 때는 SLDV나 ASSESSMENT 기록이
+없다며 막히는 것이 정상입니다. `RecommendedFromStage`부터 한 번 실행하면
+`st_run_from_stage`가 기록을 남기고, 그다음부터는 원하는 단계에서 시작할 수 있습니다.
+평소 실행에서도 기록을 남기려면 그 설정을 `true`로 두십시오.
 
 선택 가능한 단계:
 

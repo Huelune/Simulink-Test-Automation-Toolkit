@@ -3,7 +3,7 @@ function [rows, details, inputFiles, verifyCells, maxTimes, decisionBlockLists] 
 %ST_COLLECT_SPECIFICATION_TARGET Inspect a loaded Harness; never activate/edit.
 % Columns are assigned public Korean headers by the export entry point.
 if nargin < 4, verifyMode = 'STEP2'; end
-if nargin < 5 || isempty(decisionScope), decisionScope = 'EXPLICIT'; end
+if nargin < 5 || isempty(decisionScope), decisionScope = 'ALL'; end
 if nargin < 6, decisionFinderFactory = []; end
 rows = strings(0,13);
 details = strings(0,10);

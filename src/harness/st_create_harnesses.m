@@ -36,7 +36,12 @@ totalTimer = tic;
 st_log(cfg, 'INFO', 'Create Test Harnesses | Model=%s | Count=%d', ...
     cfg.TopModel, n);
 
-
+% Creating a Harness can compile the model, which builds below pwd; run
+% from a short folder so that stays inside the Windows path limit. The
+% create and save calls go back to the caller's folder, see run_in_folder.
+callerDirectory = pwd;
+shortBuildDirectory = st_enter_short_build_directory(cfg, 'HARNESS');
+loopTimer = tic;
 for i = 1:n
 
     if ~selection.Run(i)
@@ -62,7 +67,8 @@ for i = 1:n
         '[HarnessCreate %d/%d] target resolved | CUT=%s | Harness=%s', ...
         i, n, ownerPath, harnessName);
 
-    st_log_progress(cfg, i, n, 'START', harnessName, 'Detail', ownerPath);
+    st_log_progress(cfg, i, n, 'START', harnessName, 'Detail', ownerPath, ...
+        'Eta', st_progress_eta(toc(loopTimer), i - 1, n));
 
 
     try
@@ -145,8 +151,14 @@ for i = 1:n
                  'This call can take several minutes.'], ...
                 i, n);
 
+            st_log(cfg, 'DEBUG', ...
+                ['[HarnessCreate %d/%d] create folder=%s | ' ...
+                 'build folder=%s'], ...
+                i, n, callerDirectory, pwd);
+
             st_call_quiet(cfg, 'sltest.harness.create', ...
-                @() sltest.harness.create( ...
+                @() run_in_folder(callerDirectory, @() ...
+                sltest.harness.create( ...
                     ownerPath, ...
                     'Name', harnessName, ...
                     'Source', 'Signal Editor', ...
@@ -160,7 +172,7 @@ for i = 1:n
                     'RebuildOnOpen', false, ...
                     'RebuildModelData', false, ...
                     'SaveExternally', false, ...
-                    'SynchronizationMode', synchronizationMode));
+                    'SynchronizationMode', synchronizationMode)));
 
             st_log(cfg, 'DEBUG', ...
                 '[HarnessCreate %d/%d] sltest.harness.create returned', ...
@@ -192,8 +204,8 @@ for i = 1:n
                 '[HarnessCreate %d/%d] save_system start', ...
                 i, n);
 
-            save_system( ...
-                cfg.TopModel);
+            run_in_folder(callerDirectory, @() ...
+                save_system(cfg.TopModel));
 
             st_log(cfg, 'DEBUG', ...
                 '[HarnessCreate %d/%d] save_system done', ...
@@ -248,8 +260,10 @@ for i = 1:n
         i, n, char(Status(i)), ElapsedSec(i));
 
     st_log_progress(cfg, i, n, Status(i), harnessName, ...
-        'Elapsed', ElapsedSec(i), 'Message', Message(i), 'Detail', ownerPath);
+        'Elapsed', ElapsedSec(i), 'Message', Message(i), 'Detail', ownerPath, ...
+        'Eta', st_progress_eta(toc(loopTimer), i, n));
 end
+clear shortBuildDirectory
 
 
 R = table( ...
@@ -280,6 +294,28 @@ st_write_result( ...
     'HarnessCreateResult', ...
     R);
 
+
+end
+
+
+function run_in_folder(folder, action)
+%RUN_IN_FOLDER Run one Harness file operation while pwd is a folder that lasts.
+%
+% sltest.harness.create writes the Signal Editor input,
+% <Harness>_HarnessInputs.mat, into pwd and the block keeps only that bare
+% file name. The short build folder is deleted when the stage ends, so a
+% Harness created there loses its input and the Signal Editor stage finds
+% the library default 'Scenario' instead of InputScenario. The save that
+% follows runs here too, so every step that can write the input happens
+% where it did before the short folder existed. Only pwd moves:
+% CacheFolder and CodeGenFolder stay in the short folder, so the compile
+% that create runs still builds inside the Windows path limit.
+
+buildDirectory = pwd;
+cd(folder);
+restoreDirectory = onCleanup(@() cd(buildDirectory));
+action();
+clear restoreDirectory;
 
 end
 
