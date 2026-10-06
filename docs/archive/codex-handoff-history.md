@@ -918,3 +918,9 @@ Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e
   `st_log_run` 감싸기와 로컬 함수 `classify_body`, 여러 줄 요약 블록은 INFO 한 줄(Model,
   Input)과 STEP 결과 한 줄(Output과 개수)이 되었다. 빈 범주는 원래 있던 WARN 줄만
   남긴다. 실행 로그를 여는 13번째 명령이다. `st_rename_test_file_models`는 그대로 둔다.
+
+## 2026-10-06 로그 체계 개편을 develop에 통합
+
+- `feat/logging`을 `develop`에 fast-forward로 넣었다. 통합 뒤 이 브랜치는 지우므로
+  브랜치 지도에서 뺐다. MATLAB 실행 검증은 하지 않은 채 들어갔으며, 미검증 항목과 돌릴
+  테스트는 codex-handoff.md의 "로그 체계 개편" 절에 있다.

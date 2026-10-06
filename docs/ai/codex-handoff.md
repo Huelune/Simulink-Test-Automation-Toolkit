@@ -24,12 +24,12 @@
 - 사용자 문서의 원본: 절차와 기본 옵션은 `docs/user-manual.md`, 옵션 전체는
   `docs/reference/execution-commands.md`, Excel 열은 `docs/reference/workbook-reference.md`,
   설정은 `docs/reference/config-reference.md`. 같은 내용을 여러 문서에 나눠 적지 않는다.
-- `feat/logging`(로그 체계 개편): 콘솔은 `cfg.ConsoleLogLevel`(기본 `'STEP'`)로
-  거르고 모든 레벨은 `result/logs/<yyyyMMdd_HHmmss>_<명령>.log`에 남긴다. 설계는
+- 로그 체계: 2026-10-06에 로그 체계 개편(옛 `feat/logging`)이 `develop`에 들어왔다.
+  콘솔은 `cfg.ConsoleLogLevel`(기본 `'STEP'`)로 거르고 모든 레벨은
+  `result/logs/<yyyyMMdd_HHmmss>_<명령>.log`에 남긴다. 설계는
   `docs/superpowers/specs/2026-09-29-logging-design.md`, 계획은
-  `docs/superpowers/plans/2026-09-29-logging.md`. `develop` `8029420`까지 합쳤고 아직
-  `develop`에 들어가지 않았다. **정적 구현과 문서까지 끝났고 MATLAB 실행 검증은
-  미수행이다.** 미검증 항목은 아래 "로그 체계 개편" 절에 있다. 실행 로그를 여는
+  `docs/superpowers/plans/2026-09-29-logging.md`. **MATLAB 실행 검증은 하지 않았다.**
+  미검증 항목과 MATLAB에서 돌릴 테스트는 아래 "로그 체계 개편" 절에 있다. 실행 로그를 여는
   명령은 13개이며 목록은 `docs/user-manual.md`의 "콘솔에 보이는 줄과 실행 로그"에
   있다(13번째가 `st_classify_standalone_results`). `st_rename_test_file_models`는 로그
   범위를 열지 않고 `disp`/`fprintf` 출력도 그대로다.
@@ -59,7 +59,7 @@
 - `st_set_standalone_coverage_root` 기본 루트 `D:\model_result\<Top Model>`.
 - `DisableLibraryLinkForSldvTargets` 실물 동작.
 
-### 로그 체계 개편 (`feat/logging`)
+### 로그 체계 개편
 
 바뀐 내용과 합치기 기록은 작업 기록의 2026-09-29, 2026-10-06 절에 있다.
 
@@ -128,8 +128,6 @@
 | `main` | 원격 | 사용자의 MATLAB 클론이 받는 브랜치. 직접 커밋하지 않고 `develop`을 fast-forward로 받는다 |
 | `develop` | 원격 | 모든 개발의 활성 브랜치 |
 | `exp/per-cut-parallel` | 원격 | 접은 PER_CUT 병렬 실험의 진단 두 개(`3fb563f`). 참고용이며 합치지 않는다. 이유는 작업 기록의 2026-10-01 절 |
-| `feat/logging` | 로컬 worktree만 | 로그 체계 개편. 2026-10-06에 `main` `893d55b`, `develop` `8029420`을 차례로 합쳤다. 원격에 없고 `develop`에 합쳐지지 않았다. 설계·계획은 `docs/superpowers/`. 미검증 항목은 위 "로그 체계 개편" 절. 이어 갈지 사용자에게 확인한 뒤 손댄다 |
-
 정리된 과거 브랜치 목록은 작업 기록에 있다. 그 브랜치를 다시 만들거나 과거 tip을
 전체 병합하지 않는다.
 

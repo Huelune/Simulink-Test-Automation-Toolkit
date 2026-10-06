@@ -538,7 +538,8 @@ info = st_collect_per_cut_results('Mode', 'LEAN');
 `Mode='LEAN'`은 최종 문서(`st_export_final_document`)가 읽는 `TestSummary.xlsx`의
 판정(`Iterations`, `Targets`)과 `DecisionPoints`만 씁니다. 재실행한 CUT은 `final/`만,
 아니면 `initial/`만 만듭니다. MLDATX 사본, CUT 커버리지 추출, PDF, CVT·CVF 사본·커버리지
-HTML은 만들지 않습니다(`[ResultReport]` 줄에 `SKIP`). CVF 생성과 부착은 그대로 해서
+HTML은 만들지 않습니다(실행 로그의 `[ResultReport]` DEBUG 줄에 `SKIP`. 기본 콘솔
+설정에서는 보이지 않습니다). CVF 생성과 부착은 그대로 해서
 DecisionPoints가 `FULL`과 같게 나옵니다. 커버리지를 standalone 파이프라인에서 가져오는
 기본 흐름(`cfg.FinalDocumentCoverageSource='STANDALONE'`)용이며, `'TEST_RUN'`이면
 `simtest:CollectLeanWithoutCoverage`로 멈춥니다. 1단계 실행의 CUT별 커버리지 HTML을

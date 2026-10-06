@@ -227,8 +227,8 @@ st_log_progress(cfg, i, n, status, label, 'Elapsed', sec, 'Message', msg, 'Detai
 
 - 콘솔 예: `    [ 3/26] FAIL   OBC_DIAG_..._Harness     30.9s  Port mismatch ...  elapsed=1m33s eta=11m53s`
 - 대상 하나가 오래 걸리는 곳에는 시작 줄 `    [ 3/26] START  <label>`을 먼저 찍는다.
-  Harness 생성, SLDV, PER_CUT 실행, PER_CUT 결과 정리가 해당하며, 그곳에서는 대상
-  하나에 콘솔 줄이 최대 두 줄이 된다.
+  Harness 생성, SLDV, PER_CUT 실행, PER_CUT 결과 정리, standalone Harness export가
+  해당하며, 그곳에서는 대상 하나에 콘솔 줄이 최대 두 줄이 된다.
 - `Eta`(문자열, 기본 `''`)는 main `42544a5`의 경과·남은 시간이다. 콘솔 줄 맨 끝, 잘린
   메시지 뒤에 공백 두 칸을 두고 자르지 않고 붙이며, DEBUG detail 줄에도 붙인다. main이
   손댄 긴 대상 반복(Harness 생성, SLDV 준비, Harness 설정, Signal Editor, Assessment,

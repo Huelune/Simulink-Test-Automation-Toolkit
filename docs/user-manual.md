@@ -102,7 +102,7 @@ Command Window에는 명령, 단계, 대상 한 줄과 `WARN`·`ERROR`만 나옵
 [14:02:20] --> [3] Create Harnesses
 ...
 [14:03:22]     [ 3/26] START  Ctrl_Sample_Harness  elapsed=1m02s eta=12m24s
-[14:03:53]     [ 3/26] OK     Ctrl_Sample_Harness                        30.9s  elapsed=1m33s eta=11m53s
+[14:03:53]     [ 3/26] OK     Ctrl_Sample_Harness                        30.9s  Harness created  elapsed=1m33s eta=11m53s
 [14:03:55]     [ 4/26] START  Diag_Sample_Harness  elapsed=1m35s eta=12m08s
 [14:04:07] ERROR     [ 4/26] FAIL   Diag_Sample_Harness                        12.3s  Port mismatch on Inport 2  elapsed=1m47s eta=9m48s
 ...
@@ -116,7 +116,7 @@ Command Window에는 명령, 단계, 대상 한 줄과 `WARN`·`ERROR`만 나옵
 | --- | --- |
 | `==> <명령> start` / `<== <명령> done` | 명령의 시작과 끝. 끝 줄에 걸린 시간이 붙고, 실패하면 `FAILED`와 오류 식별자·메시지가, Ctrl+C로 끊으면 `INTERRUPTED`가 붙습니다 |
 | `--> [3] <단계>` / `<-- [3] <단계>` | 단계의 시작과 끝. `[3]`은 그 명령에서 세 번째로 시작한 단계이고, 실행마다 도는 단계가 달라 전체 개수는 적지 않습니다. 끝 줄에 상태별 개수(`OK=25, FAIL=1`)와 걸린 시간이 붙습니다. FAIL이 있으면 끝 줄이 `WARN`이 되고 실패한 대상이 `ERROR` 줄로 이어집니다 |
-| `[ 3/26] OK <이름> 30.9s` | 대상 26개 중 3번째의 결과. FAIL은 `ERROR`로 나오고, 이름은 40자, 메시지는 60자에서 잘립니다 |
+| `[ 3/26] OK <이름> 30.9s <메시지>` | 대상 26개 중 3번째의 결과. FAIL은 `ERROR`로 나오고, 이름은 40자, 메시지는 60자에서 잘립니다 |
 | `[ 3/26] START <이름>` | 대상 하나가 오래 걸리는 곳(Harness 생성, SLDV, PER_CUT 실행, 결과 정리, standalone Harness export)에서만 먼저 나오는 시작 줄 |
 | `elapsed=1m33s eta=11m53s` | 대상 줄 끝에 붙는 그 단계의 경과 시간과 남은 시간. 남은 시간은 그 단계에서 지금까지 끝난 대상의 평균으로 계산하므로, 캐시로 건너뛴 대상이 많으면 처음에는 짧게 나옵니다. 첫 대상의 `START` 줄은 아직 계산할 수 없어 `eta=--`입니다 |
 | `    log: <경로>` | 이 명령의 로그 파일. 시작할 때와 끝날 때 한 번씩 나옵니다 |
@@ -577,8 +577,11 @@ disp(tree.OutputDir)
 ```
 
 콘솔에는 결과 한 줄(`Standalone submission tree | Output=<출력 폴더> | CUT=<개수> |
-TestCase=... | Report=... | Project=... | Skipped=...`)만 나오고, 파일이 하나도 없는
-범주가 있으면 CUT마다 `WARN` 줄이 붙습니다. 직접 부르면 로그 파일을 따로 엽니다.
+TestCase=... | Report=... | Project=... | Skipped=...`)이 나옵니다. 파일이 하나도 없는
+범주가 있으면 그 CUT과 범주의 쌍마다 `WARN` 줄이 하나씩 붙습니다. 직접 부르면 로그
+파일을 따로 열고, 그 앞뒤로 실행 로그 틀 4줄(`==>`, `<==`, `log:` 두 줄)이 더
+붙습니다. 3단계 파이프라인의 `ClassifyResults` 안에서 불리면 틀 없이 파이프라인의
+로그에 이어 씁니다.
 
 파이프라인 폴더 **옆에** `{TopModel}\`이 생깁니다.
 
