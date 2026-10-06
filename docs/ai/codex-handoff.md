@@ -222,7 +222,7 @@ result와 CVF를 읽기만 하며, 점검을 위해 연 모델은 저장하지 �
     불변인지 확인한다.
 16. If/Switch/MinMax/MultiPortSwitch/SwitchCase와 Saturate/Abs/DeadZone/RateLimiter/
     Relay/Lookup_n-D/Interpolation_n-D/PreLookup/Integrator/DiscreteIntegrator/
-    ForIterator/WhileIterator/Logic이 있는 CUT의 명세서를 export하고, 블록 이름 다음
+    ForIterator/WhileIterator가 있는 CUT의 명세서를 export하고, 블록 이름 다음
     줄의 D번호·저장 파라미터 표현과 DecisionBlockDetails의
     (elseif가 있는 If는 조건 개수만큼 D를 차지하고 이름 줄은 한 번만 나오는지,
     else는 목록에 없는지, SwitchCase는 조건식 없이 유형만 찍히는지 포함)

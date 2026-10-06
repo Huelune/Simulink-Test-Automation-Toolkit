@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **명세서 `DecisionBlocks` 목록에서 Logical Operator를 뺍니다.** Simulink
+  Coverage는 Logical Operator에 Condition/MCDC objective만 만들고 Decision
+  objective는 만들지 않습니다. 그런데 `'ALL'` 범위에서는 이 블록이 D번호와
+  `[T/F]`를 받아 Decision 항목처럼 보였고, Decision 개수와 대조하면 숫자가
+  맞지 않았습니다. 이제 이 블록은 메인 셀에도 `DecisionBlockDetails`에도 나오지
+  않습니다. 같은 CUT의 다른 블록 D번호는 하나씩 당겨질 수 있습니다.
+
 - **콘솔에는 진행만 남기고, 모든 로그는 실행마다 파일에 남깁니다.**
   지금까지는 `cfg.VerboseLogging`의 기본값(`true`) 때문에 DEBUG까지 전부 콘솔에
   나왔고, 대상마다 붙는 배너와 MathWorks 출력이 섞여 어느 단계의 몇 번째 대상인지

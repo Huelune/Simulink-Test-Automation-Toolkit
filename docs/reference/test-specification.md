@@ -152,7 +152,7 @@ BlockType, 분기 순서로 정렬하고 중복을 제거하며 빈 목록은 �
 | 그룹 | 블록 | 설명 |
 | --- | --- | --- |
 | **명시적 분기** | `If`, `Switch`, `MinMax`, `MultiPortSwitch`, `SwitchCase` | 대화상자에 조건을 직접 적습니다 |
-| **암시적 분기** | `Saturate`, `Abs`, `DeadZone`, `RateLimiter`, `Relay`, `Lookup_n-D`, `Interpolation_n-D`, `PreLookup`, `Integrator`, `DiscreteIntegrator`, `ForIterator`, `WhileIterator`, `Logic` | 조건식은 없지만 저장된 파라미터 때문에 Coverage objective가 생깁니다 |
+| **암시적 분기** | `Saturate`, `Abs`, `DeadZone`, `RateLimiter`, `Relay`, `Lookup_n-D`, `Interpolation_n-D`, `PreLookup`, `Integrator`, `DiscreteIntegrator`, `ForIterator`, `WhileIterator` | 조건식은 없지만 저장된 파라미터 때문에 Coverage objective가 생깁니다 |
 
 D번호는 두 그룹을 구분하지 않고 정렬 결과에 연속으로 붙습니다. 번호는 **CUT마다
 D1부터** 시작합니다. 한 CUT 안에서는 블록이 달라도 번호가 겹치지 않고, 같은 CUT의
@@ -170,7 +170,7 @@ Scenario 행들은 같은 분기를 나열하므로 같은 번호를 씁니다. 
 
 | 값 | 포함 대상 | 쓰는 때 |
 | --- | --- | --- |
-| `ALL` (기본) | 명시적 + 암시적 18종 | 평소. `If`/`Switch`가 없는데 Decision coverage가 나오는 이유도 여기서 보입니다 |
+| `ALL` (기본) | 명시적 + 암시적 19종 | 평소. `If`/`Switch`가 없는데 Decision coverage가 나오는 이유도 여기서 보입니다 |
 | `EXPLICIT` | 명시적 분기 5종 | 목록을 짧게 보고 싶을 때 |
 | `NONE` | 없음 (셀이 빕니다) | 분기 목록이 필요 없고 export를 가볍게 하고 싶을 때 |
 
@@ -245,7 +245,6 @@ D6 [T/F]Saturate (UpperLimit=1; LowerLimit=-1)
 | `SIGN` | Abs | 음수/비음수 |
 | `INTERVAL` | Lookup_n-D, Interpolation_n-D, PreLookup | breakpoint 구간 선택과 외삽 |
 | `LOOP` | ForIterator, WhileIterator | 루프 진입/지속/종료 |
-| `CONDITION` | Logic | Condition/MCDC |
 
 ### 괄호 안 내용
 
@@ -256,7 +255,6 @@ D6 [T/F]Saturate (UpperLimit=1; LowerLimit=-1)
 | `MinMax`, `MultiPortSwitch`, `SwitchCase` | 저장된 입력 선택 또는 case 설정 |
 | `Saturate` | `UpperLimit` / `LowerLimit` |
 | `Relay` | `OnSwitchValue` / `OffSwitchValue` |
-| `Logic` | `Operator` / `Inputs` |
 | `Integrator` 계열 | `LimitOutput` / `ExternalReset` |
 | `Abs` | 파라미터를 읽지 않고 `u < 0`으로 표시 |
 
@@ -274,10 +272,9 @@ ExternalReset=none`인 `Integrator`도 그대로 남기고 상태를 표시합�
   거르면 틀릴 수 있습니다.
 - 메인 시트의 `[T/F]`는 실행 Coverage 결과가 아니라 저장된 블록에 분기가 있다는
   **정적 표기**이며, Decision objective를 뜻하지도 않습니다.
-- `Lookup_n-D`/`PreLookup`/`Interpolation_n-D`(`INTERVAL`)는 Lookup Table 지표로,
-  `Logic`(`CONDITION`)은 Condition/MCDC 지표로 집계되므로 이 행들은 Decision objective
-  수와 일치하지 않습니다. **커버리지 숫자와 대조할 때는 반드시 세부 시트의 `Outcome`
-  열을 보십시오.**
+- `Lookup_n-D`/`PreLookup`/`Interpolation_n-D`(`INTERVAL`)는 Lookup Table 지표로
+  집계되므로 이 행들은 Decision objective 수와 일치하지 않습니다. **커버리지
+  숫자와 대조할 때는 반드시 세부 시트의 `Outcome` 열을 보십시오.**
 
 모델에 `If`나 `Switch`가 하나도 없는데 Simulink Coverage가 Decision을 보고하는 이유가
 바로 암시적 분기 블록입니다.
@@ -330,6 +327,9 @@ Enabled/Triggered Subsystem은 **포함합니다.** 자세한 것은 위
    (`LookUnderMasks`는 경계를 넘게 할 뿐이고, 그 안쪽 블록은 깊이 2라 직계
    범위 밖입니다.)
 2. Stateflow와 MATLAB Function 블록 내부 분기.
+3. Logical Operator(`Logic`). 분기처럼 보이지만 Simulink Coverage는 이 블록에
+   Condition과 MCDC objective만 만들고 Decision objective는 만들지 않습니다.
+   D번호를 주면 Decision 개수와 대조할 때 숫자가 어긋나므로 목록에 넣지 않습니다.
 
 ## 7. `OverflowDetails` 시트
 

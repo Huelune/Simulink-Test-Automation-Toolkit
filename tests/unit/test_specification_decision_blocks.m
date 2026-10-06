@@ -199,7 +199,7 @@ verifyTrue(testCase, all(ismember(string(catalog.Formatter), ["CUSTOM","GENERIC"
 verifyTrue(testCase, all(ismember(string(catalog.Kind), ["EXPLICIT","IMPLICIT"])));
 verifyTrue(testCase, all(ismember(string(catalog.MainExpression), ["SHOW","HIDE"])));
 allowed = ["T/F","SELECT","CASE","LIMIT","BAND","RATE","ON/OFF", ...
-    "SIGN","INTERVAL","LOOP","CONDITION"];
+    "SIGN","INTERVAL","LOOP"];
 verifyTrue(testCase, all(ismember(string(catalog.Outcome), allowed)));
 for k = 1:height(catalog)
     label = char(blockTypes(k));
@@ -278,11 +278,13 @@ verifyEqual(testCase, expression, "OnSwitchValue=1; OffSwitchValue=0");
     'RateLimiterPath', 'RateLimiter', @fixture_implicit_parameter);
 verifyEqual(testCase, outcome, "RATE");
 verifyEqual(testCase, expression, "RisingSlewLimit=1; FallingSlewLimit=-1");
+end
 
-[outcome, expression] = st_specification_decision_descriptor( ...
-    'LogicPath', 'Logic', @fixture_implicit_parameter);
-verifyEqual(testCase, outcome, "CONDITION");
-verifyEqual(testCase, expression, "Operator=AND; Inputs=2");
+function testLogicalOperatorIsNotADecisionBlock(testCase)
+% Simulink Coverage gives Logical Operator Condition and MCDC objectives
+% only, so it must not take a D number next to real Decision branches.
+catalog = st_specification_decision_catalog('ALL');
+verifyFalse(testCase, ismember("Logic", string(catalog.BlockType)));
 end
 
 function testParameterlessBlockUsesFixedTextWithoutReadingParameters(testCase)
@@ -386,10 +388,6 @@ switch key
         value = '1';
     case "RateLimiterPath|FallingSlewLimit"
         value = '-1';
-    case "LogicPath|Operator"
-        value = 'AND';
-    case "LogicPath|Inputs"
-        value = '2';
     case "LookupPath|NumberOfTableDimensions"
         value = '2';
     case "LookupPath|InterpMethod"

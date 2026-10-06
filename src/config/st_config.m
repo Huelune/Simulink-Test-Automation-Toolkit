@@ -566,7 +566,8 @@ cfg.OnlyEnabled = true;
 %   The blocks that carry a condition in their dialog, plus the blocks that
 %   create Simulink Coverage objectives without one: Saturate, Abs, Dead
 %   Zone, Rate Limiter, Relay, the lookup table family, the integrators,
-%   the iterators, Logical Operator and Enabled / Triggered Subsystems.
+%   the iterators and Enabled / Triggered Subsystems. Logical Operator is
+%   not scanned: it receives Condition and MCDC coverage, not Decision.
 %   This also explains Decision coverage reported for a model that
 %   contains no If or Switch block at all, and matches the scope
 %   st_export_final_document always uses. The column gets much longer, and
