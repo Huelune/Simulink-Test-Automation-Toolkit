@@ -200,9 +200,11 @@ Triggered Subsystem은 `'EXPLICIT'`에서 빠지기 때문입니다. 명세서 �
 
 ### 분기 결과 — `[T]`, `[F]`, `[T/F]`, `[-]`
 
-모든 결정이 true/false 두 결과인 블록(If의 조건마다, Switch, For/While Iterator,
-Enabled/Triggered/Resettable Subsystem 등)은 **그 행의 테스트가 실제로 탄 결과**를
-적습니다.
+아래 블록은 **그 행의 테스트가 실제로 탄 결과**를 적습니다. If는 조건(if,
+elseif)마다 따로 적습니다.
+
+- If, Switch, Abs, For Iterator, While Iterator
+- Enabled/Triggered/Resettable Subsystem(CUT 자신)
 
 | 표기 | 뜻 |
 | --- | --- |
@@ -214,10 +216,12 @@ Enabled/Triggered/Resettable Subsystem 등)은 **그 행의 테스트가 실제�
 값은 결과 정리 때 iteration마다 기록한 결과 워크북의 `DecisionOutcomes` 시트에서
 옵니다. 판정과 같은 워크북·같은 실행(INITIAL/FINAL)을 읽습니다.
 
-- Saturate, MinMax, MultiPortSwitch, SwitchCase, Sign처럼 결정이 둘 이상이거나 결과가
-  셋 이상인 블록은 정적 표기 `[T/F]` 그대로입니다.
-- 결과를 붙이지 못하면 `[T/F]`로 두고 `TestResults`의 `확인 사유`에 이유를 남깁니다.
-  이 사유만으로 `확인 필요`가 `Y`가 되지는 않습니다.
+- 그 밖의 블록(Saturate, MinMax, MultiPortSwitch, SwitchCase, Sign 등)은 정적 표기
+  `[T/F]` 그대로이며 사유를 남기지 않습니다. 대상인지는 블록 종류로 정합니다.
+- 위 블록인데 그 행의 결과가 기록되지 않았으면 `[T/F]`로 두고 `TestResults`의
+  `확인 사유`에 `DECISION_OUTCOME_UNAVAILABLE`을 남깁니다. D 줄 수와 기록된 결정
+  수가 다르면 `DECISION_OUTCOME_MISMATCH`입니다. 이 사유만으로 `확인 필요`가 `Y`가
+  되지는 않습니다.
 - 이 기능 이전에 정리한 결과는 시트가 없어 모든 행이
   `DECISION_OUTCOME_UNAVAILABLE`입니다. 결과 정리를 다시 하면 채워집니다.
 

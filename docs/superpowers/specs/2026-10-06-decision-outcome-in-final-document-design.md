@@ -32,15 +32,20 @@ Simulink Coverage는 결정마다 결과별 실행 횟수를 이미 갖고 있�
 - 결과를 구할 수 없으면 지금처럼 `[T/F]`로 두고, 그 사실을 행의 `확인 사유`에
   남긴다. 결과를 모르는 상태를 "둘 다 탔다"로 착각하지 않도록 사유 코드로
   구분한다.
+- 대상인지는 **블록 종류**로 정한다. catalog(`st_specification_decision_catalog`)의
+  `TwoWay` 열이 `YES`인 종류(If, Switch, Abs, For/While Iterator, Enabled/Triggered/
+  Resettable Subsystem)만 대상이다. coverage의 outcome 텍스트로 정하지 않는 이유는,
+  Saturate처럼 D 줄 하나에 true/false 결정이 둘인 블록이 있어서 텍스트만 보면 모든
+  행이 개수 불일치가 되기 때문이다.
 
 ### 범위 밖
 
 - **명세서 export**(`st_export_test_specification`): 테스트 실행 전의 정적 문서이므로
   그대로 둔다.
-- **T/F가 아닌 분기**: 결정이 둘인 블록(Saturate의 상한·하한, Discrete-Time
+- **`TwoWay`가 `NO`인 블록**: 결정이 둘인 블록(Saturate의 상한·하한, Discrete-Time
   Integrator의 reset과 한계)과 결과가 셋 이상인 블록(MinMax, MultiPortSwitch,
-  SwitchCase, Sign, Combinatorial Logic)은 `[T/F]` 그대로 둔다. 사용자가 이 범위를
-  골랐다.
+  SwitchCase, Sign, Combinatorial Logic) 등은 `[T/F]` 그대로 두고 사유도 남기지
+  않는다. outcome 텍스트가 true/false여도 마찬가지다. 사용자가 이 범위를 골랐다.
 - D번호 체계: 지금처럼 정적 scan이 정한 블록·조건 단위를 유지한다.
 - Condition/MCDC 결과.
 
@@ -80,8 +85,11 @@ rows = st_collect_decision_outcomes(resultObj, cutName, root, cfg)
   `conditional_port`)를 공용 함수 `st_decision_object_path`로 꺼내 두 수집기가 같이
   쓴다.
 - **결정.** `[~, description] = decisioninfo(cvd, objectPath)`의
-  `description.decision(k)`마다 결과가 정확히 둘이고 그 텍스트가 `true`와 `false`
-  (대소문자 무시)이면 한 행을 남긴다. 그 밖의 결정은 남기지 않는다. 블록의 결정 중
+  `description.decision(k)`마다 결과가 정확히 둘이고 그 텍스트가 하나는 `true`, 하나는
+  `false`(대소문자와 앞뒤 공백 무시)이면 한 행을 남긴다. 텍스트가 그 단어로 시작하고
+  바로 뒤가 영숫자·`_`가 아닌 경우도 받는다. Switch는
+  `true (output is from 1st input port)`처럼 단어 뒤에 설명을 붙인다. `trueish`처럼
+  단어가 이어지면 받지 않는다. 그 밖의 결정은 남기지 않는다. 블록의 결정 중
   하나라도 이 조건에 맞지 않으면 그 블록의 행을 하나도 남기지 않는다. 일부만 남기면
   최종 문서가 결정 순서를 잘못 맞출 수 있기 때문이다.
 - **행 형식.**
@@ -129,8 +137,12 @@ rows = st_collect_decision_outcomes(resultObj, cutName, root, cfg)
   같은 파일이라 run(BATCH/PER_CUT, INITIAL/FINAL)이 자동으로 맞는다.
 - BATCH workbook에 INITIAL과 FINAL이 함께 있으면, 판정 reader와 같은 규칙으로
   FINAL을 우선한다.
-- 결과는 `(CUTName, TestCaseName, IterationName, RelativePath)`로 찾는
-  `containers.Map`이다. 값은 `DecisionIndex` 순서의 `[TrueCount FalseCount]` 행렬이다.
+- 결과는 `(TestCaseName, IterationName, RelativePath)`로 찾는 `containers.Map`이다.
+  값은 `DecisionIndex` 순서의 `[TrueCount FalseCount]` 행렬이다. 키에 `CUTName`은
+  넣지 않는다. 판정 lookup도 Test Case 이름과 iteration 이름으로만 찾기 때문이다.
+- workbook 하나를 읽다가 실패하면(시트를 못 읽거나 `DecisionIndex`가 양의 정수가
+  아닌 행이 있으면) WARN을 남기고 그 workbook을 통째로 건너뛴다. 그 workbook의 행은
+  결과 없음으로 읽히고, 최종 문서 export는 계속된다.
 - 행의 `Iteration명`이 실제 iteration이 아니면(빈 값, `<기본 설정>`, `(단일 실행)`,
   `연결 없음`) IterationName이 빈 Test Case 단위 결과로 찾는다. 판정 lookup
   (`st_final_document_table.m`의 `lookup_verdict`)과 같은 규칙이며, 같은 판별
@@ -146,6 +158,8 @@ rows = st_collect_decision_outcomes(resultObj, cutName, root, cfg)
 - 새 선택 인자 `outcomeLookup`. 행의 `(CUTName, 테스트 케이스명, Iteration명)`과 블록
   경로를 주면 결과 행렬을 돌려주는 함수 핸들이다. 명세서 export는 이 인자를 넘기지
   않으므로 출력이 바뀌지 않는다.
+- 블록 종류의 catalog `TwoWay`가 `NO`이거나 catalog에 없는 종류면 lookup을 부르지
+  않고 `[T/F]`를 사유 없이 둔다.
 - 블록의 D 줄 수와 결과 행렬의 행 수가 같을 때만 k번째 D에 k번째 결정을 대응시킨다.
   If 블록의 if/elseif가 여기에 해당한다. 다르면 그 블록의 D는 모두 `[T/F]`로 둔다.
 - 표기 규칙: `TrueCount > 0`이면 T, `FalseCount > 0`이면 F. 둘 다면 `T/F`, 둘 다
@@ -155,11 +169,11 @@ rows = st_collect_decision_outcomes(resultObj, cutName, root, cfg)
 
   | 코드 | 언제 |
   | --- | --- |
-  | `DECISION_OUTCOME_UNAVAILABLE` | 그 행의 run workbook에 `DecisionOutcomes` 시트가 없거나 그 행의 결과가 없다 |
+  | `DECISION_OUTCOME_UNAVAILABLE` | `TwoWay` 블록인데 그 행의 run workbook에 `DecisionOutcomes` 시트가 없거나, 그 행의 단위(`UNIT` 행)가 없거나, 단위는 훑었지만 그 블록의 결정이 기록되지 않았다 |
   | `DECISION_OUTCOME_MISMATCH` | 블록의 D 줄 수와 기록된 결정 수가 다르다 |
 
-  T/F가 아니라서 기록이 없는 블록(Saturate 등)은 사유를 남기지 않는다. 처음부터
-  범위 밖이기 때문이다.
+  `TwoWay`가 `NO`인 블록(Saturate 등)은 사유를 남기지 않는다. 처음부터 범위 밖이기
+  때문이다.
 
 - Metadata 시트에 `DecisionOutcomeUnits`(읽은 단위 수), `DecisionOutcomeUnavailableRows`,
   `DecisionOutcomeMismatchRows`를 더한다.
@@ -194,8 +208,9 @@ MATLAB 없이 이 환경에서 돌릴 수는 없지만, 아래는 모델 없이 
 1. iteration 단위 cvdata(`getCoverageResults(iterResult)`)가 결과를 담고 있다. 일부
    릴리스는 ResultSet 단위에만 coverage를 둔다. 그 경우 모든 행이
    `DECISION_OUTCOME_UNAVAILABLE`이 되며, 그 사실이 Metadata 숫자로 보여야 한다.
-2. Enable/Trigger/Reset, Switch, If의 outcome 텍스트가 `true`/`false`다. For
-   Iterator는 사용자 리포트 캡처로 확인했다.
+2. Enable/Trigger/Reset, Switch, If, Abs, While Iterator의 outcome 텍스트가
+   `true`/`false`로 시작한다. For Iterator는 사용자 리포트 캡처로 확인했다. 아니면
+   그 종류의 블록은 모든 행에서 `DECISION_OUTCOME_UNAVAILABLE`이 된다.
 3. If 블록의 `description.decision` 순서가 if, elseif 순서와 같다.
 4. iteration 단위 cvdata에도 coverage filter(CVF)가 적용되는지. 이번 표기는 실행
    횟수만 보므로 filter와 무관하지만, 결과가 filter로 가려진 블록이 `[-]`로 보일 수

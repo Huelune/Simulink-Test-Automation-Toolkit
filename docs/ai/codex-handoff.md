@@ -60,8 +60,9 @@
 - `DisableLibraryLinkForSldvTargets` 실물 동작.
 - 최종 문서 분기 결과(`DecisionOutcomes`): iteration 단위 `getCoverageResults`가
   결과를 담는지(비면 모든 행이 `DECISION_OUTCOME_UNAVAILABLE`, Metadata
-  `DecisionOutcomeUnits=0`), Switch·If·Enable·Trigger·Reset의 outcome 텍스트가
-  `true`/`false`인지(For Iterator만 사용자 캡처로 확인), If의
+  `DecisionOutcomeUnits=0`), Switch·If·Abs·While Iterator·Enable·Trigger·Reset의
+  outcome 텍스트가 `true`/`false`로 시작하는지(For Iterator만 사용자 캡처로 확인.
+  아니면 그 블록이 모든 행에서 `DECISION_OUTCOME_UNAVAILABLE`), If의
   `description.decision` 순서가 if→elseif인지, PER_CUT 결과 정리 시간이 얼마나
   늘었는지, `detectImportOptions`가 첫 데이터 행(UNIT 행)에 빈 칸이 여럿 있어도
   `DecisionOutcomes` 시트의 1행을 머리글로 읽는지(못 읽으면 모든 행이

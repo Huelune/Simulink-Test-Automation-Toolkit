@@ -365,7 +365,9 @@ result/runs/{timestamp}_{run-id}/
 ```
 
 `TestSummary.xlsx`에는 `Overview`, `Targets`, `Iterations`, `Coverage`,
-`CoverageFilters`, `ExpectedUpdates`, `Workflow`, `Metadata` 시트가 있습니다.
+`CoverageFilters`, `ExpectedUpdates`, `Workflow`, `DecisionOutcomes`, `Metadata`
+시트가 있습니다. `DecisionOutcomes`는 iteration마다 true/false 분기가 어느 쪽을
+몇 번 탔는지 적은 표로, 최종 문서의 `[T]`/`[F]`/`[T/F]`/`[-]` 표기가 여기서 옵니다.
 `result/latest.json`과 `result/TestSummary.xlsx`가 최신 통합 실행을 가리킵니다.
 
 ### 8.2 PER_CUT 개별 보고서
