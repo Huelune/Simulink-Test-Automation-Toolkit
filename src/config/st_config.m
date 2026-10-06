@@ -380,6 +380,19 @@ cfg.PreparationMode = 'AUTO';
 % workflow and SLDV for the existing-Harness workflow.
 cfg.PreparationFromStage = 'START';
 
+% false (default):
+%   Do not record restart evidence. Only st_run_from_stage reads it, to
+%   prove that the stages it will not rerun still hold what they built.
+%   Recording rereads every Harness after HARNESS_CONFIG, SIGNAL_EDITOR and
+%   ASSESSMENT, and the Assessment and Test File again after execution.
+%   AUTO reuse does not need it; it compares input signatures.
+%
+% true:
+%   Record it on every run. st_run_from_stage turns this on for its own
+%   run regardless, so a restart that finds no evidence asks for one
+%   restart from that stage and records it there.
+cfg.RecordRestartEvidence = false;
+
 cfg.WorkflowStateFile = ...
     fullfile(rootDir, 'result', 'state', 'workflow_state.mat');
 

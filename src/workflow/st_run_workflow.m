@@ -11,6 +11,10 @@ if ~isempty(options.IgnoreUnexpectedSldvInputs)
         'Workflow option override | IgnoreUnexpectedSldvInputs=%d', ...
         cfg.IgnoreUnexpectedSldvInputs);
 end
+if ~cfg.RecordRestartEvidence
+    st_log(cfg,'INFO', ['Restart evidence not recorded ' ...
+        '(cfg.RecordRestartEvidence=false); st_run_from_stage records it']);
+end
 if options.StrictRestart
     if ~isempty(options.IgnoreUnexpectedSldvInputs)
         error('simtest:RestartConfigOverride', ...
@@ -334,6 +338,11 @@ function overrides = config_overrides(options)
 overrides = struct();
 if ~isempty(options.IgnoreUnexpectedSldvInputs)
     overrides.IgnoreUnexpectedSldvInputs = options.IgnoreUnexpectedSldvInputs;
+end
+% A strict restart is the one reader of restart evidence. Recording it here
+% lets a restart that found none succeed the next time.
+if options.StrictRestart
+    overrides.RecordRestartEvidence = true;
 end
 end
 

@@ -446,6 +446,23 @@ workflow에서 `SLDV`로 해석됩니다.
 따지지 않고 모든 준비 단계를 `CACHED`로 두고 테스트만 실행하므로, 이 값일 때는
 `RunGeneratedTests=false`여도 테스트가 실행됩니다.
 
+### `RecordRestartEvidence` — 기본 `false`
+
+`st_run_from_stage`가 쓰는 재시작 기록을 평소 실행에서도 남길지 정합니다. 이 기록은
+단계가 끝날 때마다 결과물을 다시 읽어 해시로 남긴 것입니다. 재시작할 때 다시 돌리지 않는
+앞 단계가 그대로인지 증명하는 데 씁니다. 결과물을 다시 읽으려고 `HARNESS_CONFIG`,
+`SIGNAL_EDITOR`, `ASSESSMENT` 뒤마다 CUT별로 Harness를 다시 열고, 실행 뒤에도 한 번 더
+엽니다.
+
+| 값 | 동작 |
+| --- | --- |
+| `false` (기본) | 남기지 않습니다. `AUTO` 재사용은 입력 지문으로 판단하므로 영향이 없습니다 |
+| `true` | 매 실행마다 남깁니다 |
+
+`st_run_from_stage`는 설정과 상관없이 자기 실행에서는 기록을 남깁니다. 기록이 없는
+상태에서 처음 재시작하면 준비 점검이 "No verifiable checkpoint"로 막고 SLDV나
+ASSESSMENT부터 시작하라고 알려 줍니다. 그 단계부터 한 번 재시작하면 기록이 생깁니다.
+
 ## 9. 명세서와 최종 문서 추출
 
 ### `DecisionBlockScope` — 기본 `'ALL'`

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **평소 실행은 재시작 기록을 남기지 않습니다.**
+  재시작 기록은 `st_run_from_stage`만 읽습니다. 그런데 이 기록을 남기려고 매 실행마다
+  `HARNESS_CONFIG`, `SIGNAL_EDITOR`, `ASSESSMENT` 뒤에 CUT별로 Harness를 다시 열었고,
+  실행 뒤에도 Assessment와 Test File을 다시 읽었습니다. 새 설정
+  `cfg.RecordRestartEvidence`(기본 `false`)가 꺼져 있으면 이 작업을 하지 않습니다.
+  `AUTO` 재사용은 입력 지문으로 판단하므로 영향이 없습니다.
+  - `st_run_from_stage`는 자기 실행에서는 항상 기록합니다. 기록 없이 처음 재시작하면
+    SLDV나 ASSESSMENT부터 한 번 시작하라고 막고, 그 실행이 기록을 남깁니다.
+
 - **`Validate Scenario Alignment` 단계를 기본으로 건너뜁니다.**
   이 단계는 앞 단계가 만든 것을 다시 읽기만 하는데, CUT마다 Harness를 다시 열어 SLDV,
   Signal Editor, Test Assessment, Test Manager Iteration의 Scenario 이름을 비교해서
