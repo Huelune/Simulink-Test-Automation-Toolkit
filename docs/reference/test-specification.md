@@ -243,7 +243,7 @@ D6 [T/F]Saturate (UpperLimit=1; LowerLimit=-1)
 | `RATE` | RateLimiter | 상승/하강/제한 내 |
 | `ON/OFF` | Relay | 히스테리시스 on/off |
 | `SIGN` | Abs | 음수/비음수 |
-| `LOOP` | ForIterator, WhileIterator | 루프 진입/지속/종료 |
+| `LOOP` | ForIterator, WhileIterator | loop condition 참(반복 계속)/거짓(반복 끝) |
 
 ### 괄호 안 내용
 
