@@ -282,11 +282,9 @@ function testDecisionPointScanSkipsAggregatingContainers(testCase)
 % decisioninfo on a Subsystem returns the total of everything inside it,
 % so keeping containers would report every ancestor as a decision block.
 source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
-    'st_collect_decision_points.m'));
+    'st_decision_object_path.m'));
 verifyNotEmpty(testCase, regexp(source, ...
-    "is_container\(blockType\)", 'once'));
-verifyNotEmpty(testCase, regexp(source, ...
-    "'SubSystem', 'ModelReference'", 'once'));
+    "if ~any\(strcmp\(blockType, \{'SubSystem', 'ModelReference', ''\}\)\)", 'once'));
 end
 
 function testJustifiedCountSumsWhatTheFilterExcused(testCase)
