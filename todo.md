@@ -54,13 +54,19 @@ for i = 1:size(blocks, 1)
 end
 save_system(mdl, fullfile(tempdir, [mdl '.slx']));
 
-% Decision coverage로 한 번 시뮬레이션
+% Decision coverage로 한 번 시뮬레이션 (경고는 끄고 끝나면 되돌림)
+ws = warning('off', 'all');
 test = cvtest(mdl);
 test.settings.decision = 1;
 cvd = cvsim(test);
+warning(ws);
 
-% 블록마다 결정 텍스트, 순서, 결과별 실행 횟수 출력
-diary(fullfile(tempdir, 'cov_probe.txt'));
+% 결정 하나를 한 줄로: 블록 | 순번 | 결정 텍스트 | 결과=횟수 ...
+clc;
+logFile = fullfile(tempdir, 'cov_probe.txt');
+if isfile(logFile), delete(logFile); end
+diary(logFile);
+fprintf('%-6s %s | %-32s | %s\n', 'Block', '#', 'Decision', 'Outcome=Count');
 found = find_system(mdl, 'SearchDepth', 1, 'Type', 'Block');
 for i = 1:numel(found)
     try
@@ -69,31 +75,36 @@ for i = 1:numel(found)
         continue;
     end
     if isempty(v), continue; end
-    fprintf('\n== %s (%s)  covered %d/%d\n', found{i}, ...
-        get_param(found{i}, 'BlockType'), v(1), v(2));
+    name = get_param(found{i}, 'Name');
     for k = 1:numel(d.decision)
-        fprintf('  decision %d: %s\n', k, d.decision(k).text);
-        for j = 1:numel(d.decision(k).outcome)
-            o = d.decision(k).outcome(j);
-            fprintf('      %-45s %d\n', o.text, o.executionCount);
-        end
+        parts = arrayfun(@(o) sprintf('%s=%d', o.text, o.executionCount), ...
+            d.decision(k).outcome, 'UniformOutput', false);
+        fprintf('%-6s %d | %-32s | %s\n', name, k, d.decision(k).text, ...
+            strjoin(parts, '   '));
     end
 end
 diary off;
 close_system(mdl, 0);
-fprintf('\n결과: %s\n', fullfile(tempdir, 'cov_probe.txt'));
+```
+
+출력은 결정 하나가 한 줄이라 20줄 안팎으로 한 화면에 들어온다. 예:
+
+```text
+Block  # | Decision                         | Outcome=Count
+Sat    1 | ...                              | false=...   true=...
+Sat    2 | ...                              | ...
 ```
 
 ### 확인할 것
 
 - Saturation, Dead Zone, Rate Limiter, Relay, Discrete-Time Integrator, Delay의
-  `decision 1/2/3` 텍스트와 순서. 상한이 먼저인지, reset이 먼저인지.
+  `#` 1/2/3 텍스트와 순서. 상한이 먼저인지, reset이 먼저인지.
 - 결과 텍스트가 `true`/`false`로 시작하는지. Switch, If, Abs, Enabled Subsystem 포함.
 - If의 `u1 > 0`과 `u1 < -20` 결정 순서.
 
 ### 돌려줄 것
 
-콘솔 출력 전체, 또는 마지막 줄에 나오는 `cov_probe.txt` 내용.
+출력 화면 캡처 한 장. 줄이 잘리면 `fullfile(tempdir, 'cov_probe.txt')` 파일 내용.
 
 블록 경로나 파라미터 이름 때문에 에러가 나면 그 메시지를 함께 붙인다. 해당 블록
 줄만 지우고 다시 돌려도 된다. 이 스크립트는 아직 한 번도 실행해 보지 않았다.
