@@ -15,6 +15,29 @@ runtests({'test_decision_outcomes','test_export_final_document', ...
 
 실패한 테스트가 있으면 출력 전체를 붙인다.
 
+### 1-1. "테스트 스위트를 만들 수 없습니다"로 멈출 때
+
+2026-10-08 실행에서 `test_decision_outcomes`가 이 메시지로 멈췄다. 이 메시지는 진짜
+원인을 감춘다. 아래를 돌려 원인 전체와 클론의 커밋을 찍는다. 저장소는 바꾸지 않는다.
+
+```matlab
+%% 1-1. 스위트 생성 실패 원인 찍기
+system(sprintf('git -C "%s" log -1 --oneline', st_project_root()));
+f = which('test_decision_outcomes');
+fprintf('file=%s
+', f);
+try
+    s = matlab.unittest.TestSuite.fromFile(f);
+    fprintf('OK: %d tests
+', numel(s));
+catch e
+    disp(getReport(e, 'extended', 'hyperlinks', 'off'));
+end
+checkcode(f)
+```
+
+돌려줄 것: 출력 전체(커밋 한 줄, `file=` 경로, 오류 보고, `checkcode` 결과).
+
 이번 변경과 무관하게 **이미 실패하던 테스트 두 개**가 있다. 이 둘이 실패해도 회귀가
 아니며, 따로 고친다.
 
