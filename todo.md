@@ -117,8 +117,12 @@ develop에 들어온 로그 개편(콘솔에는 진행 줄만, 모든 로그는 
 MATLAB에서 한 번도 돌려 보지 않았다. 2절처럼 develop을 받고 실행한다.
 
 Current Folder가 모델 프로젝트여도 되도록 클론의 `tests/unit`을 `st_project_root()`로
-찾는다. 2026-10-08에 `runtests('tests/unit')`가 "테스트 스위트를 만들 수 없습니다"로
-멈췄는데, Current Folder가 클론 루트가 아니었을 가능성이 크다.
+찾는다.
+
+2026-10-08 진행: 처음 실행은 "테스트 스위트를 만들 수 없습니다"로 멈췄다. 3-2로
+`test_resolve_target_cut_paths.m`의 보조 함수 `test_cfg`가 원인임을 찾아 고쳤다
+(이름이 `test`로 시작하면 MATLAB이 테스트로 보고 인자 하나를 요구한다). 클론에서
+`git pull` 한 뒤 3-1만 다시 돌리면 된다. 3-2·3-3은 3-1이 또 멈출 때만 쓴다.
 
 ```matlab
 %% 3-1. 단위 테스트 전체
