@@ -45,3 +45,11 @@ must fit on one screen, because the user answers with a single screenshot.
   does not add `tests` to the path, so pass test files to `runtests` by full path
   (`fullfile(st_project_root(), 'tests', 'unit', '<name>.m')`); by name alone it
   stops with "테스트 스위트를 만들 수 없습니다".
+- Start every block with `clearvars`. The user pastes blocks into one workspace,
+  and a variable left by an earlier block shadows a function of the same name
+  (a variable `split` turned `split(x, ";")` into "string 유형의 값은 인덱스로
+  사용할 수 없습니다"). Do not name variables after functions either.
+- Print no company-internal information: no test case, model, CUT or block
+  names, no paths, no account names. Print counts, Simulink block types, fixed
+  messages, and only the file name of an output. The user's global rules spell
+  this out.
