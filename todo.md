@@ -2,6 +2,7 @@
 
 작성: 2026-10-07. 결과를 붙여 주면 해당 절은 지운다.
 
+블록마다 `clearvars`로 시작한다. 앞서 돌린 블록의 변수가 함수 이름을 가리면 엉뚱한 오류가 난다.
 화면에는 개수, Simulink 블록 종류 이름, 정해 둔 안내 문구만 찍는다. 테스트 케이스·모델·블록
 이름, 경로, 계정은 찍지 않는다(회사 내부 정보).
 
@@ -11,6 +12,7 @@
 BATCH면 `st_generate_test_report`. `DecisionOutcomes` 시트는 결과 정리 때 쓰인다.
 
 ```matlab
+clearvars  % a variable left over from an earlier block (e.g. "split") would shadow a function
 st_setup
 [T, file] = st_export_final_document();
 clc
@@ -53,6 +55,7 @@ fprintf('file: result\\%s%s\n', name, ext);
 바꾸지 않는다.
 
 ```matlab
+clearvars  % a variable left over from an earlier block (e.g. "split") would shadow a function
 st_setup
 cfg = st_config();
 logDir = fullfile(cfg.ResultDir, 'logs');
@@ -148,6 +151,7 @@ fprintf('collector: units without coverage %d | block list failed %d | case not 
 `<path>`, `<user>`로 가린다.
 
 ```matlab
+clearvars  % a variable left over from an earlier block (e.g. "split") would shadow a function
 st_setup
 unitDir = fullfile(st_project_root(), 'tests', 'unit');
 names = ["test_decision_outcomes", "test_export_final_document", ...
