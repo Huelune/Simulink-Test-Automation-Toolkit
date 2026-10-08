@@ -222,12 +222,11 @@ elseif)마다 따로 적습니다.
   결과가 셋 이상이라 정적 표기 `[T/F]` 그대로이며 사유를 남기지 않습니다.
 - 결정마다 D가 있는 블록은 D 줄의 Coverage 결정 이름과 기록된 결정 이름을 맞춰
   결과를 적습니다. 리포트는 하한을 상한보다 먼저 적으므로 순서로는 짝짓지 않습니다.
-  입력이 벡터라 같은 이름의 결정이 여러 개이거나, 기록된 결정이 D 줄과 하나씩
-  맞지 않으면 `[T/F]`로 두고 `DECISION_OUTCOME_MISMATCH`를 남깁니다.
 - 위 블록인데 그 행의 결과가 기록되지 않았으면 `[T/F]`로 두고 `TestResults`의
   `확인 사유`에 `DECISION_OUTCOME_UNAVAILABLE`을 남깁니다. D 줄 수와 기록된 결정
-  수가 다르면 `DECISION_OUTCOME_MISMATCH`입니다. 이 사유만으로 `확인 필요`가 `Y`가
-  되지는 않습니다.
+  수가 다르거나, D 줄의 결정 이름이 기록된 결정과 하나도 맞지 않거나 여럿과 맞으면
+  (벡터 입력) `[T/F]`로 두고 `DECISION_OUTCOME_MISMATCH`를 남깁니다. 이 사유만으로
+  `확인 필요`가 `Y`가 되지는 않습니다.
 - 이 기능 이전에 정리한 결과는 시트가 없어 모든 행이
   `DECISION_OUTCOME_UNAVAILABLE`입니다. 결과 정리를 다시 하면 채워집니다.
 
@@ -382,7 +381,7 @@ manifest에 적힌 체크섬과 실제 `CoverageSummary.xlsx`가 다르면 **중
 | `RESULT_WORKBOOK_SHAPE_UNEXPECTED` | 결과 워크북의 시트나 열이 예상과 다릅니다 |
 | `MAXTIME_UNAVAILABLE` | `Pre Condition`이 빈 칸인 이유입니다 |
 | `DECISION_OUTCOME_UNAVAILABLE` | 이 행의 분기 결과가 기록되지 않아 `Description`에 `[T/F]`를 남겼습니다. 정보성이며 `확인 필요`를 켜지 않습니다 |
-| `DECISION_OUTCOME_MISMATCH` | 블록의 D 줄 수와 기록된 결정 수가 달라 `[T/F]`를 남겼습니다. 정보성입니다 |
+| `DECISION_OUTCOME_MISMATCH` | 블록의 D 줄 수와 기록된 결정 수가 다르거나, D 줄의 결정 이름이 기록된 결정과 하나도 맞지 않거나 여럿과 맞아(벡터 입력) `[T/F]`를 남겼습니다. 정보성입니다 |
 | `DECISION_OUTCOME_AMBIGUOUS` | 같은 행·블록에 서로 다른 결과가 기록돼 그 블록을 `[T/F]`로 두었습니다 |
 | `DUPLICATE_TEST_CASE_ID` | 같은 `Test Case ID`가 여러 행에 있습니다. 값은 바꾸지 않습니다 |
 | `TESTCASE_ID_PATTERN_UNMATCHED` | 이름이 `{CUT}_{ID}` / `UT_REQ_{CUT}_{NUM}` 규칙과 달라 ID를 나누지 못했습니다. 1·2열은 원문입니다 |

@@ -199,11 +199,12 @@ D4 [T/F]MinMax (max; Inputs=3)
 Case 선택
 D5 [T/F]SwitchCase
 Sat 1
-D6 [T/F]Saturate (UpperLimit=1; LowerLimit=-1)
+D6 [T/F]Saturate (U >= LL; LowerLimit=-1)
+D7 [T/F]Saturate (U > UL; UpperLimit=1)
 ```
 
-위 여섯 줄에 대응하는 `DecisionBlockDetails`의 `Outcome`은 각각 `T/F`, `T/F`, `T/F`,
-`SELECT`, `CASE`, `LIMIT`입니다.
+위 일곱 줄에 대응하는 `DecisionBlockDetails`의 `Outcome`은 각각 `T/F`, `T/F`, `T/F`,
+`SELECT`, `CASE`, `LIMIT`, `LIMIT`입니다.
 
 ### D번호는 블록이 아니라 분기 단위
 
@@ -277,8 +278,8 @@ DiscreteIntegrator의 reset 분기는 `ExternalReset`이 `none`이 아닐 때만
 | `Signum` | 파라미터를 읽지 않고 `sign(u)`로 표시 |
 
 위 표에서 결정 단위로 나누지 않는 암시적 분기 블록은 catalog가 지정한 파라미터를
-`이름=값; 이름=값` 형태로 이어 붙입니다. 값은 workspace에서 평가하지 않고 저장된 문자열을 그대로 옮기므로, 변수로
-지정한 한계값은 변수 이름이 보입니다.
+`이름=값; 이름=값` 형태로 이어 붙입니다. 값은 workspace에서 평가하지 않고 저장된
+문자열을 그대로 옮기므로, 변수로 지정한 한계값은 변수 이름이 보입니다.
 
 파라미터가 비활성이어도 목록에서 빼지 않는 것이 원칙입니다. 예외는 설정에 따라
 Simulink Coverage가 Decision objective를 아예 만들지 않는 블록이고, catalog의
@@ -296,12 +297,16 @@ Simulink Coverage가 Decision objective를 아예 만들지 않는 블록이고,
 
 - **objective 개수를 세지 않습니다.** 실제 objective 생성 여부는 대화상자
   파라미터뿐 아니라 데이터 타입과 최적화 설정도 관여하므로, 저장된 파라미터만으로
-  거르면 틀릴 수 있습니다. MathWorks 문서가 조건을 명시한 `DiscreteIntegrator`만
-  파라미터로 거릅니다.
+  거르면 틀릴 수 있습니다. catalog의 `DecisionWhen`에 조건을 적은 블록
+  (`DiscreteIntegrator`, `Delay`, `DiscreteFir`, `DiscreteFilter`,
+  `DiscreteTransferFcn`)만 파라미터로 거릅니다.
 - 메인 시트의 `[T/F]`는 실행 Coverage 결과가 아니라 저장된 블록에 분기가 있다는
-  **정적 표기**입니다. 목록의 블록은 모두 Decision objective를 받지만, 한 블록이
-  Decision을 여럿 가질 수 있어(Saturate의 상한과 하한 등) D 개수가 리포트의
-  Decision 개수와 1:1로 맞지는 않습니다.
+  **정적 표기**입니다. 목록의 블록은 모두 Decision objective를 받습니다.
+  Coverage 결정이 여럿인 블록은 결정마다 D를 쓰므로 개수가 맞지만, 두 경우는 D
+  개수가 리포트의 Decision 개수와 1:1로 맞지 않습니다. 결과가 셋 이상인 블록
+  (MinMax, MultiPortSwitch, SwitchCase, Sign, CombinatorialLogic)은 D가 블록당
+  하나인데 Coverage는 결과(행)마다 세고, 입력이 벡터이면 Coverage는 원소마다
+  셉니다.
 
 모델에 `If`나 `Switch`가 하나도 없는데 Simulink Coverage가 Decision을 보고하는 이유가
 바로 암시적 분기 블록입니다.

@@ -112,7 +112,8 @@ DiscreteIntegrator  "Reset:ExternalReset:ExternalReset!=none; X < LL:LowerSatura
 
 `st_specification_decision_blocks`는 descriptor의 세 번째 출력을 받아 JSON 항목에
 `CoverageText` 필드로 넣는다. 그 밖의 블록은 빈 문자열이다. `DecisionBlockDetails`
-시트에는 열을 더하지 않는다. 그 시트의 `JSON` 열이 항목 전체를 담으므로 `CoverageText`도 거기 있다. 메인 셀의 D 줄 형식은 바뀌지 않는다.
+시트에는 열을 더하지 않는다. 그 시트의 `JSON` 열이 항목 전체를 담으므로
+`CoverageText`도 거기 있다. 메인 셀의 D 줄 형식은 바뀌지 않는다.
 
 ## 7. 짝짓기
 

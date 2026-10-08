@@ -16,9 +16,9 @@
   됨)로 적습니다. 결과 정리(BATCH `st_generate_test_report`, PER_CUT
   `st_collect_per_cut_results`)가 결과 워크북에 `DecisionOutcomes` 시트를 새로
   씁니다. 대상은 블록 종류로 정합니다(If의 조건마다, Switch, Abs, For/While
-  Iterator, Enabled/Triggered/Resettable Subsystem). 그 밖의 블록은 `[T/F]` 그대로
-  사유 없이 둡니다. 대상 블록인데 결과를 구할 수 없으면 `[T/F]`로 두고
-  `TestResults`에 정보성 사유 `DECISION_OUTCOME_UNAVAILABLE` /
+  Iterator, Enabled/Triggered/Resettable Subsystem, 그리고 위 항목의 결정 단위 블록).
+  그 밖의 블록은 `[T/F]` 그대로 사유 없이 둡니다. 대상 블록인데 결과를 구할 수
+  없으면 `[T/F]`로 두고 `TestResults`에 정보성 사유 `DECISION_OUTCOME_UNAVAILABLE` /
   `DECISION_OUTCOME_MISMATCH`를 남깁니다.
   - **기존 결과에는 시트가 없습니다.** 이 버전 전에 정리한 결과로 최종 문서를 뽑으면
     모든 행이 `DECISION_OUTCOME_UNAVAILABLE`입니다. 결과 정리를 다시 하십시오.
