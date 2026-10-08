@@ -83,7 +83,8 @@ for key = string(keys(decisions))
         st_log(cfg, 'WARN', 'Final document decision outcome incomplete | Key=%s', key);
     end
 end
-outcomes.Units = units.Count;
+% containers.Map counts are uint64; Units is reported as a plain number.
+outcomes.Units = double(units.Count);
 outcomes.Lookup = @(testCaseName, iterationName, relativePath) ...
     lookup(units, decisions, texts, testCaseName, iterationName, relativePath);
 st_log(cfg, 'INFO', ...
