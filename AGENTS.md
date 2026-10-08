@@ -23,3 +23,25 @@ file edited by two sessions loses whichever write lands first.
   would need its own `st_setup` and target selection, and would write a separate
   `result/` tree.
 - Only one session at a time should run MATLAB against this repository.
+
+## Asking the user to run MATLAB
+
+MATLAB runs in a separate clone inside the model project, out of the agent's
+reach. Anything the user must run there goes through `todo.md`, and its output
+must fit on one screen, because the user answers with a single screenshot.
+
+- Put the request in the repository-root `todo.md` as a numbered section, then
+  commit and push it to `develop`. Each section states why it is run, a MATLAB
+  block to paste as is, what to check, and what to send back. In chat, point to
+  the section instead of pasting the code. Delete a section once its result is
+  handled.
+- Design the output for one screen: `clc` first, warnings off and restored,
+  one line per item, passing items as a count, detail only for failures, at most
+  about 40 lines of 120 columns. Write long text (full error reports) to a file
+  under `tempdir` and print only its path.
+- When something can fail, print why it failed on the same screen. A table of
+  names alone forces a second run.
+- Build paths from `st_project_root()`, never from the current folder. `st_setup`
+  does not add `tests` to the path, so pass test files to `runtests` by full path
+  (`fullfile(st_project_root(), 'tests', 'unit', '<name>.m')`); by name alone it
+  stops with "테스트 스위트를 만들 수 없습니다".
