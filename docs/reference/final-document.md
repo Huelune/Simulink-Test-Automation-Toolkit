@@ -203,7 +203,9 @@ Triggered Subsystem은 `'EXPLICIT'`에서 빠지기 때문입니다. 명세서 �
 아래 블록은 **그 행의 테스트가 실제로 탄 결과**를 적습니다. If는 조건(if,
 elseif)마다 따로 적습니다.
 
-- If, Switch, Abs, For Iterator, While Iterator
+- If(조건마다), Switch, Abs, For Iterator, While Iterator
+- Saturate, DeadZone, RateLimiter, Relay, DiscreteIntegrator, Delay, DiscreteFir,
+  DiscreteFilter, DiscreteTransferFcn(Coverage 결정마다)
 - Enabled/Triggered/Resettable Subsystem(CUT 자신)
 
 | 표기 | 뜻 |
@@ -216,8 +218,12 @@ elseif)마다 따로 적습니다.
 값은 결과 정리 때 iteration마다 기록한 결과 워크북의 `DecisionOutcomes` 시트에서
 옵니다. 판정과 같은 워크북·같은 실행(INITIAL/FINAL)을 읽습니다.
 
-- 그 밖의 블록(Saturate, MinMax, MultiPortSwitch, SwitchCase, Sign 등)은 정적 표기
-  `[T/F]` 그대로이며 사유를 남기지 않습니다. 대상인지는 블록 종류로 정합니다.
+- 그 밖의 블록(MinMax, MultiPortSwitch, SwitchCase, Sign, CombinatorialLogic)은
+  결과가 셋 이상이라 정적 표기 `[T/F]` 그대로이며 사유를 남기지 않습니다.
+- 결정마다 D가 있는 블록은 D 줄의 Coverage 결정 이름과 기록된 결정 이름을 맞춰
+  결과를 적습니다. 리포트는 하한을 상한보다 먼저 적으므로 순서로는 짝짓지 않습니다.
+  입력이 벡터라 같은 이름의 결정이 여러 개이거나, 기록된 결정이 D 줄과 하나씩
+  맞지 않으면 `[T/F]`로 두고 `DECISION_OUTCOME_MISMATCH`를 남깁니다.
 - 위 블록인데 그 행의 결과가 기록되지 않았으면 `[T/F]`로 두고 `TestResults`의
   `확인 사유`에 `DECISION_OUTCOME_UNAVAILABLE`을 남깁니다. D 줄 수와 기록된 결정
   수가 다르면 `DECISION_OUTCOME_MISMATCH`입니다. 이 사유만으로 `확인 필요`가 `Y`가

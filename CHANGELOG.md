@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Coverage 결정이 여럿인 블록이 결정마다 D를 받습니다.** Saturate, DeadZone,
+  RateLimiter, Relay, DiscreteIntegrator, Delay, DiscreteFir, DiscreteFilter,
+  DiscreteTransferFcn의 D 줄이 `D1 [T/F]Saturate (U >= LL; LowerLimit=-32)`처럼
+  Coverage 결정 이름과 파라미터 하나로 나뉩니다. 최종 문서는 이 블록들에도 실제
+  결과를 적고, 결정 이름으로 짝짓습니다.
+  - **명세서와 최종 문서의 D 번호가 바뀝니다.** 이 블록이 있는 CUT은 D가 분기 수만큼
+    늘고 뒤쪽 번호가 밀립니다.
+  - 결과가 셋 이상인 블록(MinMax, MultiPortSwitch, SwitchCase, Sign,
+    CombinatorialLogic)은 그대로 `[T/F]`입니다.
 - **최종 문서의 `Description`에 분기의 실제 결과를 적습니다.** true/false 두 결과인
   분기는 그 행의 테스트가 탄 쪽에 따라 `[T]`, `[F]`, `[T/F]`(둘 다), `[-]`(평가 안
   됨)로 적습니다. 결과 정리(BATCH `st_generate_test_report`, PER_CUT

@@ -1,7 +1,7 @@
 # 결정 단위 분기(D) 나누기 설계
 
 - 작성일: 2026-10-08
-- 상태: 설계 검토 중
+- 상태: 구현됨 (실기 미확인)
 - 대상 브랜치: develop
 - 앞선 설계: `2026-10-06-decision-outcome-in-final-document-design.md` (최종 문서의 분기 결과 표기)
 
@@ -112,7 +112,7 @@ DiscreteIntegrator  "Reset:ExternalReset:ExternalReset!=none; X < LL:LowerSatura
 
 `st_specification_decision_blocks`는 descriptor의 세 번째 출력을 받아 JSON 항목에
 `CoverageText` 필드로 넣는다. 그 밖의 블록은 빈 문자열이다. `DecisionBlockDetails`
-시트에도 같은 열을 더한다. 메인 셀의 D 줄 형식은 바뀌지 않는다.
+시트에는 열을 더하지 않는다. 그 시트의 `JSON` 열이 항목 전체를 담으므로 `CoverageText`도 거기 있다. 메인 셀의 D 줄 형식은 바뀌지 않는다.
 
 ## 7. 짝짓기
 

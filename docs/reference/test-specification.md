@@ -219,6 +219,23 @@ D6 [T/F]Saturate (UpperLimit=1; LowerLimit=-1)
 조건이 아니므로, `ShowElse` 설정과 관계없이 D를 받지 않습니다. 따라서 `If` 블록의 D
 개수는 그 블록에 적힌 조건 개수와 같습니다.
 
+**Coverage 결정이 여럿인 블록도 결정마다 D를 하나씩 씁니다.** Saturate, DeadZone,
+RateLimiter, Relay, DiscreteIntegrator, Delay, DiscreteFir, DiscreteFilter,
+DiscreteTransferFcn이 여기 해당합니다. D 줄에는 Simulink Coverage가 그 결정에 붙이는
+이름(`U >= LL`, `U > UL`, `Reset`, `Enable` 등)과 비교 대상 파라미터 하나를 적습니다.
+
+```text
+Sat 1
+D1 [T/F]Saturate (U >= LL; LowerLimit=-32)
+D2 [T/F]Saturate (U > UL; UpperLimit=32)
+```
+
+순서는 Coverage 리포트와 같아 하한이 먼저입니다. 결정 이름의 true 방향은 리포트와
+같습니다. 예를 들어 Saturate의 하한은 `U >= LL`이 true(포화하지 않음)입니다.
+DiscreteIntegrator의 reset 분기는 `ExternalReset`이 `none`이 아닐 때만, 한계 분기는
+`LimitOutput=on`일 때만 생깁니다. Delay와 DiscreteFir의 enable 분기는
+`ShowEnablePort=on`일 때만 생깁니다.
+
 ### 조건식을 메인 시트에 쓰지 않는 블록
 
 `SwitchCase`는 메인 셀에 `D5 [T/F]SwitchCase`처럼 **블록 유형만** 적습니다. case 목록은
@@ -254,17 +271,13 @@ D6 [T/F]Saturate (UpperLimit=1; LowerLimit=-1)
 | `If` | `IfExpression`과 선택적 `ElseIfExpressions` |
 | `Switch` | `Criteria`와 `Threshold` |
 | `MinMax`, `MultiPortSwitch`, `SwitchCase` | 저장된 입력 선택 또는 case 설정 |
-| `Saturate` | `UpperLimit` / `LowerLimit` |
-| `Relay` | `OnSwitchValue` / `OffSwitchValue` |
-| `DiscreteIntegrator` | `LimitOutput` / `ExternalReset` |
-| `Delay`, `DiscreteFir` | `ExternalReset` / `ShowEnablePort` |
-| `DiscreteFilter`, `DiscreteTransferFcn` | `ExternalReset` |
+| `Saturate`, `DeadZone`, `RateLimiter`, `Relay`, `DiscreteIntegrator`, `Delay`, `DiscreteFir`, `DiscreteFilter`, `DiscreteTransferFcn` | 분기마다 Coverage 결정 이름과 파라미터 하나 (`U >= LL; LowerLimit=-32`) |
 | `CombinatorialLogic` | `TruthTable` (메인 셀에는 유형만) |
 | `Abs` | 파라미터를 읽지 않고 `u < 0`으로 표시 |
 | `Signum` | 파라미터를 읽지 않고 `sign(u)`로 표시 |
 
-암시적 분기 블록은 catalog가 지정한 파라미터를 `이름=값; 이름=값` 형태로 이어
-붙입니다. 값은 workspace에서 평가하지 않고 저장된 문자열을 그대로 옮기므로, 변수로
+위 표에서 결정 단위로 나누지 않는 암시적 분기 블록은 catalog가 지정한 파라미터를
+`이름=값; 이름=값` 형태로 이어 붙입니다. 값은 workspace에서 평가하지 않고 저장된 문자열을 그대로 옮기므로, 변수로
 지정한 한계값은 변수 이름이 보입니다.
 
 파라미터가 비활성이어도 목록에서 빼지 않는 것이 원칙입니다. 예외는 설정에 따라

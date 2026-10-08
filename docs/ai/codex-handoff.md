@@ -69,6 +69,10 @@
   늘었는지, `detectImportOptions`가 첫 데이터 행(UNIT 행)에 빈 칸이 여럿 있어도
   `DecisionOutcomes` 시트의 1행을 머리글로 읽는지(못 읽으면 모든 행이
   `DECISION_OUTCOME_UNAVAILABLE`).
+- 결정 단위 D(2026-10-08 설계): DiscreteFir의 결정 이름이 Delay와 같은 `Enable`,
+  `Reset`이고 DiscreteTransferFcn이 DiscreteFilter와 같은 `Reset`인지(실기 스크립트에
+  넣지 않음), 결정 이름이 MATLAB 릴리스·언어 설정에 따라 바뀌지 않는지, 벡터 입력
+  블록의 결정 이름이 원소마다 같은지(다르면 MISMATCH로 보인다).
 
 ### 로그 체계 개편
 
