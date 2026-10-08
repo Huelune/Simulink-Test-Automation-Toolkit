@@ -11,7 +11,7 @@
 
 ## 현재 기준
 
-- 기준일: 2026-10-06
+- 기준일: 2026-10-08
 - 브랜치: 작업은 `develop`, `main`은 `develop`의 fast-forward만 받는다. 사용자의
   MATLAB 클론은 `main`을 `git pull`한다. 자세한 역할은 아래 브랜치 지도.
 - R2025b 실물 확인 범위: 2026-09-15에 실제 업무 모델(대상 26개)로 standalone
@@ -24,12 +24,14 @@
 - 사용자 문서의 원본: 절차와 기본 옵션은 `docs/user-manual.md`, 옵션 전체는
   `docs/reference/execution-commands.md`, Excel 열은 `docs/reference/workbook-reference.md`,
   설정은 `docs/reference/config-reference.md`. 같은 내용을 여러 문서에 나눠 적지 않는다.
-- 로그 체계: 2026-10-06에 로그 체계 개편(옛 `feat/logging`)이 `develop`에 들어왔다.
+- 로그 체계: 2026-10-06에 로그 체계 개편(옛 `feat/logging`)이 `develop`에 들어왔고 그 뒤
+  `main`에도 들어갔다.
   콘솔은 `cfg.ConsoleLogLevel`(기본 `'STEP'`)로 거르고 모든 레벨은
   `result/logs/<yyyyMMdd_HHmmss>_<명령>.log`에 남긴다. 설계는
   `docs/superpowers/specs/2026-09-29-logging-design.md`, 계획은
-  `docs/superpowers/plans/2026-09-29-logging.md`. **MATLAB 실행 검증은 하지 않았다.**
-  미검증 항목과 MATLAB에서 돌릴 테스트는 아래 "로그 체계 개편" 절에 있다. 실행 로그를 여는
+  `docs/superpowers/plans/2026-09-29-logging.md`. 2026-10-08 사용자 MATLAB에서
+  `tests/unit` 전체(59개 파일)가 실패·미완료 없이 통과했다. **실제 모델 실행 검증은
+  아직이다.** 남은 미검증 항목은 아래 "로그 체계 개편" 절에 있다. 실행 로그를 여는
   명령은 13개이며 목록은 `docs/user-manual.md`의 "콘솔에 보이는 줄과 실행 로그"에
   있다(13번째가 `st_classify_standalone_results`). `st_rename_test_file_models`는 로그
   범위를 열지 않고 `disp`/`fprintf` 출력도 그대로다.
@@ -72,20 +74,14 @@
 
 바뀐 내용과 합치기 기록은 작업 기록의 2026-09-29, 2026-10-06 절에 있다.
 
-- `evalc`가 R2025b에서 `warning` 출력을 받는지(`test_call_quiet.m`의
-  `testMatlabWarningIsCaptured`). 받지 못하면 경고가 콘솔로 새고 `system warnings`
-  요약 줄이 나오지 않는다.
 - `sltest.harness.create`, `sldvrun`, `run(testCase)`, `run(testFile)`를 `evalc`
   안에서 불러도 동작과 속도가 같은지. 특히 GUI를 띄우는 경로를 본다.
 - `evalc` 안의 Ctrl+C 중단이 `st_is_user_interrupt`로 알아볼 수 있는 예외로 다시
   올라오는지. `st_call_quiet`는 받은 예외를 그대로 다시 던진다.
 - 번들 실행 중 번들 사본의 `st_log`가 번들 폴더의 session 로그로 가는지, 바깥 실행
   로그와 섞이지 않는지.
-- `diary`가 사용자 세션의 `fprintf` 출력을 실제로 받는지, `get(0,'DiaryFile')`이
-  넘긴 경로 그대로 돌려주는지, 쓸 수 없는 경로에서 `diary()`가 그 자리에서 던지는지
-  (늦게 실패하지 않는지). 던지면 WARN `Console copy could not start`로 넘어간다.
-- 한국어 로캘 MATLAB에서 `경고` 접두(`char([0xACBD 0xACE0])`)가 `evalc`와
-  `fprintf`를 거쳐도 깨지지 않는지.
+- 쓸 수 없는 경로에서 `diary()`가 그 자리에서 던지는지(늦게 실패하지 않는지).
+  던지면 WARN `Console copy could not start`로 넘어간다.
 - `dbstop if error`를 켜 둔 세션에서 `evalc` 안(`st_call_quiet`)에서 오류가 나면
   디버거에서 멈추고 그 프롬프트가 `evalc`에 잡혀 콘솔에 안 보일 수 있다. 그러면
   멈춘 것처럼 보인다. 재현되면 `dbclear if error` 뒤 다시 돌리라고 안내한다.
@@ -107,28 +103,10 @@
 어디에 남길지와 `cfg.SuppressedWarnings`에 무엇을 넣을지 정한다. 지금
 `SuppressedWarnings`는 빈 목록이다.
 
-**MATLAB에서 돌릴 테스트.**
-
-- 새 테스트: `test_log_levels.m`, `test_log_scope.m`, `test_call_quiet.m`,
-  `test_log_progress.m`, `test_workflow_log_contract.m`, `test_log_adoption.m`.
-- 단언을 새 콘솔 계약에 맞게 옮긴 테스트: `test_sldv_target_precheck.m`,
-  `test_per_cut_collection.m`, `test_standalone_coverage_pipeline.m`,
-  `test_per_cut_execution.m`, `test_partial_iteration_update.m`,
-  `test_export_bundle.m`, `test_standalone_harness_bundle.m`,
-  `test_standalone_coverage_screen_status.m`.
-- 로그 범위로 감싼 명령의 정적 확인: `test_open_standalone_test_manager.m`,
-  `test_run_record.m`(`st_generate_test_report(1, 2)` 오류가 감싸기를 지나 그대로
-  올라오는지).
-- 최종 리뷰 수정에서 더한 테스트: `test_log_scope.m`의
-  `testUnmarkedCloseIsInterrupted`, `testOnlyTheOutermostCompleteCounts`,
-  `testWriteFailureWarnsAgainInTheNextCommand`, `test_log_progress.m`의
-  `testRunSuccessIsDone`, `test_call_quiet.m`의 끝 줄 확인,
-  `test_log_adoption.m`의 `testPerCutExpectedUpdateKeepsIterationsInTheLog`(PER_CUT
-  대상 안 반복 줄), `testReportAndLateTargetLoopsShowProgress`.
-- `main`·`develop` 합치기 뒤: `test_progress_eta.m`, `test_log_progress.m`의
-  `testProgressLineCarriesEta`, `test_classify_standalone_results.m`(전체와
-  `testConsoleShowsOneSummaryLine`), `test_log_adoption.m`의
-  `testPublicCommandsOpenALogScope`.
+**단위 테스트.** 2026-10-08 사용자 MATLAB에서 `tests/unit` 전체가 통과했다. 이로써
+`evalc`가 `warning` 출력을 받는 것, `diary`가 콘솔 출력을 받고 `DiaryFile`을 되돌리는
+것, 한국어 로캘의 `경고:` 줄을 경고로 세는 것은 확인됐다. 위 목록은 실제 모델로
+돌려야 알 수 있는 것만 남긴 것이다.
 
 ## 활성 브랜치 지도
 

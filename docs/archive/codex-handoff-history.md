@@ -924,3 +924,17 @@ Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e
 - `feat/logging`을 `develop`에 fast-forward로 넣었다. 통합 뒤 이 브랜치는 지우므로
   브랜치 지도에서 뺐다. MATLAB 실행 검증은 하지 않은 채 들어갔으며, 미검증 항목과 돌릴
   테스트는 codex-handoff.md의 "로그 체계 개편" 절에 있다.
+
+## 2026-10-08 로그 개편 단위 테스트 통과
+
+- 사용자 MATLAB(모델 프로젝트 안 클론, `develop`)에서 `runtests('tests/unit')`가
+  처음에는 "테스트 스위트를 만들 수 없습니다"로 멈췄다. 원인은 두 가지였다.
+  Current Folder가 클론 루트가 아니라 모델 프로젝트였고, `test_resolve_target_cut_paths.m`의
+  보조 함수 `test_cfg`(`59784ab`에서 들어옴)가 이름 때문에 테스트로 취급돼 인자 하나를
+  요구했다. 보조 함수를 `fixture_cfg`로 바꾸고 `test_project_layout.m`에 같은 실수를
+  잡는 검사를 더했다(`148dc46`). 실행 요청은 `st_project_root()` 기준 경로로
+  `todo.md`에 적었다.
+- 다시 돌린 `tests/unit` 전체가 실패·미완료 없이 통과했다. `todo.md` 2절의 분기 결과
+  테스트도 이 실행에 들어 있었다.
+- 실물 미검증 목록에서 단위 테스트로 확인된 세 항목(`evalc`의 경고 수집, `diary`,
+  한국어 `경고` 접두)을 지웠다.
