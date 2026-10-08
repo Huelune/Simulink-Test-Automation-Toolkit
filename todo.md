@@ -15,12 +15,44 @@ names = ["test_decision_outcomes", "test_export_final_document", ...
     "test_export_test_specification", "test_specification_decision_blocks", ...
     "test_coverage_filters"];
 r = runtests(cellstr(fullfile(unitDir, names + ".m")));
-disp("Passed " + sum([r.Passed]) + " / " + numel(r));
-T = table(r);
-disp(T(~[r.Passed], :))
+clc
+known = ["testScanReportsTheSubsystemNotThePortBlock", ...
+    "testCatalogHidesOnlySwitchCaseExpressionInTheMainCell"];
+logFile = fullfile(tempdir, 'failed_tests.txt');
+fid = fopen(logFile, 'w', 'n', 'UTF-8');
+skipped = 0;
+fprintf('Passed %d / %d\n', sum([r.Passed]), numel(r));
+for k = find(~[r.Passed])
+    name = string(r(k).Name);
+    short = extractAfter(name, "/");
+    rec = r(k).Details.DiagnosticRecord;
+    at = NaN;
+    reason = "(no diagnostic)";
+    if ~isempty(rec)
+        rec = rec(1);
+        fprintf(fid, '%s\n%s\n\n', name, rec.Report);
+        for s = reshape(rec.Stack, 1, [])
+            if contains(s.file, unitDir), at = s.line; break; end
+        end
+        if isprop(rec, 'Exception') && ~isempty(rec.Exception)
+            reason = string(rec.Exception.message);
+        elseif isprop(rec, 'FrameworkDiagnosticResults') && ~isempty(rec.FrameworkDiagnosticResults)
+            reason = strjoin(string({rec.FrameworkDiagnosticResults.DiagnosticText}), " ");
+        else
+            reason = string(rec.Report);
+        end
+    end
+    if any(short == known), skipped = skipped + 1; continue; end
+    reason = strtrim(regexprep(reason, '\s+', ' '));
+    if strlength(reason) > 230, reason = extractBefore(reason, 231) + "..."; end
+    fprintf('%s:%d\n   %s\n', short, at, reason);
+end
+fclose(fid);
+fprintf('known failures skipped: %d | full reports: %s\n', skipped, logFile);
 ```
 
-실패한 테스트가 있으면 출력 전체를 붙인다.
+돌려줄 것: 화면 캡처 한 장. 실패한 테스트마다 "이름:행 번호"와 이유가 두 줄로 나온다. 이유가
+잘려서 판단이 안 되면 마지막 줄의 `failed_tests.txt` 내용을 붙인다.
 
 이번 변경과 무관하게 **이미 실패하던 테스트 두 개**가 있다. 이 둘이 실패해도 회귀가
 아니며, 따로 고친다.
