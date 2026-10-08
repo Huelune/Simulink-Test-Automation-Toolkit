@@ -227,8 +227,8 @@ verifyEqual(testCase, reasons(1), "DECISION_OUTCOME_UNAVAILABLE");
 end
 
 function testBlockTypeOutsideTheTwoWaySetIsNeverLookedUp(testCase)
-% MinMax is not a true/false block, so asking would pair its outcomes as a
-% mismatch on every row. The type alone keeps it out.
+% MinMax outcomes are inputs, not true/false, so nothing is recorded for
+% it and asking would mark every row unavailable. The type alone keeps it out.
 item = struct('BlockType', 'MinMax', 'Name', 'Mx', 'Path', 'TOP/CUT/Mx', ...
     'Outcome', 'SELECT', 'Expression', 'max; Inputs=3', 'ExpressionStatus', 'OK', 'Message', '');
 calls = 0;
@@ -301,6 +301,24 @@ function testRepeatedTextKeepsStaticMarkAndSaysMismatch(testCase)
 % A vector input gives each element its own decision with the same text.
 lookup = fake_text_lookup("Sat", [1 0; 1 0; 0 1; 0 1], ...
     ["U >= LL"; "U >= LL"; "U > UL"; "U > UL"]);
+[formatted, ~, reasons] = st_format_specification_decision_blocks( ...
+    one_row_specification(saturate_items()), base_config(), lookup);
+verifyEqual(testCase, count(formatted.DecisionBlocks(1), "[T/F]"), 2);
+verifyEqual(testCase, reasons(1), "DECISION_OUTCOME_MISMATCH");
+end
+
+function testUnknownRecordedTextIsAMismatch(testCase)
+% The counts match the lines, but one recorded text names no D line.
+lookup = fake_text_lookup("Sat", [1 0; 0 1], ["U >= LL"; "X > UL"]);
+[formatted, ~, reasons] = st_format_specification_decision_blocks( ...
+    one_row_specification(saturate_items()), base_config(), lookup);
+verifyEqual(testCase, count(formatted.DecisionBlocks(1), "[T/F]"), 2);
+verifyEqual(testCase, reasons(1), "DECISION_OUTCOME_MISMATCH");
+end
+
+function testTwoLinesMatchingOneTextIsAMismatch(testCase)
+% Both D lines find the same recorded decision, so neither is paired.
+lookup = fake_text_lookup("Sat", [1 0; 0 1], ["U >= LL"; "U >= LL"]);
 [formatted, ~, reasons] = st_format_specification_decision_blocks( ...
     one_row_specification(saturate_items()), base_config(), lookup);
 verifyEqual(testCase, count(formatted.DecisionBlocks(1), "[T/F]"), 2);

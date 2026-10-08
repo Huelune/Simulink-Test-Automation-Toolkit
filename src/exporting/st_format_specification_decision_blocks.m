@@ -190,9 +190,9 @@ function [labels, reason] = outcome_labels(cfg, decoded, labels, cutPath, ...
 % position alone would swap them. A block that cannot be paired one to one
 % keeps [T/F]: pairing anyway would put one branch's result on another.
 %
-% Only a two-way type is looked up. Another type can still have true/false
-% decisions in coverage (MinMax is one), and asking for it would report a
-% mismatch on every row. A two-way block that was scanned
+% Only a two-way type is looked up. The outcomes of another type (MinMax is
+% one) are not true/false, so nothing is recorded for it, and looking it up
+% would mark every row unavailable. A two-way block that was scanned
 % but has no counts is unavailable, not silently [T/F], because [T/F] would
 % read as "both taken".
 reason = "";
