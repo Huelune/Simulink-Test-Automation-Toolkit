@@ -144,6 +144,51 @@ fprintf('collector: units without coverage %d | block list failed %d | case not 
 
 돌려줄 것: 화면 캡처 한 장. 찍히는 것은 개수, 로그 시각, Simulink 블록 종류 이름뿐이다.
 
+### 1-2. TriggerPort 결과 텍스트와 coverage 없는 단위 (2026-10-08: 19건 모두 TriggerPort)
+
+1-1에서 결과가 안 붙은 19건이 모두 Triggered Subsystem(TriggerPort)이었고, 수집기는 결과
+텍스트가 `true`/`false`로 시작하지 않아 건너뛰었다. 그 결과 텍스트의 모양과, coverage가 없던
+단위 12개의 이유를 개수로 찍는다. 결과 텍스트는 Coverage 도구가 붙이는 표준 이름이며, 괄호
+안 내용은 `(...)`로 가린다.
+
+```matlab
+clearvars  % a variable left over from an earlier block would shadow a function
+st_setup
+cfg = st_config();
+f = dir(fullfile(cfg.ResultDir, 'logs', '*_st_collect_per_cut_results.log'));
+[~, newest] = max([f.datenum]);
+logText = splitlines(string(fileread(fullfile(f(newest).folder, f(newest).name))));
+fieldOf = @(line, name) strtrim(string(regexprep(char(line), ['^.*?\<' name '=([^|]*).*$'], '$1')));
+clc
+trig = logText(contains(logText, "skipped a block without two-way decisions") & ...
+    contains(logText, "BlockType=TriggerPort"));
+shapes = strings(numel(trig), 1);
+for k = 1:numel(trig)
+    shapes(k) = regexprep(fieldOf(trig(k), 'Outcomes'), '\([^)]*\)', '(...)');
+end
+[g, ~, idx] = unique(shapes);
+fprintf('TriggerPort skipped %d | distinct outcome-text shapes %d (decisions split by ";", outcomes by "/")\n', ...
+    numel(trig), numel(g));
+for j = 1:min(5, numel(g))
+    fprintf('  %3d x  %s\n', sum(idx == j), extractBefore(g(j) + blanks(100), 101));
+end
+noCov = logText(contains(logText, "found no coverage for a unit"));
+reasons = strings(numel(noCov), 1);
+for k = 1:numel(noCov)
+    reasons(k) = fieldOf(noCov(k), 'Reason');
+end
+fprintf('units without coverage %d: no object answers for the CUT %d | no coverage results %d | lookup failed %d\n', ...
+    numel(noCov), sum(startsWith(reasons, "no coverage object answers")), ...
+    sum(startsWith(reasons, "the unit carries no coverage results")), ...
+    sum(startsWith(reasons, "getCoverageResults failed")));
+stages = ["INITIAL", "FINAL"];
+for s = stages
+    fprintf('  scan end lines for %-7s %d\n', s, sum(contains(logText, "Decision outcome scan end | Run=" + s)));
+end
+```
+
+돌려줄 것: 화면 캡처 한 장. 찍히는 것은 개수와 Coverage 도구의 결과 이름 모양뿐이다.
+
 ## 2. 단위 테스트 다시 돌리기 (기존 실패 6건을 고친 뒤)
 
 이번 기능과 무관하게 이미 실패하던 테스트 6건을 따로 고친다. 고친 뒤 아래를 다시 돌린다.
