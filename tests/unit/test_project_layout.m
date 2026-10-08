@@ -145,3 +145,29 @@ required = { ...
         'st_executable_source.m')};
 verifyTrue(testCase, all(cellfun(@isfile, required)));
 end
+
+
+function testUnitTestHelpersAreNotMistakenForTests(testCase)
+% functiontests runs every local function whose name starts or ends with
+% "test" (any case) as a test. A helper named that way without exactly one
+% input stops runtests from building a suite for the whole tests/unit folder.
+files = dir(fullfile(st_project_root(), 'tests', 'unit', '*.m'));
+offenders = strings(0, 1);
+for k = 1:numel(files)
+    source = fileread(fullfile(files(k).folder, files(k).name));
+    tokens = regexp(source, ...
+        '^\s*function\s+(?:\[[^\]]*\]\s*=\s*|\w+\s*=\s*)?(\w+)\s*(?:\(([^)]*)\))?', ...
+        'tokens', 'lineanchors');
+    for t = 2:numel(tokens)
+        name = tokens{t}{1};
+        if isempty(regexpi(name, '^test|test$', 'once'))
+            continue;
+        end
+        args = strtrim(tokens{t}{2});
+        if isempty(args) || numel(strsplit(args, ',')) ~= 1
+            offenders(end+1, 1) = string(files(k).name) + ":" + name; %#ok<AGROW>
+        end
+    end
+end
+verifyEmpty(testCase, offenders);
+end
