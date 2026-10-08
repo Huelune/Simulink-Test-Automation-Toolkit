@@ -57,6 +57,66 @@ fprintf('file: %s\n', file);
 
 돌려줄 것: 화면 캡처 한 장.
 
+### 1-1. 분기 결과가 하나도 안 붙을 때 (2026-10-08: Units 0, 전부 UNAVAILABLE)
+
+결과 workbook에 `DecisionOutcomes` 시트가 있는지, 있으면 UNIT 행이 있는지, 마지막 결과
+정리 로그에 분기 결과 수집 줄이 있는지를 한 화면에 찍는다. 아무것도 바꾸지 않는다.
+
+```matlab
+st_setup
+cfg = st_config();
+pointer = jsondecode(fileread(cfg.PerCutLatestPointer));
+runDir = string(pointer.RunDirectory);
+files = dir(fullfile(runDir, 'targets', '*', '*', 'TestSummary.xlsx'));
+clc
+fprintf('run: %s\n', runDir);
+noSheet = strings(0,1); noUnit = strings(0,1); units = 0; decisions = 0;
+for k = 1:numel(files)
+    f = fullfile(files(k).folder, files(k).name);
+    [targetDir, stage] = fileparts(files(k).folder);
+    [~, target] = fileparts(targetDir);
+    stamp = string(datetime(files(k).datenum, 'ConvertFrom', 'datenum', 'Format', 'MM-dd HH:mm'));
+    label = string(target) + "/" + stage + " (" + stamp + ")";
+    if ~any(sheetnames(f) == "DecisionOutcomes")
+        noSheet(end+1,1) = label; continue;
+    end
+    T = readtable(f, 'Sheet', 'DecisionOutcomes', 'TextType', 'string');
+    if height(T) == 0 || ~ismember('Kind', T.Properties.VariableNames)
+        noUnit(end+1,1) = label; continue;
+    end
+    u = sum(T.Kind == "UNIT");
+    units = units + u;
+    decisions = decisions + sum(T.Kind == "DECISION");
+    if u == 0, noUnit(end+1,1) = label; end
+end
+fprintf('workbooks %d | no sheet %d | sheet without UNIT rows %d | UNIT rows %d | DECISION rows %d\n', ...
+    numel(files), numel(noSheet), numel(noUnit), units, decisions);
+for x = reshape(noSheet(1:min(3, end)), 1, []), fprintf('  no sheet: %s\n', x); end
+for x = reshape(noUnit(1:min(3, end)), 1, []), fprintf('  no UNIT : %s\n', x); end
+logs = dir(fullfile(cfg.ResultDir, 'logs', '*_st_collect_per_cut_results.log'));
+if isempty(logs)
+    fprintf('no st_collect_per_cut_results log in %s\n', fullfile(cfg.ResultDir, 'logs'));
+else
+    [~, newest] = max([logs.datenum]);
+    text = splitlines(string(fileread(fullfile(logs(newest).folder, logs(newest).name))));
+    scan = text(contains(text, "Decision outcome scan"));
+    warn = scan(contains(scan, "WARN"));
+    done = scan(contains(scan, "scan end"));
+    fprintf('log %s | outcome lines %d | WARN %d\n', logs(newest).name, numel(scan), numel(warn));
+    for x = reshape([warn(1:min(3, end)); done(1:min(3, end))], 1, [])
+        fprintf('  %s\n', extractBefore(x + blanks(150), 151));
+    end
+end
+```
+
+읽는 법:
+- `no sheet`가 workbook 수와 같다 → 결과 정리를 새 버전으로 다시 하지 않은 것이다.
+  `st_collect_per_cut_results`를 돌리고 1절을 다시 돌린다.
+- 시트는 있는데 `UNIT rows 0` → iteration별 coverage를 읽지 못한 것이다. 로그 WARN 줄의
+  `Reason=`이 원인이다.
+
+돌려줄 것: 화면 캡처 한 장.
+
 ## 2. 단위 테스트 다시 돌리기 (기존 실패 6건을 고친 뒤)
 
 이번 기능과 무관하게 이미 실패하던 테스트 6건을 따로 고친다. 고친 뒤 아래를 다시 돌린다.
