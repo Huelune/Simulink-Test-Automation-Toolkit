@@ -24,12 +24,10 @@ runtests({'test_decision_outcomes','test_export_final_document', ...
 %% 1-1. 스위트 생성 실패 원인 찍기
 system(sprintf('git -C "%s" log -1 --oneline', st_project_root()));
 f = which('test_decision_outcomes');
-fprintf('file=%s
-', f);
+disp("file=" + f);
 try
     s = matlab.unittest.TestSuite.fromFile(f);
-    fprintf('OK: %d tests
-', numel(s));
+    disp("OK: " + numel(s) + " tests");
 catch e
     disp(getReport(e, 'extended', 'hyperlinks', 'off'));
 end
