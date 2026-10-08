@@ -217,3 +217,40 @@ MATLAB 없이 이 환경에서 돌릴 수는 없지만, 아래는 모델 없이 
    있는지 확인한다.
 5. PER_CUT 리포트에 iteration 단위 수집을 더했을 때 리포트 시간이 얼마나 느는지.
    지금 PER_CUT은 속도 때문에 `IncludeTestDetails=false`로 돈다.
+
+### 10.1 실기 확인 결과 (2026-10-08, 임시 모델 `cov_probe`)
+
+`todo.md`의 확인 스크립트로 블록마다 `decisioninfo`의 결정 텍스트와 순서를 찍었다.
+사인파 입력 501 step이다.
+
+| 블록 | # | 결정 텍스트 | 결과 텍스트 |
+| --- | --- | --- | --- |
+| Abs | 1 | `U < 0` | `false`, `true` |
+| Discrete Filter | 1 | `Reset` | `false`, `true` |
+| Discrete-Time Integrator | 1 | `Reset` | `false`, `true` |
+| Discrete-Time Integrator | 2 | `X < LL` | `false`, `true` |
+| Discrete-Time Integrator | 3 | `X > UL` | `false`, `true` |
+| Dead Zone | 1 | `U >= LL` | `false`, `true` |
+| Dead Zone | 2 | `U > UL` | `false`, `true` |
+| Delay | 1 | `Enable` | `false`, `true` |
+| Delay | 2 | `Reset` | `false`, `true` |
+| Enabled Subsystem | 1 | `Enable` | `false`, `true` |
+| If | 1 | `Input1` | `false`, `true` |
+| If | 2 | `Else IF #2` | `false`, `true` |
+| Rate Limiter | 1 | `X < LL` | `false`, `true` |
+| Rate Limiter | 2 | `X > UL` | `false`, `true` |
+| Relay | 1 | `U >= OnThresh` | `false`, `true` |
+| Relay | 2 | `U <= OffThresh` | `false`, `true` |
+| Saturation | 1 | `U >= LL` | `false`, `true` |
+| Saturation | 2 | `U > UL` | `false`, `true` |
+| Switch | 1 | `TRIGGER > THRESHOLD` | `false (out = in3)`, `true (out = in1)` |
+
+- 가정 2는 확인됐다. 모든 결과 텍스트가 `true`/`false`로 시작한다. Switch만 꼬리말이
+  붙으며, 시작 단어로 받는 규칙(§4)이 이 경우를 처리한다.
+- 가정 3은 확인됐다. If는 if 다음 elseif 순서이고, elseif의 평가 횟수(187)가 if의
+  false 횟수와 같다.
+- 하한(`LL`)이 상한(`UL`)보다 **먼저** 나온다(Saturation, Dead Zone, Rate Limiter,
+  Discrete-Time Integrator). 평가는 상한이 먼저다. 하한 결정의 평가 횟수가 상한의
+  false 횟수와 같다. 문서 서술 순서(상한→하한)로 짝지었다면 결과가 뒤바뀌었을 것이다.
+- true 방향은 블록마다 다르다. Saturation·Dead Zone의 하한은 `U >= LL`이 true(포화
+  안 함), Discrete-Time Integrator·Rate Limiter의 하한은 `X < LL`이 true다.
