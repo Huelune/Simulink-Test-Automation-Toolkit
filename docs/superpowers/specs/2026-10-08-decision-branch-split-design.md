@@ -165,4 +165,7 @@ DiscreteIntegrator  "Reset:ExternalReset:ExternalReset!=none; X < LL:LowerSatura
 2. 결정 텍스트가 MATLAB 릴리스나 언어 설정에 따라 바뀌지 않는다. 실기 확인은 한
    번(R2025b 추정)뿐이다.
 3. 입력이 벡터인 블록의 결정 텍스트가 원소마다 같다. 다르면(예: 원소 번호가 붙음)
-   지금 규칙에서 MISMATCH가 되며, 그 텍스트를 보고 규칙을 넓힐 수 있다.
+   지금 규칙에서 MISMATCH가 되며, 그 텍스트를 보고 규칙을 넓힐 수 있다. 이는
+   Coverage가 원소마다 결정 하나씩을 낸다는 가정이다. 결과가 셋 이상인 결정 하나로
+   내면 `st_decision_outcome_counts`가 빈 값을 돌려 그 블록은 기록되지 않으므로,
+   사용자는 MISMATCH가 아니라 `DECISION_OUTCOME_UNAVAILABLE`을 보게 된다.

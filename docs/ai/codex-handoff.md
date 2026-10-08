@@ -72,7 +72,9 @@
 - 결정 단위 D(2026-10-08 설계): DiscreteFir의 결정 이름이 Delay와 같은 `Enable`,
   `Reset`이고 DiscreteTransferFcn이 DiscreteFilter와 같은 `Reset`인지(실기 스크립트에
   넣지 않음), 결정 이름이 MATLAB 릴리스·언어 설정에 따라 바뀌지 않는지, 벡터 입력
-  블록의 결정 이름이 원소마다 같은지(다르면 MISMATCH로 보인다).
+  블록의 결정 이름이 원소마다 같은지(다르면 MISMATCH로 보인다). 벡터 입력이
+  원소마다 결정 하나씩이면 MISMATCH지만, 결과가 셋 이상인 결정 하나로 나오면
+  그 블록은 기록되지 않아 `DECISION_OUTCOME_UNAVAILABLE`로 보인다.
 
 ### 로그 체계 개편
 

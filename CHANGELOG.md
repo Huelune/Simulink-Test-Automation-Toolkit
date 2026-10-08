@@ -22,7 +22,7 @@
   `DECISION_OUTCOME_MISMATCH`를 남깁니다.
   - **기존 결과에는 시트가 없습니다.** 이 버전 전에 정리한 결과로 최종 문서를 뽑으면
     모든 행이 `DECISION_OUTCOME_UNAVAILABLE`입니다. 결과 정리를 다시 하십시오.
-  - 명세서 export 출력은 바뀌지 않습니다.
+  - 이 항목으로는 명세서 export 출력이 바뀌지 않습니다.
 - **명세서 `DecisionBlocks` 목록에 Decision을 받는데 빠져 있던 블록을 더합니다.**
   Simulink Coverage가 Decision objective를 만드는데도 목록에 없어서, 이런 블록이
   있는 CUT은 D 개수가 리포트보다 적었습니다. 최종 문서의 coverage 기반 목록도
