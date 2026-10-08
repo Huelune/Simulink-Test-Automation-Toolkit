@@ -184,21 +184,25 @@ end
 
 function [labels, reason] = outcome_labels(cfg, decoded, labels, cutPath, ...
         testCaseName, iterationName, outcomeLookup, displayCatalog)
-% A block's D lines are paired with its recorded decisions by position, so
-% a block whose counts differ keeps [T/F]: pairing anyway would put one
-% branch's result on another.
+% A block's D lines are paired with its recorded decisions by the decision
+% text when every line names one (CoverageText), and by position otherwise
+% (If, Switch, ...). Coverage lists a lower limit before the upper limit, so
+% position alone would swap them. A block that cannot be paired one to one
+% keeps [T/F]: pairing anyway would put one branch's result on another.
 %
 % Only a two-way type is looked up. Another type can still have true/false
-% decisions in coverage (Saturate has two for one D line), and asking for
-% it would report a mismatch on every row. A two-way block that was scanned
+% decisions in coverage (MinMax is one), and asking for it would report a
+% mismatch on every row. A two-way block that was scanned
 % but has no counts is unavailable, not silently [T/F], because [T/F] would
 % read as "both taken".
 reason = "";
 paths = strings(numel(decoded), 1);
 types = strings(numel(decoded), 1);
+covered = strings(numel(decoded), 1);
 for k = 1:numel(decoded)
     paths(k) = json_optional_text(decoded(k), 'Path');
     types(k) = json_optional_text(decoded(k), 'BlockType');
+    covered(k) = json_optional_text(decoded(k), 'CoverageText');
 end
 twoWayTypes = string(displayCatalog.BlockType(string(displayCatalog.TwoWay) == "YES"));
 unavailable = false;
@@ -235,6 +239,21 @@ for path = unique(paths(strlength(paths) > 0), 'stable').'
             testCaseName, iterationName, path);
         continue;
     end
+    if all(strlength(covered(items)) > 0)
+        [picked, paired] = pair_by_text(covered(items), found);
+        if ~paired
+            mismatch = true;
+            log_message(cfg, 'WARN', ...
+                'Decision outcome text mismatch | Case=%s | Path=%s | Lines=%s | Recorded=%s', ...
+                testCaseName, path, join_texts(covered(items)), ...
+                join_texts(recorded_texts(found)));
+            continue;
+        end
+        for j = 1:numel(items)
+            labels(items(j)) = outcome_label(found.Counts(picked(j),:));
+        end
+        continue;
+    end
     if size(found.Counts, 1) ~= numel(items)
         mismatch = true;
         log_message(cfg, 'WARN', ...
@@ -254,6 +273,53 @@ elseif unavailable
     reason = codes(1);
 elseif mismatch
     reason = codes(2);
+end
+end
+
+
+function [picked, paired] = pair_by_text(lines, found)
+% Each D line must match exactly one recorded decision, and every recorded
+% decision must belong to a line. Anything else - a vector input repeating
+% a text, or a setting changed between the export and the run - leaves the
+% block unpaired.
+picked = zeros(numel(lines), 1);
+paired = false;
+recorded = recorded_texts(found);
+if numel(recorded) ~= size(found.Counts, 1) || numel(recorded) ~= numel(lines)
+    return;
+end
+recorded = squash_text(recorded);
+for j = 1:numel(lines)
+    match = find(recorded == squash_text(lines(j)));
+    if ~isscalar(match)
+        return;
+    end
+    picked(j) = match;
+end
+paired = numel(unique(picked)) == numel(picked);
+end
+
+
+function texts = recorded_texts(found)
+texts = strings(0,1);
+if isfield(found, 'Texts')
+    texts = string(found.Texts);
+    texts = texts(:);
+end
+end
+
+
+function text = squash_text(text)
+text = lower(strtrim(regexprep(string(text), '\s+', ' ')));
+end
+
+
+function text = join_texts(texts)
+% For the log line only; never fails on an empty or column array.
+text = "";
+texts = string(texts);
+if ~isempty(texts)
+    text = strjoin(reshape(texts, 1, []), ', ');
 end
 end
 

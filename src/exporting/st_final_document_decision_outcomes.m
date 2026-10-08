@@ -6,7 +6,10 @@ function outcomes = st_final_document_decision_outcomes(cfg, source)
 % outcomes.Lookup(testCaseName, iterationName, relativePath) returns a
 % struct. UnitFound says whether that row's test unit was scanned at all.
 % Counts holds one [TrueCount FalseCount] row per decision of the block, in
-% decision order, and is empty for a block with no two-way decision. A row
+% decision order, and is empty for a block with no two-way decision.
+% Texts holds the recorded decision text for each row of Counts, with
+% whitespace runs collapsed, so a D line that names its coverage decision
+% can be paired by text rather than by position. A row
 % whose iteration name is a placeholder is looked up at the Test Case
 % level, as its verdict is. Lookup is [] when no workbook was resolved, so
 % a document made before any run carries no outcome reasons at all.
@@ -18,6 +21,7 @@ st_log(cfg, 'INFO', 'Final document decision outcomes start | Workbooks=%d', ...
     height(source.Workbooks));
 units = containers.Map('KeyType', 'char', 'ValueType', 'logical');
 decisions = containers.Map('KeyType', 'char', 'ValueType', 'any');
+texts = containers.Map('KeyType', 'char', 'ValueType', 'any');
 conflicts = strings(0,1);
 for i = 1:height(source.Workbooks)
     entry = source.Workbooks(i,:);
@@ -50,10 +54,16 @@ for i = 1:height(source.Workbooks)
         current(size(current,1)+1:index, :) = NaN;
         current(index,:) = value;
         decisions(key) = current;
+        recorded = strings(0,1);
+        if isKey(texts, key), recorded = texts(key); end
+        recorded(end+1:index, 1) = "";
+        recorded(index) = entries.Text(r);
+        texts(key) = recorded;
     end
 end
 for key = unique(conflicts).'
     remove(decisions, char(key));
+    remove(texts, char(key));
     outcomes.Notes = [outcomes.Notes; table(NaN, extractBefore(key, "|"), ...
         "DECISION_OUTCOME_AMBIGUOUS", "Different counts recorded for " + key, ...
         'VariableNames', {'No','TestCaseName','Reason','Message'})];
@@ -63,27 +73,30 @@ end
 for key = string(keys(decisions))
     if any(isnan(decisions(char(key))), 'all')
         remove(decisions, char(key));
+        remove(texts, char(key));
         st_log(cfg, 'WARN', 'Final document decision outcome incomplete | Key=%s', key);
     end
 end
 outcomes.Units = units.Count;
 outcomes.Lookup = @(testCaseName, iterationName, relativePath) ...
-    lookup(units, decisions, testCaseName, iterationName, relativePath);
+    lookup(units, decisions, texts, testCaseName, iterationName, relativePath);
 st_log(cfg, 'INFO', ...
     'Final document decision outcomes end | Units=%d | Blocks=%d | Notes=%d', ...
     units.Count, decisions.Count, height(outcomes.Notes));
 end
 
 
-function result = lookup(units, decisions, testCaseName, iterationName, relativePath)
+function result = lookup(units, decisions, texts, testCaseName, iterationName, relativePath)
 if ~st_is_real_iteration_name(iterationName)
     iterationName = "";
 end
 unit = unit_key(testCaseName, iterationName);
-result = struct('UnitFound', isKey(units, char(unit)), 'Counts', zeros(0,2));
+result = struct('UnitFound', isKey(units, char(unit)), 'Counts', zeros(0,2), ...
+    'Texts', strings(0,1));
 key = char(unit + "|" + squash(relativePath));
 if isKey(decisions, key)
     result.Counts = decisions(key);
+    result.Texts = texts(key);
 end
 end
 
@@ -93,7 +106,9 @@ function entries = workbook_entries(rows)
 % workbook instead of leaving half of it behind.
 count = height(rows);
 entries = struct('Unit', strings(count,1), 'IsUnit', false(count,1), ...
-    'Key', strings(count,1), 'Index', zeros(count,1), 'Value', zeros(count,2));
+    'Key', strings(count,1), 'Index', zeros(count,1), 'Value', zeros(count,2), ...
+    'Text', strings(count,1));
+hasText = ismember("DecisionText", string(rows.Properties.VariableNames));
 for r = 1:count
     entries.Unit(r) = unit_key(rows.TestCaseName(r), rows.IterationName(r));
     entries.IsUnit(r) = rows.Kind(r) == "UNIT";
@@ -107,6 +122,9 @@ for r = 1:count
     entries.Key(r) = entries.Unit(r) + "|" + squash(rows.RelativePath(r));
     entries.Index(r) = index;
     entries.Value(r,:) = double([rows.TrueCount(r) rows.FalseCount(r)]);
+    if hasText
+        entries.Text(r) = squash(rows.DecisionText(r));
+    end
 end
 end
 

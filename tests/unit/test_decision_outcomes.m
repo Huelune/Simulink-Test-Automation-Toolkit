@@ -268,6 +268,91 @@ verifyNotEmpty(testCase, regexp(source, ...
     'st_final_document_table\(cfg, specification, outcomes, source, outcomeReasons\)', 'once'));
 end
 
+function testLookupReturnsRecordedDecisionTexts(testCase)
+file = outcome_workbook(testCase, ["FINAL","FINAL","FINAL"], ...
+    ["UNIT","DECISION","DECISION"], ["","Sat","Sat"], [0 1 2], [0 3 0], [0 0 4], ...
+    [], ["","U >= LL","U  > UL"]);
+outcomes = st_final_document_decision_outcomes(base_config(), source_with(file, "ANY"));
+found = outcomes.Lookup("Case1", "Iteration 1", "Sat");
+verifyEqual(testCase, found.Counts, [3 0; 0 4]);
+verifyEqual(testCase, found.Texts, ["U >= LL"; "U > UL"]);
+end
+
+function testTextPairingFollowsTextNotOrder(testCase)
+% Coverage lists the lower limit first. Recorded in the opposite order of
+% the D lines, each result must still land on its own line.
+lookup = fake_text_lookup("Sat", [0 5; 7 0], ["U > UL"; "U >= LL"]);
+formatted = st_format_specification_decision_blocks( ...
+    one_row_specification(saturate_items()), base_config(), lookup);
+verifyEqual(testCase, split(formatted.DecisionBlocks(1), newline), ...
+    ["Sat"; "D1 [T]Saturate (U >= LL; LowerLimit=-32)"; ...
+     "D2 [F]Saturate (U > UL; UpperLimit=32)"]);
+end
+
+function testTextPairingIgnoresSpacingAndCase(testCase)
+lookup = fake_text_lookup("Sat", [1 1; 0 0], ["u  >=  ll"; "U > UL"]);
+formatted = st_format_specification_decision_blocks( ...
+    one_row_specification(saturate_items()), base_config(), lookup);
+verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T/F]Saturate (U >= LL"));
+verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D2 [-]Saturate (U > UL"));
+end
+
+function testRepeatedTextKeepsStaticMarkAndSaysMismatch(testCase)
+% A vector input gives each element its own decision with the same text.
+lookup = fake_text_lookup("Sat", [1 0; 1 0; 0 1; 0 1], ...
+    ["U >= LL"; "U >= LL"; "U > UL"; "U > UL"]);
+[formatted, ~, reasons] = st_format_specification_decision_blocks( ...
+    one_row_specification(saturate_items()), base_config(), lookup);
+verifyEqual(testCase, count(formatted.DecisionBlocks(1), "[T/F]"), 2);
+verifyEqual(testCase, reasons(1), "DECISION_OUTCOME_MISMATCH");
+end
+
+function testRecordedDecisionWithoutALineIsAMismatch(testCase)
+% The D list has only the reset branch, but the run recorded an enable
+% decision too (the setting changed after the export).
+item = struct('BlockType', 'Delay', 'Name', 'Dly', 'Path', 'TOP/CUT/Dly', ...
+    'Outcome', 'RESET', 'Expression', 'Reset; ExternalReset=Rising', ...
+    'CoverageText', 'Reset', 'ExpressionStatus', 'OK', 'Message', '');
+lookup = fake_text_lookup("Dly", [1 1; 2 3], ["Enable"; "Reset"]);
+[formatted, ~, reasons] = st_format_specification_decision_blocks( ...
+    one_row_specification(item), base_config(), lookup);
+verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T/F]Delay"));
+verifyEqual(testCase, reasons(1), "DECISION_OUTCOME_MISMATCH");
+end
+
+function testLinesWithoutCoverageTextStillPairByPosition(testCase)
+% If has no coverage text on its lines; its order was confirmed at runtime.
+items = [if_item("TOP/CUT/If1", "a > 0"); if_item("TOP/CUT/If1", "elseif b > 0")];
+lookup = fake_lookup(struct('If1', [1 0; 0 1]));
+formatted = st_format_specification_decision_blocks( ...
+    one_row_specification(items), base_config(), lookup);
+verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T]IF (a > 0)"));
+verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D2 [F]IF (elseif b > 0)"));
+end
+
+function items = saturate_items()
+items = [ ...
+    struct('BlockType', 'Saturate', 'Name', 'Sat', 'Path', 'TOP/CUT/Sat', ...
+        'Outcome', 'LIMIT', 'Expression', 'U >= LL; LowerLimit=-32', ...
+        'CoverageText', 'U >= LL', 'ExpressionStatus', 'OK', 'Message', ''); ...
+    struct('BlockType', 'Saturate', 'Name', 'Sat', 'Path', 'TOP/CUT/Sat', ...
+        'Outcome', 'LIMIT', 'Expression', 'U > UL; UpperLimit=32', ...
+        'CoverageText', 'U > UL', 'ExpressionStatus', 'OK', 'Message', '')];
+end
+
+function lookup = fake_text_lookup(relative, counts, texts)
+% One scanned unit with one recorded block; any other path has no counts.
+lookup = @(~, ~, asked) text_lookup_result(string(asked) == string(relative), counts, texts);
+end
+
+function result = text_lookup_result(matches, counts, texts)
+result = struct('UnitFound', true, 'Counts', zeros(0,2), 'Texts', strings(0,1));
+if matches
+    result.Counts = counts;
+    result.Texts = texts;
+end
+end
+
 function cfg = base_config()
 cfg = struct('VerboseLogging', false);
 end
@@ -277,16 +362,19 @@ source = struct('Mode', 'BATCH', 'Workbooks', table(string(stage), 0, "", ...
     string(file), 'VariableNames', {'Stage','No','TestCaseName','File'}));
 end
 
-function file = outcome_workbook(testCase, runs, kinds, paths, indices, trues, falses, iterations)
-if nargin < 8
+function file = outcome_workbook(testCase, runs, kinds, paths, indices, trues, falses, iterations, texts)
+if nargin < 8 || isempty(iterations)
     iterations = repmat("Iteration 1", 1, numel(runs));
+end
+if nargin < 9
+    texts = repmat("", 1, numel(runs));
 end
 folder = tempname; mkdir(folder);
 testCase.addTeardown(@() rmdir(folder, 's'));
 file = fullfile(folder, 'TestSummary.xlsx');
 count = numel(runs);
 writetable(table(runs(:), repmat("CUT", count, 1), repmat("Case1", count, 1), ...
-    iterations(:), kinds(:), paths(:), indices(:), repmat("", count, 1), ...
+    iterations(:), kinds(:), paths(:), indices(:), texts(:), ...
     trues(:), falses(:), 'VariableNames', {'Run','CUTName','TestCaseName', ...
     'IterationName','Kind','RelativePath','DecisionIndex','DecisionText', ...
     'TrueCount','FalseCount'}), file, 'Sheet', 'DecisionOutcomes', 'UseExcel', false);
