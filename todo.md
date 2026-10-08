@@ -1,6 +1,6 @@
 # MATLAB 실행 요청
 
-작성: 2026-10-07. 결과를 붙여 주면 이 파일은 지운다.
+작성: 2026-10-07 (3절은 2026-10-08). 결과를 붙여 주면 해당 절은 지운다.
 
 ## 1. 분기 결정 텍스트와 순서 확인
 
@@ -110,3 +110,50 @@ runtests({'test_decision_outcomes','test_export_final_document', ...
 ```
 
 실패한 테스트가 있으면 출력 전체를 붙인다.
+
+## 3. 로그 개편 단위 테스트 (develop)
+
+develop에 들어온 로그 개편(콘솔에는 진행 줄만, 모든 로그는 `result/logs/`)은 아직
+MATLAB에서 한 번도 돌려 보지 않았다. 2절처럼 develop을 받고 실행한다.
+
+Current Folder가 모델 프로젝트여도 되도록 클론의 `tests/unit`을 `st_project_root()`로
+찾는다. 2026-10-08에 `runtests('tests/unit')`가 "테스트 스위트를 만들 수 없습니다"로
+멈췄는데, Current Folder가 클론 루트가 아니었을 가능성이 크다.
+
+```matlab
+%% 3-1. 단위 테스트 전체
+st_setup
+r = runtests(fullfile(st_project_root(), 'tests', 'unit'));
+T = table(r);
+disp(T(~[r.Passed], :))
+```
+
+3-1이 또 "테스트 스위트를 만들 수 없습니다"로 멈추면 3-2를 돌린다. 파일을 하나씩
+읽어서 어느 파일이 왜 실패하는지 찍는다.
+
+```matlab
+%% 3-2. 스위트를 못 만들 때: 실패하는 테스트 파일 찾기
+unitDir = fullfile(st_project_root(), 'tests', 'unit');
+fprintf('pwd=%s\nunitDir=%s exists=%d\n', pwd, unitDir, isfolder(unitDir));
+f = dir(fullfile(unitDir, '*.m'));
+fprintf('files=%d\n', numel(f));
+for k = 1:numel(f)
+    try
+        matlab.unittest.TestSuite.fromFile(fullfile(f(k).folder, f(k).name));
+    catch e
+        fprintf('FAIL %s\n  %s\n', f(k).name, e.message);
+    end
+end
+```
+
+3-2에 `FAIL` 줄이 없는데도 3-1이 멈추면, 3-1을 다시 돌린 직후에 실행한다.
+
+```matlab
+%% 3-3. 마지막 오류 전체
+disp(getReport(MException.last, 'extended'))
+```
+
+### 돌려줄 것
+
+- 3-1의 마지막 출력(실패한 테스트만 나온다). 비어 있으면 "실패 없음"이라고만 적는다.
+- 3-2나 3-3을 돌렸다면 그 출력 전체.
