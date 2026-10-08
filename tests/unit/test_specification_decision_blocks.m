@@ -201,7 +201,7 @@ verifyTrue(testCase, all(ismember(string(catalog.Kind), ["EXPLICIT","IMPLICIT"])
 verifyTrue(testCase, all(ismember(string(catalog.MainExpression), ["SHOW","HIDE"])));
 verifyTrue(testCase, all(ismember(string(catalog.TwoWay), ["YES","NO"])));
 allowed = ["T/F","SELECT","CASE","LIMIT","BAND","RATE","ON/OFF", ...
-    "SIGN","LOOP","ROW","RESET"];
+    "SIGN","LOOP","ROW","RESET","EDGE"];
 verifyTrue(testCase, all(ismember(string(catalog.Outcome), allowed)));
 for k = 1:height(catalog)
     label = char(blockTypes(k));

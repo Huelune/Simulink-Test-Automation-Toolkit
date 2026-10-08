@@ -763,6 +763,12 @@ end
 
 
 function write_iterations(file, runLabel, testCaseName, iterationName, outcome)
+% Callers pass text as char or string. A char such as 'Passed' must stay one
+% value, so convert before (:) turns it into one row per character.
+runLabel = string(runLabel);
+testCaseName = string(testCaseName);
+iterationName = string(iterationName);
+outcome = string(outcome);
 count = numel(string(runLabel(:)));
 folder = fileparts(file);
 if ~isfolder(folder), mkdir(folder); end

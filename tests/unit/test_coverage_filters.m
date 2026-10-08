@@ -275,7 +275,7 @@ function testDecisionPointScanReturnsAnEmptyTableWithoutARoot(testCase)
 points = st_collect_decision_points([], '', []);
 verifyEqual(testCase, height(points), 0);
 verifyEqual(testCase, points.Properties.VariableNames, ...
-    {'BlockPath','BlockType','ObjectiveCount'});
+    {'BlockPath','BlockType','ObjectiveCount','JustifiedCount'});
 end
 
 function testDecisionPointScanSkipsAggregatingContainers(testCase)
