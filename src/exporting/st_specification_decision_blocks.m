@@ -45,9 +45,9 @@ if isempty(blockTypes)
         cutPath);
     return;
 end
-% BlockType, Name, Path, Outcome, Expression, Status, Message, BranchOrder.
-% BranchOrder is a sort key only; it is not written to the JSON.
-records = strings(0,8);
+% BlockType, Name, Path, Outcome, Expression, Status, Message, BranchOrder,
+% CoverageText. BranchOrder is a sort key only; it is not written to the JSON.
+records = strings(0,9);
 notes = strings(0,1);
 st_log(cfg, 'INFO', 'Specification decision block scan start | CUT=%s | SearchDepth=1 | Types=%d', ...
     cutPath, numel(blockTypes));
@@ -61,7 +61,7 @@ for k = 1:numel(blockTypes)
         paths = paths(:);
         paths = paths(strlength(paths) > 0);
         paths = unique(paths);
-        typeRecords = strings(0,8);
+        typeRecords = strings(0,9);
         skipped = 0;
         for n = 1:numel(paths)
             name = "";
@@ -78,7 +78,7 @@ for k = 1:numel(blockTypes)
                     paths(n), ME.message);
             end
             try
-                [outcome, expression] = ...
+                [outcome, expression, coverageTexts] = ...
                     descriptorReader(char(paths(n)), char(blockType));
                 if isempty(expression)
                     skipped = skipped + 1;
@@ -87,13 +87,14 @@ for k = 1:numel(blockTypes)
                         paths(n), blockType);
                     continue;
                 end
-                [outcome, expression] = normalize_branches( ...
-                    outcome, expression, blockType, paths(n));
+                [outcome, expression, coverageTexts] = normalize_branches( ...
+                    outcome, expression, coverageTexts, blockType, paths(n));
                 status = repmat("OK", numel(expression), 1);
                 message = strings(numel(expression), 1);
             catch ME
                 outcome = outcomeDefaults(k);
                 expression = "조건식 읽기 실패";
+                coverageTexts = "";
                 status = "WARN";
                 message = string(ME.message);
                 notes(end+1,1) = string(sprintf('%s Expression: %s', ...
@@ -110,7 +111,7 @@ for k = 1:numel(blockTypes)
             typeRecords = [typeRecords; ...
                 repmat(blockType, branches, 1) repmat(name, branches, 1) ...
                 repmat(paths(n), branches, 1) outcome expression ...
-                status message branchOrder]; %#ok<AGROW>
+                status message branchOrder coverageTexts]; %#ok<AGROW>
             if branches > 1
                 st_log(cfg, 'DEBUG', ...
                     'Specification decision block branches expanded | Path=%s | BlockType=%s | Branches=%d', ...
@@ -140,6 +141,7 @@ else
             'Name', char(records(k,2)), 'Path', char(records(k,3)), ...
             'Outcome', char(records(k,4)), ...
             'Expression', char(records(k,5)), ...
+            'CoverageText', char(records(k,9)), ...
             'ExpressionStatus', char(records(k,6)), ...
             'Message', char(records(k,7)));
         items(k) = string(jsonencode(item));
@@ -155,13 +157,17 @@ function name = read_name(path)
 name = get_param(path, 'Name');
 end
 
-function [outcome, expression] = normalize_branches(outcome, expression, blockType, path)
+function [outcome, expression, coverageTexts] = normalize_branches( ...
+        outcome, expression, coverageTexts, blockType, path)
 % A descriptor may return one expression per branch. The outcome is the kind
-% of branch, so a scalar outcome applies to every branch of the block.
+% of branch, so a scalar outcome applies to every branch of the block. A
+% descriptor without coverage texts gets "" for every branch.
 outcome = string(outcome);
 outcome = outcome(:);
 expression = string(expression);
 expression = expression(:);
+coverageTexts = string(coverageTexts);
+coverageTexts = coverageTexts(:);
 if isempty(expression)
     error('simtest:SpecificationDecisionExpression', ...
         'Decision expression is empty: %s', path);
@@ -173,6 +179,14 @@ if numel(outcome) ~= numel(expression)
     error('simtest:SpecificationDecisionBranch', ...
         'Decision branch count mismatch for %s (%s): %d outcome(s), %d expression(s).', ...
         path, blockType, numel(outcome), numel(expression));
+end
+if isempty(coverageTexts)
+    coverageTexts = repmat("", numel(expression), 1);
+end
+if numel(coverageTexts) ~= numel(expression)
+    error('simtest:SpecificationDecisionBranch', ...
+        'Decision branch count mismatch for %s (%s): %d coverage text(s), %d expression(s).', ...
+        path, blockType, numel(coverageTexts), numel(expression));
 end
 end
 

@@ -206,12 +206,13 @@ verifyEqual(testCase, reasons(1), "DECISION_OUTCOME_MISMATCH");
 end
 
 function testBlockWithoutTwoWayDecisionsKeepsTheStaticMarkSilently(testCase)
-item = struct('BlockType', 'Saturate', 'Name', 'Sat', 'Path', 'TOP/CUT/Sat', ...
-    'Outcome', 'LIMIT', 'Expression', 'UpperLimit=1', 'ExpressionStatus', 'OK', 'Message', '');
+% MinMax selects among inputs, so its outcomes are not true/false.
+item = struct('BlockType', 'MinMax', 'Name', 'Mx', 'Path', 'TOP/CUT/Mx', ...
+    'Outcome', 'SELECT', 'Expression', 'max; Inputs=3', 'ExpressionStatus', 'OK', 'Message', '');
 lookup = fake_lookup(struct());
 [formatted, ~, reasons] = st_format_specification_decision_blocks( ...
     one_row_specification(item), base_config(), lookup);
-verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T/F]Saturate"));
+verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T/F]MinMax"));
 verifyEqual(testCase, reasons(1), "");
 end
 
@@ -226,15 +227,15 @@ verifyEqual(testCase, reasons(1), "DECISION_OUTCOME_UNAVAILABLE");
 end
 
 function testBlockTypeOutsideTheTwoWaySetIsNeverLookedUp(testCase)
-% Saturate prints one D line for two decisions. Asking would pair them as
-% a mismatch on every row, so the type alone keeps it out.
-item = struct('BlockType', 'Saturate', 'Name', 'Sat', 'Path', 'TOP/CUT/Sat', ...
-    'Outcome', 'LIMIT', 'Expression', 'UpperLimit=1', 'ExpressionStatus', 'OK', 'Message', '');
+% MinMax is not a true/false block, so asking would pair its outcomes as a
+% mismatch on every row. The type alone keeps it out.
+item = struct('BlockType', 'MinMax', 'Name', 'Mx', 'Path', 'TOP/CUT/Mx', ...
+    'Outcome', 'SELECT', 'Expression', 'max; Inputs=3', 'ExpressionStatus', 'OK', 'Message', '');
 calls = 0;
 [formatted, ~, reasons] = st_format_specification_decision_blocks( ...
     one_row_specification(item), base_config(), @counting_lookup);
 verifyEqual(testCase, calls, 0);
-verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T/F]Saturate"));
+verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T/F]MinMax"));
 verifyEqual(testCase, reasons(1), "");
 
     function found = counting_lookup(~, ~, ~)

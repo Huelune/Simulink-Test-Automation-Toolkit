@@ -137,7 +137,8 @@ switch path
 end
 end
 
-function [outcome, expression] = fixture_descriptor(path, blockType)
+function [outcome, expression, coverageTexts] = fixture_descriptor(path, blockType)
+coverageTexts = strings(0,1);
 switch path
     case 'Top/CUT/A//If'
         outcome = "T/F";
@@ -157,7 +158,7 @@ switch path
 end
 end
 
-function [outcome, expression] = failing_descriptor(~, ~) %#ok<STOUT>
+function [outcome, expression, coverageTexts] = failing_descriptor(~, ~) %#ok<STOUT>
 error('fixture:Expression', 'Expression unavailable.');
 end
 
@@ -212,7 +213,8 @@ for k = 1:height(catalog)
         regexp(cellstr(rule), '^\w+\s*!?=\s*\S', 'once'))), label);
     if catalog.Formatter(k) == "GENERIC"
         hasSource = ~isempty(required) || ...
-            strlength(strtrim(string(catalog.FixedText(k)))) > 0;
+            strlength(strtrim(string(catalog.FixedText(k)))) > 0 || ...
+            strlength(strtrim(string(catalog.Branches(k)))) > 0;
         verifyTrue(testCase, hasSource, label);
     end
 end
@@ -268,20 +270,25 @@ verifyTrue(testCase, all(depths == 1));
 end
 
 function testImplicitBlocksUseGenericNameValueExpressions(testCase)
-[outcome, expression] = st_specification_decision_descriptor( ...
+% Saturate, Relay and RateLimiter receive one Decision per limit, so each
+% limit is its own branch, named by the decision text coverage prints.
+[outcome, expression, texts] = st_specification_decision_descriptor( ...
     'SaturatePath', 'Saturate', @fixture_implicit_parameter);
 verifyEqual(testCase, outcome, "LIMIT");
-verifyEqual(testCase, expression, "UpperLimit=1; LowerLimit=-1");
+verifyEqual(testCase, expression, ["U >= LL; LowerLimit=-1"; "U > UL; UpperLimit=1"]);
+verifyEqual(testCase, texts, ["U >= LL"; "U > UL"]);
 
 [outcome, expression] = st_specification_decision_descriptor( ...
     'RelayPath', 'Relay', @fixture_implicit_parameter);
 verifyEqual(testCase, outcome, "ON/OFF");
-verifyEqual(testCase, expression, "OnSwitchValue=1; OffSwitchValue=0");
+verifyEqual(testCase, expression, ...
+    ["U >= OnThresh; OnSwitchValue=1"; "U <= OffThresh; OffSwitchValue=0"]);
 
 [outcome, expression] = st_specification_decision_descriptor( ...
     'RateLimiterPath', 'RateLimiter', @fixture_implicit_parameter);
 verifyEqual(testCase, outcome, "RATE");
-verifyEqual(testCase, expression, "RisingSlewLimit=1; FallingSlewLimit=-1");
+verifyEqual(testCase, expression, ...
+    ["X < LL; FallingSlewLimit=-1"; "X > UL; RisingSlewLimit=1"]);
 end
 
 function testBlocksWithoutDecisionCoverageAreNotListed(testCase)
@@ -345,14 +352,14 @@ verifyEmpty(testCase, expression);
 [outcome, expression] = st_specification_decision_descriptor( ...
     'DelayEnablePath', 'Delay', @fixture_implicit_parameter);
 verifyEqual(testCase, outcome, "RESET");
-verifyEqual(testCase, expression, "ExternalReset=None; ShowEnablePort=on");
+verifyEqual(testCase, expression, "Enable; ShowEnablePort=on");
 [~, expression] = st_specification_decision_descriptor( ...
     'FilterPlainPath', 'DiscreteFilter', @fixture_implicit_parameter);
 verifyEmpty(testCase, expression);
 [outcome, expression] = st_specification_decision_descriptor( ...
     'FilterResetPath', 'DiscreteFilter', @fixture_implicit_parameter);
 verifyEqual(testCase, outcome, "RESET");
-verifyEqual(testCase, expression, "ExternalReset=Rising");
+verifyEqual(testCase, expression, "Reset; ExternalReset=Rising");
 end
 
 function testSignAndCombinatorialLogicAreAlwaysListed(testCase)
@@ -370,13 +377,104 @@ function testIntegratorWithLimitOrResetIsListed(testCase)
 [outcome, expression] = st_specification_decision_descriptor( ...
     'IntegratorLimitPath', 'DiscreteIntegrator', @fixture_implicit_parameter);
 verifyEqual(testCase, outcome, "LIMIT");
-verifyEqual(testCase, expression, "LimitOutput=on; ExternalReset=none; " + ...
-    "UpperSaturationLimit=1; LowerSaturationLimit=-1");
+verifyEqual(testCase, expression, ...
+    ["X < LL; LowerSaturationLimit=-1"; "X > UL; UpperSaturationLimit=1"]);
 
 [outcome, expression] = st_specification_decision_descriptor( ...
     'IntegratorResetPath', 'DiscreteIntegrator', @fixture_implicit_parameter);
 verifyEqual(testCase, outcome, "LIMIT");
-verifyEqual(testCase, expression, "LimitOutput=off; ExternalReset=rising");
+verifyEqual(testCase, expression, "Reset; ExternalReset=rising");
+end
+
+function testCatalogBranchesAreWellFormed(testCase)
+% Each entry is "<coverage text>:<parameter>[:<condition>]". A row with
+% branches names its parameters there, never in Parameters as well.
+catalog = st_specification_decision_catalog('ALL');
+for k = 1:height(catalog)
+    spec = strtrim(string(catalog.Branches(k)));
+    label = char(catalog.BlockType(k));
+    if strlength(spec) == 0, continue; end
+    verifyEqual(testCase, string(catalog.Parameters(k)), "", label);
+    verifyEqual(testCase, string(catalog.OptionalParameters(k)), "", label);
+    verifyEqual(testCase, string(catalog.TwoWay(k)), "YES", label);
+    for entry = strtrim(split(spec, ';')).'
+        fields = strtrim(split(entry, ':'));
+        verifyTrue(testCase, numel(fields) == 2 || numel(fields) == 3, label);
+        verifyTrue(testCase, all(strlength(fields(1:2)) > 0), label);
+        if numel(fields) == 3
+            verifyNotEmpty(testCase, regexp(char(fields(3)), '^\w+\s*!?=\s*\S', 'once'), label);
+        end
+    end
+end
+end
+
+function testIntegratorWithEverySettingHasThreeBranchesInCoverageOrder(testCase)
+% Coverage reports the reset, then the lower limit, then the upper limit.
+[~, expression, texts] = st_specification_decision_descriptor( ...
+    'IntegratorAllPath', 'DiscreteIntegrator', @fixture_implicit_parameter);
+verifyEqual(testCase, expression, ["Reset; ExternalReset=rising"; ...
+    "X < LL; LowerSaturationLimit=-5"; "X > UL; UpperSaturationLimit=5"]);
+verifyEqual(testCase, texts, ["Reset"; "X < LL"; "X > UL"]);
+end
+
+function testDelayWithEnableAndResetHasTwoBranches(testCase)
+[~, expression, texts] = st_specification_decision_descriptor( ...
+    'DelayBothPath', 'Delay', @fixture_implicit_parameter);
+verifyEqual(testCase, expression, ["Enable; ShowEnablePort=on"; "Reset; ExternalReset=Rising"]);
+verifyEqual(testCase, texts, ["Enable"; "Reset"]);
+end
+
+function testDeadZoneSplitsIntoStartAndEnd(testCase)
+[outcome, expression] = st_specification_decision_descriptor( ...
+    'DeadZonePath', 'DeadZone', @fixture_implicit_parameter);
+verifyEqual(testCase, outcome, "BAND");
+verifyEqual(testCase, expression, ["U >= LL; LowerValue=-10"; "U > UL; UpperValue=10"]);
+end
+
+function testBlockWithoutBranchesHasEmptyCoverageTexts(testCase)
+[~, expression, texts] = st_specification_decision_descriptor( ...
+    'SwitchPath', 'Switch', @fixture_parameter);
+verifyEqual(testCase, expression, "u2 >= 5");
+verifyEqual(testCase, texts, "");
+end
+
+function testScanCarriesCoverageTextIntoTheJson(testCase)
+cfg = struct('VerboseLogging', false);
+descriptor = @(path, blockType) st_specification_decision_descriptor( ...
+    path, blockType, @fixture_implicit_parameter);
+[text, count, ~] = st_specification_decision_blocks( ...
+    'Top/CUT', cfg, @single_saturate_finder, @(~) "Sat", descriptor);
+decoded = jsondecode(char(text));
+verifyEqual(testCase, count, 2);
+verifyEqual(testCase, string({decoded.CoverageText}).', ["U >= LL"; "U > UL"]);
+verifyEqual(testCase, string({decoded.Expression}).', ...
+    ["U >= LL; LowerLimit=-1"; "U > UL; UpperLimit=1"]);
+end
+
+function testBranchParameterFailureKeepsTheBlockAsWarn(testCase)
+cfg = struct('VerboseLogging', false);
+descriptor = @(path, blockType) st_specification_decision_descriptor( ...
+    path, blockType, @refusing_parameter);
+[text, count, note] = st_specification_decision_blocks( ...
+    'Top/CUT', cfg, @single_saturate_finder, @(~) "Sat", descriptor);
+decoded = jsondecode(char(text));
+verifyEqual(testCase, count, 1);
+verifyEqual(testCase, string(decoded.ExpressionStatus), "WARN");
+verifyEqual(testCase, string(decoded.Expression), "조건식 읽기 실패");
+verifyEqual(testCase, string(decoded.CoverageText), "");
+verifyNotEmpty(testCase, note);
+end
+
+function paths = single_saturate_finder(~, varargin)
+[depth, blockType] = search_options(varargin);
+if depth ~= 1
+    error('fixture:SearchDepth', 'Expected SearchDepth=1.');
+end
+if strcmp(blockType, 'Saturate')
+    paths = "SaturatePath";
+else
+    paths = strings(0,1);
+end
 end
 
 function testUnknownBlockTypeIsRejectedByTheCatalogLookup(testCase)
@@ -478,6 +576,22 @@ switch key
         value = '';
     case "IntegratorResetPath|LowerSaturationLimit"
         value = '';
+    case "IntegratorAllPath|LimitOutput"
+        value = 'on';
+    case "IntegratorAllPath|ExternalReset"
+        value = 'rising';
+    case "IntegratorAllPath|UpperSaturationLimit"
+        value = '5';
+    case "IntegratorAllPath|LowerSaturationLimit"
+        value = '-5';
+    case "DelayBothPath|ExternalReset"
+        value = 'Rising';
+    case "DelayBothPath|ShowEnablePort"
+        value = 'on';
+    case "DeadZonePath|LowerValue"
+        value = '-10';
+    case "DeadZonePath|UpperValue"
+        value = '10';
     otherwise
         error('fixture:UnknownParameter', 'Unexpected parameter: %s', key);
 end
@@ -635,7 +749,9 @@ function testCatalogMarksExactlyTheTrueFalseTypesAsTwoWay(testCase)
 % which blocks can ever be reported as unrecorded.
 catalog = st_specification_decision_catalog('ALL');
 verifyEqual(testCase, string(catalog.BlockType(string(catalog.TwoWay) == "YES")), ...
-    ["If"; "Switch"; "Abs"; "ForIterator"; "WhileIterator"; ...
+    ["If"; "Switch"; "Saturate"; "Abs"; "DeadZone"; "RateLimiter"; "Relay"; ...
+     "DiscreteIntegrator"; "ForIterator"; "WhileIterator"; "Delay"; ...
+     "DiscreteFilter"; "DiscreteFir"; "DiscreteTransferFcn"; ...
      "EnablePort"; "TriggerPort"; "ResetPort"]);
 end
 
@@ -645,12 +761,14 @@ hidden = string(catalog.BlockType(string(catalog.MainExpression) == "HIDE"));
 verifyEqual(testCase, hidden, "SwitchCase");
 end
 
-function [outcome, expression] = branching_descriptor(~, ~)
+function [outcome, expression, coverageTexts] = branching_descriptor(~, ~)
+coverageTexts = strings(0,1);
 outcome = "T/F";
 expression = ["u1 == 0"; "elseif u2 > 1"; "elseif u3 < 2"];
 end
 
-function [outcome, expression] = mismatched_descriptor(~, ~)
+function [outcome, expression, coverageTexts] = mismatched_descriptor(~, ~)
+coverageTexts = strings(0,1);
 outcome = ["T/F"; "T/F"];
 expression = ["a"; "b"; "c"];
 end
