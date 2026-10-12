@@ -163,7 +163,13 @@ verifyTrue(testCase, contains(readback{2,'비고'}, "verify 내용"));
 verifyTrue(testCase, contains(readback{2,'비고'}, "[OverflowDetails!E"));
 verifyEqual(testCase, written{:,'input 시나리오 내용'}, readback{:,'input 시나리오 내용'});
 verifyEqual(testCase, written{2,'비고'}, readback{2,'비고'});
-detailReadback = readtable(path, 'Sheet', 'AssessmentDetails', 'TextType', 'string');
+% An all-blank column (Message here) comes back as NaN unless it is read as
+% text, and a blank text cell comes back missing, so both are normalised.
+detailOptions = detectImportOptions(path, 'Sheet', 'AssessmentDetails', 'TextType', 'string');
+detailOptions = setvartype(detailOptions, ...
+    intersect({'Step','Action','Message'}, detailOptions.VariableNames), 'string');
+detailReadback = readtable(path, detailOptions);
+detailReadback.Message(ismissing(detailReadback.Message)) = "";
 verifyTrue(testCase, startsWith(writtenDetails.Action, "[OverflowDetails!E"));
 verifyEqual(testCase, writtenDetails.Action, detailReadback.Action);
 verifyEqual(testCase, writtenDetails.Message, detailReadback.Message);
@@ -279,10 +285,12 @@ for i = 1:numel(files)
     % is not a call, so scan the executable text only.
     source = st_executable_source( ...
         fileread(fullfile(files(i).folder, files(i).name)));
-    forbidden = {'\bsim\s*\(', 'sltest\.testmanager\.run\s*\(', ...
-        '\bsave_system\s*\(', '\bsaveToFile\s*\(', ...
+    % \< is the MATLAB word start; \b would be a backspace character and
+    % never match, which once left this scan passing whatever the source called.
+    forbidden = {'\<sim\s*\(', 'sltest\.testmanager\.run\s*\(', ...
+        '\<save_system\s*\(', '\<saveToFile\s*\(', ...
         'sltest\.testsequence\.(activateScenario|editStep|addScenario)\s*\(', ...
-        '\bst_run_\w*\s*\(', '\bst_update_expected_from_results\s*\('};
+        '\<st_run_\w*\s*\(', '\<st_update_expected_from_results\s*\('};
     for j = 1:numel(forbidden)
         verifyEmpty(testCase, regexp(source, forbidden{j}, 'once'), files(i).name);
     end
@@ -301,7 +309,7 @@ probe = [ ...
     'end' newline];
 code = st_executable_source(probe);
 verifyEqual(testCase, numel(code), numel(probe));
-verifyEqual(testCase, regexp(code, '\bst_run_\w*\s*\(', 'match'), ...
+verifyEqual(testCase, regexp(code, '\<st_run_\w*\s*\(', 'match'), ...
     {'st_run_tests_per_cut('});
 end
 

@@ -755,10 +755,14 @@ verifyEqual(testCase, string(catalog.BlockType(string(catalog.TwoWay) == "YES"))
      "EnablePort"; "TriggerPort"; "ResetPort"]);
 end
 
-function testCatalogHidesOnlySwitchCaseExpressionInTheMainCell(testCase)
+function testCatalogHidesOnlyLongOrConditionlessExpressionsInTheMainCell(testCase)
+% SwitchCase and CombinatorialLogic carry a long case list or truth table;
+% the port rows have no dialog condition at all. Every other type shows its
+% condition after the block type.
 catalog = st_specification_decision_catalog('ALL');
 hidden = string(catalog.BlockType(string(catalog.MainExpression) == "HIDE"));
-verifyEqual(testCase, hidden, "SwitchCase");
+verifyEqual(testCase, hidden, ["SwitchCase"; "CombinatorialLogic"; ...
+    "EnablePort"; "TriggerPort"; "ResetPort"]);
 end
 
 function [outcome, expression, coverageTexts] = branching_descriptor(~, ~)
@@ -830,13 +834,15 @@ end
 
 function testScanReportsTheSubsystemNotThePortBlock(testCase)
 % The port block is named Enable in every model, so reporting it would
-% lose the one name the reader recognises.
+% lose the one name the reader recognises. The default finder hands every
+% port type to st_conditional_cut, which reports the CUT itself; that
+% function is checked by testConditionalScanReportsOnlyTheCutItself.
 source = fileread(fullfile(st_project_root(), 'src', 'exporting', ...
     'st_specification_decision_blocks.m'));
-verifyNotEmpty(testCase, regexp(source, 'function paths = conditional_subsystems', 'once'));
-verifyNotEmpty(testCase, regexp(source, "paths\{end\+1,1\} = child;", 'once'));
-% find_system reports the root itself when the root is a Subsystem.
-verifyNotEmpty(testCase, regexp(source, 'if strcmp\(child, root\)', 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    "if ~any\(strcmp\(blockType, \{'EnablePort', 'TriggerPort', 'ResetPort'\}\)\)", 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'paths = st_conditional_cut\(root, blockType\);', 'once'));
 end
 
 function testConditionalScanReportsOnlyTheCutItself(testCase)
