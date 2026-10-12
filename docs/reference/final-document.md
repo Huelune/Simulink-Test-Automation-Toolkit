@@ -218,6 +218,10 @@ elseif)마다 따로 적습니다.
 값은 결과 정리 때 iteration마다 기록한 결과 워크북의 `DecisionOutcomes` 시트에서
 옵니다. 판정과 같은 워크북·같은 실행(INITIAL/FINAL)을 읽습니다.
 
+- 함수 호출로 실행되는 Triggered Subsystem은 Coverage 결과가 `executed` 하나뿐입니다.
+  false 쪽이 없으므로 그 행에서 실행됐으면 `[T]`, 한 번도 실행되지 않았으면 `[-]`로
+  적습니다.
+
 - 그 밖의 블록(MinMax, MultiPortSwitch, SwitchCase, Sign, CombinatorialLogic)은
   결과가 셋 이상이라 정적 표기 `[T/F]` 그대로이며 사유를 남기지 않습니다.
 - 결정마다 D가 있는 블록은 D 줄의 Coverage 결정 이름과 기록된 결정 이름을 맞춰

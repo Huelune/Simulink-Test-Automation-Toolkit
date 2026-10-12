@@ -244,9 +244,12 @@ MATLAB 없이 이 환경에서 돌릴 수는 없지만, 아래는 모델 없이 
 | Saturation | 1 | `U >= LL` | `false`, `true` |
 | Saturation | 2 | `U > UL` | `false`, `true` |
 | Switch | 1 | `TRIGGER > THRESHOLD` | `false (out = in3)`, `true (out = in1)` |
+| 함수 호출 Triggered Subsystem (2026-10-08 실제 모델) | 1 | (기록 안 함) | `executed` 하나 |
 
 - 가정 2는 확인됐다. 모든 결과 텍스트가 `true`/`false`로 시작한다. Switch만 꼬리말이
-  붙으며, 시작 단어로 받는 규칙(§4)이 이 경우를 처리한다.
+  붙으며, 시작 단어로 받는 규칙(§4)이 이 경우를 처리한다. 예외는 실제 모델에서 본 함수
+  호출 Triggered Subsystem으로, 결과가 `executed` 하나뿐이다. 이 결정은 [실행 횟수 0]으로
+  기록해 `[T]`(실행됨) 또는 `[-]`(실행 안 됨)로 적는다(사용자 결정, 2026-10-12).
 - 가정 3은 확인됐다. If는 if 다음 elseif 순서이고, elseif의 평가 횟수(187)가 if의
   false 횟수와 같다.
 - 하한(`LL`)이 상한(`UL`)보다 **먼저** 나온다(Saturation, Dead Zone, Rate Limiter,

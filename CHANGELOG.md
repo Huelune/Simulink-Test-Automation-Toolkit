@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **함수 호출 Triggered Subsystem도 최종 문서에 실행 여부를 적습니다.** 이 CUT의
+  Coverage 결과는 `executed` 하나뿐이라 지금까지 기록되지 않아 모든 행이
+  `DECISION_OUTCOME_UNAVAILABLE`이었습니다. 이제 실행됐으면 `[T]`, 한 번도 안 됐으면
+  `[-]`입니다. 결과 정리를 다시 해야 반영됩니다.
+
 - **Coverage 결정이 여럿인 블록이 결정마다 D를 받습니다.** Saturate, DeadZone,
   RateLimiter, Relay, DiscreteIntegrator, Delay, DiscreteFir, DiscreteFilter,
   DiscreteTransferFcn의 D 줄이 `D1 [T/F]Saturate (U >= LL; LowerLimit=-32)`처럼
