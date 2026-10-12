@@ -8,12 +8,15 @@
 
 ## 1. 실제 모델로 최종 문서의 분기 결과 확인
 
-**먼저 결과 정리를 이 develop 버전으로 다시 한다.** PER_CUT이면 `st_collect_per_cut_results`,
-BATCH면 `st_generate_test_report`. `DecisionOutcomes` 시트는 결과 정리 때 쓰인다.
+분기 결과(`DecisionOutcomes` 시트)는 **결과 정리 때** 기록된다. 그래서 블록 맨 앞에서 결과
+정리를 다시 한다. 코드를 고친 뒤 결과 정리를 건너뛰면 예전 결과가 그대로 나온다
+(2026-10-12 확인: 결과 정리가 10-08이라 수정이 반영되지 않았다). PER_CUT 기준이며, BATCH로
+돌렸으면 첫 줄을 `st_generate_test_report`로 바꾼다. 결과 정리는 CUT 수만큼 시간이 걸린다.
 
 ```matlab
 clearvars  % a variable left over from an earlier block (e.g. "split") would shadow a function
 st_setup
+st_collect_per_cut_results();
 [T, file] = st_export_final_document();
 clc
 meta = readtable(file, 'Sheet', 'Metadata', 'TextType', 'string');
@@ -46,52 +49,9 @@ fprintf('file: result\\%s%s\n', name, ext);
 확인할 것: `DecisionOutcomeUnits`가 0보다 크다. `[T]`·`[F]`·`[-]`가 나온다.
 2026-10-12 수정 뒤에는 함수 호출 Triggered Subsystem 행도 `[T]`(실행됨)나 `[-]`가 되어
 `DECISION_OUTCOME_UNAVAILABLE`이 0이어야 한다(10-08 확인 때는 19행이 남았다). 결과 정리를
-다시 해야 반영된다. 0이 아니면 결과를 알려 주면 원인 분류 진단을 다시 올린다.
+0이 아니면 결과를 알려 주면 원인 분류 진단을 다시 올린다.
 
 돌려줄 것: 화면 캡처 한 장.
-
-### 1-1. 수정이 반영됐는지 확인 (2026-10-12: 여전히 19행 UNAVAILABLE)
-
-클론이 새 커밋을 받았는지, MATLAB이 새 코드를 읽는지, 마지막 결과 정리가 새 코드로 돌았는지를
-한 화면에 찍는다. 아무것도 바꾸지 않는다.
-
-```matlab
-clearvars  % a variable left over from an earlier block would shadow a function
-st_setup
-cfg = st_config();
-[~, head] = system(sprintf('git -C "%s" log -1 --format=%%h', st_project_root()));
-copies = which('st_decision_outcome_counts', '-all');
-source = fileread(which('st_decision_outcome_counts'));
-clc
-fprintf('clone commit %s (need 2e64792 or later) | executed rule in loaded code %d | copies on path %d\n', ...
-    strtrim(head), contains(source, '^executed'), numel(copies));
-logDir = fullfile(cfg.ResultDir, 'logs');
-c = dir(fullfile(logDir, '*_st_collect_per_cut_results.log'));
-e = dir(fullfile(logDir, '*_st_export_final_document.log'));
-if isempty(c)
-    fprintf('no result collection log\n');
-else
-    [~, i] = max([c.datenum]);
-    logText = splitlines(string(fileread(fullfile(c(i).folder, c(i).name))));
-    fprintf('newest result collection %s | TriggerPort skipped %d | scan end lines %d\n', ...
-        extractBefore(string(c(i).name), 16), ...
-        sum(contains(logText, "skipped a block without two-way decisions") & ...
-            contains(logText, "BlockType=TriggerPort")), ...
-        sum(contains(logText, "Decision outcome scan end")));
-end
-if ~isempty(e)
-    [~, i] = max([e.datenum]);
-    fprintf('newest final document  %s\n', extractBefore(string(e(i).name), 16));
-end
-```
-
-읽는 법:
-- `clone commit`이 2e64792보다 오래됐거나 `executed rule in loaded code 0` → 클론을 `git pull` 한다.
-  `copies on path`가 1보다 크면 다른 클론이 path에 섞여 있다.
-- 결과 정리 시각이 2026-10-12 수정 이전이면 결과 정리를 다시 한다.
-- 새 코드·새 결과 정리인데도 `TriggerPort skipped`가 0보다 크면 결과를 그대로 알려 준다.
-
-돌려줄 것: 화면 캡처 한 장. 커밋 해시와 시각, 개수만 찍힌다.
 
 ## 2. 단위 테스트 다시 돌리기 (기존 실패 6건을 고친 뒤)
 
