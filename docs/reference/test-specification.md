@@ -244,7 +244,12 @@ DiscreteIntegrator의 reset 분기는 `ExternalReset`이 `none`이 아닐 때만
 `DecisionBlockDetails`의 `Expression` 열에 남기므로 정보가 사라지지는 않습니다.
 
 어느 블록이 이렇게 동작하는지는 catalog의 `MainExpression` 열(`SHOW` 또는 `HIDE`)이
-정합니다. 현재 `HIDE`는 `SwitchCase` 하나뿐입니다.
+정합니다. 현재 `HIDE`는 다섯 종입니다.
+
+- `SwitchCase`: case 목록이 깁니다.
+- `CombinatorialLogic`: 진리표가 깁니다.
+- Enabled/Triggered/Resettable Subsystem(`EnablePort`, `TriggerPort`, `ResetPort`): 대화상자
+  조건이 없어 `D1 [T/F]Enable`처럼 분기 종류만 적습니다.
 
 ### `Outcome` 토큰
 
