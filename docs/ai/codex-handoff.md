@@ -56,8 +56,9 @@
   경로가 R2025b에서 해석되는지는 단위 테스트가 assume으로만 다룬다.
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
   (관측 1건), `Simulink.io.SLDVMatFile` import 결과도 같은 이름인지.
-- 데모 모델 생성기 `st_create_demo_model`(2026-10-12): 한 번도 MATLAB에서 돌지 않았다.
-  확인 요청은 `todo.md` 1절(단위 테스트), 2절(데모 전 과정). 정적으로만 정한 가정: Delay의
+- 데모 모델 생성기 `st_create_demo_model`(2026-10-12): 사용자 MATLAB에서 단위 테스트
+  `test_create_demo_model`이 6/6 통과했다(모델 생성, 컴파일, 입력 이름과 Inport 일치, CUT별
+  분기 블록 목록). 전 과정은 아직이며 `todo.md` 1절로 요청했다. 정적으로만 정한 가정: Delay의
   포트 순서가 enable 포트·외부 reset을 켰을 때 u, enable, reset이라는 것, Harness가 Signal
   Editor 입력 이름을 CUT Inport 이름 그대로 쓴다는 것, Switch Case·Multiport Switch가 double
   제어 입력을 받는다는 것. 2절이 통과하면 결정 단위 블록(Saturation 등)과 Enabled CUT의 분기

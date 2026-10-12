@@ -6,57 +6,12 @@
 화면에는 개수, Simulink 블록 종류 이름, 정해 둔 안내 문구만 찍는다. 테스트 케이스·모델·블록
 이름, 경로, 계정은 찍지 않는다(회사 내부 정보).
 
-## 1. 데모 모델 생성기 단위 테스트
-
-**왜:** 새 데모 모델 생성기 `st_create_demo_model`이 MATLAB에서 모델을 만들고, 컴파일되고,
-입력 MAT과 관리 Excel이 모델과 맞는지 처음 확인한다. 에이전트 PC에는 MATLAB이 없어 한 번도
-돌려 보지 못했다. SLDV는 쓰지 않고 테스트도 실행하지 않는다. 1~2분.
-
-먼저 MATLAB 클론에서 `git pull`로 `main`을 받는다.
-
-```matlab
-clearvars; clc
-oldWarning = warning('off', 'all');
-evalc('st_setup');
-testFile = fullfile(st_project_root(), 'tests', 'unit', 'test_create_demo_model.m');
-[~, r] = evalc('runtests(testFile)');
-reportFile = fullfile(tempdir, 'st_demo_unit_report.txt');
-fid = fopen(reportFile, 'w', 'n', 'UTF-8');
-clc
-fprintf('데모 모델 단위 테스트: 통과 %d / 전체 %d\n', sum([r.Passed]), numel(r));
-for k = find(~[r.Passed])
-    records = r(k).Details.DiagnosticRecord;
-    kind = '미완료'; id = '';
-    if ~isempty(records)
-        kind = records(1).Event;
-        if isprop(records(1), 'Exception') && ~isempty(records(1).Exception)
-            id = records(1).Exception.identifier;
-        end
-        for j = 1:numel(records)
-            fprintf(fid, '== %s\n%s\n', r(k).Name, records(j).Report);
-        end
-    end
-    name = regexprep(r(k).Name, '^.*/', '');
-    fprintf('  실패 %-48s %-20s %s\n', name, kind, id);
-end
-fclose(fid);
-if any(~[r.Passed])
-    fprintf('자세한 내용: %%TEMP%%\\st_demo_unit_report.txt (밖으로 보내지 마세요)\n');
-end
-warning(oldWarning);
-```
-
-**확인할 것:** `통과 7 / 전체 7`.
-
-**돌려줄 것:** 화면 캡처 한 장. 실패가 있으면 그 줄(테스트 함수 이름, 실패 종류, 오류 식별자)이 같이
-찍힌다. 테스트 함수 이름과 데모 모델 이름은 지어낸 이름이라 찍혀도 된다.
-
-## 2. 데모 모델로 전 과정 돌리기
+## 1. 데모 모델로 전 과정 돌리기
 
 **왜:** 데모 모델로 Harness 생성 → 실행 → 결과 정리 → 명세서 → standalone 제출물 → 최종 문서까지
 한 번에 지나가는지, 최종 문서에 분기 결과 `[T]`, `[F]`, `[T/F]`, `[-]`가 의도대로 나오는지 본다.
 실제 업무 모델에 없던 Saturation 같은 결정 단위 블록, Enabled CUT, SLDV `GENERATE`도 여기서
-처음 실물로 지나간다. 1절이 전부 통과한 뒤에 돌린다. SLDV가 필요하고 수십 분 걸릴 수 있다.
+처음 실물로 지나간다. 생성기 단위 테스트는 2026-10-12에 전부 통과했다. SLDV가 필요하고 수십 분 걸릴 수 있다.
 
 **업무 결과와 섞이지 않게** 툴킷을 `D:\st_demo\toolkit`에 복사해서 그 안에서 돌린다. 원래 클론의
 `TestManagement.xlsx`, `runtime_target.mat`, `result`는 건드리지 않는다. 끝나면 MATLAB 경로와 현재
