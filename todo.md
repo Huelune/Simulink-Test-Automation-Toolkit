@@ -48,8 +48,8 @@ fprintf('file: result\\%s%s\n', name, ext);
 
 확인할 것: `DecisionOutcomeUnits`가 0보다 크다. `[T]`·`[F]`·`[-]`가 나온다.
 2026-10-12 수정 뒤에는 함수 호출 Triggered Subsystem 행도 `[T]`(실행됨)나 `[-]`가 되어
-`DECISION_OUTCOME_UNAVAILABLE`이 0이어야 한다(10-08 확인 때는 19행이 남았다). 결과 정리를
-0이 아니면 결과를 알려 주면 원인 분류 진단을 다시 올린다.
+`DECISION_OUTCOME_UNAVAILABLE`이 0이어야 한다(10-08 확인 때는 19행이 남았다). 0이 아니면
+결과를 알려 주면 원인 분류 진단을 다시 올린다.
 
 돌려줄 것: 화면 캡처 한 장.
 
