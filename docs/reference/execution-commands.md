@@ -75,6 +75,7 @@ st_run_standalone_coverage_pipeline( ...
 | 검증 | `st_verify_all` | 환경·단위·fixture·실제 모델 종합 검증 |
 | 문서 | `st_export_final_document` | 고객 제출용 최종 문서 Excel 생성 |
 | 예제 | `st_create_example` | 익명 모델·입력·Excel 생성 |
+| 예제 | `st_create_demo_model` | 분기 블록을 고루 갖춘 데모 모델·입력·Excel 생성 |
 
 ## 2. 초기화와 대상 선택
 
@@ -706,6 +707,25 @@ demo = st_create_example(fullfile(tempdir,'st_demo'));
 
 반환 struct에는 `Root`, `ModelFile`, `ManagementExcel`, `InputFile`, `OutputRoot`가
 들어 있습니다.
+
+### `st_create_demo_model`
+
+모든 단계를 시험하고 문서 예시로 쓸 수 있는 데모 모델(CUT 7개), CUT별 Dataset MAT,
+관리 Excel을 새 폴더에 만듭니다. 이름은 모두 지어낸 것이라 캡처와 문서에 그대로 써도
+됩니다. 두 CUT은 `SldvMode=GENERATE`라 Simulink Design Verifier가 필요합니다.
+테스트를 실행하지는 않습니다. CUT 구성과 전 과정 코드는
+[익명 예제 생성](example.md#데모-모델)에 있습니다.
+
+```matlab
+demo = st_create_demo_model(fullfile(tempdir,'st_demo_model'));
+```
+
+| 인자 | 역할 |
+| --- | --- |
+| 첫 번째 (필수) | 만들 위치. **비어 있는 새 폴더여야 합니다** |
+
+반환 struct에는 `Root`, `TopModel`, `ModelFile`, `ManagementExcel`, `InputFolder`,
+`Targets`(관리 Excel에 쓴 표), `OutputRoot`가 들어 있습니다.
 
 ### `st_cleanup_results`
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **데모 모델 생성기 `st_create_demo_model`을 추가했습니다.** CUT 7개에 명세서와 최종
+  문서가 다루는 분기 종류(If/elseif, Switch, 결정 단위 블록, SELECT·CASE 블록,
+  Enabled·함수 호출 CUT, 필터를 건 부모)를 고루 넣었고, 일부 입력은 분기를 일부러 덜
+  타게 짜서 최종 문서에 `[T]`, `[F]`, `[T/F]`가 모두 나옵니다. 이름이 모두 지어낸 것이라
+  캡처와 문서 예시에 그대로 쓸 수 있습니다. 기존 `st_create_example`은 그대로입니다.
+
 - **함수 호출 Triggered Subsystem도 최종 문서에 실행 여부를 적습니다.** 이 CUT의
   Coverage 결과는 `executed` 하나뿐이라 지금까지 기록되지 않아 모든 행이
   `DECISION_OUTCOME_UNAVAILABLE`이었습니다. 이제 실행됐으면 `[T]`, 한 번도 안 됐으면

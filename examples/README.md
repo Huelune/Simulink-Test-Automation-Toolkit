@@ -15,6 +15,17 @@ R2025b 실기 확인은 아직 남아 있습니다.
 > 이 폴더에 실제 업무 모델, 관리 workbook, SLDV MAT, 생성된 Test Manager 파일을
 > 두지 마십시오. 생성된 샘플 바이너리는 Git에 추가하지 않습니다.
 
+## `st_create_demo_model`
+
+`st_create_demo_model(destination)`은 분기 블록을 고루 갖춘 데모 모델(CUT 7개),
+CUT별 Dataset MAT, 관리 Excel을 만듭니다. If/elseif, Switch, 결정 단위 블록(Saturation,
+Dead Zone, Rate Limiter, Relay, Delay, Discrete-Time Integrator), Multiport Switch,
+Switch Case, Enabled CUT, 함수 호출 CUT, 필터를 건 부모 CUT이 들어 있어 명세서와 최종
+문서의 분기 표기를 모두 볼 수 있습니다. 이름은 모두 지어낸 것입니다.
+
+구성과 따라 할 코드는 [익명 예제 생성](../docs/reference/example.md#데모-모델)에
+있습니다. R2025b 실기 확인은 아직 남아 있습니다.
+
 ## `manual-evidence.example.json`
 
 `CERTIFY + CURRENT/BOTH`에서 요구하는 수동 검사 증거의 익명 template입니다.
