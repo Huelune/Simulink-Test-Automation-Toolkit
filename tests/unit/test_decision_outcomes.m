@@ -86,6 +86,34 @@ verifyEmpty(testCase, st_decision_outcome_counts([]));
 verifyEmpty(testCase, st_decision_outcome_counts(struct('decision', [])));
 end
 
+function testExecutedOnlyDecisionCountsAsTrue(testCase)
+% A function-call Triggered Subsystem has one decision whose only outcome
+% is "executed" (seen at runtime 2026-10-08). It is recorded as executed
+% versus nothing, so the final document prints [T] or [-].
+description = struct('decision', fake_decision('trigger', "executed", 38));
+verifyEqual(testCase, st_decision_outcome_counts(description), [38 0]);
+description = struct('decision', fake_decision('trigger', "Executed", 0));
+verifyEqual(testCase, st_decision_outcome_counts(description), [0 0]);
+end
+
+function testOtherSingleOutcomeIsNotDescribed(testCase)
+description = struct('decision', fake_decision('x', "taken", 3));
+verifyEmpty(testCase, st_decision_outcome_counts(description));
+description = struct('decision', fake_decision('x', "executedly", 3));
+verifyEmpty(testCase, st_decision_outcome_counts(description));
+end
+
+function testFormatterMarksAnExecutedTrigger(testCase)
+item = struct('BlockType', 'TriggerPort', 'Name', 'CUT', 'Path', 'TOP/CUT', ...
+    'Outcome', 'EDGE', 'Expression', 'trigger', 'ExpressionStatus', 'OK', 'Message', '');
+formatted = st_format_specification_decision_blocks( ...
+    one_row_specification(item), base_config(), fake_lookup(containers.Map({'.'}, {[38 0]})));
+verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T]Trigger"));
+formatted = st_format_specification_decision_blocks( ...
+    one_row_specification(item), base_config(), fake_lookup(containers.Map({'.'}, {[0 0]})));
+verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [-]Trigger"));
+end
+
 function testBothReportsWriteTheDecisionOutcomesSheet(testCase)
 root = st_project_root();
 for file = ["st_export_result_set_report.m", "st_generate_test_report.m"]

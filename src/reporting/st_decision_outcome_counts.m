@@ -5,7 +5,7 @@ function [counts, texts] = st_decision_outcome_counts(description)
 % is that decision's text.
 %
 % Only a block whose every decision has exactly two outcomes, one true and
-% one false, is described. Anything else returns empty for the whole block:
+% one false (or the single "executed" outcome described below), is described. Anything else returns empty for the whole block:
 % keeping the two-way decisions of a mixed block would shift the decision
 % order the final document pairs its D lines with.
 %
@@ -13,6 +13,12 @@ function [counts, texts] = st_decision_outcome_counts(description)
 % spaces, it is that word alone or that word followed by a non-word
 % character. Simulink Coverage names the port a Switch passes that way,
 % e.g. "true (output is from 1st input port)". "trueish" is neither.
+%
+% One more shape is accepted: a decision whose only outcome is "executed".
+% Simulink Coverage gives a function-call Triggered Subsystem that single
+% outcome (runtime check 2026-10-08). It is recorded as [ExecutedCount 0],
+% so the final document prints [T] when the subsystem ran and [-] when it
+% never did; there is no false outcome to report.
 counts = zeros(0,2);
 texts = strings(0,1);
 if ~isstruct(description) || ~isscalar(description) || ...
@@ -23,10 +29,25 @@ decisions = description.decision;
 found = zeros(numel(decisions), 2);
 names = strings(numel(decisions), 1);
 for k = 1:numel(decisions)
-    if ~isfield(decisions(k), 'outcome') || numel(decisions(k).outcome) ~= 2
+    if ~isfield(decisions(k), 'outcome')
         return;
     end
     outcomes = decisions(k).outcome;
+    if isfield(decisions(k), 'text')
+        names(k) = string(decisions(k).text);
+    end
+    if numel(outcomes) == 1
+        label = lower(strtrim(string(outcomes.text)));
+        if ismissing(label) || isempty(regexp(char(label), ...
+                '^executed(?![a-z0-9_])', 'once'))
+            return;
+        end
+        found(k,:) = [double(outcomes.executionCount), 0];
+        continue;
+    end
+    if numel(outcomes) ~= 2
+        return;
+    end
     labels = lower(strtrim(string({outcomes.text})));
     kinds = strings(size(labels));
     for j = 1:numel(labels)
@@ -43,9 +64,6 @@ for k = 1:numel(decisions)
     end
     found(k,:) = [double(outcomes(t).executionCount), ...
         double(outcomes(f).executionCount)];
-    if isfield(decisions(k), 'text')
-        names(k) = string(decisions(k).text);
-    end
 end
 counts = found;
 texts = names;
