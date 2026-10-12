@@ -102,3 +102,52 @@ end
 
 **돌려줄 것:** 화면 캡처 한 장. 멈췄다면 멈춘 단계와 오류 식별자가 같이 찍힌다. 데모 모델 이름과 ID는
 지어낸 값이라 찍혀도 된다.
+
+## 2. 명세서 단계가 `SpecificationUnsaved`로 멈춘 곳 가리기
+
+**왜:** 1절이 5단계(결과 정리)까지 지나가고 명세서에서 `simtest:SpecificationUnsaved`로 멈췄다. 이 오류는
+Test File, Top Model, Harness 중 하나가 저장되지 않았다는 뜻인데, 어느 것인지와 언제(추출 전/추출
+도중)인지에 따라 고칠 곳이 다르다. 1절이 남긴 오류 보고와 명세서 실행 로그를 읽어 종류만 찍는다.
+모델을 열거나 바꾸지 않는다. 몇 초.
+
+```matlab
+clearvars; clc
+toolkit = 'D:\st_demo\toolkit';
+reportText = fileread(fullfile(tempdir, 'st_demo_run_report.txt'));
+logs = dir(fullfile(toolkit, 'result', 'logs', '*st_export_test_specification*.log'));
+logText = '';
+if ~isempty(logs)
+    [~, newest] = max([logs.datenum]);
+    logText = fileread(fullfile(logs(newest).folder, logs(newest).name));
+end
+T = readtable(fullfile(toolkit, 'TestManagement.xlsx'), 'Sheet', 'Targets', 'TextType', 'string');
+starts = numel(strfind(logText, 'Specification target start'));
+ends = numel(strfind(logText, 'Specification target end'));
+lastStart = max([0, strfind(logText, 'Specification target start')]);
+afterScan = lastStart > 0 && contains(logText(lastStart:end), 'Specification decision block scan end');
+kind = '알 수 없음';
+if contains(reportText, 'Save or discard Test File changes first')
+    kind = 'Test File, 추출 시작 전';
+elseif contains(reportText, 'Test File became dirty during inspection')
+    kind = 'Test File, 추출 도중 바뀜';
+elseif contains(reportText, 'model/harness changes first')
+    tok = regexp(reportText, 'model/harness changes first: ([^\r\n]+)', 'tokens', 'once');
+    name = strtrim(string(tok{1}));
+    row = T.No(T.HarnessName == name);
+    if name == "ST_DemoModel" && ends == 0
+        kind = 'Top Model, 추출 시작 전';
+    elseif name == "ST_DemoModel"
+        kind = 'Top Model, 모든 대상 추출 뒤';
+    elseif ~isempty(row) && afterScan
+        kind = sprintf('Harness No %d, 그 대상을 읽은 뒤', row);
+    elseif ~isempty(row)
+        kind = sprintf('Harness No %d, 불러온 직후', row);
+    end
+end
+fprintf('명세서 미저장 종류: %s\n', kind);
+fprintf('명세서 로그: 대상 시작 %d | 대상 끝 %d | 로그 파일 %d개\n', starts, ends, numel(logs));
+```
+
+**확인할 것:** 종류 한 줄과 대상 시작·끝 개수.
+
+**돌려줄 것:** 화면 캡처 한 장. 데모 모델의 행 번호는 지어낸 값이라 찍혀도 된다.
