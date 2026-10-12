@@ -5,7 +5,8 @@ function [counts, texts] = st_decision_outcome_counts(description)
 % is that decision's text.
 %
 % Only a block whose every decision has exactly two outcomes, one true and
-% one false (or the single "executed" outcome described below), is described. Anything else returns empty for the whole block:
+% one false (or the single "executed" outcome described below), is
+% described. Anything else returns empty for the whole block:
 % keeping the two-way decisions of a mixed block would shift the decision
 % order the final document pairs its D lines with.
 %
@@ -34,12 +35,16 @@ for k = 1:numel(decisions)
     end
     outcomes = decisions(k).outcome;
     if isfield(decisions(k), 'text')
-        names(k) = string(decisions(k).text);
+        decisionText = string(decisions(k).text);
+        if isscalar(decisionText) && ~ismissing(decisionText)
+            names(k) = decisionText;
+        end
     end
     if numel(outcomes) == 1
         label = lower(strtrim(string(outcomes.text)));
-        if ismissing(label) || isempty(regexp(char(label), ...
-                '^executed(?![a-z0-9_])', 'once'))
+        if ~isscalar(label) || ismissing(label) || ...
+                ~isscalar(outcomes.executionCount) || ...
+                isempty(regexp(char(label), '^executed(?![a-z0-9_])', 'once'))
             return;
         end
         found(k,:) = [double(outcomes.executionCount), 0];
