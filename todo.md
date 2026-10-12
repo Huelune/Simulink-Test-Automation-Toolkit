@@ -92,13 +92,16 @@ end
 fprintf('Top Model 상태 (사전 검사, 실행, 결과 정리, 명세서 뒤): %s\n', strjoin(states, ' → '));
 if strlength(diffNote) > 0
     fprintf('결과 정리 뒤 Dirty: %s\n', diffNote);
-    [kinds, ~, idx] = unique(changed); counts = accumarray(idx(:), 1);
-    [~, order] = sort(counts, 'descend');
-    for k = order(1:min(12, numel(order))).'
-        fprintf('  바뀐 파라미터: %-50s %d곳\n', kinds(k), counts(k));
+    if isempty(changed)
+        fprintf('  바뀐 파라미터 없음 (Dirty 표시만 켜짐)\n');
+    else
+        [kinds, ~, idx] = unique(changed); counts = accumarray(idx(:), 1);
+        [~, order] = sort(counts, 'descend');
+        for k = order(1:min(12, numel(order))).'
+            fprintf('  바뀐 파라미터: %-50s %d곳\n', kinds(k), counts(k));
+        end
+        if numel(kinds) > 12, fprintf('  ... 종류 %d개 더\n', numel(kinds) - 12); end
     end
-    if numel(kinds) > 12, fprintf('  ... 종류 %d개 더\n', numel(kinds) - 12); end
-    if isempty(kinds), fprintf('  바뀐 파라미터 없음 (Dirty 표시만 켜짐)\n'); end
 end
 if ~isempty(code), fprintf('standalone 검사 코드: %s\n', char(string(code))); end
 if ~isempty(finalFile)

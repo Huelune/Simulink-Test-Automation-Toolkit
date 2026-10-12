@@ -23,8 +23,13 @@ names = fieldnames(get_param(model, 'ObjectParameters'));
 for k = 1:numel(names)
     add(model, names{k}, "Model", "Model", "");
 end
-configSet = getActiveConfigSet(model);
-names = fieldnames(get_param(configSet, 'ObjectParameters'));
+try
+    configSet = getActiveConfigSet(model);
+    names = fieldnames(get_param(configSet, 'ObjectParameters'));
+catch ME
+    st_log(cfg, 'WARN', 'Config set parameters unreadable | Model=%s | %s', model, ME.message);
+    names = {};
+end
 for k = 1:numel(names)
     add(configSet, names{k}, "Config", "Config", "");
 end
