@@ -83,7 +83,9 @@
   Coverage 결과가 `executed` 하나뿐이라 기록되지 않았다. `executed` 단독 결과를 실행
   여부로 기록하도록 고쳤다(2026-10-12). 결과 정리를 다시 하고 `todo.md` 1절로 19행이
   `[T]`/`[-]`가 되는지 확인해야 한다. coverage가 없던 단위 12개는 모두 "CUT에 응답하는
-  Coverage 객체 없음"이었고 문서 행에는 쓰이지 않았다.
+  Coverage 객체 없음"이었고 문서 행에는 쓰이지 않았다. Enabled이면서 Triggered인 CUT은
+  D 두 줄(Enable, Trigger)을 순서로 짝짓는데, 수집기가 subsystem 자체에서 두 결정을
+  다른 순서로 받을 수 있는지는 확인하지 못했다(지금은 보통 개수가 달라 MISMATCH로 남는다).
 
 ### 로그 체계 개편
 
