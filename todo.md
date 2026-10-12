@@ -50,6 +50,49 @@ fprintf('file: result\\%s%s\n', name, ext);
 
 돌려줄 것: 화면 캡처 한 장.
 
+### 1-1. 수정이 반영됐는지 확인 (2026-10-12: 여전히 19행 UNAVAILABLE)
+
+클론이 새 커밋을 받았는지, MATLAB이 새 코드를 읽는지, 마지막 결과 정리가 새 코드로 돌았는지를
+한 화면에 찍는다. 아무것도 바꾸지 않는다.
+
+```matlab
+clearvars  % a variable left over from an earlier block would shadow a function
+st_setup
+cfg = st_config();
+[~, head] = system(sprintf('git -C "%s" log -1 --format=%%h', st_project_root()));
+copies = which('st_decision_outcome_counts', '-all');
+source = fileread(which('st_decision_outcome_counts'));
+clc
+fprintf('clone commit %s (need 2e64792 or later) | executed rule in loaded code %d | copies on path %d\n', ...
+    strtrim(head), contains(source, '^executed'), numel(copies));
+logDir = fullfile(cfg.ResultDir, 'logs');
+c = dir(fullfile(logDir, '*_st_collect_per_cut_results.log'));
+e = dir(fullfile(logDir, '*_st_export_final_document.log'));
+if isempty(c)
+    fprintf('no result collection log\n');
+else
+    [~, i] = max([c.datenum]);
+    logText = splitlines(string(fileread(fullfile(c(i).folder, c(i).name))));
+    fprintf('newest result collection %s | TriggerPort skipped %d | scan end lines %d\n', ...
+        extractBefore(string(c(i).name), 16), ...
+        sum(contains(logText, "skipped a block without two-way decisions") & ...
+            contains(logText, "BlockType=TriggerPort")), ...
+        sum(contains(logText, "Decision outcome scan end")));
+end
+if ~isempty(e)
+    [~, i] = max([e.datenum]);
+    fprintf('newest final document  %s\n', extractBefore(string(e(i).name), 16));
+end
+```
+
+읽는 법:
+- `clone commit`이 2e64792보다 오래됐거나 `executed rule in loaded code 0` → 클론을 `git pull` 한다.
+  `copies on path`가 1보다 크면 다른 클론이 path에 섞여 있다.
+- 결과 정리 시각이 2026-10-12 수정 이전이면 결과 정리를 다시 한다.
+- 새 코드·새 결과 정리인데도 `TriggerPort skipped`가 0보다 크면 결과를 그대로 알려 준다.
+
+돌려줄 것: 화면 캡처 한 장. 커밋 해시와 시각, 개수만 찍힌다.
+
 ## 2. 단위 테스트 다시 돌리기 (기존 실패 6건을 고친 뒤)
 
 이번 기능과 무관하게 이미 실패하던 테스트 6건을 따로 고친다. 고친 뒤 아래를 다시 돌린다.
