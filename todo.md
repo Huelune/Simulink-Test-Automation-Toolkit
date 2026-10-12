@@ -15,7 +15,9 @@ Top Model 상태를 찍는다. 명세서 직전에 Dirty면 메모리의 모델�
 닫은 다음 남은 단계를 계속한다. 이렇게 하면 standalone과 최종 문서도 한 번에 시험된다. SLDV가 필요하고
 수십 분 걸릴 수 있다.
 
-**먼저 `D:\st_demo` 폴더를 지운다.** 툴킷을 그 안에 새로 복사해서 돌리므로 원래 클론의
+**MATLAB을 새로 켜고, `D:\st_demo` 폴더를 지운 뒤 돌린다.** 이전 데모를 돌린 세션에는 같은 이름의 모델과 Test File
+정보가 남아 있어서, 폴더를 지우고 다시 만들면 저장 콜백이 실패할 수 있다(2026-10-12에 Harness 생성 중 저장이
+실패했다). 툴킷을 그 안에 새로 복사해서 돌리므로 원래 클론의
 `TestManagement.xlsx`, `runtime_target.mat`, `result`는 건드리지 않는다. 끝나면 MATLAB 경로와 현재 폴더를
 되돌린다.
 
@@ -77,6 +79,11 @@ try
     [~, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId); done = 9;
 catch ME
     failId = ME.identifier;
+    cause = ME;
+    while ~isempty(cause.cause)
+        cause = cause.cause{1};
+        failId = [failId ' <- ' cause.identifier]; %#ok<AGROW>
+    end
     fid = fopen(fullfile(tempdir, 'st_demo_run_report.txt'), 'w', 'n', 'UTF-8');
     fprintf(fid, '%s\n', getReport(ME, 'extended', 'hyperlinks', 'off'));
     fclose(fid);
