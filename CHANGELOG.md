@@ -4,7 +4,9 @@
 
 - **`st_setup_demo` 한 줄로 데모를 돌릴 준비를 합니다.** 데모 모델을 만들고, 데모 Excel을
   `TestManagement.xlsx`로 넣고, 대상 모델과 standalone 결과 폴더를 지정합니다. 바꾸기 전
-  `TestManagement.xlsx`와 `runtime_target.mat`은 백업합니다.
+  `TestManagement.xlsx`와 `runtime_target.mat`은 백업합니다. 데모는 툴킷 폴더 옆에 만들고,
+  툴킷과 다른 드라이브는 거부합니다(드라이브가 다르면 standalone 번들이
+  `NoCommonExportRoot`로 멈춥니다).
 
 - **테스트 실행 뒤 Top Model이 저장 안 된 상태로 남지 않습니다.** Test Manager로 테스트를
   돌리면 Top Model과 그 안의 Harness에 저장되지 않은 변경이 남아, 같은 세션에서 바로 부른

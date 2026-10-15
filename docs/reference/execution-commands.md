@@ -735,8 +735,12 @@ demo = st_create_demo_model(fullfile(tempdir,'st_demo_model'));
 `<데모 폴더>\model_result`로 정합니다. 바꾸기 전의 `TestManagement.xlsx`와
 `runtime_target.mat`은 `<이름>.backup_<시각>`으로 남깁니다.
 
+데모 위치는 **툴킷과 같은 드라이브**여야 합니다. `GENERATE` 행의 SLDV 데이터가 툴킷의
+`result` 아래에 생겨서, 드라이브가 다르면 standalone 번들이 `NoCommonExportRoot`로 멈춥니다.
+다른 드라이브를 주면 세팅 단계에서 `DemoDriveMismatch`로 멈춥니다.
+
 ```matlab
-demo = st_setup_demo();             % tempdir 아래 새 폴더
+demo = st_setup_demo();             % 툴킷 폴더 옆에 st_demo_<시각> 폴더
 demo = st_setup_demo('D:\st_demo')  % 위치 지정. 비어 있는 새 폴더여야 합니다
 ```
 

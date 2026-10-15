@@ -55,6 +55,19 @@ verifyEqual(testCase, target.StandaloneCoverageRootDir, demo.StandaloneCoverageR
 verifyEqual(testCase, target.Keep, 1);
 end
 
+function testAnotherDriveIsRefusedBeforeAnythingIsWritten(testCase)
+% The standalone bundle needs one folder holding the model and the SLDV data
+% under the toolkit's result folder.
+assumeTrue(testCase, ispc);
+root = testCase.TestData.Root;
+other = 'Q:';
+if strncmpi(root, other, 2), other = 'R:'; end
+before = dir(fullfile(root, '*.backup_*'));
+verifyError(testCase, @() st_setup_demo(fullfile(other, 'st_demo')), ...
+    'simtest:DemoDriveMismatch');
+verifyNumElements(testCase, dir(fullfile(root, '*.backup_*')), numel(before));
+end
+
 function cleanup(root, originalPath)
 path(originalPath);
 clear st_project_root st_set_standalone_coverage_root;

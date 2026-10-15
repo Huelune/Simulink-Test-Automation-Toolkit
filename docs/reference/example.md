@@ -133,7 +133,7 @@ standalone 검사 코드는 `1111111111`입니다. `Description`의 D 줄 결과
 ```matlab
 %% MATLAB을 새로 켠 뒤
 st_setup
-demo = st_setup_demo();          % 만들 위치를 주려면 st_setup_demo('D:\st_demo')
+demo = st_setup_demo();          % 툴킷 폴더 옆에 만듭니다. 위치를 주려면 st_setup_demo('D:\st_demo')
 st_pre_validate_targets();
 
 %% 1단계 → 5단계 (사용자 매뉴얼 9장과 같습니다)
@@ -146,6 +146,8 @@ code = st_check_standalone_coverage()            % 1111111111
 winopen(finalFile)
 ```
 
+- 데모 위치는 **툴킷과 같은 드라이브**여야 합니다. 드라이브가 다르면 standalone이
+  `NoCommonExportRoot`로 멈춥니다([문제 해결](troubleshooting.md#nocommonexportroot)).
 - **MATLAB을 새로 켠 세션에서 돌리십시오.** 같은 세션에서 데모 폴더를 지우고 다시 만들자 Harness
   생성 중 모델 저장이 실패한 적이 있습니다.
 - 데모 결과는 이 저장소의 `result` 폴더에 실제 업무 결과와 함께 쌓입니다. 섞이지 않게 하려면

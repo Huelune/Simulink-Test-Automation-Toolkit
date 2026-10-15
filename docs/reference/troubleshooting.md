@@ -449,6 +449,19 @@ standalone 실행과 1단계의 SLDV 준비·Harness 생성·PER_CUT 실행은 �
 오류는 보통 나지 않습니다. 그래도 나면 `cfg.StandaloneBuildCacheDir`에
 `'D:\stt_build'`처럼 짧은 경로를 지정하십시오([설정 참조](config-reference.md)).
 
+### `NoCommonExportRoot`
+
+**뜻:** standalone 번들을 만들 때 모델과 그 의존 파일을 모두 담는 공통 폴더를 찾지
+못했습니다. 번들은 모든 파일을 그 폴더 기준 상대 경로로 옮깁니다.
+
+**왜 생기는가:** 파일이 서로 다른 드라이브에 있습니다. `SldvMode=GENERATE` 행의 SLDV
+데이터는 툴킷의 `result\sldv` 아래에 생기므로, 모델이 C:에 있고 툴킷이 D:에 있으면 이렇게
+됩니다. 2026-10-15에 `tempdir`(C:)에 만든 데모를 D:의 툴킷으로 돌리다가 났습니다.
+
+**대처:** 모델(모델 프로젝트)과 툴킷 클론을 같은 드라이브에 두십시오. 데모는
+`st_setup_demo`가 기본으로 툴킷 폴더 옆에 만들고, 다른 드라이브를 지정하면
+`DemoDriveMismatch`로 세팅 단계에서 멈춥니다.
+
 ## 7. 명세서 추출 오류
 
 ### `SpecificationUnsaved`

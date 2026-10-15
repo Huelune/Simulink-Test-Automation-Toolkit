@@ -4,8 +4,8 @@ function demo = st_setup_demo(destination)
 % demo = st_setup_demo()
 % demo = st_setup_demo(destination)
 %
-% Runs st_create_demo_model in DESTINATION (default: a new folder under
-% tempdir), then prepares this toolkit to run it:
+% Runs st_create_demo_model in DESTINATION (default: a new st_demo_<time>
+% folder next to this repository), then prepares this toolkit to run it:
 %   - copies the demo workbook over <repo>/TestManagement.xlsx, the one
 %     place the toolkit reads, after backing up the existing file as
 %     TestManagement.backup_<timestamp>.xlsx;
@@ -16,14 +16,28 @@ function demo = st_setup_demo(destination)
 % The demo's results land in this repository's result folder next to the
 % real ones; to keep them apart, run the demo from a copy of the toolkit.
 % Restore the real target by copying the backups in demo.Backups back.
+%
+% DESTINATION must be on the same drive as this repository. The standalone
+% bundle copies the model with every dependency relative to one common
+% folder, and the SLDV data of the GENERATE rows lives under this
+% repository's result folder; across drives there is no such folder and the
+% pipeline stops with NoCommonExportRoot (2026-10-15, demo under tempdir on
+% C: with the toolkit on D:).
 cfg = struct('ConsoleLogLevel','INFO');
 st_log(cfg,'INFO','Demo setup start');
+root = st_project_root();
 if nargin < 1 || isempty(destination)
-    destination = fullfile(tempdir,['st_demo_' char(datetime('now','Format','yyyyMMdd_HHmmss'))]);
+    destination = fullfile(fileparts(root),['st_demo_' char(datetime('now','Format','yyyyMMdd_HHmmss'))]);
 end
 try
+    destination = st_absolute_path(destination);
+    if ~strcmpi(drive_of(destination),drive_of(root))
+        error('simtest:DemoDriveMismatch', ...
+            ['Put the demo on the same drive as the toolkit (%s). The standalone ' ...
+             'bundle needs one folder holding the model and the toolkit''s SLDV data.'], ...
+            drive_of(root));
+    end
     demo = st_create_demo_model(destination);
-    root = st_project_root();
     stamp = char(datetime('now','Format','yyyyMMdd_HHmmss'));
     backups = strings(0,1);
     workbook = fullfile(root,'TestManagement.xlsx');
@@ -43,6 +57,11 @@ catch ME
     st_log(cfg,'ERROR','Demo setup failed | %s',ME.message);
     rethrow(ME);
 end
+end
+
+function drive = drive_of(path)
+% 'D:' for a drive path, '\\server' for a UNC path, '/' elsewhere.
+drive = regexp(char(path),'^([A-Za-z]:|\\\\[^\\]+|/)','match','once');
 end
 
 function saved = backup(file,stamp,cfg)
