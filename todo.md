@@ -8,9 +8,10 @@
 
 ## 1. 데모 모델로 전 과정 돌리기 (Top Model 저장 상태 추적)
 
-**왜:** 지난 실행에서 나온 두 문제를 고쳤다. (1) 테스트 실행 뒤 Top Model에 Dirty 표시만 켜져(바뀐 것은
-실행 중에만 쓰는 값뿐) 명세서가 `SpecificationUnsaved`로 멈췄다. 이제 실행 전에 깨끗했던 Top Model은 실행 뒤
-표시를 내린다. (2) standalone이 모든 행에 `ALL_CONTENT` + `CUT_ONLY` + `EXCLUDE`를 요구하는데 데모 Excel은 한 행에만
+**왜:** 지난 실행들에서 나온 문제를 고쳤다. (1) 테스트 실행 뒤 Top Model과 그 안의 Harness에 저장되지 않은
+변경이 남아 명세서가 `SpecificationUnsaved`로 멈췄다. Dirty 표시만 내리자 Top Model은 `저장됨`이 됐지만 명세서는
+여전히 멈췄고, 앞서 Top Model을 저장하지 않고 닫았을 때는 통과했다. 이제 실행이 끝나면 그 변경을 버리고 Top Model을
+저장된 파일에서 다시 연다. 명세서가 또 멈추면 원인 종류(Test File/Top Model/Harness 행 번호)를 찍는다. (2) standalone이 모든 행에 `ALL_CONTENT` + `CUT_ONLY` + `EXCLUDE`를 요구하는데 데모 Excel은 한 행에만
 넣었다. 이번에는 데모로 전 과정을 다시 돌리고, 끝에 관련 단위 테스트 두 개를 돌린다. 그래도 명세서
 직전에 Dirty면 지난번처럼 바뀐 파라미터 종류를 찍고 저장하지 않고 닫은 뒤 계속한다. SLDV가 필요하고 수십 분 걸릴
 수 있다.
@@ -94,7 +95,7 @@ path(savedPath); cd(savedFolder);
 try
     evalc('st_setup');
     unitFiles = fullfile(st_project_root(), 'tests', 'unit', ...
-        {'test_create_demo_model.m', 'test_release_execution_dirty_flag.m'});
+        {'test_create_demo_model.m', 'test_discard_execution_model_changes.m'});
     [~, unit] = evalc('runtests(unitFiles)');
 catch
     unit = [];
@@ -109,6 +110,24 @@ fprintf('데모 전 과정: %d / %d 단계 통과\n', done, numel(stages));
 if done < numel(stages)
     fprintf('  멈춘 단계: %s | 오류 식별자: %s\n', stages(done + 1), failId);
     fprintf('  자세한 내용: %%TEMP%%\\st_demo_run_report.txt (밖으로 보내지 마세요)\n');
+end
+if startsWith(failId, 'simtest:SpecificationUnsaved') && exist('demo', 'var')
+    reportText = fileread(fullfile(tempdir, 'st_demo_run_report.txt'));
+    kind = '알 수 없음';
+    if contains(reportText, 'Test File changes first')
+        kind = 'Test File, 추출 시작 전';
+    elseif contains(reportText, 'became dirty during inspection')
+        kind = 'Test File, 추출 도중 바뀜';
+    else
+        tok = regexp(reportText, 'model/harness changes first: ([^\r\n]+)', 'tokens', 'once');
+        if ~isempty(tok) && strtrim(string(tok{1})) == model
+            kind = 'Top Model';
+        elseif ~isempty(tok)
+            row = demo.Targets.No(demo.Targets.HarnessName == strtrim(string(tok{1})));
+            kind = sprintf('Harness No %s', strjoin(string(row), ','));
+        end
+    end
+    fprintf('  미저장 종류: %s\n', kind);
 end
 fprintf('Top Model 상태 (사전 검사, 실행, 결과 정리, 명세서 뒤): %s\n', strjoin(states, ' → '));
 if strlength(diffNote) > 0
@@ -144,7 +163,7 @@ end
 
 **확인할 것:**
 
-- 단위 테스트 `통과 10 / 전체 10`.
+- 단위 테스트 `통과 11 / 전체 11`.
 - Top Model 상태 줄에 `Dirty`가 없다(실행·결과 정리 뒤 `저장됨`).
 - 끝까지 가면 `9 / 9`, standalone 검사 코드 `1111111111`, FAIL 0, UNAVAILABLE·MISMATCH 0, ID별 기대값:
   - `90001` (If/elseif + Switch) 두 행: 하나는 `T/F T/F T/F`, 다른 하나는 `F F F`.

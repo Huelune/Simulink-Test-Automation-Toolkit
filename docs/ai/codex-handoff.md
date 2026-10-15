@@ -61,9 +61,11 @@
   분기 블록 목록). 2026-10-15 전 과정 실행에서 Harness 생성, SLDV `GENERATE`(Enabled CUT,
   함수 호출 CUT), 실행, 결과 정리, 명세서까지 지나갔다. 그래서 Harness의 Signal Editor 입력
   이름이 CUT Inport 이름과 같다는 가정은 맞았다. 그 실행에서 두 가지가 나와 고쳤다: 테스트 실행
-  뒤 Top Model에 Dirty 표시만 켜져(저장된 파일과 비교해 실행 중에만 쓰는 값만 달랐다) 명세서가
-  멈춘 것(`st_release_execution_dirty_flag`), 데모 Excel이 standalone 필수 필터 정책을 한 행에만
-  넣은 것. 고친 뒤 standalone과 최종 문서는 `todo.md` 1절로 다시 요청했다. 같은 세션에서 데모
+  뒤 Top Model과 내부 Harness에 저장 안 된 변경이 남아 명세서가 멈춘 것, 데모 Excel이 standalone 필수 필터 정책을 한 행에만
+  넣은 것. 첫 번째는 처음에 Dirty 표시만 내렸는데(Top Model 파라미터는 실행 중에만 쓰는 값만
+  달랐다) 명세서가 여전히 멈췄고, Top Model을 저장하지 않고 닫았을 때만 통과했다. 그래서 Harness
+  쪽 메모리 변경으로 보고 실행이 끝나면 변경을 버리고 다시 열게 했다
+  (`st_discard_execution_model_changes`). 무엇이 Dirty였는지는 확인하지 못했다. 고친 뒤 standalone과 최종 문서는 `todo.md` 1절로 다시 요청했다. 같은 세션에서 데모
   폴더를 지우고 다시 만들면 Harness 생성 중 모델 저장 콜백이 실패한 적이 있어(1회), 데모는 새
   MATLAB 세션에서 돌린다. 아직 정적 가정: Delay의 포트 순서가 enable 포트·외부 reset을 켰을 때
   u, enable, reset이라는 것.
