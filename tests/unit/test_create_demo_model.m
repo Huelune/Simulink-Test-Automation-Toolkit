@@ -132,6 +132,20 @@ verifyError(testCase, @() st_create_demo_model(testCase.TestData.Root), ...
     'simtest:DemoDestinationNotEmpty');
 end
 
+function testRefusesWhenAnotherDemoModelIsOnThePath(testCase)
+if bdIsLoaded('ST_DemoModel')
+    close_system('ST_DemoModel', 0);
+end
+folder = tempname;
+mkdir(folder);
+fid = fopen(fullfile(folder, 'ST_DemoModel.slx'), 'w');
+fclose(fid);
+addpath(folder, '-begin');
+testCase.addTeardown(@() rmdir(folder, 's'));
+testCase.addTeardown(@() rmpath(folder));
+verifyError(testCase, @() st_create_demo_model(tempname), 'simtest:DemoModelOnPath');
+end
+
 function load_model(demo)
 if ~bdIsLoaded(demo.TopModel)
     load_system(demo.ModelFile);

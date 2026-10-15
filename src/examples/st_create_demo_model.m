@@ -20,6 +20,15 @@ destination = st_absolute_path(destination);
 if bdIsLoaded(model)
     error('simtest:DemoModelLoaded','Close %s yourself before generating the demo.',model);
 end
+% An earlier demo left on the path shadows the new one: anything that opens
+% the model by name could load the old file (seen 2026-10-15 as a shadowing
+% warning after a failed run in the same session).
+shadowing = which(model,'-all');
+if ~isempty(shadowing)
+    error('simtest:DemoModelOnPath', ...
+        'Another %s is on the MATLAB path: %s. Remove it with rmpath or restart MATLAB.', ...
+        model,shadowing{1});
+end
 if isfolder(destination)
     files = dir(destination);
     if any(~ismember({files.name},{'.','..'}))
