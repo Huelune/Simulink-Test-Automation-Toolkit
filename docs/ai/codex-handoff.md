@@ -58,11 +58,15 @@
   (관측 1건), `Simulink.io.SLDVMatFile` import 결과도 같은 이름인지.
 - 데모 모델 생성기 `st_create_demo_model`(2026-10-12): 사용자 MATLAB에서 단위 테스트
   `test_create_demo_model`이 6/6 통과했다(모델 생성, 컴파일, 입력 이름과 Inport 일치, CUT별
-  분기 블록 목록). 전 과정은 아직이며 `todo.md` 1절로 요청했다. 정적으로만 정한 가정: Delay의
-  포트 순서가 enable 포트·외부 reset을 켰을 때 u, enable, reset이라는 것, Harness가 Signal
-  Editor 입력 이름을 CUT Inport 이름 그대로 쓴다는 것, Switch Case·Multiport Switch가 double
-  제어 입력을 받는다는 것. 2절이 통과하면 결정 단위 블록(Saturation 등)과 Enabled CUT의 분기
-  결과가 처음 실물로 확인된다.
+  분기 블록 목록). 2026-10-15 전 과정 실행에서 Harness 생성, SLDV `GENERATE`(Enabled CUT,
+  함수 호출 CUT), 실행, 결과 정리, 명세서까지 지나갔다. 그래서 Harness의 Signal Editor 입력
+  이름이 CUT Inport 이름과 같다는 가정은 맞았다. 그 실행에서 두 가지가 나와 고쳤다: 테스트 실행
+  뒤 Top Model에 Dirty 표시만 켜져(저장된 파일과 비교해 실행 중에만 쓰는 값만 달랐다) 명세서가
+  멈춘 것(`st_release_execution_dirty_flag`), 데모 Excel이 standalone 필수 필터 정책을 한 행에만
+  넣은 것. 고친 뒤 standalone과 최종 문서는 `todo.md` 1절로 다시 요청했다. 같은 세션에서 데모
+  폴더를 지우고 다시 만들면 Harness 생성 중 모델 저장 콜백이 실패한 적이 있어(1회), 데모는 새
+  MATLAB 세션에서 돌린다. 아직 정적 가정: Delay의 포트 순서가 enable 포트·외부 reset을 켰을 때
+  u, enable, reset이라는 것.
 - `st_classify_standalone_results`(팀 제출 트리 MATLAB 판). Python 판과 같은 결과를
   내는지.
 - `st_set_standalone_coverage_root` 기본 루트 `D:\model_result\<Top Model>`.

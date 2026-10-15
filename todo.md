@@ -8,12 +8,12 @@
 
 ## 1. 데모 모델로 전 과정 돌리기 (Top Model 저장 상태 추적)
 
-**왜:** 지난번에는 5단계(결과 정리)까지 지나간 뒤 명세서 직전에 Top Model이 저장 안 된 상태(Dirty)라서
-`SpecificationUnsaved`로 멈췄다. 실행 단계가 모델을 바꾸고 저장하지 않은 것으로 보인다. 이번에는 단계마다
-Top Model 상태를 찍는다. 명세서 직전에 Dirty면 메모리의 모델과 저장된 파일을 파라미터 단위로 비교해
-**바뀐 파라미터의 종류**(Model/Config/블록 종류와 파라미터 이름)만 찍는다. 그 뒤 진단을 위해 저장하지 않고
-닫은 다음 남은 단계를 계속한다. 이렇게 하면 standalone과 최종 문서도 한 번에 시험된다. SLDV가 필요하고
-수십 분 걸릴 수 있다.
+**왜:** 지난 실행에서 나온 두 문제를 고쳤다. (1) 테스트 실행 뒤 Top Model에 Dirty 표시만 켜져(바뀐 것은
+실행 중에만 쓰는 값뿐) 명세서가 `SpecificationUnsaved`로 멈췄다. 이제 실행 전에 깨끗했던 Top Model은 실행 뒤
+표시를 내린다. (2) standalone이 모든 행에 `ALL_CONTENT` + `CUT_ONLY` + `EXCLUDE`를 요구하는데 데모 Excel은 한 행에만
+넣었다. 이번에는 데모로 전 과정을 다시 돌리고, 끝에 관련 단위 테스트 두 개를 돌린다. 그래도 명세서
+직전에 Dirty면 지난번처럼 바뀐 파라미터 종류를 찍고 저장하지 않고 닫은 뒤 계속한다. SLDV가 필요하고 수십 분 걸릴
+수 있다.
 
 **MATLAB을 새로 켜고, `D:\st_demo` 폴더를 지운 뒤 돌린다.** 이전 데모를 돌린 세션에는 같은 이름의 모델과 Test File
 정보가 남아 있어서, 폴더를 지우고 다시 만들면 저장 콜백이 실패할 수 있다(2026-10-12에 Harness 생성 중 저장이
@@ -29,7 +29,7 @@ demoRoot = 'D:\st_demo'; model = 'ST_DemoModel';
 stages = ["복사" "생성" "사전 검사" "준비와 실행" "결과 정리" "명세서" "standalone" "검사" "최종 문서"];
 labels = ["닫힘" "저장됨" "Dirty"];
 dirtyOf = @(m) labels(1 + bdIsLoaded(m) + (bdIsLoaded(m) && strcmp(get_param(m, 'Dirty'), 'on')));
-states = strings(1, 0); changed = strings(0, 1); diffNote = "";
+unit = []; states = strings(1, 0); changed = strings(0, 1); diffNote = "";
 done = 0; failId = ''; code = ''; finalFile = '';
 try
     if isfolder(demoRoot), error('demo:RootExists', 'remove the demo folder first'); end
@@ -89,12 +89,26 @@ catch ME
     fclose(fid);
 end
 if bdIsLoaded(model), close_system(model, 0); end
-path(savedPath); cd(savedFolder); warning(oldWarning);
+path(savedPath); cd(savedFolder);
+% Unit tests last: they also build ST_DemoModel, which must not precede the run.
+try
+    evalc('st_setup');
+    unitFiles = fullfile(st_project_root(), 'tests', 'unit', ...
+        {'test_create_demo_model.m', 'test_release_execution_dirty_flag.m'});
+    [~, unit] = evalc('runtests(unitFiles)');
+catch
+    unit = [];
+end
+warning(oldWarning);
 clc
+if ~isempty(unit)
+    fprintf('단위 테스트: 통과 %d / 전체 %d\n', sum([unit.Passed]), numel(unit));
+    for k = find(~[unit.Passed]), fprintf('  실패 %s\n', regexprep(unit(k).Name, '^.*/', '')); end
+end
 fprintf('데모 전 과정: %d / %d 단계 통과\n', done, numel(stages));
 if done < numel(stages)
     fprintf('  멈춘 단계: %s | 오류 식별자: %s\n', stages(done + 1), failId);
-    fprintf('  자세한 내용: %%TEMP%%\st_demo_run_report.txt (밖으로 보내지 마세요)\n');
+    fprintf('  자세한 내용: %%TEMP%%\\st_demo_run_report.txt (밖으로 보내지 마세요)\n');
 end
 fprintf('Top Model 상태 (사전 검사, 실행, 결과 정리, 명세서 뒤): %s\n', strjoin(states, ' → '));
 if strlength(diffNote) > 0
@@ -130,8 +144,8 @@ end
 
 **확인할 것:**
 
-- Top Model 상태 줄: 어느 단계 뒤에 처음 `Dirty`가 되는지.
-- 바뀐 파라미터 줄: 무엇이 바뀌었는지. `바뀐 파라미터 없음`이면 실제 변경 없이 Dirty 표시만 켜진 것이다.
+- 단위 테스트 `통과 10 / 전체 10`.
+- Top Model 상태 줄에 `Dirty`가 없다(실행·결과 정리 뒤 `저장됨`).
 - 끝까지 가면 `9 / 9`, standalone 검사 코드 `1111111111`, FAIL 0, UNAVAILABLE·MISMATCH 0, ID별 기대값:
   - `90001` (If/elseif + Switch) 두 행: 하나는 `T/F T/F T/F`, 다른 하나는 `F F F`.
   - `90002` (Saturation 등): Saturation 두 줄이 `T`와 `F`로 나온다.
