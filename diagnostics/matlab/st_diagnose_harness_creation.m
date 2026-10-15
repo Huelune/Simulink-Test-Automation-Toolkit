@@ -175,6 +175,7 @@ for d = 1:2
         end
         % The port whose output is the bus: the driving port for an input.
         port.BusSource = h;
+        port.Derived = false;
         if d == 1
             wire = get_param(h, 'Line');
             port.BusSource = -1;
@@ -187,7 +188,7 @@ end
 
 function ports = empty_ports()
 ports = struct('Direction', {}, 'BusType', {}, 'DataType', {}, 'Dimensions', {}, ...
-    'SampleTime', {}, 'Complex', {}, 'Bus', {}, 'BusSource', {});
+    'SampleTime', {}, 'Complex', {}, 'Bus', {}, 'BusSource', {}, 'Derived', {});
 end
 
 function [ports, created] = derive_bus_objects(model, ports)
@@ -220,6 +221,8 @@ for k = 1:numel(ports)
     if isempty(info) || ~isfield(info, 'busName') || isempty(info(1).busName), continue; end
     ports(k).DataType = string(info(1).busName);
     ports(k).Bus = bus_shape(model, info(1).busName);
+    % Signal Editor refuses such a port (VBusWithNoBusObjNotSupported_SE).
+    ports(k).Derived = true;
 end
 end
 
@@ -613,6 +616,7 @@ if isempty(b) || ~b.Resolved
 end
 key = sprintf('%s %s 잎 %d 깊이 %d 배열요소 %d 버스배열 %d 열거형 %d 가변크기 %d Ts %s', ...
     side, kind, b.Leaves, b.Depth, b.NonScalar, b.BusArrays, b.Enums, b.VariableSize, ts);
+if port.Derived, key = key + " (원래 버스 객체 없음)"; end
 end
 
 function name = type_class(type)
