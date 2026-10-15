@@ -70,7 +70,8 @@
   MATLAB 세션에서 돌린다. 데모 세팅 명령 `st_setup_demo`(Excel·대상 모델·standalone 루트 지정,
   기존 파일 백업)는 2026-10-15 단위 테스트 4/4 통과, 실제 클론에서 세팅까지 됐다. 처음 기본
   위치가 tempdir(C:)라 D:의 툴킷에서 standalone이 NoCommonExportRoot로 멈춰, 기본 위치를 툴킷 옆으로
-  바꾸고 다른 드라이브는 거부한다. 같은 세션에 이전 데모가 경로에 남으면 생성기가 DemoModelOnPath로 멈춘다.
+  바꾸고 다른 드라이브는 거부한다. 같은 세션에 이전 데모가 경로에 남으면 생성기가 DemoModelOnPath로 멈춘다(생성기 단위 테스트
+  8/8 통과).
 - `st_classify_standalone_results`(팀 제출 트리 MATLAB 판). Python 판과 같은 결과를
   내는지.
 - `st_set_standalone_coverage_root` 기본 루트 `D:\model_result\<Top Model>`.
