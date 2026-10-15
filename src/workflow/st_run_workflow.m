@@ -213,6 +213,9 @@ if any(failedCloneRows)
     st_log(cfg,'WARN','Clone batch excludes %d failed target(s) from execution.',sum(failedCloneRows));
 end
 executionScope = st_target_scope('enter',T(~failedCloneRows,:)); %#ok<NASGU>
+% A test run leaves the Top Model Dirty without changing what is saved.
+topModelWasClean = ~bdIsLoaded(cfg.TopModel) || ...
+    strcmp(get_param(cfg.TopModel, 'Dirty'), 'off');
 if executeTests && any(~failedCloneRows)
     if strcmp(executionMode, 'PER_CUT')
         continueOnFailure = option_or_default( ...
@@ -236,6 +239,7 @@ if executeTests && any(~failedCloneRows)
 else
     st_log(cfg, 'STEP', 'Run Generated Tests: SKIP (ExecuteTests=false)');
 end
+st_release_execution_dirty_flag(cfg, cfg.TopModel, topModelWasClean);
 
 state.Artifacts.Model = st_file_signature(cfg.ModelFile);
 state.Artifacts.TestFile = st_file_signature(cfg.TestFile);
