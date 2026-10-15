@@ -89,7 +89,7 @@ st_select_target_model
 | No | CUT | 분기 블록 | 입력 | 보려는 것 |
 | --- | --- | --- | --- | --- |
 | 1 | `ModeSelect` | If(if, elseif, else), Switch | MAT, Scenario 2개 | If가 D를 조건마다 받는 것. 두 번째 Scenario는 모든 분기가 `[F]` |
-| 2 | `LimitChain` | Saturation, Dead Zone, Rate Limiter, Abs, MinMax | MAT | 결정 단위 D. 입력이 Saturation 한계에 닿지 않아 하한 `[T]`, 상한 `[F]` |
+| 2 | `LimitChain` | Saturation, Dead Zone, Rate Limiter, Abs, MinMax | MAT | 결정 단위 D. 입력이 Saturation 한계에 닿지 않아 하한 `[T]`, 상한 `[F]`. Abs는 `[F]` |
 | 3 | `StateKeeper` | Delay(enable, reset), Discrete-Time Integrator(reset, 한계), Relay | MAT | `Enable`, `Reset`, `X < LL` 같은 결정 이름 |
 | 4 | `GearSelect` | Multiport Switch, Switch Case(default 포함) | MAT, Scenario 2개 | 결과가 셋 이상이라 정적 `[T/F]`로 남는 블록 |
 | 5 | `EnabledStage` | Enabled Subsystem(CUT 자신), Switch, Sign | SLDV `GENERATE` | Enable D, SLDV 경로 |
@@ -102,6 +102,23 @@ st_select_target_model
 사유를 갖습니다. 다른 CUT의 하위 Subsystem은 Gain 하나뿐인 Action Subsystem이라 빠져도 분기가
 줄지 않습니다. 기대값 갱신은 모두 `DEFAULT`(`APPLY`)이므로 첫 실행에서 기대값이 실제 출력으로
 채워지고 모든 행이 `PASS`가 됩니다.
+
+### 기대 결과
+
+2026-10-15 R2025b에서 전 과정을 돌린 결과입니다. 최종 문서 9행이 모두 `PASS`이고
+standalone 검사 코드는 `1111111111`입니다. `Description`의 D 줄 결과는 다음과 같습니다.
+`GENERATE` 행(90005, 90006)은 SLDV가 만든 Scenario 수에 따라 행 수가 달라질 수 있습니다.
+
+| ID | CUT | D 줄 결과 (D1부터) | 읽는 법 |
+| --- | --- | --- | --- |
+| 90001 | `ModeSelect` 1행 | `T/F T/F T/F` | if, elseif, Switch를 모두 양쪽으로 탐 |
+| 90001 | `ModeSelect` 2행 | `F F F` | 낮은 입력만 넣은 Scenario라 모두 거짓 |
+| 90002 | `LimitChain` | `T/F T T/F T F F T/F T/F` | MinMax(정적), Dead Zone 하한 `T`, Saturation 하한 `T`·상한 `F`, Abs `F`(입력이 음수가 된 적 없음), Rate Limiter 둘 |
+| 90003 | `StateKeeper` | `T/F` ×7 | Discrete-Time Integrator 3, Delay 2, Relay 2 |
+| 90004 | `GearSelect` 2행 | `T/F T/F` | Multiport Switch, Switch Case는 정적 표기 |
+| 90005 | `EnabledStage` | `T/F T/F T/F` | Enable, Switch, Sign(정적) |
+| 90006 | `TriggeredStage` | `T T/F` | 함수 호출은 실행 여부만 `T`, Switch |
+| 90007 | `FilteredParent` | `T/F` | 하위 Subsystem 안의 Switch는 빠짐 |
 
 ### 실행
 

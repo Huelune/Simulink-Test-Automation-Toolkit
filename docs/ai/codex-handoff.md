@@ -58,16 +58,16 @@
   (관측 1건), `Simulink.io.SLDVMatFile` import 결과도 같은 이름인지.
 - 데모 모델 생성기 `st_create_demo_model`(2026-10-12): 2026-10-15 사용자 MATLAB의 새 세션에서
   전 과정 9단계(생성, 사전 검사, 준비와 실행, 결과 정리, 명세서, standalone, 검사, 최종 문서)가
-  통과했다. 최종 문서 9행 PASS, standalone 검사 코드 `1111111111`, UNAVAILABLE·MISMATCH 0.
-  이로써 결정 단위 블록(Saturation, Dead Zone, Delay, Discrete-Time Integrator, Relay)의 분기
-  결과와 Enabled CUT의 Enable D가 처음 실물로 나왔다(Saturation 하한 `[T]`, 상한 `[F]` 등
-  의도대로). 그 실행까지 고친 것: 테스트 실행이 남긴 Top Model·Harness 변경을 실행 뒤 버림
-  (`st_discard_execution_model_changes`, 표시만 내리는 첫 시도는 명세서를 못 살렸다), 데모
-  Excel의 standalone 필수 필터 정책, ModeSelect If 블록 입력 미연결(If가 늘 거짓). 남은 확인:
-  If를 고친 재실행(`todo.md` 2절), LimitChain의 D가 8개가 아니라 7개인 이유(Coverage가 Abs를
-  세지 않았는지 Rate Limiter 결정이 하나인지, `todo.md` 1절). Delay 포트 순서(u, enable, reset)는
-  여전히 정적 가정이다. 같은 세션에서 데모 폴더를 지우고 다시 만들면 Harness 생성 중 저장 콜백이
-  실패한 적이 있어(1회), 데모는 새 MATLAB 세션에서 돌린다.
+  통과했고, 최종 문서의 ID별 분기 결과가 모두 기대대로 나왔다(`docs/reference/example.md`의
+  "기대 결과" 표). 최종 문서 9행 PASS, standalone 검사 코드 `1111111111`, UNAVAILABLE·MISMATCH 0,
+  단위 테스트 12/12. 이로써 결정 단위 블록(Saturation, Dead Zone, Rate Limiter, Delay,
+  Discrete-Time Integrator, Relay)과 Enabled CUT의 분기 결과가 처음 실물로 확인됐다. 그 과정에서
+  고친 것: 테스트 실행이 남긴 Top Model·Harness 변경을 실행 뒤 버림
+  (`st_discard_execution_model_changes`, 표시만 내리는 첫 시도는 명세서를 못 살렸다), 데모 Excel의
+  standalone 필수 필터 정책, ModeSelect If 블록 입력 미연결. 남은 정적 가정: Delay의 포트 순서
+  (u, enable, reset). Enable과 Reset 결정이 둘 다 `T/F`라 결과로는 가려지지 않는다. 같은 세션에서
+  데모 폴더를 지우고 다시 만들면 Harness 생성 중 저장 콜백이 실패한 적이 있어(1회), 데모는 새
+  MATLAB 세션에서 돌린다.
 - `st_classify_standalone_results`(팀 제출 트리 MATLAB 판). Python 판과 같은 결과를
   내는지.
 - `st_set_standalone_coverage_root` 기본 루트 `D:\model_result\<Top Model>`.
