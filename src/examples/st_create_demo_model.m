@@ -80,6 +80,7 @@ add_block('simulink/Sources/In1',[cut '/override'],'Position',[30 213 60 227]);
 add_block('simulink/Ports & Subsystems/If',[cut '/ModeIf'], ...
     'NumInputs','1','IfExpression','u1 > 50','ElseIfExpressions','u1 > 20', ...
     'ShowElse','on','Position',[110 40 190 120]);
+add_line(cut,'level/1','ModeIf/1','autorouting','on');
 names = {'High','Mid','Low'}; gains = {'3','2','1'};
 for k = 1:3
     y = 20 + 60*(k-1);

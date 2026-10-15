@@ -66,6 +66,25 @@ feval(model, [], [], [], 'compile');
 feval(model, [], [], [], 'term');
 end
 
+function testEveryInputPortIsConnected(testCase)
+% A dangling input still compiles (it reads 0), which once left the If of
+% ModeSelect always false. Data, enable, trigger and action ports all count.
+demo = testCase.TestData.Demo;
+load_model(demo);
+blocks = find_system(demo.TopModel, 'LookUnderMasks', 'all', 'Type', 'Block');
+dangling = strings(0, 1);
+for b = 1:numel(blocks)
+    ports = get_param(blocks{b}, 'PortHandles');
+    inputs = [ports.Inport, ports.Enable, ports.Trigger, ports.Ifaction];
+    for p = inputs
+        if get_param(p, 'Line') == -1
+            dangling(end+1, 1) = string(blocks{b}); %#ok<AGROW>
+        end
+    end
+end
+verifyEmpty(testCase, dangling);
+end
+
 function testEveryCutListsItsBranchBlocks(testCase)
 demo = testCase.TestData.Demo;
 load_model(demo);
