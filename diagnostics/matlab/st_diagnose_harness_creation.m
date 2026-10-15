@@ -90,7 +90,7 @@ for r = [report.Original(:); report.Reduced(:)]'
         details(end+1, 1) = "[" + r.Label + "]" + newline + r.Text; %#ok<AGROW>
     end
 end
-write_text(report.ReportFile, strjoin([report.Version; details], newline + newline));
+write_text(report.ReportFile, strjoin([report.Version; details], [newline newline]));
 if p.Results.Print
     print_report(report);
 end
