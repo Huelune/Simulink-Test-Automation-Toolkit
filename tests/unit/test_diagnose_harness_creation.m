@@ -55,6 +55,25 @@ set_param(wire, 'Name', 'secret_sig_a');
 wire = add_line(model, 'C2/1', 'BC/2');
 set_param(wire, 'Name', 'secret_sig_b');
 add_line(model, 'BC/1', 'secret_cut/3');
+% A scalar input typed by an alias, the kind the real CUT reported as "기타".
+alias = Simulink.AliasType;
+alias.BaseType = 'single';
+assignin('base', 'secret_alias_t', alias);
+add_block('built-in/Inport', [cut '/secret_in_alias'], 'OutDataTypeStr', 'secret_alias_t', ...
+    'SampleTime', '0.01');
+add_block('built-in/Terminator', [cut '/T3']);
+add_line(cut, 'secret_in_alias/1', 'T3/1');
+add_block('built-in/Inport', [model '/A'], 'OutDataTypeStr', 'secret_alias_t', 'SampleTime', '0.01');
+add_line(model, 'A/1', 'secret_cut/4');
+% A virtual bus output with no bus object; the reduced model's Constant must
+% not take Inherit: auto for it.
+add_block('built-in/BusCreator', [cut '/BC2'], 'Inputs', '2');
+add_block('built-in/Outport', [cut '/secret_out_bus']);
+add_line(cut, 'secret_in_vec/1', 'BC2/1');
+add_line(cut, 'G/1', 'BC2/2');
+add_line(cut, 'BC2/1', 'secret_out_bus/1');
+add_block('built-in/Terminator', [model '/TY']);
+add_line(model, 'secret_cut/2', 'TY/1');
 save_system(model, fullfile(folder, [model '.slx']));
 
 [testCase.TestData.Console, testCase.TestData.Report] = evalc( ...
@@ -86,7 +105,7 @@ end
 
 function testInterfaceIsCountedNotNamed(testCase)
 ports = testCase.TestData.Report.Ports;
-verifyEqual(testCase, [ports.Direction], ["In" "In" "In" "Out"]);
+verifyEqual(testCase, [ports.Direction], ["In" "In" "In" "In" "Out" "Out"]);
 verifyEqual(testCase, ports(1).BusType, "NON_VIRTUAL_BUS");
 verifyEqual(testCase, ports(1).Bus.Leaves, 3);
 verifyEqual(testCase, ports(1).Bus.Depth, 2);
@@ -108,12 +127,23 @@ verifyTrue(testCase, port.Derived, summary);
 verifyFalse(testCase, report.Ports(1).Derived);
 end
 
+function testAliasInputIsNamedByKindAndKeptInTheReducedModel(testCase)
+report = testCase.TestData.Report;
+verifyEqual(testCase, report.Ports(4).TypeClass, "별칭형→single");
+verifyEqual(testCase, report.ReducedNotes.TypesKept, 1);
+files = report.ReducedFiles;
+objects = load(files(endsWith(files, '.mat')));
+verifyClass(testCase, objects.ReproType_1, 'Simulink.AliasType');
+verifyEqual(testCase, objects.ReproType_1.BaseType, 'single');
+end
+
 function testReducedModelHoldsOnlyRenamedBuses(testCase)
 files = testCase.TestData.Report.ReducedFiles;
 verifyNumElements(testCase, files, 2);
 buses = load(files(endsWith(files, '.mat')));
 busNames = sort(string(fieldnames(buses)));
-verifyEqual(testCase, busNames, ["ReproBus_1"; "ReproBus_2"; "ReproBus_3"], ...
+busNames = busNames(startsWith(busNames, "ReproBus_"));
+verifyEqual(testCase, busNames(1:3), ["ReproBus_1"; "ReproBus_2"; "ReproBus_3"], ...
     "buses: " + strjoin(busNames, ', '));
 elements = arrayfun(@(n) buses.(n).Elements, busNames, 'UniformOutput', false);
 elements = vertcat(elements{:});
@@ -156,7 +186,7 @@ function cleanup(model, folder)
 for name = {model, 'ST_HarnessRepro'}
     if bdIsLoaded(name{1}), close_system(name{1}, 0); end
 end
-evalin('base', 'clear secret_inner_bus secret_outer_bus ReproBus_*');
+evalin('base', 'clear secret_inner_bus secret_outer_bus secret_alias_t ReproBus_* ReproType_*');
 repro = fullfile(folder, 'st_harness_repro');
 if contains(path, repro), rmpath(repro); end
 if isfolder(folder), rmdir(folder, 's'); end
