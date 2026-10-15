@@ -364,15 +364,14 @@ for k = find(~isGenerate).'
 end
 MatVariableName = strings(n,1);
 ExpectedUpdateMode = repmat("DEFAULT",n,1);
-CoverageFilterMode = repmat("OFF",n,1);
-CoverageBoundaryMode = repmat("OFF",n,1);
-CoverageFilterAction = strings(n,1);
-CoverageFilterRationale = strings(n,1);
-filtered = CUTName == "FilteredParent";
-CoverageFilterMode(filtered) = "ALL_CONTENT";
-CoverageBoundaryMode(filtered) = "CUT_ONLY";
-CoverageFilterAction(filtered) = "EXCLUDE";
-CoverageFilterRationale(filtered) = "Demo: child subsystems are verified separately";
+% The standalone pipeline requires ALL_CONTENT + CUT_ONLY + EXCLUDE and a
+% rationale on every row. Child subsystems of the other CUTs are If/Switch
+% Case action subsystems that hold one Gain, so excluding them removes no
+% decision; in FilteredParent it removes the Switch inside Diagnostics.
+CoverageFilterMode = repmat("ALL_CONTENT",n,1);
+CoverageBoundaryMode = repmat("CUT_ONLY",n,1);
+CoverageFilterAction = repmat("EXCLUDE",n,1);
+CoverageFilterRationale = repmat("Demo: child subsystems are verified separately",n,1);
 targets = table(No,Enabled,CUTName,CUTPath,HarnessName,TestCaseName, ...
     SldvMode,DataFileFormat,SldvDataFile,MatVariableName,ExpectedUpdateMode, ...
     CoverageFilterMode,CoverageBoundaryMode,CoverageFilterAction,CoverageFilterRationale);

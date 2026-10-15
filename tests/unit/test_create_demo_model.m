@@ -34,7 +34,11 @@ verifyEqual(testCase, sum(T.SldvMode == "FILE"), 5);
 verifyTrue(testCase, all(startsWith(T.TestCaseName, T.CUTName + "_")));
 fileRows = T(T.SldvMode == "FILE", :);
 verifyTrue(testCase, all(isfile(fileRows.SldvDataFile)));
-verifyEqual(testCase, T.CoverageFilterMode(T.CUTName == "FilteredParent"), "ALL_CONTENT");
+% The standalone pipeline rejects any row without this policy.
+verifyTrue(testCase, all(T.CoverageFilterMode == "ALL_CONTENT"));
+verifyTrue(testCase, all(T.CoverageBoundaryMode == "CUT_ONLY"));
+verifyTrue(testCase, all(T.CoverageFilterAction == "EXCLUDE"));
+verifyTrue(testCase, all(strlength(T.CoverageFilterRationale) > 0));
 end
 
 function testDatasetElementsMatchCutInportsInPortOrder(testCase)

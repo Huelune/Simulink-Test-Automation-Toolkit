@@ -94,11 +94,13 @@ st_select_target_model
 | 4 | `GearSelect` | Multiport Switch, Switch Case(default 포함) | MAT, Scenario 2개 | 결과가 셋 이상이라 정적 `[T/F]`로 남는 블록 |
 | 5 | `EnabledStage` | Enabled Subsystem(CUT 자신), Switch, Sign | SLDV `GENERATE` | Enable D, SLDV 경로 |
 | 6 | `TriggeredStage` | 함수 호출 Subsystem(CUT 자신), Switch | SLDV `GENERATE` | `FcnTriggerPort` 자동 제외, `executed` 단독 결과 `[T]` |
-| 7 | `FilteredParent` | Switch, 직계 하위 Subsystem 2개 | MAT | `ALL_CONTENT` + `EXCLUDE`, `CUT_ONLY` 경계 |
+| 7 | `FilteredParent` | Switch, 직계 하위 Subsystem 2개 | MAT | 하위 Subsystem 안의 Switch가 커버리지에서 빠지는 것 |
 
 테스트 케이스 이름은 `{CUT}_{ID}`(`ModeSelect_90001` 등)이고 ID는 지어낸 번호입니다.
 최종 문서의 `Test Case ID`와 `ID` 열이 규칙대로 나뉩니다. Harness 이름은 `{CUT}_Harness`
-입니다. 기대값 갱신은 모두 `DEFAULT`(`APPLY`)이므로 첫 실행에서 기대값이 실제 출력으로
+입니다. standalone 파이프라인이 요구하므로 모든 행이 `ALL_CONTENT` + `CUT_ONLY` + `EXCLUDE`와
+사유를 갖습니다. 다른 CUT의 하위 Subsystem은 Gain 하나뿐인 Action Subsystem이라 빠져도 분기가
+줄지 않습니다. 기대값 갱신은 모두 `DEFAULT`(`APPLY`)이므로 첫 실행에서 기대값이 실제 출력으로
 채워지고 모든 행이 `PASS`가 됩니다.
 
 ### 실행
