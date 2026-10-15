@@ -30,11 +30,16 @@ for k = find(~[r.Passed])
         end
     end
     fprintf('  실패 %-52s %-20s %s\n', regexprep(r(k).Name, '^.*/', ''), kind, id);
+    % 테스트가 남긴 값 요약(오류 식별자, 개수). 이름과 경로는 넣지 않았다.
+    if ~isempty(records) && isprop(records(1), 'TestDiagnosticResults') ...
+            && ~isempty(records(1).TestDiagnosticResults)
+        fprintf('       %s\n', records(1).TestDiagnosticResults(1).DiagnosticText);
+    end
 end
 warning(oldWarning);
 ```
 
-**확인할 것:** `통과 7 / 전체 7`.
+**확인할 것:** `통과 7 / 전체 7`. 실패하면 그 아래 줄에 기대와 달랐던 값이 찍힌다.
 
 **돌려줄 것:** 화면 캡처 한 장.
 

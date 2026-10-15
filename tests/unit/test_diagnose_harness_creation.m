@@ -71,8 +71,8 @@ end
 
 function testEveryAttemptSucceedsOnAPlainModel(testCase)
 report = testCase.TestData.Report;
-verifyEqual(testCase, [report.Original.Ok], true(1, 3));
-verifyEqual(testCase, [report.Reduced.Ok], true(1, 3));
+verifyEqual(testCase, [report.Original.Ok], true(1, 3), attempt_summary(report.Original));
+verifyEqual(testCase, [report.Reduced.Ok], true(1, 3), attempt_summary(report.Reduced));
 end
 
 function testInterfaceIsCountedNotNamed(testCase)
@@ -89,10 +89,12 @@ function testVirtualBusWithoutObjectKeepsItsStructure(testCase)
 % does not fall back to Inherit: auto.
 report = testCase.TestData.Report;
 port = report.Ports(3);
-verifyEqual(testCase, port.BusType, "VIRTUAL_BUS");
-verifyTrue(testCase, port.Bus.Resolved);
-verifyEqual(testCase, port.Bus.Leaves, 2);
-verifyEqual(testCase, report.ReducedNotes.UnresolvedBuses, 0);
+summary = sprintf('BusType=%s Resolved=%d Leaves=%d Unresolved=%d', port.BusType, ...
+    ~isempty(port.Bus) && port.Bus.Resolved, leaves(port), report.ReducedNotes.UnresolvedBuses);
+verifyEqual(testCase, port.BusType, "VIRTUAL_BUS", summary);
+verifyTrue(testCase, ~isempty(port.Bus) && port.Bus.Resolved, summary);
+verifyEqual(testCase, leaves(port), 2, summary);
+verifyEqual(testCase, report.ReducedNotes.UnresolvedBuses, 0, summary);
 end
 
 function testReducedModelHoldsOnlyRenamedBuses(testCase)
@@ -100,7 +102,8 @@ files = testCase.TestData.Report.ReducedFiles;
 verifyNumElements(testCase, files, 2);
 buses = load(files(endsWith(files, '.mat')));
 busNames = sort(string(fieldnames(buses)));
-verifyEqual(testCase, busNames, ["ReproBus_1"; "ReproBus_2"; "ReproBus_3"]);
+verifyEqual(testCase, busNames, ["ReproBus_1"; "ReproBus_2"; "ReproBus_3"], ...
+    "buses: " + strjoin(busNames, ', '));
 elements = arrayfun(@(n) buses.(n).Elements, busNames, 'UniformOutput', false);
 elements = vertcat(elements{:});
 verifyTrue(testCase, all(startsWith(string({elements.Name}), "e")));
@@ -115,6 +118,20 @@ end
 
 function testDiagnosisLeavesNoHarness(testCase)
 verifyEmpty(testCase, sltest.harness.find(testCase.TestData.Cut));
+end
+
+function text = attempt_summary(results)
+parts = strings(1, numel(results));
+for k = 1:numel(results)
+    parts(k) = "OK";
+    if ~results(k).Ok, parts(k) = results(k).Ids; end
+end
+text = char(strjoin(parts, ' / '));
+end
+
+function n = leaves(port)
+n = 0;
+if ~isempty(port.Bus), n = port.Bus.Leaves; end
 end
 
 function e = element(name, type, dims)
