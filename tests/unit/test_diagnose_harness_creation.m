@@ -43,6 +43,18 @@ add_block('built-in/Outport', [model '/Y']);
 add_line(model, 'B/1', 'secret_cut/1');
 add_line(model, 'V/1', 'secret_cut/2');
 add_line(model, 'secret_cut/1', 'Y/1');
+% A virtual bus with no bus object, as a Bus Creator makes it.
+add_block('built-in/Inport', [cut '/secret_in_virtual'], 'SampleTime', '0.01');
+add_block('built-in/Terminator', [cut '/T2']);
+add_line(cut, 'secret_in_virtual/1', 'T2/1');
+add_block('built-in/Constant', [model '/C1'], 'Value', '1', 'SampleTime', '0.01');
+add_block('built-in/Constant', [model '/C2'], 'Value', '[1 2]', 'SampleTime', '0.01');
+add_block('built-in/BusCreator', [model '/BC'], 'Inputs', '2');
+wire = add_line(model, 'C1/1', 'BC/1');
+set_param(wire, 'Name', 'secret_sig_a');
+wire = add_line(model, 'C2/1', 'BC/2');
+set_param(wire, 'Name', 'secret_sig_b');
+add_line(model, 'BC/1', 'secret_cut/3');
 save_system(model, fullfile(folder, [model '.slx']));
 
 [testCase.TestData.Console, testCase.TestData.Report] = evalc( ...
@@ -65,22 +77,40 @@ end
 
 function testInterfaceIsCountedNotNamed(testCase)
 ports = testCase.TestData.Report.Ports;
-verifyEqual(testCase, [ports.Direction], ["In" "In" "Out"]);
+verifyEqual(testCase, [ports.Direction], ["In" "In" "In" "Out"]);
 verifyEqual(testCase, ports(1).BusType, "NON_VIRTUAL_BUS");
 verifyEqual(testCase, ports(1).Bus.Leaves, 3);
 verifyEqual(testCase, ports(1).Bus.Depth, 2);
 verifyEqual(testCase, ports(1).Bus.NonScalar, 1);
 end
 
+function testVirtualBusWithoutObjectKeepsItsStructure(testCase)
+% Simulink derives a bus object from the Bus Creator, so the reduced model
+% does not fall back to Inherit: auto.
+report = testCase.TestData.Report;
+port = report.Ports(3);
+verifyEqual(testCase, port.BusType, "VIRTUAL_BUS");
+verifyTrue(testCase, port.Bus.Resolved);
+verifyEqual(testCase, port.Bus.Leaves, 2);
+verifyEqual(testCase, report.ReducedNotes.UnresolvedBuses, 0);
+end
+
 function testReducedModelHoldsOnlyRenamedBuses(testCase)
 files = testCase.TestData.Report.ReducedFiles;
 verifyNumElements(testCase, files, 2);
 buses = load(files(endsWith(files, '.mat')));
-verifyEqual(testCase, sort(string(fieldnames(buses))), ["ReproBus_1"; "ReproBus_2"]);
-names = string({buses.ReproBus_1.Elements.Name, buses.ReproBus_2.Elements.Name});
-verifyTrue(testCase, all(startsWith(names, "e")));
-types = string({buses.ReproBus_1.Elements.DataType, buses.ReproBus_2.Elements.DataType});
+busNames = sort(string(fieldnames(buses)));
+verifyEqual(testCase, busNames, ["ReproBus_1"; "ReproBus_2"; "ReproBus_3"]);
+elements = arrayfun(@(n) buses.(n).Elements, busNames, 'UniformOutput', false);
+elements = vertcat(elements{:});
+verifyTrue(testCase, all(startsWith(string({elements.Name}), "e")));
+types = string({elements.DataType});
 verifyEmpty(testCase, types(contains(types, 'secret')));
+end
+
+function testDerivedBusObjectsAreClearedFromBase(testCase)
+names = string(evalin('base', 'who'));
+verifyEmpty(testCase, names(startsWith(names, "slBus")));
 end
 
 function testDiagnosisLeavesNoHarness(testCase)
@@ -98,7 +128,7 @@ function cleanup(model, folder)
 for name = {model, 'ST_HarnessRepro'}
     if bdIsLoaded(name{1}), close_system(name{1}, 0); end
 end
-evalin('base', 'clear secret_inner_bus secret_outer_bus ReproBus_1 ReproBus_2');
+evalin('base', 'clear secret_inner_bus secret_outer_bus ReproBus_*');
 repro = fullfile(folder, 'st_harness_repro');
 if contains(path, repro), rmpath(repro); end
 if isfolder(folder), rmdir(folder, 's'); end

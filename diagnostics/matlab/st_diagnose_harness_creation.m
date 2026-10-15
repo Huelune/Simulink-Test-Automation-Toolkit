@@ -75,6 +75,8 @@ catch ME
     details(end+1, 1) = "[인터페이스 컴파일]" + newline + report_text(ME);
     st_log(cfg, 'WARN', 'Harness diagnosis could not compile the model | %s', report.CompileIds);
 end
+[report.Ports, derived] = derive_bus_objects(model, report.Ports);
+clearDerived = onCleanup(@() clear_base(derived)); %#ok<NASGU>
 
 if p.Results.MakeReducedModel && ~isempty(report.Ports)
     try
@@ -171,6 +173,13 @@ for d = 1:2
         if port.BusType ~= "NOT_BUS"
             port.Bus = bus_shape(model, port.DataType);
         end
+        % The port whose output is the bus: the driving port for an input.
+        port.BusSource = h;
+        if d == 1
+            wire = get_param(h, 'Line');
+            port.BusSource = -1;
+            if wire ~= -1, port.BusSource = get_param(wire, 'SrcPortHandle'); end
+        end
         ports(end+1) = port; %#ok<AGROW>
     end
 end
@@ -178,7 +187,35 @@ end
 
 function ports = empty_ports()
 ports = struct('Direction', {}, 'BusType', {}, 'DataType', {}, 'Dimensions', {}, ...
-    'SampleTime', {}, 'Complex', {}, 'Bus', {});
+    'SampleTime', {}, 'Complex', {}, 'Bus', {}, 'BusSource', {});
+end
+
+function [ports, created] = derive_bus_objects(model, ports)
+% A virtual bus from a Bus Creator has no bus object. Simulink derives one
+% from the signal hierarchy, so the reduced model keeps the bus structure
+% instead of falling back to Inherit: auto. The model must not be compiled.
+created = {};
+for k = 1:numel(ports)
+    b = ports(k).Bus;
+    if ports(k).BusType == "NOT_BUS" || (~isempty(b) && b.Resolved), continue; end
+    source = ports(k).BusSource;
+    if source == -1, continue; end
+    before = evalin('base', 'who');
+    try
+        evalc('info = Simulink.Bus.createObject(model, source);');
+    catch
+        continue;
+    end
+    created = union(created, setdiff(evalin('base', 'who'), before));
+    ports(k).DataType = string(info(1).busName);
+    ports(k).Bus = bus_shape(model, info(1).busName);
+end
+end
+
+function clear_base(names)
+if ~isempty(names)
+    evalin('base', ['clear ' strjoin(names, ' ')]);
+end
 end
 
 function shape = bus_shape(model, busName)
@@ -214,6 +251,12 @@ value = [];
 try
     value = Simulink.data.evalinGlobal(model, char(name));
 catch
+    % Derived bus objects live in the base workspace, which a model
+    % linked to a data dictionary may not see.
+    try
+        value = evalin('base', char(name));
+    catch
+    end
 end
 end
 
