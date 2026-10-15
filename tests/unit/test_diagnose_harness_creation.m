@@ -69,10 +69,19 @@ verifyEmpty(testCase, strfind(console, 'secret'));
 verifyNotEmpty(testCase, strfind(console, '하네스 생성 진단'));
 end
 
-function testEveryAttemptSucceedsOnAPlainModel(testCase)
-report = testCase.TestData.Report;
-verifyEqual(testCase, [report.Original.Ok], true(1, 3), attempt_summary(report.Original));
-verifyEqual(testCase, [report.Reduced.Ok], true(1, 3), attempt_summary(report.Reduced));
+function testSignalEditorRefusesTheVirtualBusWithoutObject(testCase)
+% The fixture's third input is a Bus Creator bus with no bus object, which a
+% Signal Editor Harness does not accept; an Inport Harness does.
+original = testCase.TestData.Report.Original;
+summary = attempt_summary(original);
+verifyEqual(testCase, [original.Ok], [false false true], summary);
+verifyTrue(testCase, all(contains([original(1:2).Ids], "VBusWithNoBusObjNotSupported_SE")), summary);
+end
+
+function testReducedModelAcceptsEveryAttempt(testCase)
+% The reduced model carries the derived bus object, so Signal Editor works.
+reduced = testCase.TestData.Report.Reduced;
+verifyEqual(testCase, [reduced.Ok], true(1, 3), attempt_summary(reduced));
 end
 
 function testInterfaceIsCountedNotNamed(testCase)
@@ -95,6 +104,8 @@ verifyEqual(testCase, port.BusType, "VIRTUAL_BUS", summary);
 verifyTrue(testCase, ~isempty(port.Bus) && port.Bus.Resolved, summary);
 verifyEqual(testCase, leaves(port), 2, summary);
 verifyEqual(testCase, report.ReducedNotes.UnresolvedBuses, 0, summary);
+verifyTrue(testCase, port.Derived, summary);
+verifyFalse(testCase, report.Ports(1).Derived);
 end
 
 function testReducedModelHoldsOnlyRenamedBuses(testCase)
