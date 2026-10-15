@@ -6,15 +6,32 @@
 화면에는 개수, Simulink 블록 종류 이름, 정해 둔 안내 문구만 찍는다. 테스트 케이스·모델·블록
 이름, 경로, 계정은 찍지 않는다(회사 내부 정보).
 
-## 1. 데모 모델로 전 과정 돌리기 (Top Model 저장 상태 추적)
+## 1. 최종 문서에서 ID 90002의 D 줄 보기
 
-**왜:** 지난 실행들에서 나온 문제를 고쳤다. (1) 테스트 실행 뒤 Top Model과 그 안의 Harness에 저장되지 않은
-변경이 남아 명세서가 `SpecificationUnsaved`로 멈췄다. Dirty 표시만 내리자 Top Model은 `저장됨`이 됐지만 명세서는
-여전히 멈췄고, 앞서 Top Model을 저장하지 않고 닫았을 때는 통과했다. 이제 실행이 끝나면 그 변경을 버리고 Top Model을
-저장된 파일에서 다시 연다. 명세서가 또 멈추면 원인 종류(Test File/Top Model/Harness 행 번호)를 찍는다. (2) standalone이 모든 행에 `ALL_CONTENT` + `CUT_ONLY` + `EXCLUDE`를 요구하는데 데모 Excel은 한 행에만
-넣었다. 이번에는 데모로 전 과정을 다시 돌리고, 끝에 관련 단위 테스트 두 개를 돌린다. 그래도 명세서
-직전에 Dirty면 지난번처럼 바뀐 파라미터 종류를 찍고 저장하지 않고 닫은 뒤 계속한다. SLDV가 필요하고 수십 분 걸릴
-수 있다.
+**왜:** 2026-10-15 실행의 ID 90002(LimitChain: MinMax, Dead Zone, Saturation, Abs, Rate Limiter)에 D가 8개 나와야
+하는데 7개였다. 최종 문서는 Simulink Coverage가 Decision objective를 잡은 블록만 적으므로, Coverage가 Abs를
+분기로 세지 않았거나 Rate Limiter의 결정이 하나뿐인 것이다. 결과 순서만으로는 어느 쪽인지 가릴 수 없어 그 칸의
+원문을 찍는다. 데모 모델의 지어낸 블록 이름과 공개된 Simulink 결정 이름뿐이라 찍혀도 된다. **`D:\st_demo`를 지우기
+전에** 돌린다. 몇 초.
+
+```matlab
+clearvars; clc
+files = dir(fullfile('D:\st_demo', 'toolkit', 'result', 'final_document_*.xlsx'));
+[~, newest] = max([files.datenum]);
+C = readcell(fullfile(files(newest).folder, files(newest).name), 'Sheet', 'TestCase');
+row = find(cellfun(@(v) isequal(string(v), "90002"), C(:, 2)), 1);
+fprintf('ID 90002 Description:\n%s\n', string(C{row, 5}));
+```
+
+**확인할 것:** D 줄이 어느 블록에 몇 개인지.
+
+**돌려줄 것:** 화면 캡처 한 장.
+
+## 2. If 연결을 고친 데모 모델로 전 과정 다시 돌리기
+
+**왜:** 2026-10-15 실행에서 9단계가 모두 통과했지만(PASS 9, 검사 코드 `1111111111`, Dirty 없음), ModeSelect
+(ID 90001)의 If 블록에 입력을 연결하지 않아 If 조건이 늘 거짓이었다. 생성기를 고치고 연결 안 된 입력 포트를 잡는
+단위 테스트를 더했다. **1절을 먼저 돌린 뒤에** 이 절을 돌린다. SLDV가 필요하고 수십 분 걸릴 수 있다.
 
 **MATLAB을 새로 켜고, `D:\st_demo` 폴더를 지운 뒤 돌린다.** 이전 데모를 돌린 세션에는 같은 이름의 모델과 Test File
 정보가 남아 있어서, 폴더를 지우고 다시 만들면 저장 콜백이 실패할 수 있다(2026-10-12에 Harness 생성 중 저장이
@@ -163,10 +180,10 @@ end
 
 **확인할 것:**
 
-- 단위 테스트 `통과 11 / 전체 11`.
+- 단위 테스트 `통과 12 / 전체 12`.
 - Top Model 상태 줄에 `Dirty`가 없다(실행·결과 정리 뒤 `저장됨`).
 - 끝까지 가면 `9 / 9`, standalone 검사 코드 `1111111111`, FAIL 0, UNAVAILABLE·MISMATCH 0, ID별 기대값:
-  - `90001` (If/elseif + Switch) 두 행: 하나는 `T/F T/F T/F`, 다른 하나는 `F F F`.
+  - `90001` (If/elseif + Switch) 두 행: 하나는 `T/F T/F T/F`, 다른 하나는 `F F F`. **이번에 바뀌는 곳.**
   - `90002` (Saturation 등): Saturation 두 줄이 `T`와 `F`로 나온다.
   - `90003` (Delay, Discrete-Time Integrator, Relay): `T/F`가 대부분이다.
   - `90004` (Multiport Switch, Switch Case) 두 행: 정적 블록이라 둘 다 `T/F T/F`.

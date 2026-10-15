@@ -56,19 +56,18 @@
   경로가 R2025b에서 해석되는지는 단위 테스트가 assume으로만 다룬다.
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
   (관측 1건), `Simulink.io.SLDVMatFile` import 결과도 같은 이름인지.
-- 데모 모델 생성기 `st_create_demo_model`(2026-10-12): 사용자 MATLAB에서 단위 테스트
-  `test_create_demo_model`이 6/6 통과했다(모델 생성, 컴파일, 입력 이름과 Inport 일치, CUT별
-  분기 블록 목록). 2026-10-15 전 과정 실행에서 Harness 생성, SLDV `GENERATE`(Enabled CUT,
-  함수 호출 CUT), 실행, 결과 정리, 명세서까지 지나갔다. 그래서 Harness의 Signal Editor 입력
-  이름이 CUT Inport 이름과 같다는 가정은 맞았다. 그 실행에서 두 가지가 나와 고쳤다: 테스트 실행
-  뒤 Top Model과 내부 Harness에 저장 안 된 변경이 남아 명세서가 멈춘 것, 데모 Excel이 standalone 필수 필터 정책을 한 행에만
-  넣은 것. 첫 번째는 처음에 Dirty 표시만 내렸는데(Top Model 파라미터는 실행 중에만 쓰는 값만
-  달랐다) 명세서가 여전히 멈췄고, Top Model을 저장하지 않고 닫았을 때만 통과했다. 그래서 Harness
-  쪽 메모리 변경으로 보고 실행이 끝나면 변경을 버리고 다시 열게 했다
-  (`st_discard_execution_model_changes`). 무엇이 Dirty였는지는 확인하지 못했다. 고친 뒤 standalone과 최종 문서는 `todo.md` 1절로 다시 요청했다. 같은 세션에서 데모
-  폴더를 지우고 다시 만들면 Harness 생성 중 모델 저장 콜백이 실패한 적이 있어(1회), 데모는 새
-  MATLAB 세션에서 돌린다. 아직 정적 가정: Delay의 포트 순서가 enable 포트·외부 reset을 켰을 때
-  u, enable, reset이라는 것.
+- 데모 모델 생성기 `st_create_demo_model`(2026-10-12): 2026-10-15 사용자 MATLAB의 새 세션에서
+  전 과정 9단계(생성, 사전 검사, 준비와 실행, 결과 정리, 명세서, standalone, 검사, 최종 문서)가
+  통과했다. 최종 문서 9행 PASS, standalone 검사 코드 `1111111111`, UNAVAILABLE·MISMATCH 0.
+  이로써 결정 단위 블록(Saturation, Dead Zone, Delay, Discrete-Time Integrator, Relay)의 분기
+  결과와 Enabled CUT의 Enable D가 처음 실물로 나왔다(Saturation 하한 `[T]`, 상한 `[F]` 등
+  의도대로). 그 실행까지 고친 것: 테스트 실행이 남긴 Top Model·Harness 변경을 실행 뒤 버림
+  (`st_discard_execution_model_changes`, 표시만 내리는 첫 시도는 명세서를 못 살렸다), 데모
+  Excel의 standalone 필수 필터 정책, ModeSelect If 블록 입력 미연결(If가 늘 거짓). 남은 확인:
+  If를 고친 재실행(`todo.md` 2절), LimitChain의 D가 8개가 아니라 7개인 이유(Coverage가 Abs를
+  세지 않았는지 Rate Limiter 결정이 하나인지, `todo.md` 1절). Delay 포트 순서(u, enable, reset)는
+  여전히 정적 가정이다. 같은 세션에서 데모 폴더를 지우고 다시 만들면 Harness 생성 중 저장 콜백이
+  실패한 적이 있어(1회), 데모는 새 MATLAB 세션에서 돌린다.
 - `st_classify_standalone_results`(팀 제출 트리 MATLAB 판). Python 판과 같은 결과를
   내는지.
 - `st_set_standalone_coverage_root` 기본 루트 `D:\model_result\<Top Model>`.
