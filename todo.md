@@ -52,7 +52,8 @@ warning(oldWarning);
 진단이 만든 하네스는 지우지만 모델은 바뀐 상태로 남는다. **돌린 뒤 원래 모델은 저장하지 말고 닫는다.**
 저장할 변경이 남아 있으면 먼저 저장한 뒤 돌린다. 모델 크기에 따라 몇 분 걸린다.
 
-먼저 모델을 열고, 하네스를 만들 수 없던 CUT 블록을 한 번 클릭해 선택한 뒤 붙여 넣는다.
+먼저 모델을 열고, CUT이 **보이는 부모 단계에서** CUT 블록을 한 번 클릭해 선택한 뒤 붙여 넣는다.
+CUT 안으로 들어간 상태면 `gcb`가 안쪽 블록을 가리켜 `InvalidHarnessOwnerHandle`이 난다.
 
 ```matlab
 clearvars
@@ -64,7 +65,8 @@ try
 catch ME
     clc
     fprintf('진단이 멈춤: %s\n', ME.identifier);
-    fprintf('CUT 블록을 선택했는지, 모델이 열려 있는지 확인한 뒤 다시 돌려 주세요.\n');
+    fprintf('선택한 블록 종류: %s (SubSystem이어야 한다)\n', get_param(cutBlock, 'BlockType'));
+    fprintf('CUT이 보이는 부모 단계에서 CUT을 선택했는지 확인한 뒤 다시 돌려 주세요.\n');
 end
 warning(oldWarning);
 ```
@@ -84,11 +86,12 @@ warning(oldWarning);
 이 식별자가 화면에 나오지 않으므로, 명령 창에서 GUI와 같은 설정으로 만들어 오류 원문을 띄운다.
 이 화면에는 모델·블록 이름과 경로가 찍힌다. **기술지원용이며 Claude에게는 보내지 않는다.**
 
-먼저 모델을 열고 하네스가 안 만들어지는 CUT 블록을 클릭해 선택한 뒤 붙여 넣는다.
+2절처럼 CUT이 보이는 부모 단계에서 CUT 블록을 클릭해 선택한 뒤 붙여 넣는다.
 
 ```matlab
 clearvars; clc
 cutBlock = gcb;
+fprintf('선택한 블록 종류: %s (SubSystem이어야 한다)\n\n', get_param(cutBlock, 'BlockType'));
 try
     sltest.harness.create(cutBlock, 'Name', 'ST_Support_Harness', ...
         'Source', 'Signal Editor', 'SeparateAssessment', true);
@@ -100,7 +103,7 @@ catch ME
 end
 ```
 
-**확인할 것:** 첫 줄에 `sl_sta:editor:errorGeneratingSimInput`이 나오는지.
+**확인할 것:** 블록 종류가 `SubSystem`이고, 오류 식별자가 `sl_sta:editor:errorGeneratingSimInput`인지.
 
 **돌려줄 것:**
 
