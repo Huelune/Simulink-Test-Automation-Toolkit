@@ -213,8 +213,9 @@ if any(failedCloneRows)
     st_log(cfg,'WARN','Clone batch excludes %d failed target(s) from execution.',sum(failedCloneRows));
 end
 executionScope = st_target_scope('enter',T(~failedCloneRows,:)); %#ok<NASGU>
-% A test run leaves the Top Model Dirty without changing what is saved.
-topModelWasClean = ~bdIsLoaded(cfg.TopModel) || ...
+% A test run leaves unsaved changes in the Top Model and its Harnesses.
+topModelWasLoaded = bdIsLoaded(cfg.TopModel);
+topModelWasClean = ~topModelWasLoaded || ...
     strcmp(get_param(cfg.TopModel, 'Dirty'), 'off');
 if executeTests && any(~failedCloneRows)
     if strcmp(executionMode, 'PER_CUT')
@@ -239,7 +240,6 @@ if executeTests && any(~failedCloneRows)
 else
     st_log(cfg, 'STEP', 'Run Generated Tests: SKIP (ExecuteTests=false)');
 end
-st_release_execution_dirty_flag(cfg, cfg.TopModel, topModelWasClean);
 
 state.Artifacts.Model = st_file_signature(cfg.ModelFile);
 state.Artifacts.TestFile = st_file_signature(cfg.TestFile);
@@ -311,6 +311,11 @@ elseif executeTests && any(~failedCloneRows)
 elseif executeTests
     st_log(cfg, 'STEP', 'Save Run Record: SKIP (no target completed)');
 end
+
+% Last, after the BATCH report and the PER_CUT AutoCollect used the results
+% still held in memory.
+st_discard_execution_model_changes(cfg, cfg.TopModel, cfg.ModelFile, ...
+    topModelWasLoaded, topModelWasClean);
 
 if any(failedCloneRows)
     st_log(cfg, 'WARN', 'Automation finished with %d failed clone target(s).', ...

@@ -3,9 +3,11 @@
 ## Unreleased
 
 - **테스트 실행 뒤 Top Model이 저장 안 된 상태로 남지 않습니다.** Test Manager로 테스트를
-  돌리면 저장된 내용은 그대로인데 Top Model에 Dirty 표시가 켜져, 같은 세션에서 바로 부른
-  명세서와 최종 문서가 `SpecificationUnsaved`로 멈췄습니다. 이제 실행 전에 깨끗했던 Top
-  Model은 실행 뒤 표시를 내립니다. 실행 전에 이미 Dirty였던 모델은 그대로 둡니다.
+  돌리면 Top Model과 그 안의 Harness에 저장되지 않은 변경이 남아, 같은 세션에서 바로 부른
+  명세서와 최종 문서가 `SpecificationUnsaved`로 멈췄습니다. 이제 실행이 끝나면 그 변경을
+  버립니다. 실행 전에 열려 있지 않던 Top Model은 닫고, 열려 있던 것은 저장된 파일에서 다시
+  엽니다. 남겨야 할 변경(기대값 갱신)은 실행 중에 이미 저장됩니다. 실행 전에 이미 Dirty였던
+  모델은 그대로 둡니다.
 
 - **데모 모델 생성기 `st_create_demo_model`을 추가했습니다.** CUT 7개에 명세서와 최종
   문서가 다루는 분기 종류(If/elseif, Switch, 결정 단위 블록, SELECT·CASE 블록,
