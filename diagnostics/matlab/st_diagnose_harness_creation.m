@@ -55,7 +55,7 @@ report = struct( ...
     'Ports', empty_ports(), ...
     'Original', [], ...
     'Reduced', [], ...
-    'ReducedNotes', struct('EnumsReplaced', 0, 'TypesReplaced', 0, 'UnresolvedBuses', 0), ...
+    'ReducedNotes', struct('EnumsReplaced', 0, 'TypesReplaced', 0, 'UnresolvedBuses', 0, 'TypesKept', 0), ...
     'ReducedFiles', strings(0, 1), ...
     'ReportFile', string(fullfile(outputFolder, 'st_harness_diagnosis.txt')));
 details = strings(0, 1);
@@ -170,8 +170,11 @@ for d = 1:2
         port.SampleTime = get_param(h, 'CompiledSampleTime');
         port.Complex = isequal(get_param(h, 'CompiledPortComplexSignal'), 1);
         port.Bus = [];
+        port.TypeClass = "";
         if port.BusType ~= "NOT_BUS"
             port.Bus = bus_shape(model, port.DataType);
+        else
+            port.TypeClass = type_class(model, port.DataType);
         end
         % The port whose output is the bus: the driving port for an input.
         port.BusSource = h;
@@ -188,7 +191,8 @@ end
 
 function ports = empty_ports()
 ports = struct('Direction', {}, 'BusType', {}, 'DataType', {}, 'Dimensions', {}, ...
-    'SampleTime', {}, 'Complex', {}, 'Bus', {}, 'BusSource', {}, 'Derived', {});
+    'SampleTime', {}, 'Complex', {}, 'Bus', {}, 'TypeClass', {}, 'BusSource', {}, ...
+    'Derived', {});
 end
 
 function [ports, created] = derive_bus_objects(model, ports)
@@ -297,8 +301,9 @@ name = 'ST_HarnessRepro';
 if bdIsLoaded(name), close_system(name, 0); end
 if ~isfolder(folder), mkdir(folder); end
 busMap = containers.Map();
-buses = struct();
-notes = struct('EnumsReplaced', 0, 'TypesReplaced', 0, 'UnresolvedBuses', 0);
+objects = struct();   % renamed buses and data types, saved beside the model
+typeMap = containers.Map();
+notes = struct('EnumsReplaced', 0, 'TypesReplaced', 0, 'UnresolvedBuses', 0, 'TypesKept', 0);
 
 new_system(name);
 copy_solver(model, name);
@@ -324,8 +329,11 @@ for port = ports(:)'
     else
         outIndex = outIndex + 1;
         source = sprintf('%s/Const%d', reducedCut, outIndex);
+        % A Constant rejects Inherit: auto, left for a bus with no object.
+        constType = type;
+        if startsWith(type, 'Inherit'), constType = 'double'; end
         add_block('built-in/Constant', source, 'Position', [150 50*outIndex 190 50*outIndex+20], ...
-            'Value', zero_value(type, dims), 'OutDataTypeStr', type, 'SampleTime', ts);
+            'Value', zero_value(constType, dims), 'OutDataTypeStr', constType, 'SampleTime', ts);
         inner = sprintf('%s/Out%d', reducedCut, outIndex);
         add_block('built-in/Outport', inner, 'Position', [250 50*outIndex 280 50*outIndex+14]);
         add_line(reducedCut, sprintf('Const%d/1', outIndex), sprintf('Out%d/1', outIndex));
@@ -337,13 +345,13 @@ end
 
 modelFile = fullfile(folder, [name '.slx']);
 files = string(modelFile);
-if ~isempty(fieldnames(buses))
-    % The reduced model loads its renamed buses itself, from beside the file.
-    busFile = fullfile(folder, [name '_buses.mat']);
-    save(busFile, '-struct', 'buses');
-    assign_buses(buses);
-    set_param(name, 'PreLoadFcn', sprintf('load(''%s_buses.mat'');', name));
-    files(end+1, 1) = string(busFile);
+if ~isempty(fieldnames(objects))
+    % The reduced model loads its renamed buses and types itself, from beside the file.
+    dataFile = fullfile(folder, [name '_data.mat']);
+    save(dataFile, '-struct', 'objects');
+    assign_base(objects);
+    set_param(name, 'PreLoadFcn', sprintf('load(''%s_data.mat'');', name));
+    files(end+1, 1) = string(dataFile);
     addpath(folder);
 end
 save_system(name, modelFile);
@@ -392,7 +400,36 @@ save_system(name, modelFile);
             elements(end+1) = n; %#ok<AGROW>
         end
         reduced.Elements = elements;
-        buses.(newName) = reduced;
+        objects.(newName) = reduced;
+    end
+
+    function newName = anon_object(oldName, value)
+        if isKey(typeMap, oldName)
+            newName = typeMap(oldName);
+            return;
+        end
+        newName = sprintf('ReproType_%d', typeMap.Count + 1);
+        typeMap(oldName) = newName;
+        notes.TypesKept = notes.TypesKept + 1;
+        if isa(value, 'Simulink.AliasType')
+            kept = Simulink.AliasType;
+            kept.BaseType = anon_type(value.BaseType);
+        else
+            kept = Simulink.NumericType;
+            kept.DataTypeMode = value.DataTypeMode;
+            if startsWith(value.DataTypeMode, 'Fixed-point')
+                kept.Signedness = value.Signedness;
+                kept.WordLength = value.WordLength;
+                if contains(value.DataTypeMode, 'binary point')
+                    kept.FractionLength = value.FractionLength;
+                else
+                    kept.Slope = value.Slope;
+                    kept.Bias = value.Bias;
+                end
+            end
+            kept.IsAlias = value.IsAlias;
+        end
+        objects.(newName) = kept;
     end
 
     function type = anon_type(type)
@@ -416,29 +453,14 @@ save_system(name, modelFile);
             return;
         end
         value = resolve(model, type);
-        if isa(value, 'Simulink.AliasType')
-            type = anon_type(value.BaseType);
-        elseif isa(value, 'Simulink.NumericType')
-            type = numeric_type(value);
+        if isa(value, 'Simulink.AliasType') || isa(value, 'Simulink.NumericType')
+            % Kept as a named type: Signal Editor may treat it unlike its base type.
+            type = anon_object(type, value);
         else
             notes.TypesReplaced = notes.TypesReplaced + 1;
             type = 'double';
         end
     end
-end
-
-function type = numeric_type(t)
-switch t.DataTypeMode
-    case 'Double', type = 'double';
-    case 'Single', type = 'single';
-    case 'Boolean', type = 'boolean';
-    case 'Fixed-point: binary point scaling'
-        type = sprintf('fixdt(%d,%d,%d)', strcmp(t.Signedness, 'Signed'), ...
-            t.WordLength, t.FractionLength);
-    otherwise
-        type = sprintf('fixdt(%d,%d,%.17g,%.17g)', strcmp(t.Signedness, 'Signed'), ...
-            t.WordLength, t.Slope, t.Bias);
-end
 end
 
 function value = zero_value(type, dims)
@@ -485,10 +507,10 @@ if strcmp(get_param(model, 'SolverType'), 'Fixed-step')
 end
 end
 
-function assign_buses(buses)
-names = fieldnames(buses);
+function assign_base(objects)
+names = fieldnames(objects);
 for i = 1:numel(names)
-    assignin('base', names{i}, buses.(names{i}));
+    assignin('base', names{i}, objects.(names{i}));
 end
 end
 
@@ -555,7 +577,8 @@ if numel(lines) > shown, fprintf('  ... 외 %d종\n', numel(lines) - shown); end
 print_attempts('[원래 모델에서 sltest.harness.create]', report.Original);
 if ~isempty(report.Reduced)
     n = report.ReducedNotes;
-    print_attempts(sprintf('[축소 모델에서] 이름 익명화, 열거형 %d개·기타 형식 %d개 대체, 버스 객체 못 찾음 %d', ...
+    print_attempts(sprintf(['[축소 모델에서] 이름 익명화, 별칭·NumericType %d개 유지, ' ...
+        '열거형 %d개·기타 형식 %d개 대체, 버스 객체 못 찾음 %d'], n.TypesKept, ...
         n.EnumsReplaced, n.TypesReplaced, n.UnresolvedBuses), report.Reduced);
 end
 fprintf('\n');
@@ -603,7 +626,7 @@ ts = string(sample_time_text(port.SampleTime));
 if port.BusType == "NOT_BUS"
     dims = port.Dimensions;
     if numel(dims) >= 2 && dims(1) > 0, dims = dims(2:1+dims(1)); end
-    key = sprintf('%s %s 크기 %s Ts %s', side, type_class(port.DataType), mat2str(dims), ts);
+    key = sprintf('%s %s 크기 %s Ts %s', side, port.TypeClass, mat2str(dims), ts);
     if port.Complex, key = key + " 복소수"; end
     return;
 end
@@ -619,18 +642,29 @@ key = sprintf('%s %s 잎 %d 깊이 %d 배열요소 %d 버스배열 %d 열거형 
 if port.Derived, key = key + " (원래 버스 객체 없음)"; end
 end
 
-function name = type_class(type)
+function name = type_class(model, type)
+% A kind safe to print: a builtin name, a MathWorks class, never the type name.
 builtins = ["double" "single" "boolean" "half" "int8" "uint8" "int16" "uint16" ...
     "int32" "uint32" "int64" "uint64"];
-type = string(type);
+type = strtrim(string(type));
 if any(type == builtins)
     name = type;
-elseif ~isempty(regexp(type, '^(s|u)?fix|^flt', 'once'))
+elseif ~isempty(regexp(type, '^(s|u)?fix|^flt|^fixdt\(', 'once'))
     name = "fixdt";
 elseif is_enum(type)
     name = "열거형";
 else
-    name = "기타";
+    value = resolve(model, type);
+    if isa(value, 'Simulink.AliasType')
+        name = "별칭형→" + type_class(model, value.BaseType);
+    elseif isa(value, 'Simulink.NumericType')
+        name = "NumericType(" + string(value.DataTypeMode) + ")";
+        if value.IsAlias, name = name + " 별칭"; end
+    elseif isempty(value)
+        name = "기타(정의 못 찾음)";
+    else
+        name = "기타(" + string(class(value)) + ")";
+    end
 end
 end
 
