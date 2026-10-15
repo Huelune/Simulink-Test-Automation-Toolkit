@@ -39,6 +39,12 @@ outputFolder = char(p.Results.OutputFolder);
 cfg = struct('ConsoleLogLevel', 'ERROR');
 st_log(cfg, 'INFO', 'Harness creation diagnosis start');
 model = bdroot(cut);
+blockType = get_param(cut, 'BlockType');
+if ~any(strcmp(blockType, {'SubSystem', 'ModelReference', 'S-Function'}))
+    % gcb is often a block inside the CUT when the CUT was opened.
+    error('simtest:HarnessDiagnosisOwnerType', ...
+        'The selected block is a %s, not the CUT. Select the CUT from its parent level.', blockType);
+end
 reproFolder = fullfile(outputFolder, 'st_harness_repro');
 report = struct( ...
     'Version', string(version), ...
