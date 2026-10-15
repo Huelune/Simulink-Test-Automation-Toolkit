@@ -77,3 +77,33 @@ warning(oldWarning);
 
 **돌려줄 것:** 화면 캡처 한 장. `%TEMP%\st_harness_diagnosis.txt`(전체 오류 보고)와
 `%TEMP%\st_harness_repro`의 축소 모델은 보내지 않는다. 축소 모델을 기술지원에 보낼지는 결과를 보고 정한다.
+
+## 3. 기술지원에 보낼 오류 화면 (Claude에게는 보내지 않는다)
+
+**왜:** 기술지원이 `sl_sta:editor:errorGeneratingSimInput`이 보이는 화면 전체를 요청했다. GUI로 만들면
+이 식별자가 화면에 나오지 않으므로, 명령 창에서 GUI와 같은 설정으로 만들어 오류 원문을 띄운다.
+이 화면에는 모델·블록 이름과 경로가 찍힌다. **기술지원용이며 Claude에게는 보내지 않는다.**
+
+먼저 모델을 열고 하네스가 안 만들어지는 CUT 블록을 클릭해 선택한 뒤 붙여 넣는다.
+
+```matlab
+clearvars; clc
+cutBlock = gcb;
+try
+    sltest.harness.create(cutBlock, 'Name', 'ST_Support_Harness', ...
+        'Source', 'Signal Editor', 'SeparateAssessment', true);
+    disp('하네스가 만들어졌다. 오류가 재현되지 않았다.');
+    sltest.harness.delete(cutBlock, 'ST_Support_Harness');
+catch ME
+    fprintf('오류 식별자: %s\n\n', ME.identifier);
+    disp(getReport(ME, 'extended', 'hyperlinks', 'off'));
+end
+```
+
+**확인할 것:** 첫 줄에 `sl_sta:editor:errorGeneratingSimInput`이 나오는지.
+
+**돌려줄 것:**
+
+- 기술지원에는 명령 창 화면을 캡처해 보낸다. 사내 이름과 경로를 가릴지는 직접 정한다.
+- Claude에게는 식별자가 나왔는지 여부만 말로 알려 준다.
+- 돌린 뒤 모델은 저장하지 말고 닫는다.
