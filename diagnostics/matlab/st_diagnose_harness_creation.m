@@ -200,13 +200,24 @@ for k = 1:numel(ports)
     if ports(k).BusType == "NOT_BUS" || (~isempty(b) && b.Resolved), continue; end
     source = ports(k).BusSource;
     if source == -1, continue; end
+    % Try the port first; a release that takes only blocks gets the block
+    % that drives the bus, when that block has a single output.
+    candidates = {source};
+    owner = get_param(source, 'Parent');
+    outputs = get_param(owner, 'PortHandles');
+    if isscalar(outputs.Outport), candidates{end+1} = owner; end %#ok<AGROW>
     before = evalin('base', 'who');
-    try
-        evalc('info = Simulink.Bus.createObject(model, source);');
-    catch
-        continue;
+    info = [];
+    for c = 1:numel(candidates)
+        target = candidates{c};
+        try
+            evalc('info = Simulink.Bus.createObject(model, target);');
+            break;
+        catch
+        end
     end
     created = union(created, setdiff(evalin('base', 'who'), before));
+    if isempty(info) || ~isfield(info, 'busName') || isempty(info(1).busName), continue; end
     ports(k).DataType = string(info(1).busName);
     ports(k).Bus = bus_shape(model, info(1).busName);
 end
