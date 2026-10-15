@@ -122,23 +122,47 @@ standalone 검사 코드는 `1111111111`입니다. `Description`의 D 줄 결과
 
 ### 실행
 
-관리 Excel과 `result`가 저장소 루트 한 자리라서, 업무 결과와 섞이지 않게 **툴킷을 다른
-폴더에 복사해서** 돌리는 것을 권합니다. 복사본에서 `st_setup`을 부르기 전에 원래 툴킷을
-경로에서 빼십시오.
+`st_setup_demo` 한 줄이 데모를 실행할 준비를 다 합니다.
+
+1. 데모 모델, 입력 MAT, 관리 Excel을 만듭니다(`st_create_demo_model`).
+2. 데모 Excel을 저장소 루트의 `TestManagement.xlsx`로 넣습니다. 툴킷은 이 한 자리만 읽습니다.
+   원래 파일은 `TestManagement.backup_<시각>.xlsx`로 남깁니다.
+3. `runtime_target.mat`도 같은 방식으로 백업한 뒤, 대상 모델을 데모로 고르고 standalone 결과
+   폴더를 `<데모 폴더>\model_result`로 정합니다.
 
 ```matlab
-% 툴킷 복사본의 루트에서
+%% MATLAB을 새로 켠 뒤
 st_setup
-demo = st_create_demo_model(fullfile(tempdir, 'st_demo_model'));
-copyfile(demo.ManagementExcel, fullfile(st_project_root(), 'TestManagement.xlsx'));
-st_save_runtime_target_fields(fullfile(st_project_root(), 'runtime_target.mat'), ...
-    struct('TopModel', demo.TopModel, 'ModelFile', demo.ModelFile));
-st_set_standalone_coverage_root(fullfile(tempdir, 'st_demo_result'));
+demo = st_setup_demo();          % 만들 위치를 주려면 st_setup_demo('D:\st_demo')
+st_pre_validate_targets();
+
+%% 1단계 → 5단계 (사용자 매뉴얼 9장과 같습니다)
+st_run_from_harness
+st_collect_per_cut_results
+[~, specFile] = st_export_test_specification();
+info = st_run_standalone_coverage_pipeline();
+code = st_check_standalone_coverage()            % 1111111111
+[~, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
+winopen(finalFile)
 ```
 
-그다음은 [사용자 매뉴얼 9장](../user-manual.md#9-복사용-전체-코드)의 전체 코드를 그대로
-씁니다(`st_select_target_model`은 위에서 대신했으므로 건너뜁니다).
+- **MATLAB을 새로 켠 세션에서 돌리십시오.** 같은 세션에서 데모 폴더를 지우고 다시 만들자 Harness
+  생성 중 모델 저장이 실패한 적이 있습니다.
+- 데모 결과는 이 저장소의 `result` 폴더에 실제 업무 결과와 함께 쌓입니다. 섞이지 않게 하려면
+  **툴킷을 다른 폴더에 복사해서** 그 복사본에서 돌리십시오. 복사본에서 `st_setup`을 부르기 전에
+  원래 툴킷을 경로에서 빼야 합니다.
+- `GENERATE` 두 행 때문에 Simulink Design Verifier가 필요합니다. 없으면 `TestManagement.xlsx`에서
+  No 5, 6 행의 `Enabled`를 `false`로 바꾸십시오.
 
-`GENERATE` 두 행 때문에 Simulink Design Verifier가 필요합니다. 없으면 관리 Excel에서
-No 5, 6 행의 `Enabled`를 `false`로 바꾸십시오.
+실제 모델로 돌아갈 때는 백업을 되돌립니다. 백업 경로는 `demo.Backups`에 있습니다.
+
+```matlab
+for k = 1:numel(demo.Backups)
+    original = regexprep(demo.Backups(k), '\.backup_\d{8}_\d{6}', '');
+    copyfile(demo.Backups(k), original);
+end
+```
+
+백업이 없었다면(처음 쓰는 클론) `st_select_target_model`로 실제 모델을 다시 고르고
+`TestManagement.xlsx`를 새로 작성하십시오.
 

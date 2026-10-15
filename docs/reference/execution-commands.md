@@ -76,6 +76,7 @@ st_run_standalone_coverage_pipeline( ...
 | 문서 | `st_export_final_document` | 고객 제출용 최종 문서 Excel 생성 |
 | 예제 | `st_create_example` | 익명 모델·입력·Excel 생성 |
 | 예제 | `st_create_demo_model` | 분기 블록을 고루 갖춘 데모 모델·입력·Excel 생성 |
+| 예제 | `st_setup_demo` | 데모를 만들고 관리 Excel·대상 모델로 바로 지정 |
 
 ## 2. 초기화와 대상 선택
 
@@ -726,6 +727,22 @@ demo = st_create_demo_model(fullfile(tempdir,'st_demo_model'));
 
 반환 struct에는 `Root`, `TopModel`, `ModelFile`, `ManagementExcel`, `InputFolder`,
 `Targets`(관리 Excel에 쓴 표), `OutputRoot`가 들어 있습니다.
+
+### `st_setup_demo`
+
+`st_create_demo_model`로 데모를 만든 뒤 바로 돌릴 수 있게 지정합니다. 데모 Excel을 저장소
+루트의 `TestManagement.xlsx`로 넣고, 대상 모델을 데모로 고르고, standalone 결과 폴더를
+`<데모 폴더>\model_result`로 정합니다. 바꾸기 전의 `TestManagement.xlsx`와
+`runtime_target.mat`은 `<이름>.backup_<시각>`으로 남깁니다.
+
+```matlab
+demo = st_setup_demo();             % tempdir 아래 새 폴더
+demo = st_setup_demo('D:\st_demo')  % 위치 지정. 비어 있는 새 폴더여야 합니다
+```
+
+반환 struct는 `st_create_demo_model`의 것에 `Backups`(백업 파일 경로)와
+`StandaloneCoverageRoot`를 더한 것입니다. 되돌리는 방법은
+[익명 예제 생성](example.md#실행)에 있습니다.
 
 ### `st_cleanup_results`
 
