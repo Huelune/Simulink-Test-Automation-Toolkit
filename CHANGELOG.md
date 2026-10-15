@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **하네스를 만들 수 없을 때 `st_diagnose_harness_creation(gcb)`로 기술지원 문의 자료를
+  모읍니다.** `version`, 이름 없이 묶은 CUT 입출력 구성(버스 여부, 형식 종류, 크기, 샘플
+  타임), 그리고 Signal Editor + 별도 Test Assessment, Signal Editor만, Inport 세 가지로
+  만들었을 때의 성공·실패와 오류 식별자를 한 화면에 찍습니다. CUT 입출력만 남기고 버스와
+  요소 이름을 바꾼 축소 모델도 만들어 같은 결과가 나오는지 봅니다. 만든 하네스는 지우지만
+  모델은 바뀐 채 남으니 저장하지 말고 닫습니다.
+
 - **`st_setup_demo` 한 줄로 데모를 돌릴 준비를 합니다.** 데모 모델을 만들고, 데모 Excel을
   `TestManagement.xlsx`로 넣고, 대상 모델과 standalone 결과 폴더를 지정합니다. 바꾸기 전
   `TestManagement.xlsx`와 `runtime_target.mat`은 백업합니다. 데모는 툴킷 폴더 옆에 만들고,
