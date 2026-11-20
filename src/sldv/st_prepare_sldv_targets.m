@@ -783,6 +783,7 @@ opts.SaveHarnessModel = 'off';
 if isfield(cfg, 'SldvMaxProcessTime') && ~isempty(cfg.SldvMaxProcessTime)
     opts.MaxProcessTime = max_process_time(cfg.SldvMaxProcessTime);
 end
+apply_sldv_coverage_filter(cfg, opts, targetRow, ownerPath, stagingDir);
 
 st_log( ...
     cfg, ...
@@ -1747,5 +1748,76 @@ if numel(values) >= index
 else
     value = defaultValue;
 end
+
+end
+
+
+function apply_sldv_coverage_filter(cfg, opts, targetRow, ownerPath, stagingDir)
+%APPLY_SLDV_COVERAGE_FILTER Keep SLDV objectives out of filtered children.
+% Mirrors the CUT_CHILD rules of st_generate_coverage_filter_file, but with
+% SIDs from the top model, because sldvrun analyzes the CUT there, not in
+% the Harness that the test-execution CVF refers to.
+filterMode = string(targetRow.CoverageFilterMode);
+if filterMode == "OFF"
+    return;
+end
+
+children = find_system(ownerPath, 'SearchDepth', 1, ...
+    'FollowLinks', 'on', 'LookUnderMasks', 'all', ...
+    'LookInsideSubsystemReference', 'on', ...
+    'MatchFilter', @Simulink.match.allVariants, ...
+    'Type', 'Block', 'BlockType', 'SubSystem');
+children = cellstr(string(children(:)));
+children = children(~strcmp(children, ownerPath));
+if isempty(children)
+    st_log(cfg, 'INFO', ...
+        '[SLDV] coverage filter skipped: no child Subsystem | CUT=%s', ...
+        ownerPath);
+    return;
+end
+
+if filterMode == "SUBSYSTEM"
+    selectorType = slcoverage.BlockSelectorType.BlockInstance;
+else
+    selectorType = slcoverage.BlockSelectorType.SubsystemAllContent;
+end
+if string(targetRow.CoverageFilterAction) == "JUSTIFY"
+    ruleMode = slcoverage.FilterMode.Justify;
+else
+    ruleMode = slcoverage.FilterMode.Exclude;
+end
+
+try
+    filterObj = slcoverage.Filter;
+    for i = 1:numel(children)
+        selector = slcoverage.BlockSelector(selectorType, ...
+            Simulink.ID.getSID(children{i}));
+        if ~addRule(filterObj, ...
+                slcoverage.FilterRule(selector, 'none', ruleMode))
+            error('simtest:SldvCoverageFilterRuleRejected', ...
+                'SLDV coverage filter rule was rejected for block: %s', ...
+                children{i});
+        end
+    end
+    % pwd is the short SLDV build folder, which the Coverage API accepts.
+    filterBase = fullfile(stagingDir, 'sldv_filter');
+    save(filterObj, filterBase);
+catch ME
+    st_log(cfg, 'ERROR', ...
+        '[SLDV] coverage filter build failed | CUT=%s | %s: %s', ...
+        ownerPath, ME.identifier, ME.message);
+    rethrow(ME);
+end
+
+filterFile = [filterBase '.cvf'];
+if ~isfile(filterFile) && isfile(filterBase)
+    filterFile = filterBase;
+end
+opts.CovFilter = 'on';
+opts.CovFilterFileName = filterFile;
+st_log(cfg, 'INFO', ...
+    '[SLDV] coverage filter applied | CUT=%s | Mode=%s | Action=%s | Rules=%d', ...
+    ownerPath, char(filterMode), char(string(targetRow.CoverageFilterAction)), ...
+    numel(children));
 
 end

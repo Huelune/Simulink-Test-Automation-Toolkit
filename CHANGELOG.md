@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **`SldvMode=GENERATE`도 `CoverageFilterMode`를 따릅니다.** 커버리지에서 뺀 CUT 바로 아래
+  하위 Subsystem에는 SLDV도 테스트 목표를 만들지 않습니다. `SUBSYSTEM`/`ALL_CONTENT`와
+  `EXCLUDE`/`JUSTIFY`를 그대로 옮긴 CVF를 Top Model 기준으로 만들어 `sldvrun`의
+  `CovFilter`에 넘깁니다. 하위 로직 자체는 그대로 분석합니다. 필터를 켠 GENERATE 행은 SLDV
+  단계를 한 번 다시 돌립니다.
+
 - **하네스를 만들 수 없을 때 `st_diagnose_harness_creation(gcb)`로 기술지원 문의 자료를
   모읍니다.** `version`, 이름 없이 묶은 CUT 입출력 구성(버스 여부, 형식 종류, 크기, 샘플
   타임), 그리고 Signal Editor + 별도 Test Assessment, Signal Editor만, Inport 세 가지로

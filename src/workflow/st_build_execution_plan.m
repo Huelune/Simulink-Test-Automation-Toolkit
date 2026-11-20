@@ -238,6 +238,11 @@ sldv.AutoConvertAtomic = cfg.AutoConvertSldvTargetsToAtomic;
 sldv.DisableLibraryLink = cfg.DisableLibraryLinkForSldvTargets;
 sldv.IgnoreUnexpectedInputs = cfg.IgnoreUnexpectedSldvInputs;
 sldv.AllowSubsystemPathMismatch = cfg.AllowSldvSubsystemPathMismatch;
+% Only when it changes sldvrun, so rows without a filter keep their cache.
+if row.SldvMode == "GENERATE" && string(row.CoverageFilterMode) ~= "OFF"
+    sldv.CoverageFilterMode = char(row.CoverageFilterMode);
+    sldv.CoverageFilterAction = char(row.CoverageFilterAction);
+end
 signatures.SLDV = st_hash_value(sldv);
 
 harnessConfig = struct('Upstream', signatures.SLDV, ...

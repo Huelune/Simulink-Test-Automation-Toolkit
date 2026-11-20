@@ -87,3 +87,18 @@ cfg = st_config();
 
 verifyEqual(testCase, cfg.ExpectedUpdateMode, 'APPLY');
 end
+
+
+function testSldvGenerateFollowsTheCoverageFilterColumns(testCase)
+% SLDV must not chase objectives that coverage filters out of the CUT.
+source = fileread(fullfile(st_project_root(), ...
+    'src', 'sldv', 'st_prepare_sldv_targets.m'));
+verifyTrue(testCase, contains(source, ...
+    "apply_sldv_coverage_filter(cfg, opts, targetRow, ownerPath, stagingDir);"));
+verifyTrue(testCase, contains(source, "opts.CovFilter = 'on';"));
+
+plan = fileread(fullfile(st_project_root(), ...
+    'src', 'workflow', 'st_build_execution_plan.m'));
+verifyTrue(testCase, contains(plan, ...
+    "sldv.CoverageFilterMode = char(row.CoverageFilterMode);"));
+end
