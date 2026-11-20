@@ -54,9 +54,6 @@
 - 이름이 공백으로 끝나는 CUT: `st_normalize_cut_path`가 `getfullname`을 돌려주는
   경로가 Test Manager·PER_CUT·standalone 커버리지·최종 문서에서 맞는지. 끝 `/`를 붙인
   경로가 R2025b에서 해석되는지는 단위 테스트가 assume으로만 다룬다.
-- SLDV coverage filter(`apply_sldv_coverage_filter`, 2026-11-20): `sldvoptions`의
-  `CovFilter`/`CovFilterFileName` 이름, Top Model SID로 만든 CVF가 atomic CUT 추출 분석에서도
-  맞는지, 목표 수가 실제로 줄어드는지.
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
   (관측 1건), `Simulink.io.SLDVMatFile` import 결과도 같은 이름인지.
 - 데모 모델 생성기 `st_create_demo_model`(2026-10-12): 2026-10-15 사용자 MATLAB의 새 세션에서

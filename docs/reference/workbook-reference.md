@@ -292,8 +292,8 @@ CUT **내부**의 하위 Subsystem을 커버리지 계산에서 뺄지 정합니
 두 모드 모두 CUT 자기 자신은 선택하지 않습니다. 바로 아래 하위 Subsystem이 하나도
 없고 경계 모드도 `OFF`라면 규칙이 0개인 CVF가 만들어집니다. 이것은 오류가 아닙니다.
 
-`SldvMode=GENERATE` 행에서는 SLDV도 같은 하위 Subsystem에 테스트 목표를 만들지 않습니다
-(`CoverageFilterAction`도 따릅니다). 하위 로직은 분석에 그대로 들어가므로 CUT 출력은 바뀌지
+`SldvMode=GENERATE` 행에서는 SLDV도 같은 하위 Subsystem의 목표를 충족시키려 하지 않습니다
+(`CoverageFilterAction`도 따릅니다). 목표 자체는 SLDV 데이터에 남습니다. 하위 로직은 분석에 그대로 들어가므로 CUT 출력은 바뀌지
 않습니다. `CoverageBoundaryMode`는 SLDV에 영향이 없습니다. SLDV는 CUT만 분석합니다.
 
 ### `CoverageBoundaryMode`
