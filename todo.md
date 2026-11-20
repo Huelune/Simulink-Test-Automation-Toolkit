@@ -125,12 +125,11 @@ end
 바꿨다(기능 브랜치, 아직 main에 없음). 실제 모델에 넣기 전에 세 가지 가정을 확인한다.
 `sldvoptions`에 `CovFilter`/`CovFilterFileName`이 있는지, Top Model SID로 만든 CVF가 atomic CUT
 분석에서도 걸리는지, 그래서 목표 수가 줄어드는지. 블록 이름이 일반적인 작은 모델을 임시 폴더에
-만들어 쓰므로 브랜치는 바꾸지 않아도 된다. 2~3분.
+만들어 쓰므로 브랜치는 바꾸지 않아도 된다. 툴킷 함수를 쓰지 않아 어느 폴더에서 붙여 넣어도 된다. 2~3분.
 
 ```matlab
 clearvars; clc
 oldWarning = warning('off', 'all');
-evalc('st_setup');
 workDir = fullfile(tempdir, 'st_sldv_filter_check');
 if isfolder(workDir), rmdir(workDir, 's'); end
 mkdir(workDir); oldDir = cd(workDir);
