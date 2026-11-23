@@ -98,7 +98,7 @@ for i = 1:numel(iterationResults)
 end
 fclose(fid);
 fprintf('속성 전체: %s\n', strjoin(properties(iterationResults(2)), ', '));
-fprintf('자세한 메시지: %%TEMP%%\\st_iteration2_report.txt\n');
+fprintf('%s\n', ['자세한 메시지: %TEMP%' filesep 'st_iteration2_report.txt']);
 warning(warnState);
 ```
 
