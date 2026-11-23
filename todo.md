@@ -74,23 +74,29 @@ git checkout -- src/config/st_config.m && git pull
 파이프라인 전체가 다시 돈다(평소 3단계만큼 걸린다). 다른 모델은 닫지 않는다. standalone 모델과 이름이 같은 모델만 저장하지 않고
 닫는다(파이프라인이 연 사본이다).
 
-**이미 이 블록으로 파이프라인을 돌렸고 "저장 안 한 모델이 있습니다" 줄에서 멈췄다면** 파이프라인은 다시 돌리지 않아도 된다.
-먼저 `skipPipelineRun = true;` 한 줄을 붙여 넣고, 이어서 블록을 붙여 넣는다. 이 블록은 그 변수가 지워지지 않도록 `clearvars`로
-시작하지 않는다.
+앞서 돌린 파이프라인은 PACKAGE까지 끝나지 않아(결과 파일 저장 0) 가져올 결과가 없었다. 그래서 파이프라인부터 다시 돌린다.
+파이프라인은 Top Model이나 Test File이 저장 안 된 상태면 시작하지 않는다. 그럴 때는 블록이 멈추고 그 사실을 한 줄로 찍는다.
+오류는 종류(식별자)만 찍고, 원문은 `%TEMP%\st_saved_result_error.txt`에 쓴다.
 
 ```matlab
-clc; warnState = warning('off', 'all');
-if ~exist('skipPipelineRun', 'var') || ~skipPipelineRun
+clearvars; clc; warnState = warning('off', 'all'); cfg = st_config(); stage = '';
+try
+    stage = '파이프라인';
     evalc('st_run_standalone_coverage_pipeline(''SaveTestResult'', true);');
+    pipeline = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir, 'LATEST');
+    fprintf('파이프라인 | 결과 파일 저장 %d\n', isfile(char(string(pipeline.ResultFile))));
+    for t = 1:numel(pipeline.Targets)
+        [~, standaloneName] = fileparts(char(string(pipeline.Targets(t).PackagedStandaloneModel)));
+        if bdIsLoaded(standaloneName), close_system(standaloneName, 0); end
+    end
+    stage = '가져오기';
+    evalc('openInfo = st_open_standalone_test_manager(''ClearTestManager'', true, ''LoadModels'', true, ''ImportResults'', true);');
+catch stepError
+    fid = fopen(fullfile(tempdir, 'st_saved_result_error.txt'), 'w'); fprintf(fid, '%s', stepError.getReport('extended', 'hyperlinks', 'off')); fclose(fid);
+    fprintf('%s 실패 | 식별자 %s\n', stage, stepError.identifier);
+    if contains(stepError.identifier, 'Dirty'), fprintf('Top Model이나 Test File을 저장한 뒤 다시 붙여 넣어 주세요\n'); end
+    fprintf('%s\n', ['자세한 오류: %TEMP%' filesep 'st_saved_result_error.txt']); warning(warnState); return;
 end
-clear skipPipelineRun
-pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
-fprintf('파이프라인 | 결과 파일 저장 %d\n', isfile(char(string(pipeline.ResultFile))));
-for t = 1:numel(pipeline.Targets)
-    [~, standaloneName] = fileparts(char(string(pipeline.Targets(t).PackagedStandaloneModel)));
-    if bdIsLoaded(standaloneName), close_system(standaloneName, 0); end
-end
-evalc('openInfo = st_open_standalone_test_manager(''ClearTestManager'', true, ''LoadModels'', true, ''ImportResults'', true);');
 fprintf('가져오기 | 상태 %s | 결과 %d개\n', char(string(openInfo.ResultStatus)), openInfo.ResultRootCount);
 resultSets = sltest.testmanager.getResultSets;
 for t = 1:numel(pipeline.Targets)
