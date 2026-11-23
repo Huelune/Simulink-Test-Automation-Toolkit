@@ -13,8 +13,9 @@
 두 가지를 함께 본다. (가) 새 세션에서 `RunPerTestCase`로 돈 값. (나) 실행 전에 CVF를 빼고 돌린 뒤 결과에 CVF를 걸어
 센 값. 파이프라인은 (나)처럼 CVF 없이 실행하고 나중에 CVF를 건다.
 
-순서: MATLAB을 완전히 껐다 켠다. 클론에서 main을 pull한다. 아래 블록을 붙여 넣는다. 툴킷 폴더(`st_setup.m`이 있는
-폴더)를 고르는 창이 뜬다. CUT 수의 두 배만큼 시뮬레이션한다.
+순서: MATLAB을 완전히 껐다 켠다. 평소처럼 모델 프로젝트(.prj)를 연다(Library 경로가 여기서 잡힌다). 클론에서 main을
+pull한다. 아래 블록을 붙여 넣는다. 툴킷 폴더(`st_setup.m`이 있는 폴더)를 고르는 창이 뜬다. CUT 수의 두 배만큼
+시뮬레이션한다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
@@ -24,8 +25,14 @@ oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir);
 pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
 try
     evalc('openInfo = st_open_standalone_test_manager(''ClearTestManager'', true, ''LoadModels'', true, ''RunPerTestCase'', true);');
-    fprintf('MATLAB %s | 대상 %d | 실행 OK %d | 오류 %d | 통과 %d\n', version('-release'), height(openInfo.RunSummary), ...
-        sum(openInfo.RunSummary.Status == "OK"), sum(openInfo.RunSummary.Status == "ERROR"), sum(openInfo.RunSummary.Passed));
+    fprintf('MATLAB %s | 프로젝트 열림 %d | 대상 %d | 실행 OK %d | 오류 %d | 통과 %d | 실패 %d | 미완료 %d\n', version('-release'), ...
+        ~isempty(matlab.project.rootProject), height(openInfo.RunSummary), sum(openInfo.RunSummary.Status == "OK"), ...
+        sum(openInfo.RunSummary.Status == "ERROR"), sum(openInfo.RunSummary.Passed), sum(openInfo.RunSummary.Failed), ...
+        sum(openInfo.RunSummary.Incomplete));
+    if sum(openInfo.RunSummary.Passed) == 0
+        fprintf('통과가 0이면 시뮬레이션이 돌지 않은 것입니다. 모델 프로젝트(.prj)를 먼저 열고 다시 돌려 주세요\n');
+        warning(warnState); return;
+    end
 catch openError
     fprintf('열기 실패 | 식별자 %s\n', openError.identifier); warning(warnState); return;
 end
