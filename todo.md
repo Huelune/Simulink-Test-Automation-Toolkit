@@ -10,14 +10,13 @@
 
 왜: `st_export_test_asset_bundle`이 만든 번들의 결과 MLDATX를 더블클릭하면 오류가 나며 안 열린다.
 어느 파일(결과 `raw/` 또는 `test-manager/` Test File)이 어떤 오류 종류로 실패하는지 알아야 고친다.
-더블클릭과 같은 `open`으로 가장 최근 번들의 MLDATX를 하나씩 연다. Test Manager 창이 뜰 수 있다.
+더블클릭과 같은 `open`으로 고른 번들의 MLDATX를 하나씩 연다. Test Manager 창이 뜰 수 있다.
+툴킷 함수를 쓰지 않으므로 `st_setup` 없이 어느 폴더에서 붙여 넣어도 된다. 실행하면 폴더 고르는 창이 뜬다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
-assetRoot = fullfile(st_project_root(), 'result', 'exports', 'assets');
-bundles = dir(assetRoot); bundles = bundles([bundles.isdir] & ~startsWith({bundles.name}, '.'));
-if isempty(bundles), fprintf('번들 없음: st_export_test_asset_bundle을 먼저 돌려 주세요\n'); warning(warnState); return; end
-[~, newest] = max([bundles.datenum]); bundleDir = fullfile(assetRoot, bundles(newest).name);
+bundleDir = uigetdir(pwd, '안 열리는 자산 번들 폴더(manifest.json이 있는 폴더)를 고르세요');
+if isequal(bundleDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다\n'); warning(warnState); return; end
 mldatxFiles = dir(fullfile(bundleDir, '**', '*.mldatx'));
 reportFile = fullfile(tempdir, 'st_bundle_open_report.txt'); fid = fopen(reportFile, 'w');
 fprintf('MATLAB %s | 열린 Test File %d개 | 열린 모델 %d개 | MLDATX %d개\n', version('-release'), ...
