@@ -170,6 +170,9 @@ warning(warnState);
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
 startBlock = gcb; enabledBlock = ''; topName = bdroot(startBlock);
+if ~strcmp(get_param(startBlock, 'BlockType'), 'Switch')
+    fprintf('선택된 블록이 Switch가 아닙니다(종류 %s). 안쪽 Switch를 클릭해 선택한 뒤 다시 붙여 넣어 주세요\n', get_param(startBlock, 'BlockType')); warning(warnState); return;
+end
 % 앞서 칠한 색을 지우려고 모델을 닫았다가 다시 연다. 저장 안 한 변경이 있으면 닫지 않고 멈춘다.
 if strcmp(get_param(topName, 'Dirty'), 'on')
     fprintf('모델에 저장 안 한 변경이 있어 닫지 않았습니다. 저장하거나 되돌린 뒤 다시 돌려 주세요\n'); warning(warnState); return;
@@ -258,6 +261,50 @@ for s = 1:size(starts, 1)
                     inputTexts{end + 1} = inputType; %#ok<SAGROW>
                 end
                 fprintf('   리셋 조건 블록 | 연산자 %s | 입력: %s\n', operatorText, strjoin(inputTexts, ', '));
+                % 리셋 조건을 만드는 계산을 5단계 아래까지 나무 모양으로 찍는다(Goto/From·Subsystem 경계와 형식 변환은 건너간다).
+                % 각 줄은 (블록 경로, 들어간 입력 포트 번호, 깊이). 꺼낼 때 찍고 그 블록의 입력을 다시 쌓아, 자식이 부모 바로 아래에 찍힌다.
+                stack = {}; rootHandles = get_param(cursorPath, 'PortHandles');
+                for q = numel(rootHandles.Inport):-1:1, stack(end + 1, :) = {cursorPath, q, 1}; end %#ok<SAGROW>
+                while ~isempty(stack)
+                    nodePath = stack{end, 1}; q = stack{end, 2}; nodeDepth = stack{end, 3}; stack(end, :) = [];
+                    nodeHandles = get_param(nodePath, 'PortHandles');
+                    childLine = get_param(nodeHandles.Inport(q), 'Line'); if childLine < 0, continue; end
+                    child = get_param(childLine, 'SrcBlockHandle'); childType = get_param(child, 'BlockType'); childPath = getfullname(child); hops = 0;
+                    while any(strcmp(childType, {'From', 'Inport', 'SubSystem', 'DataTypeConversion'})) && hops < 20
+                        hops = hops + 1;
+                        if strcmp(childType, 'From')
+                            gotoBlocks = find_system(bdroot(childPath), 'FollowLinks', 'on', 'LookUnderMasks', 'all', 'BlockType', 'Goto', 'GotoTag', get_param(child, 'GotoTag'));
+                            if isempty(gotoBlocks), break; end, nextHandles = get_param(gotoBlocks{1}, 'PortHandles'); nextLine = get_param(nextHandles.Inport(1), 'Line');
+                        elseif strcmp(childType, 'Inport')
+                            parentPath = get_param(childPath, 'Parent'); if strcmp(parentPath, bdroot(childPath)), break; end
+                            nextHandles = get_param(parentPath, 'PortHandles'); nextLine = get_param(nextHandles.Inport(str2double(get_param(child, 'Port'))), 'Line');
+                        elseif strcmp(childType, 'SubSystem')
+                            portNumber = get_param(get_param(childLine, 'SrcPortHandle'), 'PortNumber');
+                            outportBlock = find_system(childPath, 'SearchDepth', 1, 'FollowLinks', 'on', 'LookUnderMasks', 'all', 'BlockType', 'Outport', 'Port', num2str(portNumber));
+                            if isempty(outportBlock), break; end, nextHandles = get_param(outportBlock{1}, 'PortHandles'); nextLine = get_param(nextHandles.Inport(1), 'Line');
+                        else
+                            nextHandles = get_param(child, 'PortHandles'); nextLine = get_param(nextHandles.Inport(1), 'Line');
+                        end
+                        if nextLine < 0, break; end
+                        childLine = nextLine; child = get_param(childLine, 'SrcBlockHandle'); childType = get_param(child, 'BlockType'); childPath = getfullname(child);
+                    end
+                    settingText = '';
+                    for name = {'Operator', 'Criteria', 'Threshold', 'Value', 'Function', 'InitialCondition'}
+                        try
+                            value = char(string(get_param(child, name{1})));
+                            if any(strcmp(name{1}, {'Threshold', 'Value', 'InitialCondition'})) && isempty(str2num(value)) %#ok<ST2NM>
+                                try, value = ['변수=' mat2str(slResolve(value, child))]; catch, value = '변수'; end
+                            end
+                            settingText = [settingText ' ' name{1} '=' value]; %#ok<AGROW>
+                        catch
+                        end
+                    end
+                    fprintf('%s입력 %d: %s%s\n', repmat('    ', 1, nodeDepth), q, childType, settingText);
+                    if nodeDepth < 5 && ~any(strcmp(childType, {'Constant', 'Inport', 'UnitDelay', 'Delay', 'Memory'}))
+                        childHandles = get_param(childPath, 'PortHandles');
+                        for p = numel(childHandles.Inport):-1:1, stack(end + 1, :) = {childPath, p, nodeDepth + 1}; end %#ok<SAGROW>
+                    end
+                end
                 break;
             end
         end
