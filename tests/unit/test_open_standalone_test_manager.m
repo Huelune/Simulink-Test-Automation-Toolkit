@@ -142,11 +142,12 @@ verifyNotEmpty(testCase, loopAt);
 verifyLessThan(testCase, loopAt(end), setAt(1));
 verifyLessThan(testCase, setAt(1), runAt(1));
 verifyLessThan(testCase, runAt(1), viewAt(1));
-% No loop boundary between setting the CVF and running its Test Case.
-between = extractBetween(launcher, ...
-    'coverage.CoverageFilterFilename = filterFile;', ...
-    'caseResult = run(testCases(matches));');
-verifyEmpty(testCase, regexp(between{1}, '^\s*end\s*$', 'once', 'lineanchors'));
+% The run sits inside the same loop: the loop's own end (at column 0)
+% comes after it. Inner if/try blocks end indented and do not count.
+loopEndAt = regexp(launcher, '^end\s*$', 'lineanchors');
+loopEndAt = loopEndAt(loopEndAt > setAt(1));
+verifyNotEmpty(testCase, loopEndAt);
+verifyLessThan(testCase, runAt(1), loopEndAt(1));
 end
 
 function text = source()
