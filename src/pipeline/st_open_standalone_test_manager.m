@@ -20,7 +20,7 @@ function varargout = st_open_standalone_test_manager(varargin)
 %   'LoadModels'        - load_system every packaged standalone model first,
 %                         so the CVF viewer resolves block names.
 %   'ApplyFilters'      - re-apply each packaged CVF to its Test Case and
-%                         verify the readback (what the packaged launcher does).
+%                         verify the readback.
 %   'ImportResults'     - import the saved aggregate Result when the pipeline
 %                         kept one (SaveTestResult=true).
 %   'ClearTestManager'  - close every Test File and Result already open in
@@ -31,6 +31,7 @@ function varargout = st_open_standalone_test_manager(varargin)
 %                         by its own CVF. Test Cases share one coverage
 %                         setting (the last CVF set wins for all of them),
 %                         so ApplyFilters alone cannot do this.
+%                         The packaged launcher does the same.
 %   'View'              - open the Test Manager window (default true).
 %   'PipelineId'        - pipeline to open, or 'LATEST' (default).
 %   'OutputRoot'        - pipeline root. Default cfg.StandaloneCoverageRootDir.

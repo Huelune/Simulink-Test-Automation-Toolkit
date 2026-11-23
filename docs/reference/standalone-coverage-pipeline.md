@@ -111,7 +111,9 @@ lifecycle 횟수를 보존하기 위해 **각 PipelineId의 `PACKAGE`와 `SUMMAR
 
 `TestManager` 폴더에는 재배선된 MLDATX와
 `open_standalone_coverage_test_manager.m` launcher가 함께 생성됩니다. launcher는
-편의 기능이며 필수가 아닙니다.
+편의 기능이며 필수가 아닙니다. launcher는 standalone 모델을 로드하고, Test Case마다 패키징된 CVF를 건 직후
+그 Test Case만 실행해 CVF가 적용된 결과를 Test Case마다 하나씩 만듭니다. Test Case들은 Coverage 설정
+하나를 함께 쓰므로 CVF를 먼저 모두 걸면 마지막 것만 남습니다. 그래서 하나씩 걸고 바로 실행합니다.
 
 제출물을 Test Manager에서 여는 방법은 [12절](#12-제출물-열기)에 있습니다.
 

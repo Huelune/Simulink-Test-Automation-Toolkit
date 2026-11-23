@@ -126,6 +126,29 @@ verifyTrue(testCase, contains(text, 'Coverage filters overwrite each other'));
 verifyTrue(testCase, contains(text, "'RunSummary', runSummary"));
 end
 
+function testLauncherRunsEachTestCaseRightAfterItsCvf(testCase)
+% The packaged launcher had the same shared-setting problem: it set every
+% CVF first, so the last one stayed on all Test Cases. It now sets one CVF
+% and runs that Test Case inside the same loop iteration.
+launcher = string(fileread(fullfile(st_project_root(), 'resources', ...
+    'standalone_coverage', 'open_standalone_coverage_test_manager.m')));
+loopAt = strfind(launcher, 'for k = 1:numel(targets)');
+setAt = strfind(launcher, 'coverage.CoverageFilterFilename = filterFile;');
+runAt = strfind(launcher, 'caseResult = run(testCases(matches));');
+viewAt = strfind(launcher, 'sltest.testmanager.view;');
+verifyNumElements(testCase, setAt, 1);
+verifyNumElements(testCase, runAt, 1);
+verifyNotEmpty(testCase, loopAt);
+verifyLessThan(testCase, loopAt(end), setAt(1));
+verifyLessThan(testCase, setAt(1), runAt(1));
+verifyLessThan(testCase, runAt(1), viewAt(1));
+% No loop boundary between setting the CVF and running its Test Case.
+between = extractBetween(launcher, ...
+    'coverage.CoverageFilterFilename = filterFile;', ...
+    'caseResult = run(testCases(matches));');
+verifyEmpty(testCase, regexp(between{1}, '^\s*end\s*$', 'once', 'lineanchors'));
+end
+
 function text = source()
 text = string(fileread(fullfile(st_project_root(), 'src', 'pipeline', ...
     'st_open_standalone_test_manager.m')));

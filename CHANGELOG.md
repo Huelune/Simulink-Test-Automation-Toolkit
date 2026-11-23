@@ -6,6 +6,7 @@
   Test Case들은 Coverage 설정 하나를 함께 씁니다. 그래서 `ApplyFilters`가 CVF를 차례로 걸면 마지막 CVF만 모든 Test
   Case에 남았고, 그 상태로 실행하면 나머지 결과는 아무것도 걸러지지 않았습니다. 새 옵션은 Test Case마다 자기 CVF를
   건 직후 따로 실행합니다. `ApplyFilters`는 CVF가 서로 덮였으면 WARN을 남깁니다.
+  제출물의 `TestManager/open_standalone_coverage_test_manager.m`도 같은 방식으로 Test Case마다 자기 CVF로 실행합니다.
 
 - **`SldvMode=GENERATE`도 `CoverageFilterMode`를 따릅니다.** 커버리지에서 뺀 CUT 바로 아래
   하위 Subsystem의 목표는 SLDV도 충족시키려 하지 않습니다(목표는 SLDV 데이터에 남습니다). `SUBSYSTEM`/`ALL_CONTENT`와

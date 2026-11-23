@@ -2,7 +2,10 @@
 %
 % This script is packaged beside the MLDATX file. It resolves every
 % standalone model and its colocated input before Test Manager refreshes the
-% Model SUT properties, then applies each packaged CVF to the in-memory copy.
+% Model SUT properties, then runs each Test Case alone right after pointing
+% it at its packaged CVF. Test Cases share one coverage setting, so setting
+% every CVF first would leave the last one on all of them; each run gives a
+% ResultSet filtered by its own CVF.
 
 launcherDirectory = fileparts(mfilename('fullpath'));
 pipelineRoot = fileparts(launcherDirectory);
@@ -82,11 +85,26 @@ for k = 1:numel(targets)
     end
     fprintf('Coverage filter applied | TestCase=%s | Filter=%s\n', ...
         char(testCaseName), filterFile);
+    fprintf('Test Case run %d/%d start | TestCase=%s\n', ...
+        k, numel(targets), char(testCaseName));
+    % One broken CUT must not hide the results of the others.
+    try
+        caseResult = run(testCases(matches));
+        fprintf(['Test Case run %d/%d complete | TestCase=%s | Passed=%d | ' ...
+            'Failed=%d | Incomplete=%d\n'], k, numel(targets), ...
+            char(testCaseName), caseResult.NumPassed, caseResult.NumFailed, ...
+            caseResult.NumIncomplete);
+    catch runError
+        fprintf(2, 'Test Case run %d/%d failed | TestCase=%s | %s: %s\n', ...
+            k, numel(targets), char(testCaseName), runError.identifier, ...
+            runError.message);
+    end
 end
 
 sltest.testmanager.view;
 fprintf(['Standalone Test Manager loaded | TestFile=%s | ' ...
-    'Models=%d | CVFs=%d\n'], testFilePath, numel(targets), numel(targets));
+    'Models=%d | CVFs=%d | Results=%d (one per Test Case)\n'], ...
+    testFilePath, numel(targets), numel(targets), numel(targets));
 
 function tf = filter_readback_matches(expected, actual)
 % CoverageSettings may return a canonical full path or just the CVF name.
