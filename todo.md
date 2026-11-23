@@ -76,7 +76,8 @@ activeConfig = getActiveConfigSet(topName);
 if isa(activeConfig, 'Simulink.ConfigSetRef'), activeConfig = getRefConfigSet(activeConfig); end
 try
     Simulink.fileGenControl('set', 'CodeGenFolder', codeFolder, 'CacheFolder', codeFolder, 'keepPreviousPath', true);
-    tempConfig = attachConfigSetCopy(topName, activeConfig, tempConfigName);
+    tempConfig = copy(activeConfig); set_param(tempConfig, 'Name', tempConfigName);
+    attachConfigSet(topName, tempConfig, true); tempConfigName = get_param(tempConfig, 'Name');
     switchTarget(tempConfig, 'ert.tlc', []);
     set_param(tempConfig, 'GenCodeOnly', 'on', 'GenerateReport', 'on');
     setActiveConfigSet(topName, tempConfigName);
