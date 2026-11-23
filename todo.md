@@ -11,7 +11,8 @@
 왜: 결과를 가져온 뒤에는 Coverage Filters의 Add로도 CVF가 적용되지 않았다. 문서가 정한 방법은 실행 전에
 Test Case의 Coverage 설정에 CVF를 넣고 돌리는 것이다. 이미 있는 `st_open_standalone_test_manager`가
 standalone 제출물의 Test File을 열고, 모델을 로드하고, 대상마다 CVF를 Test Case에 넣는다. 그 상태로 실행해
-결과에 CVF가 적용되는지 본다. Test Manager에 열려 있던 Test File과 결과는 먼저 닫는다(같은 이름 충돌 방지).
+결과에 CVF가 적용되는지 본다. 열려 있던 모델과 Test Manager의 Test File·결과는 먼저 닫는다(같은 이름 충돌 방지).
+저장 안 한 모델이 있으면 닫지 않고 멈춘다.
 가장 최근 standalone 실행을 쓴다. 실행하면 툴킷 폴더(`st_setup.m`이 있는 폴더)를 고르는 창이 뜬다.
 CUT 수만큼 시뮬레이션하므로 시간이 걸린다.
 
@@ -20,6 +21,13 @@ clearvars; clc; warnState = warning('off', 'all');
 toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
 if isequal(toolkitDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다\n'); warning(warnState); return; end
 oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir);
+% 같은 이름의 모델이 다른 폴더에서 열려 있으면 열기가 멈춘다. 저장 안 한 모델이 없을 때만 모두 닫는다.
+loadedNames = find_system('type', 'block_diagram');
+dirtyCount = sum(strcmp(get_param(loadedNames, 'Dirty'), 'on'));
+if dirtyCount > 0, fprintf('저장 안 한 모델 %d개: 저장하거나 닫은 뒤 다시 돌려 주세요
+', dirtyCount); warning(warnState); return; end
+bdclose('all'); fprintf('열려 있던 모델 %d개를 닫음
+', numel(loadedNames));
 stage = '열기';
 try
     evalc('openInfo = st_open_standalone_test_manager(''LoadModels'', true, ''ApplyFilters'', true, ''ClearTestManager'', true);');
