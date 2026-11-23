@@ -64,3 +64,50 @@ git checkout -- src/config/st_config.m && git pull
 
 돌려줄 것: 오류가 나면 그 화면. 정상이면 "됨" 한 줄.
 
+## 3. Unsatisfiable 목표가 어느 블록의 어느 결과인지 보기
+
+왜: CUT 자체 Decision 목표 22개 중 2개가 Unsatisfiable(어떤 입력으로도 닿을 수 없다고 SLDV가 증명)이다. SLDV는 "왜"를 문장으로
+주지 않는다. 대신 어느 블록의 어느 결과(예: Switch의 두 번째 입력 선택, If의 else)인지 알려 준다. 그 블록으로 들어오는 신호를
+보면 이유가 보인다(앞단에서 범위가 막힌 신호, 상수 조건 등). 화면에는 블록 종류와 결과 번호만 찍는다. 블록 이름이 들어간 자세한
+목록은 `%TEMP%\st_unsat_objectives.txt`에 쓴다. 그리고 SLDV 결과로 Top Model에 색을 칠한다(빨간색이 Unsatisfiable). 그 파일과
+모델 화면은 보내지 말고 직접 본다. 모델 프로젝트를 열고 `st_setup`을 돌린 MATLAB에서 붙여 넣는다. Top Model을 저장하지 않는다.
+
+```matlab
+clearvars; clc; warnState = warning('off', 'all');
+cfg = st_config(); targetRows = st_load_targets(cfg.OnlyEnabled);
+targetRows = targetRows(targetRows.SldvMode == "GENERATE", :);
+if ~bdIsLoaded(cfg.TopModel), load_system(cfg.ModelFile); end
+fid = fopen(fullfile(tempdir, 'st_unsat_objectives.txt'), 'w');
+for t = 1:height(targetRows)
+    row = targetRows(t, :);
+    noText = regexprep(sprintf('%.17g', double(row.No)), '[^A-Za-z0-9_-]', '_');
+    found = dir(fullfile(cfg.SldvDir, [noText '_*'], 'latest_sldvdata.mat'));
+    if isempty(found), fprintf('대상 %d | SLDV 결과 파일 없음\n', t); continue; end
+    dataFile = fullfile(found(1).folder, found(1).name);
+    data = load(dataFile, 'sldvData'); data = data.sldvData;
+    for k = 1:numel(data.Objectives)
+        objective = data.Objectives(k);
+        if ~contains(objective.type, 'Decision', 'IgnoreCase', true) || ~contains(string(objective.status), 'Unsatisfiable'), continue; end
+        try
+            objectPath = Simulink.ID.getFullName(data.ModelObjects(objective.modelObjectIdx).designSid);
+            blockType = get_param(objectPath, 'BlockType');
+        catch
+            objectPath = '?'; blockType = '?';
+        end
+        outcome = '?'; if isfield(objective, 'outcomeValue'), outcome = num2str(objective.outcomeValue); end
+        fprintf('대상 %d | Unsatisfiable | 블록 종류 %s | 결과 번호 %s\n', t, blockType, outcome);
+        fprintf(fid, '대상 %d | %s | %s | %s\n', t, objectPath, blockType, char(string(objective.descr)));
+    end
+    if t == 1
+        try, sldvhighlight(dataFile); fprintf('대상 1 SLDV 결과를 모델에 칠했습니다(빨간색 = Unsatisfiable)\n'); catch, fprintf('모델 칠하기 실패\n'); end
+    end
+end
+fclose(fid);
+fprintf('%s\n', ['블록 이름이 든 목록: %TEMP%' filesep 'st_unsat_objectives.txt']);
+warning(warnState);
+```
+
+확인할 것: 대상마다 Unsatisfiable 목표가 어떤 블록 종류인지. 그리고 목록 파일과 칠해진 모델에서 그 블록으로 들어오는 신호를 직접 본다.
+그 신호가 앞단에서 어떤 값 범위로 막히는지 보면 된다.
+
+돌려줄 것: 화면 캡처 한 장. 이유를 찾았으면 블록·신호 이름 없이 말로 한 줄(예: "앞단 Saturation 때문에 조건이 항상 참").
