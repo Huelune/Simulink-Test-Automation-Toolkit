@@ -50,29 +50,22 @@ warning(warnState);
 돌려줄 것: 화면 캡처 한 장과 "보고서에 필터 항목 나옴/안 나옴, 모델 색 표시 됨/안 됨" 한 줄. 보고서와 모델 화면은 블록
 이름이 보이므로 캡처하지 마세요.
 
-## 2. 워크플로가 "Library-link Harness protection failed"로 멈춘 이유 확인
+## 2. SLDV가 MaxProcessTime을 넘겨 멈추는 것이 커버리지 필터 때문인지 확인
 
-왜: 하네스 생성부터 다시 돌리려고 워크플로를 실행했더니 3개 대상 모두 Library-link Harness 보호 단계에서 실패했다. 이 단계는
-Harness가 열려 있으면 바꾸지 않고 멈춘다. standalone 모델은 Harness와 이름이 같다. 그래서 1절이나 앞선 확인에서 연
-standalone 모델이 열린 채로 남아 있으면, 툴킷은 Harness가 열려 있다고 보고 멈춘다. 이름이 Harness와 같은 모델이 몇 개
-열려 있는지 세고, 저장 안 한 것이 없으면 모두 닫는다. 워크플로를 돌린 MATLAB에서 붙여 넣는다.
+왜: 처음부터 다시 돌린 워크플로가 SLDV 단계 첫 대상의 `sldvrun`에서 30분 넘게 끝나지 않았다(`MaxProcessTime=300 s`).
+이 실행부터 SLDV에도 커버리지 필터(CovFilter)를 넘긴다. 이 필터를 실제 모델에서 쓴 것은 이번이 처음이다. 그래서 새
+스위치 `cfg.SldvCoverageFilter = false`로 필터를 끄고 같은 단계를 돌려, 몇 분 안에 끝나는지 비교한다.
 
-```matlab
-clearvars; clc; warnState = warning('off', 'all');
-cfg = st_config(); targetRows = st_load_targets(cfg.OnlyEnabled);
-loadedNames = string(find_system('type', 'block_diagram'));
-fprintf('대상 %d | 지금 열린 모델 %d | 그중 Harness 이름과 같은 것 %d\n', height(targetRows), ...
-    numel(loadedNames), sum(ismember(loadedNames, string(targetRows.HarnessName))));
-dirtyCount = sum(strcmp(get_param(cellstr(loadedNames), 'Dirty'), 'on'));
-if dirtyCount > 0
-    fprintf('저장 안 한 모델 %d개: 저장할 것은 저장하고 나머지는 닫은 뒤 워크플로를 다시 돌려 주세요\n', dirtyCount);
-else
-    bdclose('all'); fprintf('열린 모델을 모두 닫았습니다. 워크플로를 다시 돌려 주세요\n');
-end
-warning(warnState);
-```
+순서:
 
-확인할 것: "Harness 이름과 같은 것"이 0보다 크면 원인은 열린 standalone 모델이다. 닫은 뒤 워크플로를 다시 돌린다. 0이면
-다른 원인이니 아래 "돌려줄 것"을 보낸다.
+1. 돌고 있는 워크플로를 Ctrl+C로 멈춘다. 멈출 때까지 시간이 걸릴 수 있다. 멈추지 않으면 MATLAB을 끈다.
+2. MATLAB을 다시 켜고 모델 프로젝트(.prj)를 연다. 클론에서 main을 pull한다.
+3. 툴킷 폴더의 `src\config\st_config.m`에서 `cfg.SldvCoverageFilter = true;`를 `false;`로 바꿔 저장한다.
+4. 평소처럼 워크플로를 다시 실행한다. 이번에 멈췄던 명령을 그대로 쓴다.
+5. SLDV 단계의 진행 줄(`[1/3] START` → `[1/3] OK` 또는 `FAIL`)에 찍히는 시각을 본다.
 
-돌려줄 것: 화면 캡처 한 장. 워크플로를 다시 돌려도 같은 오류가 나면 그 화면도.
+확인할 것: 필터를 끄고 대상마다 SLDV가 5~6분(300초 + 컴파일) 안에 끝나면, 필터가 원인이다. 필터를 꺼도 30분 넘게
+걸리면 필터와 관계없는 다른 원인이다(그 모델이 원래 오래 걸리는 경우).
+
+돌려줄 것: SLDV 단계의 진행 줄 화면 캡처 한 장(시각과 `[n/3] OK/FAIL`만 보이게). 끝나면 `st_config.m`의 값을 `true`로
+되돌리지 말고 그대로 둔 채 알려 달라.
