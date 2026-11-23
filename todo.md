@@ -73,19 +73,30 @@ git checkout -- src/config/st_config.m && git pull
 Threshold, 상태 블록의 초기값, Saturation 한계, 상수 값이다. 블록 이름은 찍지 않는다. 같은 블록을 다시 만나면 고리로 표시하고 멈춘다.
 모델 프로젝트를 열고 `st_setup`을 돌린 MATLAB에서 Top Model을 연 뒤, 목록 파일에 있던 Switch를 클릭해 선택하고 붙여 넣는다.
 MinMax를 볼 때는 MinMax를 선택하고 `startPort = 2;`로 바꾼다.
+선택 블록을 감싼 Enabled Subsystem이 언제 켜지는지 보려면 같은 블록을 선택한 채 `startPort = 'enable';`로 바꾼다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
 startPort = 2;   % Switch는 2(제어 입력), MinMax는 살펴볼 입력 번호
-startBlock = gcb; visited = {}; queue = {startBlock, startPort, 0};
+startBlock = gcb;
+if ischar(startPort) && strcmp(startPort, 'enable')
+    % 선택 블록을 감싼 가장 가까운 Enabled Subsystem의 Enable 입력부터 따라간다.
+    while ~strcmp(get_param(startBlock, 'Parent'), bdroot(startBlock))
+        startBlock = get_param(startBlock, 'Parent');
+        startHandles = get_param(startBlock, 'PortHandles');
+        if ~isempty(startHandles.Enable), break; end
+    end
+end
+visited = {}; queue = {startBlock, startPort, 0};
 fprintf('시작 | 종류 %s', get_param(startBlock, 'BlockType'));
 try, fprintf(' | Criteria %s | Threshold %s', get_param(startBlock, 'Criteria'), get_param(startBlock, 'Threshold')); catch, end
 fprintf('\n');
 while ~isempty(queue) && numel(visited) < 60
     block = queue{1, 1}; port = queue{1, 2}; depth = queue{1, 3}; queue(1, :) = [];
     handles = get_param(block, 'PortHandles');
-    if port > numel(handles.Inport), continue; end
-    line = get_param(handles.Inport(port), 'Line'); if line < 0, continue; end
+    if ischar(port), portHandle = handles.Enable; else, if port > numel(handles.Inport), continue; end, portHandle = handles.Inport(port); end
+    if isempty(portHandle), continue; end
+    line = get_param(portHandle, 'Line'); if line < 0, continue; end
     source = get_param(line, 'SrcBlockHandle'); if source < 0, continue; end
     sourcePath = getfullname(source); sourceType = get_param(source, 'BlockType');
     indent = repmat('  ', 1, depth + 1);
