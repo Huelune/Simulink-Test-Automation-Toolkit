@@ -17,13 +17,11 @@ Coverage가 가리키는 CVF 이름과 같은 번들 CVF를 찾아 다시 걸면
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
 bundleDir = uigetdir(pwd, '자산 번들 폴더(manifest.json이 있는 폴더)를 고르세요');
-if isequal(bundleDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다
-'); warning(warnState); return; end
+if isequal(bundleDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다\n'); warning(warnState); return; end
 rawFiles = dir(fullfile(bundleDir, 'results', '*', 'raw', '*.mldatx'));
 cvfFiles = dir(fullfile(bundleDir, 'results', '**', '*.cvf'));
 cvfNames = lower(string({cvfFiles.name}));
-fprintf('MATLAB %s | 결과 파일 %d개 | 번들 CVF %d개
-', version('-release'), numel(rawFiles), numel(cvfFiles));
+fprintf('MATLAB %s | 결과 파일 %d개 | 번들 CVF %d개\n', version('-release'), numel(rawFiles), numel(cvfFiles));
 for k = 1:numel(rawFiles)
     resultSet = sltest.testmanager.importResults(fullfile(rawFiles(k).folder, rawFiles(k).name));
     pending = {getCoverageResults(resultSet)}; covObjects = {};
@@ -56,8 +54,7 @@ for k = 1:numel(rawFiles)
         covObjects{j}.filter = cellstr(newRefs);
         if numel(string(covObjects{j}.filter)) == numel(newRefs), bound = bound + 1; else, readbackFail = readbackFail + 1; end
     end
-    fprintf('결과 %d | Coverage %d개 | CVF 다시 걸음 %d | CVF 없던 것 %d | 번들에 CVF 없음 %d | 걸고 확인 실패 %d
-', ...
+    fprintf('결과 %d | Coverage %d개 | CVF 다시 걸음 %d | CVF 없던 것 %d | 번들에 CVF 없음 %d | 걸고 확인 실패 %d\n', ...
         k, numel(covObjects), bound, noFilter, missing, readbackFail);
 end
 sltest.testmanager.view; warning(warnState);
