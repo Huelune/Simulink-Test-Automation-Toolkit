@@ -212,9 +212,15 @@ verifyNotEmpty(testCase, metricAt);
 verifyNotEmpty(testCase, cleanupAt);
 verifyLessThan(testCase, captureAt(1), cleanupAt(1));
 verifyLessThan(testCase, reportAt(1), metricAt(1));
-coverageSaveAt = strfind(perCut, 'save_package_evidence_cvt(cvtPath');
-verifyNotEmpty(testCase, coverageSaveAt);
-verifyLessThan(testCase, coverageSaveAt(1), cleanupAt(1));
+% The CVT is saved inside capture_package_evidence, which runs before the
+% model cleanup (captureAt < cleanupAt above). Helpers sit below the main
+% body, so check the save is in that helper rather than its text position.
+captureBody = extractBetween(perCut, ...
+    'function [evidencePath, evidenceHash] = capture_package_evidence(', ...
+    [newline 'function ']);
+verifyNotEmpty(testCase, captureBody);
+verifyTrue(testCase, contains(captureBody{1}, ...
+    'save_package_evidence_cvt(cvtPath'));
 verifyTrue(testCase, contains(perCut, ...
     'StandalonePackageEvidenceModelNotOpen'));
 verifyTrue(testCase, contains(perCut, ...
