@@ -165,3 +165,23 @@ verifyNumElements(testCase, decisionAt, 1);
 verifyLessThan(testCase, max(verdictAt), decisionAt);
 verifyLessThan(testCase, decisionAt, summaryAt);
 end
+
+function testViewOpensTheResultsWithTheirCvfAndWritesNothing(testCase)
+% A saved ResultSet carries no CVF, so importing it alone shows unfiltered
+% coverage. VIEW attaches the run's CVF in memory and leaves the results in
+% Test Manager: no reports, no manifest update, and the models stay loaded
+% so coverage can be highlighted.
+collect = fileread(fullfile(st_project_root(), 'src', 'execution', ...
+    'st_collect_per_cut_results.m'));
+verifyTrue(testCase, contains(collect, '["FULL","LEAN","VIEW"]'));
+viewAt = strfind(collect, 'if viewOnly');
+verifyNotEmpty(testCase, viewAt);
+verifyNotEmpty(testCase, regexp(collect, ...
+    'if ~viewOnly\s*modelCleanup = onCleanup\(', 'once'));
+viewBlock = extractBetween(collect, ...
+    'attach_one(viewSaved, row, filterPath, cfg);', 'continue;');
+verifyNumElements(testCase, viewBlock, 1);
+verifyFalse(testCase, contains(viewBlock{1}, 'st_export_result_set_report'));
+verifyFalse(testCase, contains(viewBlock{1}, 'update_target_manifest'));
+verifyTrue(testCase, contains(collect, 'sltest.testmanager.view;'));
+end

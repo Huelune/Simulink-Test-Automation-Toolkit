@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **`st_collect_per_cut_results('Mode', 'VIEW')`로 CVF를 적용한 PER_CUT 결과를 Test Manager에서 봅니다.**
+  저장된 `Results.mldatx`에는 CVF가 들어 있지 않아 파일만 열면 필터 없는 Coverage가 보입니다. VIEW는 CUT마다
+  최종 문서가 읽는 결과를 가져와 `filter/`의 CVF를 메모리에서만 걸고 Test Manager를 엽니다. 보고서와
+  manifest는 쓰지 않고, Coverage를 모델에 표시할 수 있도록 모델은 열어 둡니다.
+
 - **`SldvMode=GENERATE`도 `CoverageFilterMode`를 따릅니다.** 커버리지에서 뺀 CUT 바로 아래
   하위 Subsystem의 목표는 SLDV도 충족시키려 하지 않습니다(목표는 SLDV 데이터에 남습니다). `SUBSYSTEM`/`ALL_CONTENT`와
   `EXCLUDE`/`JUSTIFY`를 그대로 옮긴 CVF를 Top Model 기준으로 만들어 `sldvrun`의

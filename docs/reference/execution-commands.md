@@ -525,13 +525,14 @@ ResultSet만 저장합니다.
 info = st_collect_per_cut_results;
 info = st_collect_per_cut_results('RunId', 'LATEST', 'ReportMode', 'FULL');
 info = st_collect_per_cut_results('Mode', 'LEAN');
+st_collect_per_cut_results('Mode', 'VIEW');   % CVF를 건 결과를 Test Manager에서 보기
 ```
 
 | 옵션 | 기본값 | 역할 |
 | --- | --- | --- |
 | `RunId` | `'LATEST'` | 저장된 PER_CUT run의 id |
 | `ReportMode` | run의 기록값 | `'SUMMARY'` 또는 `'FULL'` |
-| `Mode` | `'FULL'` | `'LEAN'`이면 최종 문서가 읽는 것만 만듭니다 (아래) |
+| `Mode` | `'FULL'` | `'LEAN'`이면 최종 문서가 읽는 것만 만듭니다. `'VIEW'`는 아무것도 쓰지 않고 Test Manager에 띄웁니다 (아래) |
 
 각 CUT 폴더의 `filter/`에 CVF를 만들고, 저장된 결과에 부착한 뒤 `initial/`과
 `final/`에 보고서를 씁니다. 이미 실행 중에 산출물을 만든 run(standalone 번들)은
@@ -546,6 +547,13 @@ DecisionPoints가 `FULL`과 같게 나옵니다. 커버리지를 standalone 파�
 기본 흐름(`cfg.FinalDocumentCoverageSource='STANDALONE'`)용이며, `'TEST_RUN'`이면
 `simtest:CollectLeanWithoutCoverage`로 멈춥니다. 1단계 실행의 CUT별 커버리지 HTML을
 검토해야 할 때는 `FULL`로 정리하십시오.
+
+`Mode='VIEW'`는 CVF를 적용한 결과를 Test Manager에서 볼 때 씁니다. 저장된
+`Results.mldatx`에는 CVF가 들어 있지 않아서, 그 파일만 열면 필터가 적용되지 않은
+Coverage가 보입니다. VIEW는 CUT마다 최종 문서가 읽는 결과를 가져옵니다(재실행했으면
+`final/`, 아니면 `initial/`). 그 결과에 `filter/`의 CVF를 메모리에서만 걸고 Test Manager를
+엽니다. CVF가 없으면 새로 만들지만, 보고서와 manifest는 쓰지 않습니다. Coverage를 모델에 표시할 수 있도록
+모델은 닫지 않고 둡니다.
 
 ### `st_export_test_asset_bundle`
 
