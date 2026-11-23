@@ -6,42 +6,57 @@
 화면에는 개수, Simulink 블록 종류 이름, 정해 둔 안내 문구만 찍는다. 테스트 케이스·모델·블록
 이름, 경로, 계정은 찍지 않는다(회사 내부 정보).
 
-## 1. Test Manager 재실행 결정 커버리지가 파이프라인보다 낮은 이유 확인
+## 1. 자기 입력 MAT로 다시 돌려 파이프라인 커버리지와 맞는지 확인
 
-왜: CVF를 적용한 결정 커버리지가 파이프라인의 `CoverageSummary.xlsx`에서는 CUT마다 20/22인데, `RunPerTestCase`로
-다시 돌리면 11/22다. 분모가 같으니 CVF는 똑같이 걸렸다. 그런데 덜 충족됐으므로 입력이 달랐다고 의심한다.
-파이프라인은 CUT마다 그 CUT 폴더만 path에 올리고 돌린다. 열기 명령은 모든 CUT 폴더를 한꺼번에 올린다. 그런데 입력
-MAT는 파일 이름으로만 찾는다. 그래서 여러 CUT 폴더에 이름이 같은 MAT가 있으면 엉뚱한 MAT를 읽을 수 있다.
-반복(iteration) 수가 다른지도 본다. `st_open_standalone_test_manager(..., 'RunPerTestCase', true)`로 열고 실행한
-MATLAB을 닫지 않은 상태에서 붙여 넣는다. 닫았다면 그 명령을 먼저 다시 돌린다.
+왜: 앞 확인에서 세 대상 모두, path 맨 앞에 있는 입력 MAT가 패키지에 든 자기 것이 아니었다. 이름이 같은 다른 MAT로
+돌아서 결정 커버리지가 11/22로 나왔다(파이프라인은 20/22). 이제 `RunPerTestCase`는 실행 직전에 그 대상 폴더를
+path 맨 앞에 둔다. 그래도 자기 MAT가 아니면 그 Test Case를 실행하지 않는다. 다시 돌려 20/22가 나오는지 보고, 단위
+테스트도 함께 돌린다. 먼저 클론에서 main을 pull한다. 실행하면 툴킷 폴더(`st_setup.m`이 있는 폴더)를 고르는 창이 뜬다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
-cfg = st_config();
-pipeline = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir, 'LATEST');
-targetCount = numel(pipeline.Targets); inputNames = strings(1, targetCount);
-for t = 1:targetCount
-    [~, inputName, inputExt] = fileparts(char(string(pipeline.Targets(t).PackagedInput))); inputNames(t) = lower(string([inputName inputExt]));
-end
-testFiles = sltest.testmanager.getTestFiles; allCases = getAllTestCases(testFiles(1));
-for t = 1:targetCount
-    ownInput = char(string(pipeline.Targets(t).PackagedInput));
-    if isempty(ownInput), fprintf('대상 %d | 입력 MAT 없음\n', t); continue; end
-    found = which(char(inputNames(t)), '-all'); if ischar(found), found = {found}; end
-    resolvesOwn = ~isempty(found) && strcmpi(found{1}, ownInput);
-    caseIndex = find(string({allCases.Name}) == string(pipeline.Targets(t).TestCaseName), 1);
-    iterationCount = 0; if ~isempty(caseIndex), iterationCount = numel(getIterations(allCases(caseIndex))); end
-    fprintf('대상 %d | 같은 이름 입력 MAT를 쓰는 대상 %d | path에서 찾은 같은 이름 MAT %d개 | 맨 앞이 자기 것 %d | Iteration %d\n', ...
-        t, sum(inputNames == inputNames(t)), numel(found), resolvesOwn, iterationCount);
+toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
+if isequal(toolkitDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다\n'); warning(warnState); return; end
+oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir);
+evalc('testResults = runtests(fullfile(st_project_root(), ''tests'', ''unit'', ''test_open_standalone_test_manager.m''));');
+fprintf('단위 테스트 %d | 통과 %d | 실패 %d\n', numel(testResults), sum([testResults.Passed]), sum([testResults.Failed]));
+failedTests = testResults([testResults.Failed] | [testResults.Incomplete]);
+for k = 1:numel(failedTests), fprintf('실패 | %s\n', failedTests(k).Name); end
+loadedNames = find_system('type', 'block_diagram');
+dirtyCount = sum(strcmp(get_param(loadedNames, 'Dirty'), 'on'));
+if dirtyCount > 0, fprintf('저장 안 한 모델 %d개: 저장하거나 닫은 뒤 다시 돌려 주세요\n', dirtyCount); warning(warnState); return; end
+bdclose('all');
+try
+    evalc('openInfo = st_open_standalone_test_manager(''ClearTestManager'', true, ''LoadModels'', true, ''RunPerTestCase'', true);');
+    runSummary = openInfo.RunSummary;
+    fprintf('MATLAB %s | 대상 %d | 실행 OK %d | 오류 %d | 통과 %d | 실패 %d\n', version('-release'), height(runSummary), ...
+        sum(runSummary.Status == "OK"), sum(runSummary.Status == "ERROR"), sum(runSummary.Passed), sum(runSummary.Failed));
+catch openError
+    fprintf('열기 실패 | 식별자 %s\n', openError.identifier);
 end
 resultSets = sltest.testmanager.getResultSets;
 for k = 1:numel(resultSets)
-    fprintf('결과 %d | 통과 %d | 실패 %d | 미완료 %d\n', k, resultSets(k).NumPassed, resultSets(k).NumFailed, resultSets(k).NumIncomplete);
+    pending = {getCoverageResults(resultSets(k))}; covObjects = {};
+    while ~isempty(pending)
+        item = pending{1}; pending(1) = [];
+        if iscell(item), pending = [pending, item(:)']; %#ok<AGROW>
+        elseif isa(item, 'cv.cvdatagroup'), pending = [pending, getAll(item)']; %#ok<AGROW>
+        elseif isa(item, 'cvdata'), covObjects = [covObjects, num2cell(item(:)')]; end %#ok<AGROW>
+    end
+    for j = 1:numel(covObjects)
+        cvd = covObjects{j}; root = char(string(cvd.modelinfo.analyzedModel));
+        try
+            decision = decisioninfo(cvd, root); executed = executioninfo(cvd, root);
+            fprintf('결과 %d-%d | 결정 %d/%d | 실행 %d/%d\n', k, j, decision(1), decision(2), executed(1), executed(2));
+        catch infoError
+            fprintf('결과 %d-%d | 지표 읽기 실패 | 식별자 %s\n', k, j, infoError.identifier);
+        end
+    end
 end
-warning(warnState);
+sltest.testmanager.view; warning(warnState);
 ```
 
-확인할 것: "맨 앞이 자기 것"이 0인 대상이 있으면 다른 CUT의 입력 MAT로 돌린 것이다. 대상마다 Iteration 수와
-결과의 통과+실패+미완료 수가 다르면 반복이 일부만 돌았다.
+확인할 것: 단위 테스트 실패 0. 오류 0이고, 결과마다 결정 20/22·실행 45/45(파이프라인 `CoverageSummary.xlsx`와
+같은 값)인지. 오류가 있으면 현재 폴더에 이름이 같은 MAT가 있는 것이니, 현재 폴더를 옮기고 다시 돌린다.
 
-돌려줄 것: 화면 캡처 한 장. 파이프라인 실행 때 CUT마다 Iteration이 몇 개였는지 알면 한 줄 적어 주세요.
+돌려줄 것: 화면 캡처 한 장.
