@@ -164,7 +164,7 @@ warning(warnState);
 - 빨간색: 각 Unit Delay 바로 앞의 리셋 Switch
 - 하늘색: 처음 선택한 Switch
 화면에는 개수만 찍고, 블록 경로는 `%TEMP%\st_counter_blocks.txt`에 쓴다. 그 파일은 보내지 말고 직접 연다. 모델은 저장하지 않는다.
-다 보면 `hilite_system(gcb, 'none')` 대신 모델을 닫았다 열거나 그대로 두면 된다(색은 저장되지 않는다).
+색은 강조 표시라 모델에 저장되지 않는다.
 3절에서 쓴 **같은 안쪽 Switch를 선택한 채로** 붙여 넣는다.
 
 ```matlab
@@ -217,7 +217,9 @@ for s = 1:size(starts, 1)
     end
 end
 fid = fopen(fullfile(tempdir, 'st_counter_blocks.txt'), 'w');
-groups = {'enabled', '노란색 Enabled Subsystem', 'yellow'; 'delays', '초록색 Unit Delay', 'green'; 'resets', '빨간색 리셋 Switch', 'red'};
+schemes = {'user1', 'yellow'; 'user2', 'green'; 'user3', 'red'; 'user4', 'lightBlue'};
+for c = 1:size(schemes, 1), set_param(0, 'HiliteAncestorsData', struct('HiliteType', schemes{c, 1}, 'ForegroundColor', 'black', 'BackgroundColor', schemes{c, 2})); end
+groups = {'enabled', '노란색 Enabled Subsystem', 'user1'; 'delays', '초록색 Unit Delay', 'user2'; 'resets', '빨간색 리셋 Switch', 'user3'};
 for g = 1:size(groups, 1)
     items = unique(found.(groups{g, 1}), 'stable');
     fprintf('%s %d개\n', groups{g, 2}, numel(items));
@@ -226,7 +228,7 @@ for g = 1:size(groups, 1)
         hilite_system(items{k}, groups{g, 3});
     end
 end
-hilite_system(startBlock, 'lightBlue'); fprintf(fid, '하늘색 처음 선택한 Switch | %s\n', startBlock); fclose(fid);
+hilite_system(startBlock, 'user4'); fprintf(fid, '하늘색 처음 선택한 Switch | %s\n', startBlock); fclose(fid);
 if ~isempty(found.enabled), open_system(get_param(found.enabled{1}, 'Parent')); end
 fprintf('%s\n', ['블록 경로: %TEMP%' filesep 'st_counter_blocks.txt']);
 warning(warnState);
