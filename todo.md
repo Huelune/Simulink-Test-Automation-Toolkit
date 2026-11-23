@@ -84,7 +84,7 @@ for t = 1:numel(pipeline.Targets)
         target.DecisionCovered, target.DecisionTotal, target.ExecutionCovered, target.ExecutionTotal);
     freshFolder = tempname; mkdir(freshFolder); previousFolder = cd(freshFolder);
     try
-        Simulink.fileGenControl('set', 'CacheFolder', freshFolder, 'CodeGenFolder', freshFolder);
+        Simulink.fileGenControl('set', 'CacheFolder', freshFolder, 'CodeGenFolder', freshFolder, 'keepPreviousPath', true);
         addpath(char(string(target.OutputDirectory)), '-begin');
         caseIndex = find(string({allCases.Name}) == string(target.TestCaseName), 1);
         coverage = getCoverageSettings(allCases(caseIndex)); coverage.CoverageFilterFilename = char(string(target.PackagedCVF));
