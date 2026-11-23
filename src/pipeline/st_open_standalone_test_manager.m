@@ -277,6 +277,14 @@ for k = 1:n
         end
         Report(k) = string(fullfile(reportDirectory, 'report.html'));
         cvhtml(char(Report(k)), data);
+        try
+            cvmodelview(data);
+        catch viewError
+            % The report already holds the numbers; colouring is a bonus.
+            st_log(cfg, 'WARN', ...
+                'Model coverage highlighting skipped | TestCase=%s | %s', ...
+                char(TestCaseName(k)), viewError.identifier);
+        end
         Status(k) = "OK";
         st_log(cfg, 'INFO', ...
             ['Saved coverage shown %d/%d | TestCase=%s | Decision=%d/%d | ' ...
