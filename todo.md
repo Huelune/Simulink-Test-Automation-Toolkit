@@ -50,25 +50,16 @@ warning(warnState);
 돌려줄 것: 화면 캡처 한 장과 "보고서에 필터 항목 나옴/안 나옴, 모델 색 표시 됨/안 됨" 한 줄. 보고서와 모델 화면은 블록
 이름이 보이므로 캡처하지 마세요.
 
-## 2. SLDV가 MaxProcessTime을 넘겨 멈추는 것이 커버리지 필터 때문인지 확인
+## 2. st_config.m에서 바꾼 SldvCoverageFilter 되돌리고 pull
 
-왜: 처음부터 다시 돌린 워크플로가 SLDV 단계 첫 대상의 `sldvrun`에서 30분 넘게 끝나지 않았다(`MaxProcessTime=300 s`).
-이 실행부터 SLDV에도 커버리지 필터(CovFilter)를 넘긴다. 이 필터를 실제 모델에서 쓴 것은 이번이 처음이다. 그래서 새
-스위치 `cfg.SldvCoverageFilter = false`로 필터를 끄고 같은 단계를 돌려, 몇 분 안에 끝나는지 비교한다.
+왜: 비교하려고 클론의 `src\config\st_config.m`에서 `cfg.SldvCoverageFilter`를 `false`로 직접 바꿨다. 이제 main에서 기본값이
+`false`가 되었다. 직접 바꾼 줄이 남아 있으면 pull할 때 같은 줄이 충돌한다. 그래서 그 파일의 직접 바꾼 내용을 버리고 pull한다.
+툴킷 클론 폴더에서 명령 프롬프트로 실행한다.
 
-순서:
+```cmd
+git checkout -- src/config/st_config.m && git pull
+```
 
-1. 돌고 있는 워크플로를 Ctrl+C로 멈춘다. 멈출 때까지 시간이 걸릴 수 있다. 멈추지 않으면 MATLAB을 끈다.
-2. MATLAB을 다시 켜고 모델 프로젝트(.prj)를 연다. 클론에서 main을 pull한다.
-3. 툴킷 폴더의 `src\config\st_config.m`에서 `cfg.SldvCoverageFilter = true;`를 `false;`로 바꿔 저장한다.
-4. 평소처럼 워크플로를 다시 실행한다. 이번에 멈췄던 명령을 그대로 쓴다.
-5. SLDV 단계의 진행 줄(`[1/3] START` → `[1/3] OK` 또는 `FAIL`)에 찍히는 시각을 본다.
+확인할 것: 오류 없이 끝나는지. pull 뒤 `st_config.m`에 `cfg.SldvCoverageFilter = false;`가 있는지.
 
-확인할 것: 필터를 끄고 대상마다 SLDV가 5~6분(300초 + 컴파일) 안에 끝나면, 필터가 원인이다. 필터를 꺼도 30분 넘게
-걸리면 필터와 관계없는 다른 원인이다(그 모델이 원래 오래 걸리는 경우).
-
-이것은 원인을 가리기 위한 비교일 뿐이다. 원래 목적은 CVF로 뺀 하위 Subsystem은 SLDV가 채우지 않고 나머지만 채우게 하는
-것이고, 그것이 필터를 켠(`true`) 상태다. 비교가 끝나면 `st_config.m`을 `true`로 되돌린다. 필터 때문에 멈추는 것이 확인되면
-필터를 켠 채로 끝나도록 고친다.
-
-돌려줄 것: SLDV 단계의 진행 줄 화면 캡처 한 장(시각과 `[n/3] OK/FAIL`만 보이게).
+돌려줄 것: 오류가 나면 그 화면. 정상이면 "됨" 한 줄.
