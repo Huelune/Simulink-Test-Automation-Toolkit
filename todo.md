@@ -264,7 +264,7 @@ for s = 1:size(starts, 1)
                     inputTexts{end + 1} = inputType; %#ok<SAGROW>
                 end
                 fprintf('   리셋 조건 블록 | 연산자 %s | 입력: %s\n', operatorText, strjoin(inputTexts, ', '));
-                % 리셋 조건을 만드는 계산을 8단계 아래까지(최대 30줄) 나무 모양으로 찍는다. 상태 블록은 번호를 붙여 안으로도 한 번 따라간다(Goto/From·Subsystem 경계와 형식 변환은 건너간다).
+                % 리셋 조건을 만드는 계산을 8단계 아래까지(대상마다 최대 16줄) 나무 모양으로 찍는다. 상태 블록은 번호를 붙여 안으로도 한 번 따라간다(Goto/From·Subsystem 경계와 형식 변환은 건너간다).
                 % 각 줄은 (블록 경로, 들어간 입력 포트 번호, 깊이). 꺼낼 때 찍고 그 블록의 입력을 다시 쌓아, 자식이 부모 바로 아래에 찍힌다.
                 stack = {}; rootHandles = get_param(cursorPath, 'PortHandles'); treeLines = 0;
                 if ~exist('treeSeen', 'var'), treeSeen = {}; end
@@ -311,7 +311,7 @@ for s = 1:size(starts, 1)
                     end
                     if strcmp(childType, 'Inport'), seenNote = ' (모델 바깥 입력)'; end
                     treeLines = treeLines + 1;
-                    if treeLines > 30, fprintf('%s... 이하 생략\n', repmat('    ', 1, nodeDepth)); stack = {}; continue; end
+                    if treeLines > 16, fprintf('%s... 이하 생략\n', repmat('    ', 1, nodeDepth)); stack = {}; continue; end
                     fprintf('%s입력 %d: %s%s%s\n', repmat('    ', 1, nodeDepth), q, childType, settingText, seenNote);
                     if isempty(seenNote) && nodeDepth < 8 && ~any(strcmp(childType, {'Constant', 'Inport'}))
                         childHandles = get_param(childPath, 'PortHandles');
