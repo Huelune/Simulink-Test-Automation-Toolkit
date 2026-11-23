@@ -722,7 +722,19 @@ disp(tree.OutputDir)
 %% 5단계 — 고객 제출용 최종 문서
 [T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
 winopen(finalFile)
+
+%% 6단계 (선택) — CVF를 적용한 결과를 Test Manager에서 보기
+st_open_standalone_test_manager('PipelineId', info.PipelineId, ...
+    'ClearTestManager', true, 'LoadModels', true, 'RunPerTestCase', true);
 ```
+
+6단계는 standalone 제출물의 Test Case를 CUT마다 자기 CVF를 건 채 다시 실행합니다. 실행이 끝나면 Test Manager의
+Results and Artifacts에 CUT마다 결과가 하나씩 생깁니다. 맨 위 **Results** 항목을 눌러 Aggregated Coverage Results를
+보면 CVF가 적용된 값이 나옵니다. Test Case 항목을 누르면 필터가 적용되지 않은 값이 나오니 주의하십시오. 같은 이름의
+모델이 열려 있으면 멈추므로, 저장할 것은 저장하고 모델을 닫은 뒤 부르십시오. 다시 실행한 값이 3단계의 제출 값보다
+낮게 나온 사례가 있습니다. 제출할 값은 3단계 결과를 쓰십시오. 3단계가 측정한 그대로 보려면
+`st_open_standalone_test_manager('PipelineId', info.PipelineId, 'ShowSavedCoverage', true, 'View', false)`를 씁니다.
+이 명령은 시뮬레이션 없이 CVF를 적용한 보고서를 열고 모델에 Coverage를 표시합니다.
 
 결과 확인과 2단계 명세서를 뺀 짧은 코드입니다.
 
@@ -753,6 +765,10 @@ disp(tree.OutputDir)
 %% 5단계 — 고객 제출용 최종 문서
 [T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
 winopen(finalFile)
+
+%% 6단계 (선택) — CVF를 적용한 결과를 Test Manager에서 보기
+st_open_standalone_test_manager('PipelineId', info.PipelineId, ...
+    'ClearTestManager', true, 'LoadModels', true, 'RunPerTestCase', true);
 ```
 
 ### 빠른 방식 — 준비가 끝난 뒤 다시 돌릴 때
@@ -785,6 +801,10 @@ disp(tree.OutputDir)
 %% 5단계 — 고객 제출용 최종 문서
 [T, finalFile] = st_export_final_document('CoveragePipelineId', info.PipelineId);
 winopen(finalFile)
+
+%% 6단계 (선택) — CVF를 적용한 결과를 Test Manager에서 보기
+st_open_standalone_test_manager('PipelineId', info.PipelineId, ...
+    'ClearTestManager', true, 'LoadModels', true, 'RunPerTestCase', true);
 ```
 
 | 바뀐 곳 | 줄어드는 것 | 대신 잃는 것 |
