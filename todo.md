@@ -24,10 +24,8 @@ oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir);
 % 같은 이름의 모델이 다른 폴더에서 열려 있으면 열기가 멈춘다. 저장 안 한 모델이 없을 때만 모두 닫는다.
 loadedNames = find_system('type', 'block_diagram');
 dirtyCount = sum(strcmp(get_param(loadedNames, 'Dirty'), 'on'));
-if dirtyCount > 0, fprintf('저장 안 한 모델 %d개: 저장하거나 닫은 뒤 다시 돌려 주세요
-', dirtyCount); warning(warnState); return; end
-bdclose('all'); fprintf('열려 있던 모델 %d개를 닫음
-', numel(loadedNames));
+if dirtyCount > 0, fprintf('저장 안 한 모델 %d개: 저장하거나 닫은 뒤 다시 돌려 주세요\n', dirtyCount); warning(warnState); return; end
+bdclose('all'); fprintf('열려 있던 모델 %d개를 닫음\n', numel(loadedNames));
 stage = '열기';
 try
     evalc('openInfo = st_open_standalone_test_manager(''LoadModels'', true, ''ApplyFilters'', true, ''ClearTestManager'', true);');
