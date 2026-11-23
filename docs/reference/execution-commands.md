@@ -491,7 +491,7 @@ info = st_open_standalone_test_manager('ClearTestManager', true, 'LoadModels', t
 Results에 그 Test Case의 CVF가 적용되어 보입니다. Test Case마다 실행 직전에 그 대상 폴더를 path 맨 앞에 둡니다. 그리고 입력 MAT가 패키지에 든 자기 파일로 읽히는지
 확인합니다. 현재 폴더에 이름이 같은 MAT가 있으면 그 Test Case는 `StandaloneTestManagerInputShadowed`로 실행하지 않고
 `Status=ERROR`가 됩니다. 이때는 현재 폴더를 옮기고 다시 엽니다. `RunPerTestCase`는 시뮬레이션을 돌리므로 현재 폴더에
-빌드 캐시가 생길 수 있습니다. `info.RunSummary`에는 Test Case별 통과·실패 수와 `Status`(`OK`/`NO_CVF`/`ERROR`)가
+빌드 캐시가 생길 수 있습니다. `info.RunSummary`에는 Test Case별 통과·실패 수와 `Status`(`OK`/`NO_CVF`/`ERROR`), 오류 식별자 `ErrorId`가
 있습니다.
 
 반환 `info`에는 `AddedFolders`, `LoadedModels`, `AppliedFilterCount`,

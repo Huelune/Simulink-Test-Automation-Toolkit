@@ -122,8 +122,8 @@ end
 
 % 4b. Optional: run each Test Case alone under its own CVF.
 runSummary = table(strings(0,1), zeros(0,1), zeros(0,1), zeros(0,1), ...
-    strings(0,1), 'VariableNames', ...
-    {'TestCaseName','Passed','Failed','Incomplete','Status'});
+    strings(0,1), strings(0,1), 'VariableNames', ...
+    {'TestCaseName','Passed','Failed','Incomplete','Status','ErrorId'});
 if p.Results.RunPerTestCase
     runSummary = run_per_test_case(testFile, targets, testFilePath, cfg);
 end
@@ -389,6 +389,7 @@ Passed = zeros(n,1);
 Failed = zeros(n,1);
 Incomplete = zeros(n,1);
 Status = strings(n,1);
+ErrorId = strings(n,1);
 totalTimer = tic;
 st_log(cfg, 'INFO', 'Per Test Case run start | Targets=%d', n);
 for k = 1:n
@@ -419,12 +420,13 @@ for k = 1:n
             toc(caseTimer));
     catch ME
         Status(k) = "ERROR";
+        ErrorId(k) = string(ME.identifier);
         st_log(cfg, 'ERROR', ...
             'Per Test Case run %d/%d failed | TestCase=%s | %s: %s', ...
             k, n, char(TestCaseName(k)), ME.identifier, ME.message);
     end
 end
-summary = table(TestCaseName, Passed, Failed, Incomplete, Status);
+summary = table(TestCaseName, Passed, Failed, Incomplete, Status, ErrorId);
 st_log(cfg, 'INFO', ...
     'Per Test Case run complete | OK=%d | Targets=%d | elapsed=%.3f sec', ...
     sum(Status == "OK"), n, toc(totalTimer));
