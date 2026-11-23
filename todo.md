@@ -50,27 +50,3 @@ warning(warnState);
 돌려줄 것: 화면 캡처 한 장과 "보고서에 필터 항목 나옴/안 나옴, 모델 색 표시 됨/안 됨" 한 줄. 보고서와 모델 화면은 블록
 이름이 보이므로 캡처하지 마세요.
 
-## 2. 도달 불가 Switch·Max 뒤의 로직을 이름 없는 식으로 보기
-
-왜: SLDV 보고서는 안쪽 Switch와 Max가 도달 불가라는 결과만 주고 이유는 주지 않는다. 이유를 찾으려면 그 블록으로 들어오는 로직(카운터,
-리셋, Enable)을 한눈에 봐야 한다. 새 진단 함수 `st_explain_block_logic`이 선택한 블록에서 거슬러 올라가며 로직을 식으로 찍는다.
-- Unit Delay는 `D1, D2…`로, CUT 입력은 `In1, In2…`로 바꾼다.
-- 긴 계산은 `T1, T2…`로 따로 정의한다.
-- 변수로 된 상수는 값으로 바꾼다.
-- Goto/From, Subsystem 경계, Compare To Constant 마스크는 건너서 따라간다.
-- CUT 입력에서 멈춘다(SLDV는 CUT 입력을 자유 입력으로 본다).
-- 블록·신호·변수 이름은 찍지 않는다. 모델은 바꾸지 않는다.
-
-순서: 클론에서 main을 pull한다. 모델 프로젝트를 열고 툴킷 폴더에서 `st_setup`을 돌린다. Top Model에서 **안쪽 Switch를 클릭해 선택**하고
-아래를 붙여 넣는다. 이어서 **Max 블록을 선택**하고 한 번 더 붙여 넣는다.
-
-```matlab
-clearvars; clc; warnState = warning('off', 'all');
-st_explain_block_logic;
-warning(warnState);
-```
-
-확인할 것: 첫 줄의 선택 블록 식, Enable 식, 그리고 `D1 (초기값 …) 다음 값 = …` 줄들. 줄이 40을 넘으면 마지막에 "정의하지 못한 기호"가
-찍힌다.
-
-돌려줄 것: Switch와 Max 각각 화면 캡처 한 장. Claude가 이 식으로 도달 불가 이유를 정리한다.
