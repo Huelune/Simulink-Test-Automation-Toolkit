@@ -729,8 +729,17 @@ st_open_standalone_test_manager('PipelineId', info.PipelineId, ...
 ```
 
 6단계는 3단계 파이프라인이 실제로 돌린 결과를 Test Manager에 가져옵니다. 다시 실행하지 않으므로 값이 3단계 제출 값과
-같습니다. 그래서 3단계를 `'SaveTestResult', true`로 돌려 그 결과를 파일로 남겨 둡니다. 결과가 Results and Artifacts에 들어오면
-맨 위 **Results** 항목을 눌러 Aggregated Coverage Results를 봅니다. Test Case 항목을 누르면 필터가 적용되지 않은 값이 나옵니다.
+같습니다. 그래서 3단계를 `'SaveTestResult', true`로 돌려 그 결과를 파일로 남겨 둡니다.
+
+저장된 결과에는 CVF가 붙어 있지 않습니다. 가져온 뒤 결과마다 한 번씩 화면에서 붙입니다.
+
+1. Results and Artifacts에서 가져온 결과의 맨 위 **Results** 항목을 누릅니다.
+2. **Coverage Filters** 칸의 **Add**로 그 CUT의 `.cvf`를 고릅니다. 위치는
+   `{standalone 결과 루트}\{PipelineId}\{번호}_UT_REQ_{Test Case}\UT_REQ_{Test Case}.cvf`입니다. 같은 CUT의 것이어야 하고,
+   예전 PipelineId 폴더의 CVF는 쓰지 마십시오.
+3. Aggregated Coverage Results의 값이 3단계 `CoverageSummary.xlsx`와 같아집니다. Test Case 항목을 누르면 필터가 적용되지
+   않은 값이 나옵니다.
+
 같은 이름의 모델이 열려 있으면 멈추므로, 저장할 것은 저장하고 모델을 닫은 뒤 부르십시오. Test Manager 화면 대신 CVF를 적용한
 보고서와 모델 표시로 보려면 `st_open_standalone_test_manager('PipelineId', info.PipelineId, 'ShowSavedCoverage', true, 'View', false)`를
 씁니다.
