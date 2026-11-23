@@ -200,7 +200,9 @@ checker = source('verification', 'st_check_standalone_coverage.m');
 launcher = string(fileread(fullfile(st_project_root(), 'resources', ...
     'standalone_coverage', 'open_standalone_coverage_test_manager.m')));
 captureAt = strfind(perCut, 'capture_package_evidence(');
-reportAt = strfind(perCut, 'cvhtml(reportHTML, coverageObjects{1}');
+% cvhtml lives in a helper defined further down the file, so compare where
+% that helper is called, not where cvhtml appears in the text.
+reportAt = strfind(perCut, 'capture_package_coverage_report(reportZip');
 metricAt = strfind(perCut, ...
     'st_collect_final_cut_coverage_metrics(');
 cleanupAt = strfind(perCut, 'close_execution_model(row, cfg)');
