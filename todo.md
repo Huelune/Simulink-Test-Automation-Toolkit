@@ -10,7 +10,8 @@
 
 왜: 앞 확인에서 세 대상 모두, path 맨 앞에 있는 입력 MAT가 패키지에 든 자기 것이 아니었다. 이름이 같은 다른 MAT로
 돌아서 결정 커버리지가 11/22로 나왔다(파이프라인은 20/22). 이제 `RunPerTestCase`는 실행 직전에 그 대상 폴더를
-path 맨 앞에 둔다. 그래도 자기 MAT가 아니면 그 Test Case를 실행하지 않는다. 다시 돌려 20/22가 나오는지 보고, 단위
+path 맨 앞에 두고, 실행하는 동안은 빈 임시 폴더로 옮긴다(현재 폴더에 이름이 같은 원본 MAT가 있어 세 대상이 모두
+멈췄던 문제). 그래도 자기 MAT가 아니면 그 Test Case를 실행하지 않는다. 다시 돌려 20/22가 나오는지 보고, 단위
 테스트도 함께 돌린다. 먼저 클론에서 main을 pull한다. 실행하면 툴킷 폴더(`st_setup.m`이 있는 폴더)를 고르는 창이 뜬다.
 
 ```matlab
@@ -34,16 +35,6 @@ try
     for t = 1:height(runSummary)
         if runSummary.Status(t) == "OK", continue; end
         fprintf('대상 %d | %s | 식별자 %s\n', t, runSummary.Status(t), runSummary.ErrorId(t));
-    end
-    pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
-    for t = 1:numel(pipeline.Targets)
-        ownInput = char(string(pipeline.Targets(t).PackagedInput)); if isempty(ownInput), continue; end
-        [~, inputName, inputExt] = fileparts(ownInput); foundInput = which([inputName inputExt]);
-        where = '다른 폴더';
-        if isempty(foundInput), where = '못 찾음';
-        elseif st_same_path(foundInput, ownInput), where = '자기 폴더';
-        elseif st_same_path(fileparts(foundInput), pwd), where = '현재 폴더'; end
-        fprintf('대상 %d 입력 MAT | 지금 먼저 읽히는 곳: %s\n', t, where);
     end
 catch openError
     fprintf('열기 실패 | 식별자 %s\n', openError.identifier);
