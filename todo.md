@@ -64,49 +64,43 @@ git checkout -- src/config/st_config.m && git pull
 
 돌려줄 것: 오류가 나면 그 화면. 정상이면 "됨" 한 줄.
 
-## 3. 재실행에서 Iteration 2가 왜 Failed인지 보기
+## 3. Iteration에 무엇이 들어 있는지 구조 보기
 
-왜: Top Model을 먼저 열어도 재실행은 Iteration 2만 Failed이고 CUT 결정 11/22다. 파이프라인은 PASSED·20/22다. Iteration 2가 기대값
-비교에서 졌는지, 아니면 시뮬레이션 자체가 오류로 끝났는지에 따라 볼 곳이 다르다. 시뮬레이션이 오류로 끝났다면 그 시나리오의
-Coverage가 통째로 빠지므로 11/22도 함께 설명된다. 대상 1을 한 번 다시 돌린다. Iteration 2 결과의 속성 이름과, 오류·메시지
-속성의 개수를 찍는다. 메시지 원문은 `%TEMP%\st_iteration2_report.txt`에만 쓴다. 그 파일은 보내지 말고, 종류만 말로 알려 달라.
-6단계를 돌린 MATLAB에서 붙여 넣는다. 시뮬레이션 1회.
+왜: 재실행의 Iteration 2는 "Failed criteria: Verification"이다. 시뮬레이션은 오류 없이 돌았지만, 기대값과 출력이 달랐다. 시나리오
+1·3은 파이프라인과 같은 출력이 나왔다. 그러니 시나리오 2에만 들어가는 무언가가 재실행에서 빠졌다. 툴킷은 SLDV가 만든 파라미터
+값을 Iteration마다 `setVariable`로 넣는다. 그런데 지난 확인에서 `TestParams`에는 보이지 않았다. 그래서 Iteration 객체의 속성 이름과,
+속성마다 담긴 항목 수를 센다. 이름과 값은 찍지 않는다. 6단계를 돌린 MATLAB에서 붙여 넣는다.
 
 ```matlab
-fclose('all'); clearvars; clc; warnState = warning('off', 'all');
+clearvars; clc; warnState = warning('off', 'all');
 pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
 testFiles = sltest.testmanager.getTestFiles; allCases = getAllTestCases(testFiles(1));
-target = pipeline.Targets(1);
-addpath(char(string(target.OutputDirectory)), '-begin');
-caseIndex = find(string({allCases.Name}) == string(target.TestCaseName), 1);
-freshFolder = tempname; mkdir(freshFolder); previousFolder = cd(freshFolder);
-evalc('oneRun = run(allCases(caseIndex));');
-cd(previousFolder);
-caseResults = getTestCaseResults(oneRun); iterationResults = getIterationResults(caseResults(1));
-reportFile = fullfile(tempdir, 'st_iteration2_report.txt'); fid = fopen(reportFile, 'w');
-for i = 1:numel(iterationResults)
-    names = properties(iterationResults(i));
-    messageNames = names(contains(names, {'Error', 'Message', 'Reason', 'Fail', 'Log'}, 'IgnoreCase', true));
-    counts = zeros(1, numel(messageNames));
-    for m = 1:numel(messageNames)
+caseIndex = find(string({allCases.Name}) == string(pipeline.Targets(1).TestCaseName), 1);
+iterations = getIterations(allCases(caseIndex));
+propertyNames = properties(iterations(1));
+fprintf('Iteration 속성: %s\n', strjoin(propertyNames, ', '));
+fprintf('Iteration 메서드 중 get/Variable/Param: %s\n', strjoin(methods(iterations(1)) ...
+    (contains(methods(iterations(1)), {'get', 'Variable', 'Param'}, 'IgnoreCase', true)), ', '));
+for i = 1:numel(iterations)
+    counts = strings(1, numel(propertyNames));
+    for p = 1:numel(propertyNames)
         try
-            value = iterationResults(i).(messageNames{m});
+            value = iterations(i).(propertyNames{p});
+            if isstruct(value), counts(p) = sprintf('%s=%d(%s)', propertyNames{p}, numel(value), strjoin(fieldnames(value), '/'));
+            elseif iscell(value), counts(p) = sprintf('%s=%dx%d', propertyNames{p}, size(value, 1), size(value, 2));
+            else, counts(p) = sprintf('%s=%d', propertyNames{p}, numel(value)); end
         catch
-            counts(m) = -1; continue; % 이 릴리스에서 읽을 수 없는 속성
+            counts(p) = sprintf('%s=?', propertyNames{p});
         end
-        counts(m) = numel(value);
-        fprintf(fid, '=== Iteration %d %s\n%s\n', i, messageNames{m}, evalc('disp(value)'));
     end
-    fprintf('Iteration %d | %s | 메시지 속성 %s | 개수 %s\n', i, char(string(iterationResults(i).Outcome)), ...
-        strjoin(messageNames, ','), mat2str(counts));
+    fprintf('Iteration %d | %s\n', i, strjoin(counts, ' | '));
 end
-fclose(fid);
-fprintf('속성 전체: %s\n', strjoin(properties(iterationResults(2)), ', '));
-fprintf('%s\n', ['자세한 메시지: %TEMP%' filesep 'st_iteration2_report.txt']);
+caseVariables = '';
+try, caseVariables = sprintf('%d', numel(getVariables(allCases(caseIndex)))); catch, caseVariables = '?'; end
+fprintf('Test Case 변수(getVariables) %s개\n', caseVariables);
 warning(warnState);
 ```
 
-확인할 것: Iteration 2의 메시지 속성에 개수가 있는지(-1은 이 릴리스에서 읽을 수 없는 속성). 그리고 `%TEMP%\st_iteration2_report.txt`의 Iteration 2 부분이 어떤 종류인지.
-기대값 비교에서 졌다는 내용(verify 실패)인가, 시뮬레이션 오류(변수 없음, 입력 불일치 등)인가.
+확인할 것: Iteration 2에만 항목 수가 다른 속성이 있는지. 특히 Variables, ParameterOverrides, ModelParams 같은 이름의 속성.
 
-돌려줄 것: 화면 캡처 한 장과, 파일에 적힌 Iteration 2 오류의 종류를 이름·경로·값 없이 한 줄로.
+돌려줄 것: 화면 캡처 한 장. 속성 이름은 MathWorks API 이름이라 찍혀도 된다.
