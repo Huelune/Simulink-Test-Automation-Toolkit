@@ -165,11 +165,16 @@ warning(warnState);
 - 빨간색: 각 카운터의 리셋 Switch
 - 하늘색: 리셋 조건이 나오는 블록
 블록 경로는 `%TEMP%\st_counter_blocks.txt`에 쓴다(보내지 말 것). 색은 저장되지 않는다. 같은 안쪽 Switch를 선택한 채로 붙여 넣는다.
-앞 절의 색이 남아 있으면 모델을 닫았다 다시 연 뒤 Switch를 선택하고 돌린다.
+블록이 먼저 모델을 닫았다가 다시 열어 앞서 칠한 색을 지운다(선택한 Switch는 기억해 둔다). 저장 안 한 변경이 있으면 닫지 않고 멈춘다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
-startBlock = gcb; enabledBlock = '';
+startBlock = gcb; enabledBlock = ''; topName = bdroot(startBlock);
+% 앞서 칠한 색을 지우려고 모델을 닫았다가 다시 연다. 저장 안 한 변경이 있으면 닫지 않고 멈춘다.
+if strcmp(get_param(topName, 'Dirty'), 'on')
+    fprintf('모델에 저장 안 한 변경이 있어 닫지 않았습니다. 저장하거나 되돌린 뒤 다시 돌려 주세요\n'); warning(warnState); return;
+end
+close_system(topName, 0); open_system(topName);
 current = startBlock;
 while ~strcmp(get_param(current, 'Parent'), bdroot(current))
     current = get_param(current, 'Parent'); currentHandles = get_param(current, 'PortHandles');
