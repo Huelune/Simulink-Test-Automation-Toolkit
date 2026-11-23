@@ -81,7 +81,7 @@ startBlock = gcb; visited = {}; queue = {startBlock, startPort, 0};
 fprintf('시작 | 종류 %s', get_param(startBlock, 'BlockType'));
 try, fprintf(' | Criteria %s | Threshold %s', get_param(startBlock, 'Criteria'), get_param(startBlock, 'Threshold')); catch, end
 fprintf('\n');
-while ~isempty(queue) && numel(visited) < 40
+while ~isempty(queue) && numel(visited) < 60
     block = queue{1, 1}; port = queue{1, 2}; depth = queue{1, 3}; queue(1, :) = [];
     handles = get_param(block, 'PortHandles');
     if port > numel(handles.Inport), continue; end
@@ -104,9 +104,35 @@ while ~isempty(queue) && numel(visited) < 40
         end
     end
     fprintf('%s%s%s\n', indent, sourceType, detail);
-    if any(strcmp(sourceType, {'Inport', 'From', 'Constant'})), continue; end
-    sourceHandles = get_param(source, 'PortHandles');
-    for p = 1:numel(sourceHandles.Inport), queue(end + 1, :) = {sourcePath, p, depth + 1}; end %#ok<SAGROW>
+    switch sourceType
+        case 'Constant'
+            continue;
+        case 'From'
+            % 같은 태그의 Goto로 건너가 그 입력을 계속 따라간다(태그 이름은 찍지 않는다).
+            gotoBlocks = find_system(bdroot(sourcePath), 'FollowLinks', 'on', 'LookUnderMasks', 'all', ...
+                'BlockType', 'Goto', 'GotoTag', get_param(source, 'GotoTag'));
+            sameLevel = gotoBlocks(strcmp(get_param(gotoBlocks, 'Parent'), get_param(source, 'Parent')));
+            if ~isempty(sameLevel), gotoBlocks = sameLevel; end
+            fprintf('%s  → 같은 태그의 Goto %d개 중 1번째로 이어 감\n', indent, numel(gotoBlocks));
+            if ~isempty(gotoBlocks), queue(end + 1, :) = {gotoBlocks{1}, 1, depth + 1}; end %#ok<SAGROW>
+        case 'Inport'
+            % Subsystem 안의 입력 포트면 바깥 Subsystem의 같은 번호 입력으로 올라간다.
+            parentBlock = get_param(sourcePath, 'Parent');
+            if ~strcmp(parentBlock, bdroot(sourcePath))
+                fprintf('%s  → 바깥 Subsystem 입력 %s번으로 올라감\n', indent, get_param(source, 'Port'));
+                queue(end + 1, :) = {parentBlock, str2double(get_param(source, 'Port')), depth + 1}; %#ok<SAGROW>
+            end
+        case 'SubSystem'
+            % Subsystem 출력이면 안쪽의 같은 번호 Outport로 들어간다.
+            portNumber = get_param(get_param(line, 'SrcPortHandle'), 'PortNumber');
+            outportBlock = find_system(sourcePath, 'SearchDepth', 1, 'FollowLinks', 'on', 'LookUnderMasks', 'all', ...
+                'BlockType', 'Outport', 'Port', num2str(portNumber));
+            fprintf('%s  → Subsystem 안 출력 %d번으로 들어감\n', indent, portNumber);
+            if ~isempty(outportBlock), queue(end + 1, :) = {outportBlock{1}, 1, depth + 1}; end %#ok<SAGROW>
+        otherwise
+            sourceHandles = get_param(source, 'PortHandles');
+            for p = 1:numel(sourceHandles.Inport), queue(end + 1, :) = {sourcePath, p, depth + 1}; end %#ok<SAGROW>
+    end
 end
 warning(warnState);
 ```
