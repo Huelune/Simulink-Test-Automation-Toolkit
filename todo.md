@@ -31,6 +31,20 @@ try
     runSummary = openInfo.RunSummary;
     fprintf('MATLAB %s | 대상 %d | 실행 OK %d | 오류 %d | 통과 %d | 실패 %d\n', version('-release'), height(runSummary), ...
         sum(runSummary.Status == "OK"), sum(runSummary.Status == "ERROR"), sum(runSummary.Passed), sum(runSummary.Failed));
+    for t = 1:height(runSummary)
+        if runSummary.Status(t) == "OK", continue; end
+        fprintf('대상 %d | %s | 식별자 %s\n', t, runSummary.Status(t), runSummary.ErrorId(t));
+    end
+    pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
+    for t = 1:numel(pipeline.Targets)
+        ownInput = char(string(pipeline.Targets(t).PackagedInput)); if isempty(ownInput), continue; end
+        [~, inputName, inputExt] = fileparts(ownInput); foundInput = which([inputName inputExt]);
+        where = '다른 폴더';
+        if isempty(foundInput), where = '못 찾음';
+        elseif st_same_path(foundInput, ownInput), where = '자기 폴더';
+        elseif st_same_path(fileparts(foundInput), pwd), where = '현재 폴더'; end
+        fprintf('대상 %d 입력 MAT | 지금 먼저 읽히는 곳: %s\n', t, where);
+    end
 catch openError
     fprintf('열기 실패 | 식별자 %s\n', openError.identifier);
 end
