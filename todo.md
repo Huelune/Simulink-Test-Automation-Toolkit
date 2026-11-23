@@ -70,18 +70,27 @@ git checkout -- src/config/st_config.m && git pull
 가져오는 방식으로 바꿨다. 3단계를 `'SaveTestResult', true`로 다시 돌리고, 그 결과를 가져와 CVF가 걸려 보이는지 확인한다.
 가져온 결과에 따로 CVF를 다시 걸지 않는다. 결과에 저장된 그대로를 센다.
 
-순서: 모델 프로젝트를 연다. 클론에서 main을 pull한다. 툴킷 폴더에서 `st_setup`을 돌린다. 저장 안 한 모델이 없는 상태에서 아래
-블록을 붙여 넣는다. 3단계 파이프라인 전체가 다시 돈다(평소 3단계만큼 걸린다).
+순서: 모델 프로젝트를 연다. 클론에서 main을 pull한다. 툴킷 폴더에서 `st_setup`을 돌린다. 아래 블록을 붙여 넣는다. 3단계
+파이프라인 전체가 다시 돈다(평소 3단계만큼 걸린다). 다른 모델은 닫지 않는다. standalone 모델과 이름이 같은 모델만 저장하지 않고
+닫는다(파이프라인이 연 사본이다).
+
+**이미 이 블록으로 파이프라인을 돌렸고 "저장 안 한 모델이 있습니다" 줄에서 멈췄다면** 파이프라인은 다시 돌리지 않아도 된다.
+먼저 `skipPipelineRun = true;` 한 줄을 붙여 넣고, 이어서 블록을 붙여 넣는다. 이 블록은 그 변수가 지워지지 않도록 `clearvars`로
+시작하지 않는다.
 
 ```matlab
-clearvars; clc; warnState = warning('off', 'all');
-evalc('info = st_run_standalone_coverage_pipeline(''SaveTestResult'', true);');
-pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, info.PipelineId);
+clc; warnState = warning('off', 'all');
+if ~exist('skipPipelineRun', 'var') || ~skipPipelineRun
+    evalc('st_run_standalone_coverage_pipeline(''SaveTestResult'', true);');
+end
+clear skipPipelineRun
+pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
 fprintf('파이프라인 | 결과 파일 저장 %d\n', isfile(char(string(pipeline.ResultFile))));
-loadedNames = find_system('type', 'block_diagram');
-if any(strcmp(get_param(loadedNames, 'Dirty'), 'on')), fprintf('저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요\n'); warning(warnState); return; end
-bdclose('all');
-evalc('openInfo = st_open_standalone_test_manager(''PipelineId'', info.PipelineId, ''ClearTestManager'', true, ''LoadModels'', true, ''ImportResults'', true);');
+for t = 1:numel(pipeline.Targets)
+    [~, standaloneName] = fileparts(char(string(pipeline.Targets(t).PackagedStandaloneModel)));
+    if bdIsLoaded(standaloneName), close_system(standaloneName, 0); end
+end
+evalc('openInfo = st_open_standalone_test_manager(''ClearTestManager'', true, ''LoadModels'', true, ''ImportResults'', true);');
 fprintf('가져오기 | 상태 %s | 결과 %d개\n', char(string(openInfo.ResultStatus)), openInfo.ResultRootCount);
 resultSets = sltest.testmanager.getResultSets;
 for t = 1:numel(pipeline.Targets)
