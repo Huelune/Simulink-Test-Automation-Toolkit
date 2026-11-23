@@ -50,101 +50,27 @@ warning(warnState);
 돌려줄 것: 화면 캡처 한 장과 "보고서에 필터 항목 나옴/안 나옴, 모델 색 표시 됨/안 됨" 한 줄. 보고서와 모델 화면은 블록
 이름이 보이므로 캡처하지 마세요.
 
-## 2. Justify 근거용 SLDV Dead Logic 보고서 만들기
+## 2. 도달 불가 Switch·Max 뒤의 로직을 이름 없는 식으로 보기
 
-왜: CUT 결정 22개 중 2개(Switch 하나, Max 하나)를 SLDV가 Unsatisfiable(어떤 입력으로도 닿을 수 없음)로 증명했다. 커버리지 보고서에서 이
-둘을 CVF로 Justify하려면 근거 자료가 필요하다. SLDV의 Design Error Detection 모드에서 Dead Logic 검사를 하면, 실행될 수 없는 블록
-결과를 정리한 공식 보고서(HTML)가 나온다. 그 보고서를 Justify 사유의 첨부로 쓴다. 보고서는 툴킷 폴더의 `result\sldv_dead_logic\`
-아래 시각 폴더에 남긴다. 모델은 저장하지 않는다. 분석 시간은 툴킷 설정(`cfg.SldvMaxProcessTime`, 비어 있으면 모델 설정)을 따른다.
+왜: SLDV 보고서는 안쪽 Switch와 Max가 도달 불가라는 결과만 주고 이유는 주지 않는다. 이유를 찾으려면 그 블록으로 들어오는 로직(카운터,
+리셋, Enable)을 한눈에 봐야 한다. 새 진단 함수 `st_explain_block_logic`이 선택한 블록에서 거슬러 올라가며 로직을 식으로 찍는다.
+- Unit Delay는 `D1, D2…`로, CUT 입력은 `In1, In2…`로 바꾼다.
+- 긴 계산은 `T1, T2…`로 따로 정의한다.
+- 변수로 된 상수는 값으로 바꾼다.
+- Goto/From, Subsystem 경계, Compare To Constant 마스크는 건너서 따라간다.
+- CUT 입력에서 멈춘다(SLDV는 CUT 입력을 자유 입력으로 본다).
+- 블록·신호·변수 이름은 찍지 않는다. 모델은 바꾸지 않는다.
 
-순서: 모델 프로젝트를 열고 툴킷 폴더에서 `st_setup`을 돌린다. Top Model을 열고 **CUT Subsystem을 클릭해 선택**한 뒤 붙여 넣는다.
-CUT마다 따로 돌린다(대상 3개면 세 번). CUT 하나에 몇 분 걸린다.
-
-```matlab
-clearvars; clc; warnState = warning('off', 'all');
-cfg = st_config(); cutBlock = gcb; topName = bdroot(cutBlock);
-fprintf('선택 블록 종류 %s | Atomic %s\n', get_param(cutBlock, 'BlockType'), get_param(cutBlock, 'TreatAsAtomicUnit'));
-wasDirty = get_param(topName, 'Dirty');
-stamp = char(datetime('now', 'Format', 'yyyyMMdd_HHmmss'));
-outputFolder = fullfile(st_project_root(), 'result', 'sldv_dead_logic', stamp); mkdir(outputFolder);
-opts = sldvoptions;
-opts.Mode = 'DesignErrorDetection';
-opts.DetectDeadLogic = 'on';
-opts.DetectActiveLogic = 'off';
-opts.DetectOutOfBounds = 'off'; opts.DetectDivisionByZero = 'off'; opts.DetectIntegerOverflow = 'off';
-opts.OutputDir = outputFolder; opts.MakeOutputFilesUnique = 'on';
-opts.SaveReport = 'on'; opts.ReportIncludeGraphics = 'on'; opts.DisplayReport = 'off';
-if ~isempty(cfg.SldvMaxProcessTime), opts.MaxProcessTime = cfg.SldvMaxProcessTime; end
-try
-    evalc('[status, files] = sldvrun(cutBlock, opts, false);');
-    fprintf('Dead Logic 분석 | 상태 %d (1 완료, -1 시간 초과, 0 실패)\n', status);
-    if isfield(files, 'DataFile') && isfile(files.DataFile)
-        data = load(files.DataFile, 'sldvData'); data = data.sldvData;
-        statuses = string({data.Objectives.status});
-        fprintf('검사 목표 %d개 | Dead Logic %d | Active Logic %d | Undecided %d\n', numel(statuses), ...
-            sum(contains(statuses, 'Dead Logic')), sum(contains(statuses, 'Active Logic')), sum(contains(statuses, 'Undecided')));
-        deadIndex = find(contains(statuses, 'Dead Logic'));
-        for k = deadIndex
-            try, blockType = get_param(Simulink.ID.getFullName(data.ModelObjects(data.Objectives(k).modelObjectIdx).designSid), 'BlockType'); catch, blockType = '?'; end
-            fprintf('   Dead Logic | 블록 종류 %s | 목표 종류 %s\n', blockType, data.Objectives(k).type);
-        end
-    end
-    if isfield(files, 'Report') && isfile(files.Report)
-        [~, reportName, reportExt] = fileparts(files.Report);
-        fprintf('%s\n', ['보고서: ' fullfile('result', 'sldv_dead_logic', stamp, [reportName reportExt])]);
-        winopen(files.Report);
-    else
-        fprintf('보고서가 만들어지지 않았습니다\n');
-    end
-catch deadError
-    fprintf('Dead Logic 분석 실패 | 식별자 %s\n', deadError.identifier);
-end
-if strcmp(wasDirty, 'off') && strcmp(get_param(topName, 'Dirty'), 'on'), set_param(topName, 'Dirty', 'off'); end
-warning(warnState);
-```
-
-확인할 것: 상태 1(완료)이고, Dead Logic 목록에 Switch와 MinMax가 있는지. 커버리지에서 못 채운 2개와 같은 블록이어야 한다(SLDV 테스트 생성 때
-하위 Subsystem 안에 있던 1개도 함께 나올 수 있다). 열린 보고서의 Dead Logic 항목을 그 블록의 Justify 근거로 쓴다.
-
-돌려줄 것: 화면 캡처 한 장. 보고서는 블록 이름이 들어 있으니 보내지 말 것.
-
-## 3. 이미 있는 SLDV 결과로 보고서 만들기 (2절이 안 될 때)
-
-왜: GUI에서 CUT에 Dead Logic 검사를 돌리면 "not analyzable independently"로 막힌다. 2절(코드)도 같은 이유로 실패할 수 있다.
-그런데 워크플로가 이미 CUT마다 SLDV 테스트 생성을 돌려 결과(`latest_sldvdata.mat`)를 남겼다. 거기에는 목표마다 판정이 있고, 못 채운
-2개는 Unsatisfiable(도달 불가로 증명)로 들어 있다. 다시 분석하지 않고 그 결과로 SLDV 공식 보고서(HTML)를 만들어 Justify 근거로 쓴다.
-보고서는 툴킷 폴더의 `result\sldv_report\{시각}\`에 남긴다. 모델 프로젝트를 열고 `st_setup`을 돌린 MATLAB에서 붙여 넣는다.
-GENERATE 대상 전부의 보고서를 한 번에 만든다. 모델은 저장하지 않는다.
+순서: 클론에서 main을 pull한다. 모델 프로젝트를 열고 툴킷 폴더에서 `st_setup`을 돌린다. Top Model에서 **안쪽 Switch를 클릭해 선택**하고
+아래를 붙여 넣는다. 이어서 **Max 블록을 선택**하고 한 번 더 붙여 넣는다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
-cfg = st_config(); targetRows = st_load_targets(cfg.OnlyEnabled);
-targetRows = targetRows(targetRows.SldvMode == "GENERATE", :);
-stamp = char(datetime('now', 'Format', 'yyyyMMdd_HHmmss'));
-outputFolder = fullfile(st_project_root(), 'result', 'sldv_report', stamp); mkdir(outputFolder);
-if ~bdIsLoaded(cfg.TopModel), load_system(cfg.ModelFile); end
-for t = 1:height(targetRows)
-    noText = regexprep(sprintf('%.17g', double(targetRows.No(t))), '[^A-Za-z0-9_-]', '_');
-    found = dir(fullfile(cfg.SldvDir, [noText '_*'], 'latest_sldvdata.mat'));
-    if isempty(found), fprintf('대상 %d | SLDV 결과 파일 없음\n', t); continue; end
-    dataFile = fullfile(found(1).folder, found(1).name);
-    data = load(dataFile, 'sldvData'); statuses = string({data.sldvData.Objectives.status});
-    try
-        reportOptions = sldvoptions; reportOptions.OutputDir = fullfile(outputFolder, sprintf('target_%d', t));
-        reportOptions.ReportIncludeGraphics = 'on';
-        [reportStatus, reportFile] = sldvreport(dataFile, reportOptions, false);
-        [~, reportName, reportExt] = fileparts(char(string(reportFile)));
-        fprintf('대상 %d | 보고서 %d | 목표 %d개 중 Unsatisfiable %d | %s\n', t, reportStatus, numel(statuses), ...
-            sum(contains(statuses, 'Unsatisfiable')), fullfile('result', 'sldv_report', stamp, sprintf('target_%d', t), [reportName reportExt]));
-    catch reportError
-        fprintf('대상 %d | 보고서 실패 | 식별자 %s\n', t, reportError.identifier);
-    end
-end
-winopen(outputFolder);
+st_explain_block_logic;
 warning(warnState);
 ```
 
-확인할 것: 대상마다 보고서가 1(성공)이고 Unsatisfiable 개수가 3(CUT 자체 2 + 하위 Subsystem 1)인지. 열린 폴더의 보고서에서 Objectives 표의
-Unsatisfiable 항목이 그 Switch와 Max인지 보고, 그 항목을 Justify 근거로 쓴다.
+확인할 것: 첫 줄의 선택 블록 식, Enable 식, 그리고 `D1 (초기값 …) 다음 값 = …` 줄들. 줄이 40을 넘으면 마지막에 "정의하지 못한 기호"가
+찍힌다.
 
-돌려줄 것: 화면 캡처 한 장. 보고서는 보내지 말 것.
+돌려줄 것: Switch와 Max 각각 화면 캡처 한 장. Claude가 이 식으로 도달 불가 이유를 정리한다.
