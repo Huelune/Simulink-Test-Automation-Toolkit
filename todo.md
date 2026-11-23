@@ -38,7 +38,8 @@ warning(warnState);
 다시 돌리면 11/22다. 분모가 같으니 CVF는 똑같이 걸렸다. 그런데 덜 충족됐으므로 입력이 달랐다고 의심한다.
 파이프라인은 CUT마다 그 CUT 폴더만 path에 올리고 돌린다. 열기 명령은 모든 CUT 폴더를 한꺼번에 올린다. 그런데 입력
 MAT는 파일 이름으로만 찾는다. 그래서 여러 CUT 폴더에 이름이 같은 MAT가 있으면 엉뚱한 MAT를 읽을 수 있다.
-반복(iteration) 수가 다른지도 본다. 1절을 돌린 같은 MATLAB에서, `RunPerTestCase`로 연 상태 그대로 붙여 넣는다.
+반복(iteration) 수가 다른지도 본다. `st_open_standalone_test_manager(...RunPerTestCase, true)`로 열고 실행한
+MATLAB을 닫지 않은 상태에서 붙여 넣는다. 닫았다면 그 명령을 먼저 다시 돌린다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
