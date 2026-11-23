@@ -64,67 +64,62 @@ git checkout -- src/config/st_config.m && git pull
 
 돌려줄 것: 오류가 나면 그 화면. 정상이면 "됨" 한 줄.
 
-## 3. 파이프라인이 실제로 돌린 작업 공간 파일로 다시 돌려 보기
+## 3. Top Model을 먼저 열어 두면 재실행이 파이프라인과 같아지는지 확인
 
-왜: Iteration에서 파라미터 덮어쓰기는 보이지 않았다(모두 0). 그래서 그 가설로는 설명이 안 된다. 이번에는 범위를 반으로 나눈다.
-파이프라인은 실행 작업 공간에 있는 Test File과 standalone 모델로 돌렸고, 패키지 단계는 그것을 복사한 뒤 Signal Editor를 바꿔
-저장했다. 작업 공간 원본으로 똑같이 돌린다. 그때 PASSED·20/22가 나오면 패키지 단계에서 무언가 바뀐 것이다. 그때도 Iteration 2가
-실패하면 파이프라인 실행기만 하는 무언가가 있는 것이다.
-Test Manager의 Test File과 결과를 닫는다. 저장 안 한 모델이 없을 때만 모든 모델을 닫고 시작한다. CUT 수만큼 시뮬레이션한다.
+왜: 작업 공간 파일은 파이프라인 실행기 밖에서는 아예 돌지 않았다(모두 Failed, Coverage 없음). 그래서 이 비교로는 범위를 나눌 수
+없었다. 다른 차이를 본다. 파이프라인은 같은 MATLAB 세션에서 Top Model을 열었다가 진행한다. Top Model의 콜백(PreLoadFcn 등)은
+열릴 때 base workspace에 변수를 만들 수 있다. standalone 모델이 그 변수를 쓰면 파이프라인에서는 그 값으로 돈다. 반면 재실행은
+Top Model을 열지 않는다. 게다가 todo.md 블록이 모두 `clearvars`로 시작하므로 base workspace가 비어 있다. 그러면 standalone은 다른 값(sldd나
+모델 기본값)으로 돌 수 있다. 이번에는 Top Model을 먼저 열고(콜백 실행), base workspace를 비우지 않은 채 재실행한다.
+**이 블록은 `clearvars`로 시작하지 않는다.** 6단계를 돌린 MATLAB에서 붙여 넣는다. 저장 안 한 모델이 있으면 멈춘다.
 
 ```matlab
-clearvars; clc; warnState = warning('off', 'all');
-pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
-workFile = char(string(pipeline.TestManagerWorkFile));
-fprintf('작업 공간 Test File 있음 %d\n', isfile(workFile));
-if ~isfile(workFile), warning(warnState); return; end
-loadedNames = find_system('type', 'block_diagram');
-if any(strcmp(get_param(loadedNames, 'Dirty'), 'on')), fprintf('저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요\n'); warning(warnState); return; end
-bdclose('all'); sltest.testmanager.clearResults; sltest.testmanager.clear;
-workTestFile = sltest.testmanager.load(workFile); allCases = getAllTestCases(workTestFile);
-oldGen = Simulink.fileGenControl('getConfig');
-for t = 1:numel(pipeline.Targets)
-    target = pipeline.Targets(t); cutPath = char(string(target.StandaloneCUTPath));
-    workModel = char(string(target.StandaloneModelFile)); [~, modelName] = fileparts(workModel);
-    fprintf('대상 %d 파이프라인 | 판정 %s | CUT 결정 %d/%d | CUT 실행 %d/%d | 작업 공간 모델 있음 %d\n', t, ...
-        char(string(target.InitialOutcome)), target.DecisionCovered, target.DecisionTotal, target.ExecutionCovered, ...
-        target.ExecutionTotal, isfile(workModel));
-    freshFolder = tempname; mkdir(freshFolder); previousFolder = cd(freshFolder);
+clc; diagWarn = warning('off', 'all');
+diagCfg = st_config(); diagPipe = st_load_standalone_pipeline_manifest(diagCfg.StandaloneCoverageRootDir, 'LATEST');
+diagLoaded = find_system('type', 'block_diagram');
+if any(strcmp(get_param(diagLoaded, 'Dirty'), 'on')), fprintf('저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요\n'); warning(diagWarn); return; end
+bdclose('all'); diagBaseBefore = numel(evalin('base', 'who'));
+load_system(diagCfg.ModelFile);
+diagCallbacks = ~isempty(get_param(diagCfg.TopModel, 'PreLoadFcn')) + ~isempty(get_param(diagCfg.TopModel, 'PostLoadFcn')) + ~isempty(get_param(diagCfg.TopModel, 'InitFcn'));
+fprintf('Top Model 콜백 %d개 | base workspace 변수: 열기 전 %d, 연 뒤 %d | sldd 연결 %d\n', diagCallbacks, diagBaseBefore, ...
+    numel(evalin('base', 'who')), ~isempty(get_param(diagCfg.TopModel, 'DataDictionary')));
+diagFiles = sltest.testmanager.getTestFiles; diagCases = getAllTestCases(diagFiles(1));
+diagGen = Simulink.fileGenControl('getConfig');
+for diagT = 1:numel(diagPipe.Targets)
+    diagTarget = diagPipe.Targets(diagT); diagCut = char(string(diagTarget.StandaloneCUTPath));
+    fprintf('대상 %d 파이프라인 | 판정 %s | CUT 결정 %d/%d | CUT 실행 %d/%d\n', diagT, char(string(diagTarget.InitialOutcome)), ...
+        diagTarget.DecisionCovered, diagTarget.DecisionTotal, diagTarget.ExecutionCovered, diagTarget.ExecutionTotal);
+    diagFolder = tempname; mkdir(diagFolder); diagPrev = cd(diagFolder);
     try
-        Simulink.fileGenControl('set', 'CacheFolder', freshFolder, 'CodeGenFolder', freshFolder, 'keepPreviousPath', true);
-        addpath(fileparts(workModel), '-begin');
-        caseIndex = find(string({allCases.Name}) == string(target.TestCaseName), 1);
-        if isempty(caseIndex), fprintf('대상 %d | 작업 공간 Test File에 같은 이름의 Test Case 없음 (Test Case %d개)\n', t, numel(allCases)); error('stt:skip', 'skip'); end
-        coverage = getCoverageSettings(allCases(caseIndex)); coverage.CoverageFilterFilename = char(string(target.PackagedCVF));
-        evalc('workRun = run(allCases(caseIndex));');
-        caseResults = getTestCaseResults(workRun); iterationOutcomes = '';
-        for c = 1:numel(caseResults)
-            iterationResults = getIterationResults(caseResults(c));
-            for i = 1:numel(iterationResults), iterationOutcomes = [iterationOutcomes ' ' char(string(iterationResults(i).Outcome))]; end %#ok<AGROW>
+        Simulink.fileGenControl('set', 'CacheFolder', diagFolder, 'CodeGenFolder', diagFolder, 'keepPreviousPath', true);
+        addpath(char(string(diagTarget.OutputDirectory)), '-begin');
+        diagIdx = find(string({diagCases.Name}) == string(diagTarget.TestCaseName), 1);
+        diagCov = getCoverageSettings(diagCases(diagIdx)); diagCov.CoverageFilterFilename = char(string(diagTarget.PackagedCVF));
+        evalc('diagRun = run(diagCases(diagIdx));');
+        diagOut = ''; diagCR = getTestCaseResults(diagRun);
+        for c = 1:numel(diagCR), diagIR = getIterationResults(diagCR(c)); for i = 1:numel(diagIR), diagOut = [diagOut ' ' char(string(diagIR(i).Outcome))]; end, end %#ok<AGROW>
+        fprintf('대상 %d Top Model 연 뒤 재실행 | 통과 %d | 실패 %d | Iteration:%s\n', diagT, diagRun.NumPassed, diagRun.NumFailed, diagOut);
+        diagPending = {getCoverageResults(diagRun)}; diagObjs = {};
+        while ~isempty(diagPending)
+            diagItem = diagPending{1}; diagPending(1) = [];
+            if iscell(diagItem), diagPending = [diagPending, diagItem(:)']; %#ok<AGROW>
+            elseif isa(diagItem, 'cv.cvdatagroup'), diagPending = [diagPending, getAll(diagItem)']; %#ok<AGROW>
+            elseif isa(diagItem, 'cvdata'), diagObjs = [diagObjs, num2cell(diagItem(:)')]; end %#ok<AGROW>
         end
-        fprintf('대상 %d 작업 공간 재실행 | 통과 %d | 실패 %d | 미완료 %d | Iteration:%s\n', t, ...
-            workRun.NumPassed, workRun.NumFailed, workRun.NumIncomplete, iterationOutcomes);
-        pending = {getCoverageResults(workRun)}; covObjects = {};
-        while ~isempty(pending)
-            item = pending{1}; pending(1) = [];
-            if iscell(item), pending = [pending, item(:)']; %#ok<AGROW>
-            elseif isa(item, 'cv.cvdatagroup'), pending = [pending, getAll(item)']; %#ok<AGROW>
-            elseif isa(item, 'cvdata'), covObjects = [covObjects, num2cell(item(:)')]; end %#ok<AGROW>
+        if ~isempty(diagObjs)
+            diagCvd = diagObjs{1}; diagCvd.filter = char(string(diagTarget.PackagedCVF));
+            d = decisioninfo(diagCvd, diagCut); e = executioninfo(diagCvd, diagCut);
+            fprintf('대상 %d Top Model 연 뒤 Coverage | CUT 결정 %d/%d | CUT 실행 %d/%d\n', diagT, d(1), d(2), e(1), e(2));
         end
-        if isempty(covObjects), fprintf('대상 %d 작업 공간 재실행 | Coverage 결과 없음\n', t); error('stt:skip', 'skip'); end
-        cvd = covObjects{1}; cvd.filter = char(string(target.PackagedCVF));
-        decision = decisioninfo(cvd, cutPath); executed = executioninfo(cvd, cutPath);
-        fprintf('대상 %d 작업 공간 Coverage | CUT 결정 %d/%d | CUT 실행 %d/%d\n', t, decision(1), decision(2), executed(1), executed(2));
-    catch workError
-        if ~strcmp(workError.identifier, 'stt:skip'), fprintf('대상 %d | 실패 | 식별자 %s\n', t, workError.identifier); end
+    catch diagError
+        fprintf('대상 %d | 실패 | 식별자 %s\n', diagT, diagError.identifier);
     end
-    Simulink.fileGenControl('setConfig', 'config', oldGen); cd(previousFolder);
-    if bdIsLoaded(modelName), close_system(modelName, 0); end
-    rmpath(fileparts(workModel));
+    Simulink.fileGenControl('setConfig', 'config', diagGen); cd(diagPrev);
 end
-warning(warnState);
+warning(diagWarn);
 ```
 
-확인할 것: "작업 공간 재실행" 줄이 "파이프라인" 줄과 같은지(실패 0, 20/22, 45/45). 작업 공간 파일이 이미 지워졌으면 "있음 0"으로 나온다.
+확인할 것: Top Model 콜백이 있거나 열고 나서 base workspace 변수가 늘었는지. 그리고 "Top Model 연 뒤 재실행"이 파이프라인과 같아졌는지
+(실패 0, CUT 결정 20/22, 실행 45/45).
 
 돌려줄 것: 화면 캡처 한 장.
