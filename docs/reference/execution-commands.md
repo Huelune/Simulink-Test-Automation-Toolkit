@@ -474,7 +474,23 @@ info = st_open_standalone_test_manager('LoadModels', true, ...
 | `ApplyFilters` | `false` | Test Case마다 패키징된 CVF를 다시 걸고 readback을 확인할지 |
 | `ImportResults` | `false` | 저장된 aggregate Result를 import할지. 파이프라인이 저장하지 않았으면(`SaveTestResult=false`) WARN 후 건너뜁니다 |
 | `ClearTestManager` | `false` | 열기 전에 Test Manager의 Test File과 Result를 전부 닫을지 |
+| `RunPerTestCase` | `false` | Test Case마다 자기 CVF를 건 직후 따로 실행해, CVF가 적용된 결과를 Test Case마다 하나씩 만듭니다 |
 | `View` | `true` | Test Manager 창을 열지 |
+
+Test Case들은 Coverage 설정 하나를 함께 씁니다. 그래서 `ApplyFilters`로 CVF를 차례로 걸면
+마지막 CVF가 모든 Test Case에 남습니다. 이렇게 되면 `Coverage filters overwrite each other` WARN이 남습니다.
+그 상태로 Test File 전체를 실행하면 마지막 대상만 제대로 필터링되고, 나머지 결과에는 다른 모델의 CVF가
+걸려 아무것도 빠지지 않습니다. CVF를 적용한 결과를 Test Manager에서 보려면 다음처럼 엽니다.
+
+```matlab
+info = st_open_standalone_test_manager('ClearTestManager', true, 'LoadModels', true, ...
+    'RunPerTestCase', true);
+```
+
+결과는 Test Case마다 하나씩 생깁니다. 맨 위 Results 항목의 Coverage Filters와 Aggregated Coverage
+Results에 그 Test Case의 CVF가 적용되어 보입니다. `RunPerTestCase`는 시뮬레이션을 돌리므로 현재 폴더에
+빌드 캐시가 생길 수 있습니다. `info.RunSummary`에는 Test Case별 통과·실패 수와 `Status`(`OK`/`NO_CVF`/`ERROR`)가
+있습니다.
 
 반환 `info`에는 `AddedFolders`, `LoadedModels`, `AppliedFilterCount`,
 `ResultStatus`(`SKIPPED`/`IMPORTED`/`NOT_SAVED`/`MISSING`/`CHECKSUM_MISMATCH`)가

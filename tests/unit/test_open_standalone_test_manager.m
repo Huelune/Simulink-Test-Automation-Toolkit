@@ -13,7 +13,7 @@ verifyTrue(testCase, isfield(signatures, 'st_open_standalone_test_manager'));
 names = string({signatures.st_open_standalone_test_manager.inputs.name});
 verifyEqual(testCase, sort(names), sort(["PipelineId", "OutputRoot", ...
     "LoadModels", "ApplyFilters", "ImportResults", "ClearTestManager", ...
-    "View"]));
+    "RunPerTestCase", "View"]));
 end
 
 function testCommandIsReadOnlyOnDisk(testCase)
@@ -48,7 +48,8 @@ verifyLessThan(testCase, addpathAt(1), openAt(1));
 verifyLessThan(testCase, openAt(1), viewAt(1));
 verifyTrue(testCase, contains(text, "field_text(targets(k), 'OutputDirectory')"));
 verifyTrue(testCase, contains(text, 'sltest.testmanager.TestFile(testFilePath)'));
-for extra = ["LoadModels", "ApplyFilters", "ImportResults", "ClearTestManager"]
+for extra = ["LoadModels", "ApplyFilters", "ImportResults", "ClearTestManager", ...
+        "RunPerTestCase"]
     verifyTrue(testCase, contains(text, ...
         "addParameter(p, '" + extra + "', false"), ...
         extra + " must default to false");
@@ -103,6 +104,26 @@ verifyTrue(testCase, contains(text, 'Standalone Test Manager open start'));
 verifyTrue(testCase, contains(text, ...
     'Standalone Test Manager open complete'));
 verifyTrue(testCase, contains(text, "st_log(cfg, 'WARN'"));
+end
+
+function testRunPerTestCaseSetsEachCvfRightBeforeItsRun(testCase)
+% Test Cases share one coverage setting: setting every CVF first left the
+% last one on all Test Cases, and results of the others filtered nothing.
+% Each Test Case therefore gets its CVF immediately before its own run.
+text = source();
+verifyTrue(testCase, contains(text, 'if p.Results.RunPerTestCase'));
+body = extractAfter(text, 'function summary = run_per_test_case(');
+setAt = strfind(body, 'set_case_filter(');
+runAt = strfind(body, 'resultSet = run(testCase);');
+verifyNumElements(testCase, runAt, 1);
+verifyNotEmpty(testCase, setAt);
+verifyLessThan(testCase, setAt(1), runAt(1));
+loopAt = strfind(body, 'for k = 1:n');
+verifyNotEmpty(testCase, loopAt);
+verifyLessThan(testCase, loopAt(1), setAt(1));
+% ApplyFilters alone now reports the overwrite instead of passing silently.
+verifyTrue(testCase, contains(text, 'Coverage filters overwrite each other'));
+verifyTrue(testCase, contains(text, "'RunSummary', runSummary"));
 end
 
 function text = source()

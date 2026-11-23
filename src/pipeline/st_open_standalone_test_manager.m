@@ -26,6 +26,11 @@ function varargout = st_open_standalone_test_manager(varargin)
 %   'ClearTestManager'  - close every Test File and Result already open in
 %                         Test Manager first. Use it when a Test File of the
 %                         same name is still loaded from the pipeline run.
+%   'RunPerTestCase'    - run each Test Case alone, setting its own CVF
+%                         just before, so each gets a ResultSet filtered
+%                         by its own CVF. Test Cases share one coverage
+%                         setting (the last CVF set wins for all of them),
+%                         so ApplyFilters alone cannot do this.
 %   'View'              - open the Test Manager window (default true).
 %   'PipelineId'        - pipeline to open, or 'LATEST' (default).
 %   'OutputRoot'        - pipeline root. Default cfg.StandaloneCoverageRootDir.
@@ -48,6 +53,7 @@ addParameter(p, 'LoadModels', false, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'ApplyFilters', false, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'ImportResults', false, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'ClearTestManager', false, @(x) islogical(x) && isscalar(x));
+addParameter(p, 'RunPerTestCase', false, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'View', true, @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 
@@ -113,6 +119,14 @@ if p.Results.ApplyFilters
     appliedFilters = apply_packaged_filters(testFile, targets, testFilePath, cfg);
 end
 
+% 4b. Optional: run each Test Case alone under its own CVF.
+runSummary = table(strings(0,1), zeros(0,1), zeros(0,1), zeros(0,1), ...
+    strings(0,1), 'VariableNames', ...
+    {'TestCaseName','Passed','Failed','Incomplete','Status'});
+if p.Results.RunPerTestCase
+    runSummary = run_per_test_case(testFile, targets, testFilePath, cfg);
+end
+
 % 5. Optional: saved aggregate Result.
 [resultStatus, resultRoots, resultFile] = import_saved_result( ...
     manifest, p.Results.ImportResults, cfg);
@@ -130,6 +144,7 @@ info = struct( ...
     'AddedFolders', addedFolders, ...
     'LoadedModels', loadedModels, ...
     'AppliedFilterCount', appliedFilters, ...
+    'RunSummary', runSummary, ...
     'ResultStatus', resultStatus, ...
     'ResultFile', resultFile, ...
     'ResultRootCount', resultRoots);
@@ -148,6 +163,11 @@ if p.Results.ApplyFilters
 end
 if p.Results.ImportResults
     fprintf('Results    : %s\n', result_summary_text(resultStatus, resultRoots));
+end
+if p.Results.RunPerTestCase
+    fprintf('Run        : %d Test Case(s) | passed %d | failed %d | not run %d\n', ...
+        height(runSummary), sum(runSummary.Passed), sum(runSummary.Failed), ...
+        sum(runSummary.Status ~= "OK"));
 end
 fprintf('============================================\n');
 st_log(cfg, 'INFO', ...
@@ -256,44 +276,132 @@ for k = 1:numel(testCases)
     caseNames(k) = string(testCases(k).Name);
 end
 applied = 0;
+appliedCases = zeros(0,1);
+appliedFiles = strings(0,1);
 for k = 1:numel(targets)
-    item = targets(k);
-    testCaseName = string(field_text(item, 'TestCaseName'));
-    filterFile = field_text(item, 'PackagedCVF');
-    if isempty(filterFile)
-        st_log(cfg, 'WARN', ...
-            'No packaged CVF for Test Case | TestCase=%s | Status=%s', ...
-            char(testCaseName), field_text(item, 'ExecutionStatus'));
+    [testCase, filterFile] = set_case_filter( ...
+        testCases, caseNames, targets(k), testFilePath, cfg);
+    if isempty(testCase)
         continue;
     end
-    if ~isfile(filterFile)
-        error('simtest:StandaloneTestManagerFilterMissing', ...
-            'Packaged CVF is missing for %s: %s', ...
-            char(testCaseName), filterFile);
-    end
-    matches = find(caseNames == testCaseName);
-    if numel(matches) ~= 1
-        error('simtest:StandaloneTestManagerCaseMappingFailed', ...
-            'Expected one Test Case named %s in %s, found %d.', ...
-            char(testCaseName), testFilePath, numel(matches));
-    end
-    coverage = getCoverageSettings(testCases(matches));
-    coverage.CoverageFilterFilename = filterFile;
-    actual = string(coverage.CoverageFilterFilename);
-    if ~filter_readback_matches(filterFile, actual)
-        error('simtest:StandaloneTestManagerFilterReadbackFailed', ...
-            ['Coverage filter readback failed for %s. ' ...
-             'Expected=%s | Actual=%s'], ...
-            char(testCaseName), filterFile, char(strjoin(actual, ' | ')));
-    end
     applied = applied + 1;
-    st_log(cfg, 'DEBUG', ...
-        'Coverage filter applied | TestCase=%s | Filter=%s', ...
-        char(testCaseName), filterFile);
+    appliedCases(end+1,1) = find(caseNames == string(testCase.Name)); %#ok<AGROW>
+    appliedFiles(end+1,1) = string(filterFile); %#ok<AGROW>
+end
+% Test Cases can share one coverage setting, so a later CVF replaces an
+% earlier one for every Test Case. Read each back once all are set.
+overwritten = 0;
+for k = 1:numel(appliedCases)
+    actual = string(getCoverageSettings(testCases(appliedCases(k))) ...
+        .CoverageFilterFilename);
+    if ~filter_readback_matches(char(appliedFiles(k)), actual)
+        overwritten = overwritten + 1;
+    end
+end
+if overwritten > 0
+    st_log(cfg, 'WARN', ...
+        ['Coverage filters overwrite each other | Overwritten=%d | ' ...
+         'Applied=%d | Test Cases share one coverage setting, so only the ' ...
+         'last CVF stays. Use ''RunPerTestCase'', true to run each Test ' ...
+         'Case under its own CVF.'], overwritten, applied);
 end
 st_log(cfg, 'INFO', ...
-    'Coverage filters applied | Applied=%d | Targets=%d', ...
-    applied, numel(targets));
+    'Coverage filters applied | Applied=%d | Targets=%d | Overwritten=%d', ...
+    applied, numel(targets), overwritten);
+end
+
+function [testCase, filterFile] = set_case_filter( ...
+        testCases, caseNames, item, testFilePath, cfg)
+%SET_CASE_FILTER Point one Test Case at its packaged CVF and read it back.
+testCase = [];
+testCaseName = string(field_text(item, 'TestCaseName'));
+filterFile = field_text(item, 'PackagedCVF');
+if isempty(filterFile)
+    st_log(cfg, 'WARN', ...
+        'No packaged CVF for Test Case | TestCase=%s | Status=%s', ...
+        char(testCaseName), field_text(item, 'ExecutionStatus'));
+    return;
+end
+if ~isfile(filterFile)
+    error('simtest:StandaloneTestManagerFilterMissing', ...
+        'Packaged CVF is missing for %s: %s', ...
+        char(testCaseName), filterFile);
+end
+matches = find(caseNames == testCaseName);
+if numel(matches) ~= 1
+    error('simtest:StandaloneTestManagerCaseMappingFailed', ...
+        'Expected one Test Case named %s in %s, found %d.', ...
+        char(testCaseName), testFilePath, numel(matches));
+end
+coverage = getCoverageSettings(testCases(matches));
+coverage.CoverageFilterFilename = filterFile;
+actual = string(coverage.CoverageFilterFilename);
+if ~filter_readback_matches(filterFile, actual)
+    error('simtest:StandaloneTestManagerFilterReadbackFailed', ...
+        ['Coverage filter readback failed for %s. ' ...
+         'Expected=%s | Actual=%s'], ...
+        char(testCaseName), filterFile, char(strjoin(actual, ' | ')));
+end
+testCase = testCases(matches);
+st_log(cfg, 'DEBUG', ...
+    'Coverage filter applied | TestCase=%s | Filter=%s', ...
+    char(testCaseName), filterFile);
+end
+
+function summary = run_per_test_case(testFile, targets, testFilePath, cfg)
+%RUN_PER_TEST_CASE Run each Test Case alone under its own CVF.
+% The CVF is set right before each run because Test Cases share one
+% coverage setting. A failed run is logged and the next Test Case still
+% runs, so one broken CUT does not hide the others.
+testCases = getAllTestCases(testFile);
+caseNames = strings(numel(testCases),1);
+for k = 1:numel(testCases)
+    caseNames(k) = string(testCases(k).Name);
+end
+n = numel(targets);
+TestCaseName = strings(n,1);
+Passed = zeros(n,1);
+Failed = zeros(n,1);
+Incomplete = zeros(n,1);
+Status = strings(n,1);
+totalTimer = tic;
+st_log(cfg, 'INFO', 'Per Test Case run start | Targets=%d', n);
+for k = 1:n
+    TestCaseName(k) = string(field_text(targets(k), 'TestCaseName'));
+    caseTimer = tic;
+    try
+        [testCase, ~] = set_case_filter( ...
+            testCases, caseNames, targets(k), testFilePath, cfg);
+        if isempty(testCase)
+            Status(k) = "NO_CVF";
+            st_log(cfg, 'WARN', ...
+                'Per Test Case run skipped | TestCase=%s | no packaged CVF', ...
+                char(TestCaseName(k)));
+            continue;
+        end
+        st_log(cfg, 'INFO', 'Per Test Case run %d/%d start | TestCase=%s', ...
+            k, n, char(TestCaseName(k)));
+        resultSet = run(testCase);
+        Passed(k) = resultSet.NumPassed;
+        Failed(k) = resultSet.NumFailed;
+        Incomplete(k) = resultSet.NumIncomplete;
+        Status(k) = "OK";
+        st_log(cfg, 'INFO', ...
+            ['Per Test Case run %d/%d complete | TestCase=%s | Passed=%d | ' ...
+             'Failed=%d | Incomplete=%d | elapsed=%.3f sec'], k, n, ...
+            char(TestCaseName(k)), Passed(k), Failed(k), Incomplete(k), ...
+            toc(caseTimer));
+    catch ME
+        Status(k) = "ERROR";
+        st_log(cfg, 'ERROR', ...
+            'Per Test Case run %d/%d failed | TestCase=%s | %s: %s', ...
+            k, n, char(TestCaseName(k)), ME.identifier, ME.message);
+    end
+end
+summary = table(TestCaseName, Passed, Failed, Incomplete, Status);
+st_log(cfg, 'INFO', ...
+    'Per Test Case run complete | OK=%d | Targets=%d | elapsed=%.3f sec', ...
+    sum(Status == "OK"), n, toc(totalTimer));
 end
 
 function [status, rootCount, resultFile] = import_saved_result( ...
