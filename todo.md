@@ -94,6 +94,7 @@ for t = 1:numel(pipeline.Targets)
         Simulink.fileGenControl('set', 'CacheFolder', freshFolder, 'CodeGenFolder', freshFolder, 'keepPreviousPath', true);
         addpath(fileparts(workModel), '-begin');
         caseIndex = find(string({allCases.Name}) == string(target.TestCaseName), 1);
+        if isempty(caseIndex), fprintf('대상 %d | 작업 공간 Test File에 같은 이름의 Test Case 없음 (Test Case %d개)\n', t, numel(allCases)); error('stt:skip', 'skip'); end
         coverage = getCoverageSettings(allCases(caseIndex)); coverage.CoverageFilterFilename = char(string(target.PackagedCVF));
         evalc('workRun = run(allCases(caseIndex));');
         caseResults = getTestCaseResults(workRun); iterationOutcomes = '';
@@ -101,6 +102,8 @@ for t = 1:numel(pipeline.Targets)
             iterationResults = getIterationResults(caseResults(c));
             for i = 1:numel(iterationResults), iterationOutcomes = [iterationOutcomes ' ' char(string(iterationResults(i).Outcome))]; end %#ok<AGROW>
         end
+        fprintf('대상 %d 작업 공간 재실행 | 통과 %d | 실패 %d | 미완료 %d | Iteration:%s\n', t, ...
+            workRun.NumPassed, workRun.NumFailed, workRun.NumIncomplete, iterationOutcomes);
         pending = {getCoverageResults(workRun)}; covObjects = {};
         while ~isempty(pending)
             item = pending{1}; pending(1) = [];
@@ -108,12 +111,12 @@ for t = 1:numel(pipeline.Targets)
             elseif isa(item, 'cv.cvdatagroup'), pending = [pending, getAll(item)']; %#ok<AGROW>
             elseif isa(item, 'cvdata'), covObjects = [covObjects, num2cell(item(:)')]; end %#ok<AGROW>
         end
+        if isempty(covObjects), fprintf('대상 %d 작업 공간 재실행 | Coverage 결과 없음\n', t); error('stt:skip', 'skip'); end
         cvd = covObjects{1}; cvd.filter = char(string(target.PackagedCVF));
         decision = decisioninfo(cvd, cutPath); executed = executioninfo(cvd, cutPath);
-        fprintf('대상 %d 작업 공간 재실행 | 통과 %d | 실패 %d | CUT 결정 %d/%d | CUT 실행 %d/%d | Iteration:%s\n', t, ...
-            workRun.NumPassed, workRun.NumFailed, decision(1), decision(2), executed(1), executed(2), iterationOutcomes);
+        fprintf('대상 %d 작업 공간 Coverage | CUT 결정 %d/%d | CUT 실행 %d/%d\n', t, decision(1), decision(2), executed(1), executed(2));
     catch workError
-        fprintf('대상 %d | 실패 | 식별자 %s\n', t, workError.identifier);
+        if ~strcmp(workError.identifier, 'stt:skip'), fprintf('대상 %d | 실패 | 식별자 %s\n', t, workError.identifier); end
     end
     Simulink.fileGenControl('setConfig', 'config', oldGen); cd(previousFolder);
     if bdIsLoaded(modelName), close_system(modelName, 0); end
