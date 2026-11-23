@@ -107,3 +107,44 @@ warning(warnState);
 하위 Subsystem 안에 있던 1개도 함께 나올 수 있다). 열린 보고서의 Dead Logic 항목을 그 블록의 Justify 근거로 쓴다.
 
 돌려줄 것: 화면 캡처 한 장. 보고서는 블록 이름이 들어 있으니 보내지 말 것.
+
+## 3. 이미 있는 SLDV 결과로 보고서 만들기 (2절이 안 될 때)
+
+왜: GUI에서 CUT에 Dead Logic 검사를 돌리면 "not analyzable independently"로 막힌다. 2절(코드)도 같은 이유로 실패할 수 있다.
+그런데 워크플로가 이미 CUT마다 SLDV 테스트 생성을 돌려 결과(`latest_sldvdata.mat`)를 남겼다. 거기에는 목표마다 판정이 있고, 못 채운
+2개는 Unsatisfiable(도달 불가로 증명)로 들어 있다. 다시 분석하지 않고 그 결과로 SLDV 공식 보고서(HTML)를 만들어 Justify 근거로 쓴다.
+보고서는 툴킷 폴더의 `result\sldv_report\{시각}\`에 남긴다. 모델 프로젝트를 열고 `st_setup`을 돌린 MATLAB에서 붙여 넣는다.
+GENERATE 대상 전부의 보고서를 한 번에 만든다. 모델은 저장하지 않는다.
+
+```matlab
+clearvars; clc; warnState = warning('off', 'all');
+cfg = st_config(); targetRows = st_load_targets(cfg.OnlyEnabled);
+targetRows = targetRows(targetRows.SldvMode == "GENERATE", :);
+stamp = char(datetime('now', 'Format', 'yyyyMMdd_HHmmss'));
+outputFolder = fullfile(st_project_root(), 'result', 'sldv_report', stamp); mkdir(outputFolder);
+if ~bdIsLoaded(cfg.TopModel), load_system(cfg.ModelFile); end
+for t = 1:height(targetRows)
+    noText = regexprep(sprintf('%.17g', double(targetRows.No(t))), '[^A-Za-z0-9_-]', '_');
+    found = dir(fullfile(cfg.SldvDir, [noText '_*'], 'latest_sldvdata.mat'));
+    if isempty(found), fprintf('대상 %d | SLDV 결과 파일 없음\n', t); continue; end
+    dataFile = fullfile(found(1).folder, found(1).name);
+    data = load(dataFile, 'sldvData'); statuses = string({data.sldvData.Objectives.status});
+    try
+        reportOptions = sldvoptions; reportOptions.OutputDir = fullfile(outputFolder, sprintf('target_%d', t));
+        reportOptions.ReportIncludeGraphics = 'on';
+        [reportStatus, reportFile] = sldvreport(dataFile, reportOptions, false);
+        [~, reportName, reportExt] = fileparts(char(string(reportFile)));
+        fprintf('대상 %d | 보고서 %d | 목표 %d개 중 Unsatisfiable %d | %s\n', t, reportStatus, numel(statuses), ...
+            sum(contains(statuses, 'Unsatisfiable')), fullfile('result', 'sldv_report', stamp, sprintf('target_%d', t), [reportName reportExt]));
+    catch reportError
+        fprintf('대상 %d | 보고서 실패 | 식별자 %s\n', t, reportError.identifier);
+    end
+end
+winopen(outputFolder);
+warning(warnState);
+```
+
+확인할 것: 대상마다 보고서가 1(성공)이고 Unsatisfiable 개수가 3(CUT 자체 2 + 하위 Subsystem 1)인지. 열린 폴더의 보고서에서 Objectives 표의
+Unsatisfiable 항목이 그 Switch와 Max인지 보고, 그 항목을 Justify 근거로 쓴다.
+
+돌려줄 것: 화면 캡처 한 장. 보고서는 보내지 말 것.
