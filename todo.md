@@ -64,50 +64,48 @@ git checkout -- src/config/st_config.m && git pull
 
 돌려줄 것: 오류가 나면 그 화면. 정상이면 "됨" 한 줄.
 
-## 3. Unsatisfiable 목표가 어느 블록의 어느 결과인지 보기
+## 3. Unsatisfiable Switch의 제어 신호를 거꾸로 따라가 보기
 
-왜: CUT 자체 Decision 목표 22개 중 2개가 Unsatisfiable(어떤 입력으로도 닿을 수 없다고 SLDV가 증명)이다. SLDV는 "왜"를 문장으로
-주지 않는다. 대신 어느 블록의 어느 결과(예: Switch의 두 번째 입력 선택, If의 else)인지 알려 준다. 그 블록으로 들어오는 신호를
-보면 이유가 보인다(앞단에서 범위가 막힌 신호, 상수 조건 등). 화면에는 블록 종류와 결과 번호만 찍는다. 블록 이름이 들어간 자세한
-목록은 `%TEMP%\st_unsat_objectives.txt`에 쓴다. 그리고 SLDV 결과로 Top Model에 색을 칠한다(빨간색이 Unsatisfiable). 그 파일과
-모델 화면은 보내지 말고 직접 본다. 모델 프로젝트를 열고 `st_setup`을 돌린 MATLAB에서 붙여 넣는다. Top Model을 저장하지 않는다.
+왜: CUT 자체에서 닿을 수 없다고 증명된 결정의 사유를 정확히 알아야 한다. 그 Switch의 제어 신호는 출력을 되먹임해서 다시 쓰는
+구조라서 손으로 따라가기 어렵다. 되먹임 고리에는 반드시 상태 블록(Unit Delay, Memory, Delay, Integrator 등)이 있다. 그 블록의
+초기값과, 고리 안에서 값이 어떻게만 바뀌는지(늘기만 하는지, 범위가 막혀 있는지)가 보통 사유다. 모델에서 Switch 하나를 클릭해
+선택한 뒤 이 블록을 돌리면, 제어 입력에서 거꾸로 올라가며 지나는 블록의 **종류**와 숫자 설정만 찍는다. 그 숫자 설정은 Switch의
+Threshold, 상태 블록의 초기값, Saturation 한계, 상수 값이다. 블록 이름은 찍지 않는다. 같은 블록을 다시 만나면 고리로 표시하고 멈춘다.
+모델 프로젝트를 열고 `st_setup`을 돌린 MATLAB에서 Top Model을 연 뒤, 목록 파일에 있던 Switch를 클릭해 선택하고 붙여 넣는다.
+MinMax를 볼 때는 MinMax를 선택하고 `startPort = 2;`로 바꾼다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
-cfg = st_config(); targetRows = st_load_targets(cfg.OnlyEnabled);
-targetRows = targetRows(targetRows.SldvMode == "GENERATE", :);
-if ~bdIsLoaded(cfg.TopModel), load_system(cfg.ModelFile); end
-fid = fopen(fullfile(tempdir, 'st_unsat_objectives.txt'), 'w');
-for t = 1:height(targetRows)
-    row = targetRows(t, :);
-    noText = regexprep(sprintf('%.17g', double(row.No)), '[^A-Za-z0-9_-]', '_');
-    found = dir(fullfile(cfg.SldvDir, [noText '_*'], 'latest_sldvdata.mat'));
-    if isempty(found), fprintf('대상 %d | SLDV 결과 파일 없음\n', t); continue; end
-    dataFile = fullfile(found(1).folder, found(1).name);
-    data = load(dataFile, 'sldvData'); data = data.sldvData;
-    for k = 1:numel(data.Objectives)
-        objective = data.Objectives(k);
-        if ~contains(objective.type, 'Decision', 'IgnoreCase', true) || ~contains(string(objective.status), 'Unsatisfiable'), continue; end
-        try
-            objectPath = Simulink.ID.getFullName(data.ModelObjects(objective.modelObjectIdx).designSid);
-            blockType = get_param(objectPath, 'BlockType');
-        catch
-            objectPath = '?'; blockType = '?';
-        end
-        outcome = '?'; if isfield(objective, 'outcomeValue'), outcome = num2str(objective.outcomeValue); end
-        fprintf('대상 %d | Unsatisfiable | 블록 종류 %s | 결과 번호 %s\n', t, blockType, outcome);
-        fprintf(fid, '대상 %d | %s | %s | %s\n', t, objectPath, blockType, char(string(objective.descr)));
+startPort = 2;   % Switch는 2(제어 입력), MinMax는 살펴볼 입력 번호
+startBlock = gcb; visited = {}; queue = {startBlock, startPort, 0};
+fprintf('시작 | 종류 %s', get_param(startBlock, 'BlockType'));
+try, fprintf(' | Criteria %s | Threshold %s', get_param(startBlock, 'Criteria'), get_param(startBlock, 'Threshold')); catch, end
+fprintf('\n');
+while ~isempty(queue) && numel(visited) < 40
+    block = queue{1, 1}; port = queue{1, 2}; depth = queue{1, 3}; queue(1, :) = [];
+    handles = get_param(block, 'PortHandles');
+    if port > numel(handles.Inport), continue; end
+    line = get_param(handles.Inport(port), 'Line'); if line < 0, continue; end
+    source = get_param(line, 'SrcBlockHandle'); if source < 0, continue; end
+    sourcePath = getfullname(source); sourceType = get_param(source, 'BlockType');
+    indent = repmat('  ', 1, depth + 1);
+    if any(strcmp(visited, sourcePath)), fprintf('%s%s (이미 지난 블록, 되먹임 고리)\n', indent, sourceType); continue; end
+    visited{end + 1} = sourcePath; %#ok<SAGROW>
+    detail = '';
+    for name = {'InitialCondition', 'X0', 'UpperLimit', 'LowerLimit', 'Value', 'Threshold', 'Criteria', 'Operator', 'Inputs', 'Function', 'OutDataTypeStr'}
+        try, detail = [detail ' | ' name{1} ' ' char(string(get_param(source, name{1})))]; catch, end %#ok<AGROW>
     end
-    if t == 1
-        try, sldvhighlight(dataFile); fprintf('대상 1 SLDV 결과를 모델에 칠했습니다(빨간색 = Unsatisfiable)\n'); catch, fprintf('모델 칠하기 실패\n'); end
-    end
+    fprintf('%s%s%s\n', indent, sourceType, detail);
+    if any(strcmp(sourceType, {'Inport', 'From', 'Constant'})), continue; end
+    sourceHandles = get_param(source, 'PortHandles');
+    for p = 1:numel(sourceHandles.Inport), queue(end + 1, :) = {sourcePath, p, depth + 1}; end %#ok<SAGROW>
 end
-fclose(fid);
-fprintf('%s\n', ['블록 이름이 든 목록: %TEMP%' filesep 'st_unsat_objectives.txt']);
 warning(warnState);
 ```
 
-확인할 것: 대상마다 Unsatisfiable 목표가 어떤 블록 종류인지. 그리고 목록 파일과 칠해진 모델에서 그 블록으로 들어오는 신호를 직접 본다.
-그 신호가 앞단에서 어떤 값 범위로 막히는지 보면 된다.
+확인할 것: 화면에서 상태 블록(UnitDelay, Memory, Delay, DiscreteIntegrator 등)의 초기값과, 고리 안의 Sum·Saturation·Constant 값을 본다.
+그것으로 제어 신호가 시작값에서 어느 쪽으로만 움직이는지 본다. 예를 들어 초기값이 Threshold 이상이고 고리가 더하기만 하면,
+제어 신호는 영영 Threshold 아래로 내려가지 않는다. 그것이 사유다. `Value`나 `InitialCondition`이 숫자가 아니라 변수 이름으로 나오면
+그 변수는 sldd에 있다.
 
-돌려줄 것: 화면 캡처 한 장. 이유를 찾았으면 블록·신호 이름 없이 말로 한 줄(예: "앞단 Saturation 때문에 조건이 항상 참").
+돌려줄 것: 화면 캡처 한 장(블록 종류와 숫자만 찍힌다. 변수 이름이 찍혀 나오면 그 부분은 가리고 보내 달라).
