@@ -49,3 +49,30 @@ warning(warnState);
 
 돌려줄 것: 화면 캡처 한 장과 "보고서에 필터 항목 나옴/안 나옴, 모델 색 표시 됨/안 됨" 한 줄. 보고서와 모델 화면은 블록
 이름이 보이므로 캡처하지 마세요.
+
+## 2. 워크플로가 "Library-link Harness protection failed"로 멈춘 이유 확인
+
+왜: 하네스 생성부터 다시 돌리려고 워크플로를 실행했더니 3개 대상 모두 Library-link Harness 보호 단계에서 실패했다. 이 단계는
+Harness가 열려 있으면 바꾸지 않고 멈춘다. standalone 모델은 Harness와 이름이 같다. 그래서 1절이나 앞선 확인에서 연
+standalone 모델이 열린 채로 남아 있으면, 툴킷은 Harness가 열려 있다고 보고 멈춘다. 이름이 Harness와 같은 모델이 몇 개
+열려 있는지 세고, 저장 안 한 것이 없으면 모두 닫는다. 워크플로를 돌린 MATLAB에서 붙여 넣는다.
+
+```matlab
+clearvars; clc; warnState = warning('off', 'all');
+cfg = st_config(); targetRows = st_load_targets(cfg.OnlyEnabled);
+loadedNames = string(find_system('type', 'block_diagram'));
+fprintf('대상 %d | 지금 열린 모델 %d | 그중 Harness 이름과 같은 것 %d\n', height(targetRows), ...
+    numel(loadedNames), sum(ismember(loadedNames, string(targetRows.HarnessName))));
+dirtyCount = sum(strcmp(get_param(cellstr(loadedNames), 'Dirty'), 'on'));
+if dirtyCount > 0
+    fprintf('저장 안 한 모델 %d개: 저장할 것은 저장하고 나머지는 닫은 뒤 워크플로를 다시 돌려 주세요\n', dirtyCount);
+else
+    bdclose('all'); fprintf('열린 모델을 모두 닫았습니다. 워크플로를 다시 돌려 주세요\n');
+end
+warning(warnState);
+```
+
+확인할 것: "Harness 이름과 같은 것"이 0보다 크면 원인은 열린 standalone 모델이다. 닫은 뒤 워크플로를 다시 돌린다. 0이면
+다른 원인이니 아래 "돌려줄 것"을 보낸다.
+
+돌려줄 것: 화면 캡처 한 장. 워크플로를 다시 돌려도 같은 오류가 나면 그 화면도.
