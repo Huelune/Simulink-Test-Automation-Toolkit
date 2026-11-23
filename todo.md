@@ -6,54 +6,56 @@
 화면에는 개수, Simulink 블록 종류 이름, 정해 둔 안내 문구만 찍는다. 테스트 케이스·모델·블록
 이름, 경로, 계정은 찍지 않는다(회사 내부 정보).
 
-## 1. 재실행의 Iteration이 서로 다른 시나리오를 돌았는지 확인
+## 1. Iteration에 Signal Editor 시나리오를 지정하면 파이프라인 커버리지가 나오는지 확인
 
-왜: sldd 내용은 파이프라인 사본과 같았다. 그런데도 재실행은 CUT 결정 11/22이고 파이프라인은 20/22다. 패키지 단계는
-standalone 모델 사본의 Signal Editor 입력 파일 이름을 바꿔 저장한다. 이때 시나리오 선택이 초기화되었다면, 세 Iteration이
-모두 같은 시나리오만 돌아 덜 충족될 수 있다. Iteration마다 지정된 시나리오(Signal Editor, Test Sequence)가 몇 가지인지 센다. 그리고 Iteration마다
-CUT 결정 충족 수가 서로 다른지 본다. 이름은 찍지 않는다.
-앞 절처럼 프로젝트를 열고 `RunPerTestCase`로 돌린 MATLAB에서 이어서 붙여 넣는다.
+왜: 재실행의 세 Iteration은 CUT 결정 충족 수가 모두 11로 같았다. 입력이 Iteration마다 바뀌지 않은 것이다. Iteration에는
+Test Sequence 시나리오만 지정되어 있고 Signal Editor 시나리오는 지정되어 있지 않았다(0개). 그래서 Signal Editor는 모델에
+저장된 한 시나리오만 재생한다. 툴킷은 원래 Iteration마다 두 시나리오에 같은 이름을 넣는다. 이번에는 메모리에서만 각
+Iteration에 Test Sequence 시나리오와 같은 이름을 Signal Editor 시나리오로 넣고 다시 돌린다. 저장은 하지 않는다. 함께
+Signal Editor 블록의 시나리오 수도 센다. 앞 절처럼 프로젝트를 열고 `RunPerTestCase`로 돌린 MATLAB에서 이어서 붙여 넣는다.
+CUT 수만큼 다시 시뮬레이션한다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
 pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
 testFiles = sltest.testmanager.getTestFiles; allCases = getAllTestCases(testFiles(1));
-resultSets = sltest.testmanager.getResultSets;
+runFolder = fullfile(tempdir, 'st_open_standalone_run'); if ~isfolder(runFolder), mkdir(runFolder); end
+previousFolder = cd(runFolder);
 for t = 1:numel(pipeline.Targets)
     target = pipeline.Targets(t); cutPath = char(string(target.StandaloneCUTPath));
-    caseIndex = find(string({allCases.Name}) == string(target.TestCaseName), 1);
-    useScenarios = getProperty(allCases(caseIndex), 'UseSignalEditorScenarios');
-    iterations = getIterations(allCases(caseIndex)); editorScenarios = strings(0, 1); sequenceScenarios = strings(0, 1);
-    for i = 1:numel(iterations)
-        editorScenarios(end+1, 1) = st_specification_parameter(iterations(i).TestParams, {'SignalEditorScenario'}); %#ok<SAGROW>
-        sequenceScenarios(end+1, 1) = st_specification_parameter(iterations(i).TestParams, {'TestSequenceScenario'}); %#ok<SAGROW>
-    end
-    fprintf('대상 %d | Iteration %d | Signal Editor 시나리오 지정 %d, 서로 다른 것 %d | Test Sequence 시나리오 지정 %d, 서로 다른 것 %d\n', ...
-        t, numel(iterations), sum(strlength(editorScenarios) > 0), numel(unique(editorScenarios(strlength(editorScenarios) > 0))), ...
-        sum(strlength(sequenceScenarios) > 0), numel(unique(sequenceScenarios(strlength(sequenceScenarios) > 0))));
-    for k = 1:numel(resultSets)
-        caseResults = getTestCaseResults(resultSets(k));
-        for c = 1:numel(caseResults)
-            iterationResults = getIterationResults(caseResults(c)); covered = nan(1, numel(iterationResults));
-            for i = 1:numel(iterationResults)
-                try
-                    cov = getCoverageResults(iterationResults(i));
-                    if isa(cov, 'cv.cvdatagroup'), cov = getAll(cov); end
-                    if iscell(cov), cov = cov{1}; end
-                    cov.filter = char(string(target.PackagedCVF));
-                    decision = decisioninfo(cov, cutPath); covered(i) = decision(1);
-                catch
-                end
-            end
-            if all(isnan(covered)), continue; end % 이 결과는 다른 대상의 것이다
-            fprintf('대상 %d 결과 %d | Iteration별 CUT 결정 충족 %s\n', t, k, mat2str(covered));
+    [~, modelName] = fileparts(char(string(target.PackagedStandaloneModel)));
+    try
+        editorBlock = st_find_signal_editor_block(modelName);
+        scenarioCount = numel(st_normalize_options(get_param(editorBlock, 'options@ActiveScenario')));
+        addpath(char(string(target.OutputDirectory)), '-begin');
+        caseIndex = find(string({allCases.Name}) == string(target.TestCaseName), 1);
+        iterations = getIterations(allCases(caseIndex)); assigned = 0;
+        for i = 1:numel(iterations)
+            sequenceScenario = st_specification_parameter(iterations(i).TestParams, {'TestSequenceScenario'});
+            if strlength(sequenceScenario) == 0, continue; end
+            setTestParam(iterations(i), 'SignalEditorScenario', char(sequenceScenario)); assigned = assigned + 1;
         end
+        coverage = getCoverageSettings(allCases(caseIndex)); coverage.CoverageFilterFilename = char(string(target.PackagedCVF));
+        evalc('scenarioRun = run(allCases(caseIndex));');
+        pending = {getCoverageResults(scenarioRun)}; covObjects = {};
+        while ~isempty(pending)
+            item = pending{1}; pending(1) = [];
+            if iscell(item), pending = [pending, item(:)']; %#ok<AGROW>
+            elseif isa(item, 'cv.cvdatagroup'), pending = [pending, getAll(item)']; %#ok<AGROW>
+            elseif isa(item, 'cvdata'), covObjects = [covObjects, num2cell(item(:)')]; end %#ok<AGROW>
+        end
+        cvd = covObjects{1}; cvd.filter = char(string(target.PackagedCVF));
+        decision = decisioninfo(cvd, cutPath); executed = executioninfo(cvd, cutPath);
+        fprintf('대상 %d | Signal Editor 시나리오 %d개 | 지정한 Iteration %d | 통과 %d | 실패 %d | CUT 결정 %d/%d | CUT 실행 %d/%d\n', ...
+            t, scenarioCount, assigned, scenarioRun.NumPassed, scenarioRun.NumFailed, decision(1), decision(2), executed(1), executed(2));
+    catch scenarioError
+        fprintf('대상 %d | 실패 | 식별자 %s\n', t, scenarioError.identifier);
     end
 end
-warning(warnState);
+cd(previousFolder); warning(warnState);
 ```
 
-확인할 것: "서로 다른 것"이 1이거나 Iteration별 충족 수가 모두 같으면, 세 Iteration이 같은 시나리오를 돈 것이다.
-NaN이면 그 Iteration 결과에 Coverage가 따로 없는 것이다.
+확인할 것: CUT 결정이 20/22, 실행이 45/45로 나오면 원인은 Iteration에 Signal Editor 시나리오가 빠진 것이다.
+"Signal Editor 시나리오" 수가 1이면 입력 파일에 시나리오가 하나뿐인 것이다.
 
 돌려줄 것: 화면 캡처 한 장.
