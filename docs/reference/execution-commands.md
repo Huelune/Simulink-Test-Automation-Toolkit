@@ -488,7 +488,9 @@ info = st_open_standalone_test_manager('ClearTestManager', true, 'LoadModels', t
     'RunPerTestCase', true);
 ```
 
-파이프라인이 측정한 그대로 CVF를 적용해 보려면 다시 실행하지 않고 저장된 CVT를 엽니다. 현장에서 다시 실행한 결과가
+파이프라인이 실제로 돌린 결과를 Test Manager에서 보려면 3단계를 `SaveTestResult=true`로 돌리고
+`st_open_standalone_test_manager('ClearTestManager', true, 'LoadModels', true, 'ImportResults', true)`로 가져옵니다. 다시 실행하지
+않으므로 값이 파이프라인과 같습니다. 파이프라인이 측정한 그대로 CVF를 적용해 보려면 다시 실행하지 않고 저장된 CVT를 엽니다. 현장에서 다시 실행한 결과가
 파이프라인보다 덜 충족된 경우가 있었고, 원인은 아직 찾지 못했습니다. 그러니 제출할 값은 이 방법으로 확인합니다.
 
 ```matlab

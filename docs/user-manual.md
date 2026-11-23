@@ -459,7 +459,7 @@ Harness를 원본 모델 없이도 열리는 **독립 모델**로 떼어내 실�
 ### 5.2 실행
 
 ```matlab
-info = st_run_standalone_coverage_pipeline();
+info = st_run_standalone_coverage_pipeline('SaveTestResult', true);
 disp(info.PipelineId)
 ```
 
@@ -708,7 +708,7 @@ winopen(latest.Summary)
 disp(specFile)
 
 %% 3단계 — 원본 Top Model과 Harness는 파이프라인이 저장하고 닫습니다
-info = st_run_standalone_coverage_pipeline();
+info = st_run_standalone_coverage_pipeline('SaveTestResult', true);
 disp(info.PipelineId)
 
 [code, summary, details] = st_check_standalone_coverage();
@@ -725,16 +725,18 @@ winopen(finalFile)
 
 %% 6단계 (선택) — CVF를 적용한 결과를 Test Manager에서 보기
 st_open_standalone_test_manager('PipelineId', info.PipelineId, ...
-    'ClearTestManager', true, 'LoadModels', true, 'RunPerTestCase', true);
+    'ClearTestManager', true, 'LoadModels', true, 'ImportResults', true);
 ```
 
-6단계는 standalone 제출물의 Test Case를 CUT마다 자기 CVF를 건 채 다시 실행합니다. 실행이 끝나면 Test Manager의
-Results and Artifacts에 CUT마다 결과가 하나씩 생깁니다. 맨 위 **Results** 항목을 눌러 Aggregated Coverage Results를
-보면 CVF가 적용된 값이 나옵니다. Test Case 항목을 누르면 필터가 적용되지 않은 값이 나오니 주의하십시오. 같은 이름의
-모델이 열려 있으면 멈추므로, 저장할 것은 저장하고 모델을 닫은 뒤 부르십시오. 다시 실행한 값이 3단계의 제출 값보다
-낮게 나온 사례가 있습니다. 제출할 값은 3단계 결과를 쓰십시오. 3단계가 측정한 그대로 보려면
-`st_open_standalone_test_manager('PipelineId', info.PipelineId, 'ShowSavedCoverage', true, 'View', false)`를 씁니다.
-이 명령은 시뮬레이션 없이 CVF를 적용한 보고서를 열고 모델에 Coverage를 표시합니다.
+6단계는 3단계 파이프라인이 실제로 돌린 결과를 Test Manager에 가져옵니다. 다시 실행하지 않으므로 값이 3단계 제출 값과
+같습니다. 그래서 3단계를 `'SaveTestResult', true`로 돌려 그 결과를 파일로 남겨 둡니다. 결과가 Results and Artifacts에 들어오면
+맨 위 **Results** 항목을 눌러 Aggregated Coverage Results를 봅니다. Test Case 항목을 누르면 필터가 적용되지 않은 값이 나옵니다.
+같은 이름의 모델이 열려 있으면 멈추므로, 저장할 것은 저장하고 모델을 닫은 뒤 부르십시오. Test Manager 화면 대신 CVF를 적용한
+보고서와 모델 표시로 보려면 `st_open_standalone_test_manager('PipelineId', info.PipelineId, 'ShowSavedCoverage', true, 'View', false)`를
+씁니다.
+
+`'RunPerTestCase', true`로 제출물을 다시 실행하는 방법도 있습니다. 하지만 다시 실행하면 한 시나리오가 기대값 비교에서 실패하고
+커버리지가 3단계보다 낮게 나온 사례가 있고, 원인은 아직 모릅니다. 그러니 결과를 볼 때는 쓰지 마십시오.
 
 결과 확인과 2단계 명세서를 뺀 짧은 코드입니다.
 
@@ -751,7 +753,7 @@ st_run_from_harness
 st_collect_per_cut_results
 
 %% 3단계 — 원본 Top Model과 Harness는 파이프라인이 저장하고 닫습니다
-info = st_run_standalone_coverage_pipeline();
+info = st_run_standalone_coverage_pipeline('SaveTestResult', true);
 disp(info.PipelineId)
 
 [code, summary, details] = st_check_standalone_coverage();
@@ -768,7 +770,7 @@ winopen(finalFile)
 
 %% 6단계 (선택) — CVF를 적용한 결과를 Test Manager에서 보기
 st_open_standalone_test_manager('PipelineId', info.PipelineId, ...
-    'ClearTestManager', true, 'LoadModels', true, 'RunPerTestCase', true);
+    'ClearTestManager', true, 'LoadModels', true, 'ImportResults', true);
 ```
 
 ### 빠른 방식 — 준비가 끝난 뒤 다시 돌릴 때
@@ -787,7 +789,7 @@ st_run_from_harness('FromStage','EXECUTE')
 st_collect_per_cut_results('Mode','LEAN')
 
 %% 3단계 — 원본 Top Model과 Harness는 파이프라인이 저장하고 닫습니다
-info = st_run_standalone_coverage_pipeline();
+info = st_run_standalone_coverage_pipeline('SaveTestResult', true);
 disp(info.PipelineId)
 
 [code, summary, details] = st_check_standalone_coverage();
@@ -804,7 +806,7 @@ winopen(finalFile)
 
 %% 6단계 (선택) — CVF를 적용한 결과를 Test Manager에서 보기
 st_open_standalone_test_manager('PipelineId', info.PipelineId, ...
-    'ClearTestManager', true, 'LoadModels', true, 'RunPerTestCase', true);
+    'ClearTestManager', true, 'LoadModels', true, 'ImportResults', true);
 ```
 
 | 바뀐 곳 | 줄어드는 것 | 대신 잃는 것 |
