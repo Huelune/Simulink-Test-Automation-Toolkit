@@ -27,8 +27,14 @@ fprintf('MATLAB %s | 결과 파일 %d개 | 번들 CVF %d개
 for k = 1:numel(rawFiles)
     resultSet = sltest.testmanager.importResults(fullfile(rawFiles(k).folder, rawFiles(k).name));
     pending = {getCoverageResults(resultSet)}; covObjects = {};
-    caseResults = getTestCaseResults(resultSet);
-    if isempty(pending{1}), pending = arrayfun(@getCoverageResults, caseResults, 'UniformOutput', false); end
+    if isempty(pending{1}) % 어떤 릴리스는 Coverage를 Test Case 결과에만 둔다
+        nodes = num2cell(getTestFileResults(resultSet)); pending = {};
+        while ~isempty(nodes)
+            node = nodes{1}; nodes(1) = [];
+            if isa(node, 'sltest.testmanager.TestCaseResult'), pending{end+1} = getCoverageResults(node); continue; end %#ok<SAGROW>
+            nodes = [nodes, num2cell(getTestSuiteResults(node)), num2cell(getTestCaseResults(node))]; %#ok<AGROW>
+        end
+    end
     while ~isempty(pending)
         item = pending{1}; pending(1) = [];
         if iscell(item), pending = [pending, item(:)']; %#ok<AGROW>
