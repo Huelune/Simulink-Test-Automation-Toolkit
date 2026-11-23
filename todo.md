@@ -6,31 +6,59 @@
 화면에는 개수, Simulink 블록 종류 이름, 정해 둔 안내 문구만 찍는다. 테스트 케이스·모델·블록
 이름, 경로, 계정은 찍지 않는다(회사 내부 정보).
 
-## 1. 자산 번들에서 결과로 가져올 수 있는 MLDATX 찾기
 
-왜: 번들의 MLDATX를 `importResults`로 열었더니 "not a valid Result file"이 났다. 번들의 MLDATX 중
-어느 것이 결과 파일이고 어느 것이 Test File인지 확인한다. 결과 파일은 가져오는 김에 Test Manager에 띄운다.
+## 1. 자산 번들 결과에 CVF를 다시 걸어 Test Manager에서 보기
+
+왜: 번들의 `raw/` 결과를 가져오면 열리지만 Coverage에 CVF가 적용되지 않는다. 결과의 Coverage는 CVF를
+원래 프로젝트 경로나 이름으로 가리키는데, 번들을 만들 때 CVF는 `coverage/filters/`로 복사된다. 결과의
+Coverage가 가리키는 CVF 이름과 같은 번들 CVF를 찾아 다시 걸면 Test Manager에도 적용되는지 확인한다.
 툴킷 함수를 쓰지 않으므로 `st_setup` 없이 붙여 넣어도 된다. 실행하면 번들 폴더를 고르는 창이 뜬다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
 bundleDir = uigetdir(pwd, '자산 번들 폴더(manifest.json이 있는 폴더)를 고르세요');
-if isequal(bundleDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다\n'); warning(warnState); return; end
-mldatxFiles = dir(fullfile(bundleDir, '**', '*.mldatx'));
-for k = 1:numel(mldatxFiles)
-    filePath = fullfile(mldatxFiles(k).folder, mldatxFiles(k).name);
-    relParts = strsplit(erase(mldatxFiles(k).folder, bundleDir), filesep);
-    role = '기타 폴더'; if any(strcmp(relParts, 'raw')), role = 'raw 폴더'; elseif any(strcmp(relParts, 'test-manager')), role = 'test-manager 폴더'; end
-    try
-        sltest.testmanager.importResults(filePath); verdict = '결과 파일: Test Manager에 가져옴';
-    catch importError
-        verdict = ['결과 파일 아님 (' importError.identifier ')'];
+if isequal(bundleDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다
+'); warning(warnState); return; end
+rawFiles = dir(fullfile(bundleDir, 'results', '*', 'raw', '*.mldatx'));
+cvfFiles = dir(fullfile(bundleDir, 'results', '**', '*.cvf'));
+cvfNames = lower(string({cvfFiles.name}));
+fprintf('MATLAB %s | 결과 파일 %d개 | 번들 CVF %d개
+', version('-release'), numel(rawFiles), numel(cvfFiles));
+for k = 1:numel(rawFiles)
+    resultSet = sltest.testmanager.importResults(fullfile(rawFiles(k).folder, rawFiles(k).name));
+    pending = {getCoverageResults(resultSet)}; covObjects = {};
+    caseResults = getTestCaseResults(resultSet);
+    if isempty(pending{1}), pending = arrayfun(@getCoverageResults, caseResults, 'UniformOutput', false); end
+    while ~isempty(pending)
+        item = pending{1}; pending(1) = [];
+        if iscell(item), pending = [pending, item(:)']; %#ok<AGROW>
+        elseif isa(item, 'cv.cvdatagroup'), pending = [pending, getAll(item)']; %#ok<AGROW>
+        elseif isa(item, 'cvdata'), covObjects = [covObjects, num2cell(item(:)')]; end %#ok<AGROW>
     end
-    fprintf('%d | %s | %s\n', k, role, verdict);
+    noFilter = 0; bound = 0; missing = 0; readbackFail = 0;
+    for j = 1:numel(covObjects)
+        refs = string(covObjects{j}.filter); refs = refs(strlength(refs) > 0 & ~ismissing(refs));
+        if isempty(refs), noFilter = noFilter + 1; continue; end
+        newRefs = strings(size(refs));
+        for r = 1:numel(refs)
+            [~, refName, refExt] = fileparts(char(refs(r))); if isempty(refExt), refExt = '.cvf'; end
+            hit = find(cvfNames == lower(string([refName refExt])), 1);
+            if isempty(hit), newRefs = strings(0); break; end
+            newRefs(r) = string(fullfile(cvfFiles(hit).folder, cvfFiles(hit).name));
+        end
+        if isempty(newRefs), missing = missing + 1; continue; end
+        covObjects{j}.filter = cellstr(newRefs);
+        if numel(string(covObjects{j}.filter)) == numel(newRefs), bound = bound + 1; else, readbackFail = readbackFail + 1; end
+    end
+    fprintf('결과 %d | Coverage %d개 | CVF 다시 걸음 %d | CVF 없던 것 %d | 번들에 CVF 없음 %d | 걸고 확인 실패 %d
+', ...
+        k, numel(covObjects), bound, noFilter, missing, readbackFail);
 end
 sltest.testmanager.view; warning(warnState);
 ```
 
-확인할 것: `raw 폴더` 줄이 "결과 파일"인지, Test Manager의 Results and Artifacts에 결과가 들어왔는지.
+확인할 것: 화면의 개수, 그리고 Test Manager의 Results and Artifacts에서 가져온 결과의 Coverage에
+CVF로 뺀 항목이 빠지거나 justified로 보이는지(CVF 없이 볼 때와 % 값이 달라지는지).
 
-돌려줄 것: 화면 캡처 한 장.
+돌려줄 것: 화면 캡처 한 장과 Test Manager Coverage가 바뀌었는지 한 줄. Coverage 표 캡처는 블록 이름이
+보이므로 보내지 말고 % 값이 바뀌었는지만 적어 주세요.
