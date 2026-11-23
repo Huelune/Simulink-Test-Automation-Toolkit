@@ -32,15 +32,20 @@ try
     fprintf('MATLAB %s | 대상 폴더 %d | 모델 %d | CVF 넣음 %d\n', version('-release'), ...
         numel(openInfo.AddedFolders), numel(openInfo.LoadedModels), openInfo.AppliedFilterCount);
     stage = '실행';
-    evalc('runResult = sltest.testmanager.run;');
-    fprintf('실행 | 통과 %d | 실패 %d | 미완료 %d\n', runResult.NumPassed, runResult.NumFailed, runResult.NumIncomplete);
+    % Test Case마다 따로 돌려 CUT마다 결과가 하나씩 생기게 한다
+    allCases = getAllTestCases(openInfo.TestFile);
+    for k = 1:numel(allCases)
+        evalc('caseResult = run(allCases(k));');
+        fprintf('실행 %d/%d | 통과 %d | 실패 %d | 미완료 %d\n', k, numel(allCases), ...
+            caseResult.NumPassed, caseResult.NumFailed, caseResult.NumIncomplete);
+    end
 catch stepError
     fprintf('%s 실패 | 식별자 %s\n', stage, stepError.identifier);
 end
 sltest.testmanager.view; warning(warnState);
 ```
 
-확인할 것: Test Manager에서 새 결과의 맨 위 Results 항목을 눌렀을 때 Coverage Filters 칸에 CVF가 있는지,
+확인할 것: Results and Artifacts에 결과가 CUT 수만큼 따로 들어왔는지. 각 결과의 맨 위 Results 항목을 눌렀을 때 Coverage Filters 칸에 CVF가 있는지,
 Aggregated Coverage Results의 %가 CVF 없이 볼 때와 다른지.
 
 돌려줄 것: 화면 캡처 한 장과 "Coverage Filters에 CVF 있음/없음, %가 바뀜/안 바뀜" 한 줄.
