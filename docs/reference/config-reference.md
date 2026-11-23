@@ -403,15 +403,18 @@ Harness 입력 인터페이스 검증은 어느 쪽이든 그대로 수행합니
 cfg.SldvMaxProcessTime = 1800;   % st_config.m에서 30분으로
 ```
 
-### `SldvCoverageFilter` — 기본 `true`
+### `SldvCoverageFilter` — 기본 `false`
 
-`true`이면, `SldvMode=GENERATE`이고 `CoverageFilterMode`가 `OFF`가 아닌 행에서 커버리지 필터를 `sldvrun`에도
-넘깁니다. 이 필터는 CUT 바로 아래 하위 Subsystem을 빼는 것입니다(`CovFilter`). `false`이면 넘기지 않으므로, SLDV가 필터를
-넣기 전과 똑같이 돕니다. 실제 모델 하나에서 필터를 켜자 `sldvrun`이 `MaxProcessTime`을 한참 넘겨도 끝나지 않은 일이
-있었습니다. 그럴 때 `false`로 비교합니다. 값을 바꾸면 해당 행의 SLDV 단계를 다시 돕니다.
+| 값 | 동작 |
+| --- | --- |
+| `false` (기본) | SLDV가 CUT의 목표를 모두 채우려 합니다. CVF로 뺀 하위 Subsystem 안쪽 목표도 포함합니다. 그래도 그 목표는 커버리지 계산에서는 CVF가 뺍니다 |
+| `true` | `SldvMode=GENERATE`이고 `CoverageFilterMode`가 `OFF`가 아닌 행에서, CUT 바로 아래 하위 Subsystem을 빼는 필터를 `sldvrun`에도 넘깁니다(`CovFilter`). SLDV는 그 목표를 채우려 하지 않습니다 |
+
+실제 모델 하나에서 `true`로 두자 `sldvrun`이 `MaxProcessTime`(300초)을 30분 넘게 지나도 끝나지 않았습니다. 같은 모델에서
+`false`로 두면 금방 끝났습니다. 그래서 기본값은 `false`입니다. 값을 바꾸면 해당 행의 SLDV 단계를 다시 돕니다.
 
 ```matlab
-cfg.SldvCoverageFilter = false;   % st_config.m에서
+cfg.SldvCoverageFilter = true;   % st_config.m에서. 실제 모델에서 끝나는지 먼저 확인하십시오
 ```
 
 ## 7. 커버리지

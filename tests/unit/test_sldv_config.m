@@ -106,10 +106,10 @@ end
 
 function testSldvCoverageFilterCanBeSwitchedOff(testCase)
 % One real model stayed in sldvrun far past MaxProcessTime with the filter
-% on. The switch must skip the filter and keep the plan signature as it was
+% on, so it is off by default. The switch must skip the filter and keep the plan signature as it was
 % before the filter existed, so switching it rewrites only the SLDV stage.
 cfg = st_config();
-verifyTrue(testCase, cfg.SldvCoverageFilter);
+verifyFalse(testCase, cfg.SldvCoverageFilter);
 source = fileread(fullfile(st_project_root(), ...
     'src', 'sldv', 'st_prepare_sldv_targets.m'));
 skipAt = strfind(source, 'coverage filter skipped: cfg.SldvCoverageFilter=false');

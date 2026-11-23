@@ -2,8 +2,9 @@
 
 ## Unreleased
 
-- **`cfg.SldvCoverageFilter = false`로 SLDV에 커버리지 필터를 넘기지 않을 수 있습니다.** 실제 모델 하나에서 필터를 켜자
-  `sldvrun`이 `MaxProcessTime`(300초)을 30분 넘게 지나도 끝나지 않았습니다. 기본은 그대로 `true`입니다.
+- **SLDV에 커버리지 필터를 넘기는 것은 이제 `cfg.SldvCoverageFilter = true`일 때만 합니다(기본 `false`).** 실제 모델
+  하나에서 필터를 켜자 `sldvrun`이 `MaxProcessTime`(300초)을 30분 넘게 지나도 끝나지 않았습니다. 같은 모델에서 끄면 금방
+  끝났습니다. 끈 상태에서도 SLDV는 나머지 목표를 모두 채우려 하고, 하위 Subsystem은 커버리지 계산에서 CVF가 뺍니다.
 
 - **`st_open_standalone_test_manager('ShowSavedCoverage', true)`로 파이프라인이 측정한 Coverage를 CVF 적용 상태로 봅니다.**
   CUT마다 저장된 CVT에 패키지 CVF를 걸어 보고서를 `tempdir` 아래에 만들고 모델에 Coverage를 표시합니다. 다시

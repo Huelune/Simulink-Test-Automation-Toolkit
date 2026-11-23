@@ -149,11 +149,12 @@ cfg.SldvTmaxResolution = 0.01;
 % target fails; raise this to give large CUTs more time.
 cfg.SldvMaxProcessTime = [];
 
-% true (default): a GENERATE row whose CoverageFilterMode is not OFF passes
-% the same child-Subsystem filter to sldvrun (CovFilter). false skips it, so
-% SLDV runs as it did before the filter existed. One real model stayed in
-% sldvrun far past MaxProcessTime with the filter on; use false to compare.
-cfg.SldvCoverageFilter = true;
+% false (default): SLDV tries every objective of the CUT, including those in
+% child Subsystems that coverage filters out; the CVF still removes them
+% from the coverage numbers. true passes that child-Subsystem filter to
+% sldvrun (CovFilter) so SLDV skips those objectives. On one real model
+% sldvrun with the filter stayed far past MaxProcessTime, so it is opt-in.
+cfg.SldvCoverageFilter = false;
 
 % true (default):
 %   Before FILE+SLDV validation or GENERATE execution, convert a non-atomic

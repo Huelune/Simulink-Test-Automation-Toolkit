@@ -55,8 +55,9 @@
   경로가 Test Manager·PER_CUT·standalone 커버리지·최종 문서에서 맞는지. 끝 `/`를 붙인
   경로가 R2025b에서 해석되는지는 단위 테스트가 assume으로만 다룬다.
 - SLDV coverage filter on a real model (2026-11-23): `sldvrun` with `CovFilter` on stayed past
-  `MaxProcessTime=300 s` for 30+ min on the first of three GENERATE targets. Not yet known
-  whether the filter causes it. `cfg.SldvCoverageFilter=false` is the comparison switch.
+  `MaxProcessTime=300 s` for 30+ min on the first of three GENERATE targets. The same
+  model with the filter off finished quickly, so
+  `cfg.SldvCoverageFilter` now defaults to false; why the filter stalls sldvrun is still open.
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
   (관측 1건), `Simulink.io.SLDVMatFile` import 결과도 같은 이름인지.
 - 데모 모델 생성기 `st_create_demo_model`(2026-10-12): 2026-10-15 사용자 MATLAB의 새 세션에서
