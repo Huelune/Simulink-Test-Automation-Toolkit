@@ -391,7 +391,18 @@ Incomplete = zeros(n,1);
 Status = strings(n,1);
 ErrorId = strings(n,1);
 totalTimer = tic;
-st_log(cfg, 'INFO', 'Per Test Case run start | Targets=%d', n);
+% MATLAB looks in the current folder before the path, and an operator's
+% current folder often holds the original inputs under the same names.
+% Run from an empty scratch folder, as the pipeline does, so the packaged
+% inputs win; build files land there too instead of the submission.
+runFolder = fullfile(tempdir, 'st_open_standalone_run');
+if ~isfolder(runFolder)
+    mkdir(runFolder);
+end
+previousFolder = cd(runFolder);
+restoreFolder = onCleanup(@() cd(previousFolder)); %#ok<NASGU>
+st_log(cfg, 'INFO', 'Per Test Case run start | Targets=%d | RunFolder=%s', ...
+    n, runFolder);
 for k = 1:n
     TestCaseName(k) = string(field_text(targets(k), 'TestCaseName'));
     caseTimer = tic;

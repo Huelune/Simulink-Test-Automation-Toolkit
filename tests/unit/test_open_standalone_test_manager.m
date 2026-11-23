@@ -163,12 +163,22 @@ verifyNumElements(testCase, checkAt, 1);
 verifyLessThan(testCase, checkAt(1), runAt(1));
 verifyTrue(testCase, contains(text, "addpath(folder, '-begin');"));
 verifyTrue(testCase, contains(text, 'simtest:StandaloneTestManagerInputShadowed'));
+% The current folder is searched before the path, so runs happen from an
+% empty scratch folder and the previous folder comes back afterwards.
+runFolderAt = strfind(body, 'previousFolder = cd(runFolder);');
+verifyNotEmpty(testCase, runFolderAt);
+verifyLessThan(testCase, runFolderAt(1), runAt(1));
+verifyTrue(testCase, contains(body, 'onCleanup(@() cd(previousFolder))'));
 launcher = string(fileread(fullfile(st_project_root(), 'resources', ...
     'standalone_coverage', 'open_standalone_coverage_test_manager.m')));
 shadowAt = strfind(launcher, 'simtest:PackagedTestManagerInputShadowed');
 launcherRunAt = strfind(launcher, 'caseResult = run(testCases(matches));');
 verifyNumElements(testCase, shadowAt, 1);
 verifyLessThan(testCase, shadowAt(1), launcherRunAt(1));
+launcherFolderAt = strfind(launcher, 'previousFolder = cd(runFolder);');
+verifyNumElements(testCase, launcherFolderAt, 1);
+verifyLessThan(testCase, launcherFolderAt(1), launcherRunAt(1));
+verifyEqual(testCase, numel(strfind(launcher, 'cd(previousFolder);')), 2);
 end
 
 function text = source()

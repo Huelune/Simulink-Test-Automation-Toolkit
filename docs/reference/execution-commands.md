@@ -489,9 +489,10 @@ info = st_open_standalone_test_manager('ClearTestManager', true, 'LoadModels', t
 
 결과는 Test Case마다 하나씩 생깁니다. 맨 위 Results 항목의 Coverage Filters와 Aggregated Coverage
 Results에 그 Test Case의 CVF가 적용되어 보입니다. Test Case마다 실행 직전에 그 대상 폴더를 path 맨 앞에 둡니다. 그리고 입력 MAT가 패키지에 든 자기 파일로 읽히는지
-확인합니다. 현재 폴더에 이름이 같은 MAT가 있으면 그 Test Case는 `StandaloneTestManagerInputShadowed`로 실행하지 않고
-`Status=ERROR`가 됩니다. 이때는 현재 폴더를 옮기고 다시 엽니다. `RunPerTestCase`는 시뮬레이션을 돌리므로 현재 폴더에
-빌드 캐시가 생길 수 있습니다. `info.RunSummary`에는 Test Case별 통과·실패 수와 `Status`(`OK`/`NO_CVF`/`ERROR`), 오류 식별자 `ErrorId`가
+확인합니다. MATLAB은 path보다 현재 폴더를 먼저 찾습니다. 그래서 실행하는 동안에는 빈 임시 폴더
+(`tempdir` 아래 `st_open_standalone_run`)로 옮겼다가 끝나면 원래 폴더로 돌아옵니다. 빌드 캐시도 그 임시 폴더에 생깁니다.
+그래도 다른 MAT가 먼저 읽히면 그 Test Case는 `StandaloneTestManagerInputShadowed`로 실행하지 않고 `Status=ERROR`가
+됩니다. `info.RunSummary`에는 Test Case별 통과·실패 수와 `Status`(`OK`/`NO_CVF`/`ERROR`), 오류 식별자 `ErrorId`가
 있습니다.
 
 반환 `info`에는 `AddedFolders`, `LoadedModels`, `AppliedFilterCount`,

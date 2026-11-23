@@ -60,6 +60,16 @@ testFilePath = fullfile(testFiles(1).folder, testFiles(1).name);
 testFile = sltest.testmanager.load(testFilePath);
 testCases = getAllTestCases(testFile);
 
+% MATLAB looks in the current folder before the path, and the current
+% folder often holds the original inputs under the same names. Run from an
+% empty scratch folder so the packaged inputs win.
+runFolder = fullfile(tempdir, 'st_open_standalone_run');
+if ~isfolder(runFolder)
+    mkdir(runFolder);
+end
+previousFolder = cd(runFolder);
+% Not indented under try so the per-target loop reads the same as before.
+try
 for k = 1:numel(targets)
     testCaseName = string(targets(k).TestCaseName);
     matches = find(string({testCases.Name}) == testCaseName);
@@ -120,6 +130,11 @@ for k = 1:numel(targets)
             runError.message);
     end
 end
+catch launcherError
+    cd(previousFolder);
+    rethrow(launcherError);
+end
+cd(previousFolder);
 
 sltest.testmanager.view;
 fprintf(['Standalone Test Manager loaded | TestFile=%s | ' ...
