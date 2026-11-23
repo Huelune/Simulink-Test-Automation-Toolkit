@@ -69,12 +69,14 @@ git checkout -- src/config/st_config.m && git pull
 왜: 재실행의 Iteration 2는 "Failed criteria: Verification"이다. 시뮬레이션은 오류 없이 돌았지만, 기대값과 출력이 달랐다. 시나리오
 1·3은 파이프라인과 같은 출력이 나왔다. 그러니 시나리오 2에만 들어가는 무언가가 재실행에서 빠졌다. 툴킷은 SLDV가 만든 파라미터
 값을 Iteration마다 `setVariable`로 넣는다. 그런데 지난 확인에서 `TestParams`에는 보이지 않았다. 그래서 Iteration 객체의 속성 이름과,
-속성마다 담긴 항목 수를 센다. 이름과 값은 찍지 않는다. 6단계를 돌린 MATLAB에서 붙여 넣는다.
+속성마다 담긴 항목 수를 센다. 이름과 값은 찍지 않는다. 앞 단계를 다시 돌릴 필요는 없다. 블록이 제출물의 Test File을 실행 없이
+열기만 한다. MATLAB을 새로 켰다면 모델 프로젝트를 열고 툴킷 폴더에서 `st_setup`을 먼저 돌린다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
 pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
-testFiles = sltest.testmanager.getTestFiles; allCases = getAllTestCases(testFiles(1));
+evalc('openInfo = st_open_standalone_test_manager(''ClearTestManager'', true, ''View'', false);');
+allCases = getAllTestCases(openInfo.TestFile);
 caseIndex = find(string({allCases.Name}) == string(pipeline.Targets(1).TestCaseName), 1);
 iterations = getIterations(allCases(caseIndex));
 propertyNames = properties(iterations(1));
