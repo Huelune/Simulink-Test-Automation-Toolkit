@@ -32,6 +32,14 @@ function varargout = st_open_standalone_test_manager(varargin)
 %                         setting (the last CVF set wins for all of them),
 %                         so ApplyFilters alone cannot do this.
 %                         The packaged launcher does the same.
+%                         Note: a re-run can cover less than the pipeline
+%                         run did (seen in the field, cause not found yet).
+%   'ShowSavedCoverage' - show the coverage the pipeline itself recorded:
+%                         load each CUT's packaged CVT, attach its CVF,
+%                         write a filtered report under tempdir and
+%                         highlight the model. No simulation, and the
+%                         numbers match CoverageSummary.xlsx. Loads the
+%                         standalone models (LoadModels is implied).
 %   'View'              - open the Test Manager window (default true).
 %   'PipelineId'        - pipeline to open, or 'LATEST' (default).
 %   'OutputRoot'        - pipeline root. Default cfg.StandaloneCoverageRootDir.
@@ -55,6 +63,7 @@ addParameter(p, 'ApplyFilters', false, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'ImportResults', false, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'ClearTestManager', false, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'RunPerTestCase', false, @(x) islogical(x) && isscalar(x));
+addParameter(p, 'ShowSavedCoverage', false, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'View', true, @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 
@@ -102,7 +111,7 @@ st_log(cfg, 'INFO', ...
 
 % 2. Optional: load the standalone models themselves.
 loadedModels = strings(0,1);
-if p.Results.LoadModels
+if p.Results.LoadModels || p.Results.ShowSavedCoverage
     loadedModels = load_standalone_models(targets, cfg);
 end
 
@@ -128,6 +137,15 @@ if p.Results.RunPerTestCase
     runSummary = run_per_test_case(testFile, targets, testFilePath, cfg);
 end
 
+% 4c. Optional: the coverage the pipeline recorded, with its CVF.
+savedCoverage = table(strings(0,1), zeros(0,1), zeros(0,1), zeros(0,1), ...
+    zeros(0,1), strings(0,1), strings(0,1), strings(0,1), 'VariableNames', ...
+    {'TestCaseName','DecisionCovered','DecisionTotal','ExecutionCovered', ...
+     'ExecutionTotal','Report','Status','ErrorId'});
+if p.Results.ShowSavedCoverage
+    savedCoverage = show_saved_coverage(targets, cfg);
+end
+
 % 5. Optional: saved aggregate Result.
 [resultStatus, resultRoots, resultFile] = import_saved_result( ...
     manifest, p.Results.ImportResults, cfg);
@@ -146,6 +164,7 @@ info = struct( ...
     'LoadedModels', loadedModels, ...
     'AppliedFilterCount', appliedFilters, ...
     'RunSummary', runSummary, ...
+    'SavedCoverage', savedCoverage, ...
     'ResultStatus', resultStatus, ...
     'ResultFile', resultFile, ...
     'ResultRootCount', resultRoots);
@@ -169,6 +188,18 @@ if p.Results.RunPerTestCase
     fprintf('Run        : %d Test Case(s) | passed %d | failed %d | not run %d\n', ...
         height(runSummary), sum(runSummary.Passed), sum(runSummary.Failed), ...
         sum(runSummary.Status ~= "OK"));
+end
+if p.Results.ShowSavedCoverage
+    fprintf('Coverage   : %d saved CVT(s) shown with CVF | failed %d\n', ...
+        sum(savedCoverage.Status == "OK"), sum(savedCoverage.Status ~= "OK"));
+    for k = 1:height(savedCoverage)
+        if savedCoverage.Status(k) == "OK"
+            fprintf('  %s | Decision %d/%d | Execution %d/%d\n', ...
+                savedCoverage.TestCaseName(k), savedCoverage.DecisionCovered(k), ...
+                savedCoverage.DecisionTotal(k), savedCoverage.ExecutionCovered(k), ...
+                savedCoverage.ExecutionTotal(k));
+        end
+    end
 end
 fprintf('============================================\n');
 st_log(cfg, 'INFO', ...
@@ -196,6 +227,75 @@ if ~isfield(manifest, 'Targets') || isempty(manifest.Targets)
     error('simtest:StandaloneTestManagerTargetsMissing', ...
         'Pipeline manifest has no packaged targets: %s', manifestPath);
 end
+end
+
+function summary = show_saved_coverage(targets, cfg)
+%SHOW_SAVED_COVERAGE Show each CUT's recorded coverage filtered by its CVF.
+% The pipeline saves the coverage data it measured (CVT) beside the CVF.
+% Loading that data needs no simulation, so what is shown is exactly what
+% the pipeline measured. Reports go under tempdir, never the submission.
+n = numel(targets);
+TestCaseName = strings(n,1);
+DecisionCovered = zeros(n,1);
+DecisionTotal = zeros(n,1);
+ExecutionCovered = zeros(n,1);
+ExecutionTotal = zeros(n,1);
+Report = strings(n,1);
+Status = strings(n,1);
+ErrorId = strings(n,1);
+reportRoot = fullfile(tempdir, 'st_open_standalone_coverage');
+totalTimer = tic;
+st_log(cfg, 'INFO', 'Saved coverage view start | Targets=%d | ReportRoot=%s', ...
+    n, reportRoot);
+for k = 1:n
+    item = targets(k);
+    TestCaseName(k) = string(field_text(item, 'TestCaseName'));
+    try
+        cvtFile = field_text(item, 'CoverageResult');
+        filterFile = field_text(item, 'PackagedCVF');
+        cutPath = field_text(item, 'StandaloneCUTPath');
+        if isempty(cvtFile) || ~isfile(cvtFile)
+            error('simtest:StandaloneSavedCoverageMissing', ...
+                'Saved coverage data is missing for %s: %s', ...
+                char(TestCaseName(k)), cvtFile);
+        end
+        [~, data] = cvload(cvtFile);
+        if iscell(data), data = data{1}; end
+        if ~isempty(filterFile)
+            data.filter = filterFile;
+        end
+        decision = decisioninfo(data, cutPath);
+        execution = executioninfo(data, cutPath);
+        DecisionCovered(k) = decision(1);
+        DecisionTotal(k) = decision(2);
+        ExecutionCovered(k) = execution(1);
+        ExecutionTotal(k) = execution(2);
+        reportDirectory = fullfile(reportRoot, ...
+            st_artifact_stem(char(TestCaseName(k))));
+        if ~isfolder(reportDirectory)
+            mkdir(reportDirectory);
+        end
+        Report(k) = string(fullfile(reportDirectory, 'report.html'));
+        cvhtml(char(Report(k)), data);
+        Status(k) = "OK";
+        st_log(cfg, 'INFO', ...
+            ['Saved coverage shown %d/%d | TestCase=%s | Decision=%d/%d | ' ...
+             'Execution=%d/%d | Report=%s'], k, n, char(TestCaseName(k)), ...
+            DecisionCovered(k), DecisionTotal(k), ExecutionCovered(k), ...
+            ExecutionTotal(k), char(Report(k)));
+    catch ME
+        Status(k) = "ERROR";
+        ErrorId(k) = string(ME.identifier);
+        st_log(cfg, 'ERROR', ...
+            'Saved coverage view %d/%d failed | TestCase=%s | %s: %s', ...
+            k, n, char(TestCaseName(k)), ME.identifier, ME.message);
+    end
+end
+summary = table(TestCaseName, DecisionCovered, DecisionTotal, ...
+    ExecutionCovered, ExecutionTotal, Report, Status, ErrorId);
+st_log(cfg, 'INFO', ...
+    'Saved coverage view complete | OK=%d | Targets=%d | elapsed=%.3f sec', ...
+    sum(Status == "OK"), n, toc(totalTimer));
 end
 
 function loadedModels = load_standalone_models(targets, cfg)

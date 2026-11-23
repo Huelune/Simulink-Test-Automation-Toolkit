@@ -29,6 +29,7 @@
       {"name":"ImportResults", "kind":"namevalue", "type":["logical","scalar"], "purpose":"저장된 aggregate Result를 import할지"},
       {"name":"ClearTestManager", "kind":"namevalue", "type":["logical","scalar"], "purpose":"열기 전에 Test Manager를 비울지"},
       {"name":"RunPerTestCase", "kind":"namevalue", "type":["logical","scalar"], "purpose":"Test Case마다 자기 CVF를 걸고 따로 실행할지"},
+      {"name":"ShowSavedCoverage", "kind":"namevalue", "type":["logical","scalar"], "purpose":"파이프라인이 저장한 CVT에 CVF를 걸어 보고서와 모델 표시로 보여 줄지"},
       {"name":"View", "kind":"namevalue", "type":["logical","scalar"], "purpose":"Test Manager 창을 열지"}
     ]
   },

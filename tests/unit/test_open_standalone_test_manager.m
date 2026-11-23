@@ -13,7 +13,7 @@ verifyTrue(testCase, isfield(signatures, 'st_open_standalone_test_manager'));
 names = string({signatures.st_open_standalone_test_manager.inputs.name});
 verifyEqual(testCase, sort(names), sort(["PipelineId", "OutputRoot", ...
     "LoadModels", "ApplyFilters", "ImportResults", "ClearTestManager", ...
-    "RunPerTestCase", "View"]));
+    "RunPerTestCase", "ShowSavedCoverage", "View"]));
 end
 
 function testCommandIsReadOnlyOnDisk(testCase)
@@ -49,7 +49,7 @@ verifyLessThan(testCase, openAt(1), viewAt(1));
 verifyTrue(testCase, contains(text, "field_text(targets(k), 'OutputDirectory')"));
 verifyTrue(testCase, contains(text, 'sltest.testmanager.TestFile(testFilePath)'));
 for extra = ["LoadModels", "ApplyFilters", "ImportResults", "ClearTestManager", ...
-        "RunPerTestCase"]
+        "RunPerTestCase", "ShowSavedCoverage"]
     verifyTrue(testCase, contains(text, ...
         "addParameter(p, '" + extra + "', false"), ...
         extra + " must default to false");
@@ -179,6 +179,28 @@ launcherFolderAt = strfind(launcher, 'previousFolder = cd(runFolder);');
 verifyNumElements(testCase, launcherFolderAt, 1);
 verifyLessThan(testCase, launcherFolderAt(1), launcherRunAt(1));
 verifyEqual(testCase, numel(strfind(launcher, 'cd(previousFolder);')), 2);
+end
+
+function testShowSavedCoverageUsesThePipelineCvtWithItsCvf(testCase)
+% A re-run covered less than the pipeline did, so the faithful view is the
+% coverage data the pipeline saved: its CVT with the packaged CVF, counted
+% at the standalone CUT path, reported under tempdir, never re-simulated.
+text = source();
+verifyTrue(testCase, contains(text, 'if p.Results.ShowSavedCoverage'));
+body = extractAfter(text, 'function summary = show_saved_coverage(');
+body = extractBefore(body, 'function loadedModels = load_standalone_models(');
+loadAt = strfind(body, 'cvload(cvtFile)');
+filterAt = strfind(body, 'data.filter = filterFile;');
+countAt = strfind(body, 'decisioninfo(data, cutPath)');
+reportAt = strfind(body, "cvhtml(char(Report(k)), data)");
+verifyNumElements(testCase, loadAt, 1);
+verifyLessThan(testCase, loadAt(1), filterAt(1));
+verifyLessThan(testCase, filterAt(1), countAt(1));
+verifyLessThan(testCase, countAt(1), reportAt(1));
+verifyTrue(testCase, contains(body, "fullfile(tempdir, 'st_open_standalone_coverage')"));
+verifyFalse(testCase, contains(body, 'run('));
+verifyTrue(testCase, contains(text, 'if p.Results.LoadModels || p.Results.ShowSavedCoverage'));
+verifyTrue(testCase, contains(text, "'SavedCoverage', savedCoverage"));
 end
 
 function text = source()

@@ -475,6 +475,7 @@ info = st_open_standalone_test_manager('LoadModels', true, ...
 | `ImportResults` | `false` | 저장된 aggregate Result를 import할지. 파이프라인이 저장하지 않았으면(`SaveTestResult=false`) WARN 후 건너뜁니다 |
 | `ClearTestManager` | `false` | 열기 전에 Test Manager의 Test File과 Result를 전부 닫을지 |
 | `RunPerTestCase` | `false` | Test Case마다 자기 CVF를 건 직후 따로 실행해, CVF가 적용된 결과를 Test Case마다 하나씩 만듭니다 |
+| `ShowSavedCoverage` | `false` | 파이프라인이 저장한 CUT별 CVT에 CVF를 걸어 보고서(`tempdir` 아래)와 모델 Coverage 표시로 보여 줍니다. 시뮬레이션을 하지 않으며 값은 `CoverageSummary.xlsx`와 같습니다. 모델을 로드합니다 |
 | `View` | `true` | Test Manager 창을 열지 |
 
 Test Case들은 Coverage 설정 하나를 함께 씁니다. 그래서 `ApplyFilters`로 CVF를 차례로 걸면
@@ -486,6 +487,16 @@ Test Case들은 Coverage 설정 하나를 함께 씁니다. 그래서 `ApplyFilt
 info = st_open_standalone_test_manager('ClearTestManager', true, 'LoadModels', true, ...
     'RunPerTestCase', true);
 ```
+
+파이프라인이 측정한 그대로 CVF를 적용해 보려면 다시 실행하지 않고 저장된 CVT를 엽니다. 현장에서 다시 실행한 결과가
+파이프라인보다 덜 충족된 경우가 있었고, 원인은 아직 찾지 못했습니다. 그러니 제출할 값은 이 방법으로 확인합니다.
+
+```matlab
+info = st_open_standalone_test_manager('ClearTestManager', true, 'ShowSavedCoverage', true, 'View', false);
+```
+
+CUT마다 CVF를 적용한 보고서가 열리고 모델에 Coverage가 표시됩니다. `info.SavedCoverage`에는 CUT별 결정·실행 충족/전체와
+보고서 경로가 있습니다.
 
 결과는 Test Case마다 하나씩 생깁니다. 맨 위 Results 항목의 Coverage Filters와 Aggregated Coverage
 Results에 그 Test Case의 CVF가 적용되어 보입니다. Test Case마다 실행 직전에 그 대상 폴더를 path 맨 앞에 둡니다. 그리고 입력 MAT가 패키지에 든 자기 파일로 읽히는지

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **`st_open_standalone_test_manager('ShowSavedCoverage', true)`로 파이프라인이 측정한 Coverage를 CVF 적용 상태로 봅니다.**
+  CUT마다 저장된 CVT에 패키지 CVF를 걸어 보고서를 `tempdir` 아래에 만들고 모델에 Coverage를 표시합니다. 다시
+  시뮬레이션하지 않으므로 값이 `CoverageSummary.xlsx`와 같습니다. `RunPerTestCase`로 다시 실행한 결과는 파이프라인보다
+  덜 충족된 사례가 있고 원인은 아직 모릅니다.
+
 - **`st_open_standalone_test_manager('RunPerTestCase', true)`로 CVF를 적용한 standalone 결과를 Test Manager에서 봅니다.**
   Test Case들은 Coverage 설정 하나를 함께 씁니다. 그래서 `ApplyFilters`가 CVF를 차례로 걸면 마지막 CVF만 모든 Test
   Case에 남았고, 그 상태로 실행하면 나머지 결과는 아무것도 걸러지지 않았습니다. 새 옵션은 Test Case마다 자기 CVF를
