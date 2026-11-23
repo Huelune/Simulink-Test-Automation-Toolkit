@@ -234,6 +234,9 @@ for s = 1:size(starts, 1)
             if strcmp(cursorType, 'From')
                 gotoBlocks = find_system(bdroot(cursorPath), 'FollowLinks', 'on', 'LookUnderMasks', 'all', 'BlockType', 'Goto', 'GotoTag', get_param(cursorSource, 'GotoTag'));
                 if isempty(gotoBlocks), break; end, cursor = {gotoBlocks{1}, 1};
+            elseif strcmp(cursorType, 'DataTypeConversion')
+                % 형식만 바꾸는 블록이라 그 입력을 이어 따라간다.
+                cursor = {cursorPath, 1};
             elseif strcmp(cursorType, 'Inport') && ~strcmp(get_param(cursorPath, 'Parent'), bdroot(cursorPath))
                 cursor = {get_param(cursorPath, 'Parent'), str2double(get_param(cursorSource, 'Port'))};
             elseif strcmp(cursorType, 'SubSystem')
@@ -245,6 +248,16 @@ for s = 1:size(starts, 1)
                 fprintf(fid, '하늘색 %s의 리셋 조건 출처 | %s\n', starts{s, 3}, cursorPath);
                 fprintf('%s | 카운터 초기값 %s | 리셋 Switch 조건 %s, Threshold %s | 리셋 조건 출처 종류 %s\n', starts{s, 3}, ...
                     get_param(delayFound, 'InitialCondition'), get_param(feeder, 'Criteria'), get_param(feeder, 'Threshold'), cursorType);
+                % 리셋 조건 블록이 무엇과 무엇을 비교하는지(연산자와 각 입력의 종류, 상수면 값) 찍는다.
+                operatorText = ''; try, operatorText = get_param(cursorSource, 'Operator'); catch, end
+                inputHandles = get_param(cursorSource, 'PortHandles'); inputTexts = {};
+                for q = 1:numel(inputHandles.Inport)
+                    inputLine = get_param(inputHandles.Inport(q), 'Line'); if inputLine < 0, inputTexts{end + 1} = '연결 없음'; continue; end %#ok<SAGROW>
+                    inputSource = get_param(inputLine, 'SrcBlockHandle'); inputType = get_param(inputSource, 'BlockType');
+                    if strcmp(inputType, 'Constant'), inputType = ['Constant ' get_param(inputSource, 'Value')]; end
+                    inputTexts{end + 1} = inputType; %#ok<SAGROW>
+                end
+                fprintf('   리셋 조건 블록 | 연산자 %s | 입력: %s\n', operatorText, strjoin(inputTexts, ', '));
                 break;
             end
         end
