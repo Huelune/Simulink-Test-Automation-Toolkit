@@ -30,3 +30,31 @@ verifyTrue(testCase, contains(text, 'D1 (초기값 0) 다음 값 = (1 + D1)'));
 verifyFalse(testCase, contains(printed, 'Secret'));
 verifyFalse(testCase, contains(printed, model));
 end
+
+function testShowTypesAddsCompiledTypesWithoutNames(testCase)
+% A boolean that feeds a comparison with 2 can never equal 2; the compiled
+% type answers that, so ShowTypes appends it per symbol, still name-free.
+model = 'stt_explain_secret_types';
+if bdIsLoaded(model), close_system(model, 0); end
+new_system(model);
+cleanup = onCleanup(@() close_system(model, 0)); %#ok<NASGU>
+add_block('simulink/Sources/Constant', [model '/Secret_One'], 'Value', '1');
+add_block('simulink/Math Operations/Sum', [model '/Secret_Add'], 'Inputs', '++');
+add_block('simulink/Discrete/Unit Delay', [model '/Secret_Delay'], 'InitialCondition', '0', 'SampleTime', '1');
+add_block('simulink/Signal Routing/Switch', [model '/Secret_Switch'], ...
+    'Criteria', 'u2 >= Threshold', 'Threshold', '1');
+add_block('simulink/Sinks/Terminator', [model '/Secret_End']);
+add_line(model, 'Secret_One/1', 'Secret_Add/1');
+add_line(model, 'Secret_Delay/1', 'Secret_Add/2');
+add_line(model, 'Secret_Add/1', 'Secret_Delay/1');
+add_line(model, 'Secret_Delay/1', 'Secret_Switch/2');
+add_line(model, 'Secret_One/1', 'Secret_Switch/1');
+add_line(model, 'Secret_One/1', 'Secret_Switch/3');
+add_line(model, 'Secret_Switch/1', 'Secret_End/1');
+
+printed = evalc('lines = st_explain_block_logic([model ''/Secret_Switch''], ''Boundary'', model, ''ShowTypes'', true);');
+text = strjoin(lines, newline);
+verifyTrue(testCase, contains(text, '형식: D1=double'));
+verifyFalse(testCase, contains(printed, 'Secret'));
+verifyEqual(testCase, get_param(model, 'SimulationStatus'), 'stopped');
+end

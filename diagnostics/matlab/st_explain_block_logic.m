@@ -4,6 +4,7 @@ function lines = st_explain_block_logic(startBlock, varargin)
 %   st_explain_block_logic            % the selected block (gcb)
 %   st_explain_block_logic(block)
 %   st_explain_block_logic(block, 'MaxLines', 40)
+%   st_explain_block_logic(block, 'ShowTypes', true)   % + compiled data types
 %
 % Unsatisfiable SLDV objectives often sit behind feedback loops wired with
 % Goto/From across Subsystem boundaries, which are hard to follow by eye.
@@ -25,6 +26,7 @@ p = inputParser;
 p.FunctionName = mfilename;
 addParameter(p, 'MaxLines', 40, @(x) isnumeric(x) && isscalar(x) && x > 0);
 addParameter(p, 'Boundary', '', @(x) ischar(x) || (isstring(x) && isscalar(x)));
+addParameter(p, 'ShowTypes', false, @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 if nargin < 1 || isempty(startBlock)
     startBlock = gcb;
@@ -99,6 +101,9 @@ if ~isempty(state.Pending)
     state.Lines{end+1} = sprintf('... 정의하지 못한 기호 %d개(줄 수 제한)', size(state.Pending, 1));
 end
 
+if p.Results.ShowTypes
+    state.Lines = [state.Lines, symbol_types(state)];
+end
 for k = 1:numel(state.Lines)
     fprintf('%s\n', state.Lines{k});
 end
@@ -304,6 +309,49 @@ while ~strcmp(get_param(current, 'Parent'), bdroot(current))
         enabled = current;
         return;
     end
+end
+end
+
+
+function lines = symbol_types(state)
+%SYMBOL_TYPES Compiled data type behind every symbol (D, In, T).
+% The model is compiled once to read CompiledPortDataType, then released.
+% Nothing is saved. Types are Simulink names (boolean, uint8, ...).
+keysList = keys(state.Symbols);
+if isempty(keysList)
+    lines = {};
+    return;
+end
+firstPath = extractBefore(string(keysList{1}), '|');
+model = bdroot(char(firstPath));
+lines = {};
+try
+    feval(model, [], [], [], 'compile');
+catch compileError
+    lines = {sprintf('형식 읽기 실패: 모델 컴파일 실패 | 식별자 %s', compileError.identifier)};
+    return;
+end
+cleanup = onCleanup(@() feval(model, [], [], [], 'term')); %#ok<NASGU>
+entries = strings(0, 1);
+order = zeros(0, 1);
+for k = 1:numel(keysList)
+    symbol = state.Symbols(keysList{k});
+    token = regexp(symbol, '^(D|In|T)(\d+)$', 'tokens', 'once');
+    if isempty(token), continue; end
+    parts = split(string(keysList{k}), '|');
+    try
+        handles = get_param(char(parts(1)), 'PortHandles');
+        dataType = get_param(handles.Outport(str2double(parts(end))), 'CompiledPortDataType');
+    catch
+        dataType = '?';
+    end
+    entries(end+1, 1) = sprintf('%s=%s', symbol, dataType); %#ok<AGROW>
+    order(end+1, 1) = find(strcmp(token{1}, {'D', 'In', 'T'})) * 1000 + str2double(token{2}); %#ok<AGROW>
+end
+[~, sorted] = sort(order);
+entries = entries(sorted);
+for k = 1:8:numel(entries)
+    lines{end+1} = ['형식: ' char(strjoin(entries(k:min(k + 7, numel(entries))), ', '))]; %#ok<AGROW>
 end
 end
 
