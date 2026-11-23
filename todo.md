@@ -18,10 +18,11 @@ Coverage가 가리키는 CVF 이름과 같은 번들 CVF를 찾아 다시 걸면
 clearvars; clc; warnState = warning('off', 'all');
 bundleDir = uigetdir(pwd, '자산 번들 폴더(manifest.json이 있는 폴더)를 고르세요');
 if isequal(bundleDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다\n'); warning(warnState); return; end
-rawFiles = dir(fullfile(bundleDir, 'results', '*', 'raw', '*.mldatx'));
-cvfFiles = dir(fullfile(bundleDir, 'results', '**', '*.cvf'));
+rawFiles = dir(fullfile(bundleDir, '**', '*.mldatx')); % 결과 폴더 모양이 번들마다 달라 Test File만 뺀다
+rawFiles = rawFiles(~contains({rawFiles.folder}, [filesep 'test-manager']));
+cvfFiles = dir(fullfile(bundleDir, '**', '*.cvf'));
 cvfNames = lower(string({cvfFiles.name}));
-fprintf('MATLAB %s | 결과 파일 %d개 | 번들 CVF %d개\n', version('-release'), numel(rawFiles), numel(cvfFiles));
+fprintf('MATLAB %s | manifest.json %d | 결과 파일 %d개 | 번들 CVF %d개\n', version('-release'), isfile(fullfile(bundleDir, 'manifest.json')), numel(rawFiles), numel(cvfFiles));
 for k = 1:numel(rawFiles)
     resultSet = sltest.testmanager.importResults(fullfile(rawFiles(k).folder, rawFiles(k).name));
     pending = {getCoverageResults(resultSet)}; covObjects = {};
