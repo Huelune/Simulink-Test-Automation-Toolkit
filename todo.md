@@ -64,39 +64,54 @@ git checkout -- src/config/st_config.m && git pull
 
 돌려줄 것: 오류가 나면 그 화면. 정상이면 "됨" 한 줄.
 
-## 3. 시나리오 2의 입력 데이터가 파이프라인과 같은지 비교
+## 3. 파이프라인 결과를 저장해 Test Manager로 가져와 보기
 
-왜: 세 Iteration의 설정 구조가 똑같다. 파라미터 덮어쓰기(Variables, ModelParams)는 하나도 없고, TestParams 항목 수도 같다.
-그러니 시나리오 2만 다르게 도는 이유는 Iteration 설정이 아니다. 남은 것은 입력 데이터다. 파이프라인은 실행 작업 공간의 입력
-MAT를 읽었고, 재실행은 제출물 폴더에 복사된 입력 MAT를 읽는다. 두 파일의 해시와, 시나리오마다 담긴 데이터가 같은지 비교한다.
-이름과 값은 찍지 않는다. 시뮬레이션은 하지 않는다. MATLAB에서 `st_setup`이 된 상태면 어디서든 붙여 넣는다.
+왜: 재실행은 파이프라인과 다르게 돈다(원인 미확인). 그래서 매뉴얼 6단계를 재실행 대신, 파이프라인이 실제로 돌린 결과를 저장했다가
+가져오는 방식으로 바꿨다. 3단계를 `'SaveTestResult', true`로 다시 돌리고, 그 결과를 가져와 CVF가 걸려 보이는지 확인한다.
+가져온 결과에 따로 CVF를 다시 걸지 않는다. 결과에 저장된 그대로를 센다.
+
+순서: 모델 프로젝트를 연다. 클론에서 main을 pull한다. 툴킷 폴더에서 `st_setup`을 돌린다. 저장 안 한 모델이 없는 상태에서 아래
+블록을 붙여 넣는다. 3단계 파이프라인 전체가 다시 돈다(평소 3단계만큼 걸린다).
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
-pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
+evalc('info = st_run_standalone_coverage_pipeline(''SaveTestResult'', true);');
+pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, info.PipelineId);
+fprintf('파이프라인 | 결과 파일 저장 %d\n', isfile(char(string(pipeline.ResultFile))));
+loadedNames = find_system('type', 'block_diagram');
+if any(strcmp(get_param(loadedNames, 'Dirty'), 'on')), fprintf('저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요\n'); warning(warnState); return; end
+bdclose('all');
+evalc('openInfo = st_open_standalone_test_manager(''PipelineId'', info.PipelineId, ''ClearTestManager'', true, ''LoadModels'', true, ''ImportResults'', true);');
+fprintf('가져오기 | 상태 %s | 결과 %d개\n', char(string(openInfo.ResultStatus)), openInfo.ResultRootCount);
+resultSets = sltest.testmanager.getResultSets;
 for t = 1:numel(pipeline.Targets)
-    target = pipeline.Targets(t);
-    packagedFile = char(string(target.PackagedInput)); workFile = char(string(target.SignalEditorInput));
-    if ~isfile(packagedFile) || ~isfile(workFile)
-        fprintf('대상 %d | 제출물 입력 있음 %d | 작업 공간 입력 있음 %d\n', t, isfile(packagedFile), isfile(workFile)); continue;
-    end
-    sameHash = strcmpi(st_file_signature(packagedFile).SHA256, st_file_signature(workFile).SHA256);
-    packagedData = load(packagedFile); workData = load(workFile);
-    packagedNames = fieldnames(packagedData); workNames = fieldnames(workData);
-    perScenario = strings(1, numel(packagedNames));
-    for k = 1:numel(packagedNames)
-        if k <= numel(workNames) && strcmp(packagedNames{k}, workNames{k})
-            perScenario(k) = string(double(isequaln(packagedData.(packagedNames{k}), workData.(workNames{k}))));
-        else
-            perScenario(k) = "이름다름";
+    target = pipeline.Targets(t); cutPath = char(string(target.StandaloneCUTPath));
+    fprintf('대상 %d 파이프라인 | 판정 %s | CUT 결정 %d/%d | CUT 실행 %d/%d\n', t, char(string(target.InitialOutcome)), ...
+        target.DecisionCovered, target.DecisionTotal, target.ExecutionCovered, target.ExecutionTotal);
+    for k = 1:numel(resultSets)
+        pending = {getCoverageResults(resultSets(k))}; covObjects = {};
+        while ~isempty(pending)
+            item = pending{1}; pending(1) = [];
+            if iscell(item), pending = [pending, item(:)']; %#ok<AGROW>
+            elseif isa(item, 'cv.cvdatagroup'), pending = [pending, getAll(item)']; %#ok<AGROW>
+            elseif isa(item, 'cvdata'), covObjects = [covObjects, num2cell(item(:)')]; end %#ok<AGROW>
+        end
+        for j = 1:numel(covObjects)
+            try
+                decision = decisioninfo(covObjects{j}, cutPath); executed = executioninfo(covObjects{j}, cutPath);
+            catch
+                continue; % 다른 대상의 Coverage
+            end
+            filters = string(covObjects{j}.filter); filters = filters(strlength(filters) > 0 & ~ismissing(filters));
+            fprintf('대상 %d 가져온 결과 %d | 결과에 걸린 CVF %d | CUT 결정 %d/%d | CUT 실행 %d/%d\n', t, k, ...
+                numel(filters), decision(1), decision(2), executed(1), executed(2));
         end
     end
-    fprintf('대상 %d | 해시 같음 %d | 시나리오 수 제출물 %d, 작업 공간 %d | 시나리오별 같음 %s\n', t, sameHash, ...
-        numel(packagedNames), numel(workNames), strjoin(perScenario, ' '));
 end
 warning(warnState);
 ```
 
-확인할 것: 해시가 같으면 입력 데이터도 원인이 아니다. 해시가 다르면 "시나리오별 같음"에서 몇 번째가 0인지 본다(2번째만 0이면 원인이다).
+확인할 것: 대상마다 "가져온 결과"의 CUT 결정·실행이 "파이프라인" 줄과 같은지, "결과에 걸린 CVF"가 1 이상인지. Test Manager에서
+가져온 결과의 맨 위 Results 항목을 눌렀을 때 Coverage Filters 칸에 CVF가 있고 하위 Subsystem이 빠져 보이는지.
 
-돌려줄 것: 화면 캡처 한 장.
+돌려줄 것: 화면 캡처 한 장과 "Coverage Filters에 CVF 있음/없음, 하위 Subsystem 빠짐/안 빠짐" 한 줄. Coverage 표는 캡처하지 마세요.
