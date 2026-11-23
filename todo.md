@@ -73,7 +73,7 @@ Coverage가 통째로 빠지므로 11/22도 함께 설명된다. 대상 1을 한
 6단계를 돌린 MATLAB에서 붙여 넣는다. 시뮬레이션 1회.
 
 ```matlab
-clearvars; clc; warnState = warning('off', 'all');
+fclose('all'); clearvars; clc; warnState = warning('off', 'all');
 pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
 testFiles = sltest.testmanager.getTestFiles; allCases = getAllTestCases(testFiles(1));
 target = pipeline.Targets(1);
@@ -89,7 +89,11 @@ for i = 1:numel(iterationResults)
     messageNames = names(contains(names, {'Error', 'Message', 'Reason', 'Fail', 'Log'}, 'IgnoreCase', true));
     counts = zeros(1, numel(messageNames));
     for m = 1:numel(messageNames)
-        value = iterationResults(i).(messageNames{m});
+        try
+            value = iterationResults(i).(messageNames{m});
+        catch
+            counts(m) = -1; continue; % 이 릴리스에서 읽을 수 없는 속성
+        end
         counts(m) = numel(value);
         fprintf(fid, '=== Iteration %d %s\n%s\n', i, messageNames{m}, evalc('disp(value)'));
     end
@@ -102,7 +106,7 @@ fprintf('%s\n', ['자세한 메시지: %TEMP%' filesep 'st_iteration2_report.txt
 warning(warnState);
 ```
 
-확인할 것: Iteration 2의 메시지 속성에 개수가 있는지. 그리고 `%TEMP%\st_iteration2_report.txt`의 Iteration 2 부분이 어떤 종류인지.
+확인할 것: Iteration 2의 메시지 속성에 개수가 있는지(-1은 이 릴리스에서 읽을 수 없는 속성). 그리고 `%TEMP%\st_iteration2_report.txt`의 Iteration 2 부분이 어떤 종류인지.
 기대값 비교에서 졌다는 내용(verify 실패)인가, 시뮬레이션 오류(변수 없음, 입력 불일치 등)인가.
 
 돌려줄 것: 화면 캡처 한 장과, 파일에 적힌 Iteration 2 오류의 종류를 이름·경로·값 없이 한 줄로.
