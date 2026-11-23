@@ -154,34 +154,39 @@ warning(warnState);
 
 돌려줄 것: 화면 캡처 한 장. 블록 종류와 숫자만 찍힌다. 변수로 된 설정은 이름 대신 `변수=값`으로 찍는다.
 
-## 4. Enable, 카운터(Unit Delay), 리셋 Switch를 모델에서 찾아 색칠하기
+## 4. 두 카운터와 리셋만 골라 색칠하고 리셋 조건이 같은지 보기
 
-왜: 사유를 확정하려면 모델에서 세 곳을 직접 봐야 한다. 안쪽 Switch를 감싼 Enabled Subsystem과 그 Enable 블록, 두 카운터의 Unit Delay,
-그리고 각 카운터를 0으로 되돌리는 리셋 Switch다. 되먹임과 Goto/From 때문에 손으로 찾기 어렵다. 그래서 선택한 Switch에서 거꾸로 따라가며
-이 블록들을 모으고, 모델에서 색으로 표시한 뒤 해당 화면을 연다. 색은 이렇게 칠한다.
+왜: 앞 절은 거꾸로 끝까지 따라가는 바람에 Unit Delay 9개, Switch 5개를 다 칠해서 무엇이 무엇인지 알 수 없었다. 이번에는
+따라가다 **처음 만나는 Unit Delay 하나에서 멈춘다.** 출발점은 안쪽 Switch의 제어 입력(카운터 1)과 Enabled Subsystem의 Enable
+입력(카운터 2) 두 곳이다. 그래서 카운터는 딱 두 개만 칠한다. 각 카운터 바로 앞의 리셋 Switch도 칠한다. 그리고 두 리셋 Switch의
+조건 입력이 Goto/From을 건너 **같은 블록에서 오는지** 직접 비교해 찍는다. 색은 이렇게 칠한다.
 - 노란색: Enabled Subsystem
-- 초록색: 두 카운터의 Unit Delay
-- 빨간색: 각 Unit Delay 바로 앞의 리셋 Switch
-- 하늘색: 처음 선택한 Switch
-화면에는 개수만 찍고, 블록 경로는 `%TEMP%\st_counter_blocks.txt`에 쓴다. 그 파일은 보내지 말고 직접 연다. 모델은 저장하지 않는다.
-색은 강조 표시라 모델에 저장되지 않는다.
-3절에서 쓴 **같은 안쪽 Switch를 선택한 채로** 붙여 넣는다.
+- 초록색: 카운터 1·2
+- 빨간색: 각 카운터의 리셋 Switch
+- 하늘색: 리셋 조건이 나오는 블록
+블록 경로는 `%TEMP%\st_counter_blocks.txt`에 쓴다(보내지 말 것). 색은 저장되지 않는다. 같은 안쪽 Switch를 선택한 채로 붙여 넣는다.
+앞 절의 색이 남아 있으면 모델을 닫았다 다시 연 뒤 Switch를 선택하고 돌린다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
-startBlock = gcb; found = struct('enabled', {{}}, 'delays', {{}}, 'resets', {{}});
+startBlock = gcb; enabledBlock = '';
 current = startBlock;
 while ~strcmp(get_param(current, 'Parent'), bdroot(current))
     current = get_param(current, 'Parent'); currentHandles = get_param(current, 'PortHandles');
-    if ~isempty(currentHandles.Enable), found.enabled{end + 1} = current; break; end
+    if ~isempty(currentHandles.Enable), enabledBlock = current; break; end
 end
-starts = {startBlock, 2};
-if ~isempty(found.enabled), starts(end + 1, :) = {found.enabled{1}, 'enable'}; end
-visited = {};
+starts = {startBlock, 2, '카운터 1(Switch 제어 입력)'};
+if ~isempty(enabledBlock), starts(end + 1, :) = {enabledBlock, 'enable', '카운터 2(Enable 입력)'}; end
+schemes = {'user1', 'yellow'; 'user2', 'green'; 'user3', 'red'; 'user4', 'lightBlue'};
+for c = 1:size(schemes, 1), set_param(0, 'HiliteAncestorsData', struct('HiliteType', schemes{c, 1}, 'ForegroundColor', 'black', 'BackgroundColor', schemes{c, 2})); end
+fid = fopen(fullfile(tempdir, 'st_counter_blocks.txt'), 'w');
+if ~isempty(enabledBlock), hilite_system(enabledBlock, 'user1'); fprintf(fid, '노란색 Enabled Subsystem | %s\n', enabledBlock); end
+resetSources = {};
 for s = 1:size(starts, 1)
-    queue = {starts{s, 1}, starts{s, 2}};
-    while ~isempty(queue) && numel(visited) < 200
+    queue = {starts{s, 1}, starts{s, 2}}; visited = {}; delayFound = '';
+    while ~isempty(queue) && isempty(delayFound) && numel(visited) < 200
         block = queue{1, 1}; port = queue{1, 2}; queue(1, :) = [];
+        [sourcePath, sourceType, line] = deal('', '', -1);
         handles = get_param(block, 'PortHandles');
         if ischar(port), portHandle = handles.Enable; else, if port > numel(handles.Inport), continue; end, portHandle = handles.Inport(port); end
         if isempty(portHandle), continue; end
@@ -202,39 +207,57 @@ for s = 1:size(starts, 1)
                 portNumber = get_param(get_param(line, 'SrcPortHandle'), 'PortNumber');
                 outportBlock = find_system(sourcePath, 'SearchDepth', 1, 'FollowLinks', 'on', 'LookUnderMasks', 'all', 'BlockType', 'Outport', 'Port', num2str(portNumber));
                 if ~isempty(outportBlock), queue(end + 1, :) = {outportBlock{1}, 1}; end %#ok<SAGROW>
+            case {'UnitDelay', 'Delay', 'Memory'}
+                delayFound = sourcePath;
             otherwise
-                if any(strcmp(sourceType, {'UnitDelay', 'Delay', 'Memory'}))
-                    found.delays{end + 1} = sourcePath;
-                    delayHandles = get_param(source, 'PortHandles'); delayLine = get_param(delayHandles.Inport(1), 'Line');
-                    if delayLine > 0
-                        feeder = get_param(delayLine, 'SrcBlockHandle');
-                        if feeder > 0 && strcmp(get_param(feeder, 'BlockType'), 'Switch'), found.resets{end + 1} = getfullname(feeder); end
-                    end
-                end
                 sourceHandles = get_param(source, 'PortHandles');
                 for p = 1:numel(sourceHandles.Inport), queue(end + 1, :) = {sourcePath, p}; end %#ok<SAGROW>
         end
     end
-end
-fid = fopen(fullfile(tempdir, 'st_counter_blocks.txt'), 'w');
-schemes = {'user1', 'yellow'; 'user2', 'green'; 'user3', 'red'; 'user4', 'lightBlue'};
-for c = 1:size(schemes, 1), set_param(0, 'HiliteAncestorsData', struct('HiliteType', schemes{c, 1}, 'ForegroundColor', 'black', 'BackgroundColor', schemes{c, 2})); end
-groups = {'enabled', '노란색 Enabled Subsystem', 'user1'; 'delays', '초록색 Unit Delay', 'user2'; 'resets', '빨간색 리셋 Switch', 'user3'};
-for g = 1:size(groups, 1)
-    items = unique(found.(groups{g, 1}), 'stable');
-    fprintf('%s %d개\n', groups{g, 2}, numel(items));
-    for k = 1:numel(items)
-        fprintf(fid, '%s | %s\n', groups{g, 2}, items{k});
-        hilite_system(items{k}, groups{g, 3});
+    if isempty(delayFound), fprintf('%s | Unit Delay를 찾지 못함\n', starts{s, 3}); resetSources{end + 1} = ''; continue; end %#ok<SAGROW>
+    hilite_system(delayFound, 'user2'); fprintf(fid, '초록색 %s | %s\n', starts{s, 3}, delayFound);
+    delayHandles = get_param(delayFound, 'PortHandles'); feeder = get_param(get_param(delayHandles.Inport(1), 'Line'), 'SrcBlockHandle');
+    feederType = get_param(feeder, 'BlockType'); resetSource = '';
+    if strcmp(feederType, 'Switch')
+        hilite_system(feeder, 'user3'); fprintf(fid, '빨간색 %s의 리셋 Switch | %s\n', starts{s, 3}, getfullname(feeder));
+        % 리셋 조건(Switch 가운데 입력)을 Goto/From·Subsystem 경계를 건너 처음 계산 블록까지 따라간다.
+        cursor = {getfullname(feeder), 2};
+        for hop = 1:30
+            cursorHandles = get_param(cursor{1}, 'PortHandles'); if cursor{2} > numel(cursorHandles.Inport), break; end
+            cursorLine = get_param(cursorHandles.Inport(cursor{2}), 'Line'); if cursorLine < 0, break; end
+            cursorSource = get_param(cursorLine, 'SrcBlockHandle'); cursorType = get_param(cursorSource, 'BlockType'); cursorPath = getfullname(cursorSource);
+            if strcmp(cursorType, 'From')
+                gotoBlocks = find_system(bdroot(cursorPath), 'FollowLinks', 'on', 'LookUnderMasks', 'all', 'BlockType', 'Goto', 'GotoTag', get_param(cursorSource, 'GotoTag'));
+                if isempty(gotoBlocks), break; end, cursor = {gotoBlocks{1}, 1};
+            elseif strcmp(cursorType, 'Inport') && ~strcmp(get_param(cursorPath, 'Parent'), bdroot(cursorPath))
+                cursor = {get_param(cursorPath, 'Parent'), str2double(get_param(cursorSource, 'Port'))};
+            elseif strcmp(cursorType, 'SubSystem')
+                portNumber = get_param(get_param(cursorLine, 'SrcPortHandle'), 'PortNumber');
+                outportBlock = find_system(cursorPath, 'SearchDepth', 1, 'FollowLinks', 'on', 'LookUnderMasks', 'all', 'BlockType', 'Outport', 'Port', num2str(portNumber));
+                if isempty(outportBlock), break; end, cursor = {outportBlock{1}, 1};
+            else
+                resetSource = cursorPath; hilite_system(cursorSource, 'user4');
+                fprintf(fid, '하늘색 %s의 리셋 조건 출처 | %s\n', starts{s, 3}, cursorPath);
+                fprintf('%s | 카운터 초기값 %s | 리셋 Switch 조건 %s, Threshold %s | 리셋 조건 출처 종류 %s\n', starts{s, 3}, ...
+                    get_param(delayFound, 'InitialCondition'), get_param(feeder, 'Criteria'), get_param(feeder, 'Threshold'), cursorType);
+                break;
+            end
+        end
+    else
+        fprintf('%s | 카운터 바로 앞이 Switch가 아님(종류 %s)\n', starts{s, 3}, feederType);
     end
+    resetSources{end + 1} = resetSource; %#ok<SAGROW>
 end
-hilite_system(startBlock, 'user4'); fprintf(fid, '하늘색 처음 선택한 Switch | %s\n', startBlock); fclose(fid);
-if ~isempty(found.enabled), open_system(get_param(found.enabled{1}, 'Parent')); end
+fclose(fid);
+if numel(resetSources) == 2 && ~isempty(resetSources{1})
+    fprintf('두 리셋 조건이 같은 블록에서 나옴: %d\n', strcmp(resetSources{1}, resetSources{2}));
+end
+if ~isempty(enabledBlock), open_system(get_param(enabledBlock, 'Parent')); end
 fprintf('%s\n', ['블록 경로: %TEMP%' filesep 'st_counter_blocks.txt']);
 warning(warnState);
 ```
 
-확인할 것: 노란색 Enabled Subsystem의 Enable이 어느 카운터에서 오는지, 초록색 Unit Delay 두 개가 각각 어느 빨간색 Switch로 리셋되는지, 두
-리셋 Switch의 조건 입력이 같은 신호에서 오는지.
+확인할 것: "두 리셋 조건이 같은 블록에서 나옴: 1"이면 두 카운터가 같은 조건으로 함께 리셋된다. 그러면 사유가 확정된다. 0이면 리셋 조건이
+다르니, 하늘색 두 블록이 어떤 관계인지 모델에서 본다.
 
-돌려줄 것: 화면 캡처 한 장(개수만 찍힌다). 그리고 "두 리셋 조건이 같은 신호/다른 신호" 한 줄.
+돌려줄 것: 화면 캡처 한 장.
