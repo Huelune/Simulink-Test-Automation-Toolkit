@@ -46,6 +46,17 @@ state.Boundary = char(string(p.Results.Boundary));
 if isempty(state.Boundary)
     state.Boundary = find_cut(startBlock);
 end
+if isempty(state.Boundary)
+    % Without a CUT the walk would wander the whole model; stop at the
+    % top-level Subsystem that holds the block instead.
+    state.Boundary = startBlock;
+    while ~strcmp(get_param(state.Boundary, 'Parent'), bdroot(startBlock))
+        state.Boundary = get_param(state.Boundary, 'Parent');
+    end
+    state.Lines{end+1} = 'CUT를 찾지 못해 맨 위 Subsystem 경계에서 멈춥니다';
+end
+state.Budget = containers.Map('KeyType', 'char', 'ValueType', 'double');
+state.Budget('n') = 0;
 
 % The start block and, if any, the Enabled Subsystem around it.
 [startExpr, state] = describe_block(startBlock, state, 0);
@@ -174,6 +185,26 @@ if isKey(state.Symbols, key)
     expr = state.Symbols(key);
     return;
 end
+% Every block on the current path is marked so a loop that never meets a
+% delay (wiring through Goto/From and Subsystem ports) ends instead of
+% recursing forever. A budget caps runaway walks across a large model.
+state.Budget('n') = state.Budget('n') + 1;
+if state.Budget('n') > 20000
+    expr = '?';
+    return;
+end
+guarded = ~any(strcmp(type, {'UnitDelay', 'Delay', 'Memory'}));
+if guarded
+    state.Symbols(key) = '↺';
+end
+[expr, state] = source_expr_body(type, key, sourcePath, sourcePort, state, depth);
+if guarded && isKey(state.Symbols, key) && strcmp(state.Symbols(key), '↺')
+    remove(state.Symbols, key);
+end
+end
+
+
+function [expr, state] = source_expr_body(type, key, sourcePath, sourcePort, state, depth)
 switch type
     case 'Constant'
         expr = resolve_text(get_param(sourcePath, 'Value'), sourcePath, state);
@@ -190,12 +221,14 @@ switch type
     case 'Inport'
         parentPath = get_param(sourcePath, 'Parent');
         if strcmp(parentPath, bdroot(sourcePath)) || strcmp(parentPath, state.Boundary)
+            remove(state.Symbols, key);
             [expr, state] = new_symbol(state, 'In', key, sourcePath, sourcePort);
             return;
         end
         handles = get_param(parentPath, 'PortHandles');
         portNumber = str2double(get_param(sourcePath, 'Port'));
         if portNumber > numel(handles.Inport) || get_param(handles.Inport(portNumber), 'Line') < 0
+            remove(state.Symbols, key);
             [expr, state] = new_symbol(state, 'In', key, sourcePath, sourcePort);
             return;
         end
@@ -220,11 +253,10 @@ switch type
     otherwise
         if depth >= 3
             % Keep lines short: name the deeper computation and define it later.
-            [expr, state] = new_symbol(state, 'T', key, sourcePath, sourcePort);
-        else
-            state.Symbols(key) = '…';   % guards algebraic recursion while describing
-            [expr, state] = describe_block(sourcePath, state, depth);
             remove(state.Symbols, key);
+        [expr, state] = new_symbol(state, 'T', key, sourcePath, sourcePort);
+        else
+            [expr, state] = describe_block(sourcePath, state, depth);
         end
 end
 end
