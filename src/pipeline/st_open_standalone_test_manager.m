@@ -349,6 +349,30 @@ st_log(cfg, 'DEBUG', ...
     char(testCaseName), filterFile);
 end
 
+function require_own_input(item, cfg)
+%REQUIRE_OWN_INPUT Make the Test Case read the input MAT packaged with it.
+% The packaged Test File names its input MAT by file name only, so MATLAB
+% takes the first match in the current folder or on the path. The pipeline
+% ran each CUT with only its own folder on the path; here every target
+% folder and the project's own inputs are on it, and another same-named
+% MAT came first, so the run silently used the wrong input.
+folder = field_text(item, 'OutputDirectory');
+addpath(folder, '-begin');
+input = field_text(item, 'PackagedInput');
+if isempty(input)
+    return;
+end
+[~, name, extension] = fileparts(input);
+found = which([name extension]);
+if ~st_same_path(found, input)
+    error('simtest:StandaloneTestManagerInputShadowed', ...
+        ['Another %s comes before the packaged input (current folder ' ...
+         'first, then the path). Change the current folder away from it. ' ...
+         'Packaged=%s | Found=%s'], [name extension], input, found);
+end
+st_log(cfg, 'DEBUG', 'Packaged input resolves first | Input=%s', input);
+end
+
 function summary = run_per_test_case(testFile, targets, testFilePath, cfg)
 %RUN_PER_TEST_CASE Run each Test Case alone under its own CVF.
 % The CVF is set right before each run because Test Cases share one
@@ -380,6 +404,7 @@ for k = 1:n
                 char(TestCaseName(k)));
             continue;
         end
+        require_own_input(targets(k), cfg);
         st_log(cfg, 'INFO', 'Per Test Case run %d/%d start | TestCase=%s', ...
             k, n, char(TestCaseName(k)));
         resultSet = run(testCase);

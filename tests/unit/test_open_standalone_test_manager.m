@@ -150,6 +150,27 @@ verifyNotEmpty(testCase, loopEndAt);
 verifyLessThan(testCase, runAt(1), loopEndAt(1));
 end
 
+function testEachRunReadsItsOwnPackagedInput(testCase)
+% Inputs are named by file name only. With every target folder and the
+% project's inputs on the path, another same-named MAT came first and the
+% re-run covered fewer decisions than the pipeline. Each run now puts its
+% own folder first and refuses to run when the packaged input is shadowed.
+text = source();
+body = extractAfter(text, 'function summary = run_per_test_case(');
+checkAt = strfind(body, 'require_own_input(targets(k), cfg);');
+runAt = strfind(body, 'resultSet = run(testCase);');
+verifyNumElements(testCase, checkAt, 1);
+verifyLessThan(testCase, checkAt(1), runAt(1));
+verifyTrue(testCase, contains(text, "addpath(folder, '-begin');"));
+verifyTrue(testCase, contains(text, 'simtest:StandaloneTestManagerInputShadowed'));
+launcher = string(fileread(fullfile(st_project_root(), 'resources', ...
+    'standalone_coverage', 'open_standalone_coverage_test_manager.m')));
+shadowAt = strfind(launcher, 'simtest:PackagedTestManagerInputShadowed');
+launcherRunAt = strfind(launcher, 'caseResult = run(testCases(matches));');
+verifyNumElements(testCase, shadowAt, 1);
+verifyLessThan(testCase, shadowAt(1), launcherRunAt(1));
+end
+
 function text = source()
 text = string(fileread(fullfile(st_project_root(), 'src', 'pipeline', ...
     'st_open_standalone_test_manager.m')));

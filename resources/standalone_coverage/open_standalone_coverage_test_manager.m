@@ -89,6 +89,26 @@ for k = 1:numel(targets)
         k, numel(targets), char(testCaseName));
     % One broken CUT must not hide the results of the others.
     try
+        % The input MAT is named by file name only. Put this target's folder
+        % first and make sure no same-named MAT (current folder or path)
+        % comes before it, or the run silently uses another input.
+        addpath(fileparts(char(string(targets(k).PackagedStandaloneModel))), '-begin');
+        inputFile = '';
+        if isfield(targets(k), 'PackagedInput')
+            inputFile = char(string(targets(k).PackagedInput));
+        end
+        if ~isempty(inputFile)
+            [~, inputName, inputExtension] = fileparts(inputFile);
+            foundInput = which([inputName inputExtension]);
+            if isempty(foundInput) || ~strcmpi( ...
+                    char(java.io.File(foundInput).getCanonicalPath()), ...
+                    char(java.io.File(inputFile).getCanonicalPath()))
+                error('simtest:PackagedTestManagerInputShadowed', ...
+                    ['Another %s comes before the packaged input. Change ' ...
+                     'the current folder away from it. Packaged=%s | Found=%s'], ...
+                    [inputName inputExtension], inputFile, foundInput);
+            end
+        end
         caseResult = run(testCases(matches));
         fprintf(['Test Case run %d/%d complete | TestCase=%s | Passed=%d | ' ...
             'Failed=%d | Incomplete=%d\n'], k, numel(targets), ...

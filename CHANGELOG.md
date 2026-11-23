@@ -7,6 +7,8 @@
   Case에 남았고, 그 상태로 실행하면 나머지 결과는 아무것도 걸러지지 않았습니다. 새 옵션은 Test Case마다 자기 CVF를
   건 직후 따로 실행합니다. `ApplyFilters`는 CVF가 서로 덮였으면 WARN을 남깁니다.
   제출물의 `TestManager/open_standalone_coverage_test_manager.m`도 같은 방식으로 Test Case마다 자기 CVF로 실행합니다.
+  실행 직전에 그 대상 폴더를 path 맨 앞에 두고, 입력 MAT가 패키지에 든 자기 파일로 읽히는지 확인합니다. 입력 MAT는 파일
+  이름으로만 찾기 때문에, 이름이 같은 다른 MAT가 앞에 있으면 다른 입력으로 돌아 커버리지가 파이프라인보다 낮게 나왔습니다.
 
 - **`SldvMode=GENERATE`도 `CoverageFilterMode`를 따릅니다.** 커버리지에서 뺀 CUT 바로 아래
   하위 Subsystem의 목표는 SLDV도 충족시키려 하지 않습니다(목표는 SLDV 데이터에 남습니다). `SUBSYSTEM`/`ALL_CONTENT`와
