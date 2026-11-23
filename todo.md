@@ -142,3 +142,54 @@ warning(warnState);
 제어 신호는 영영 Threshold 아래로 내려가지 않는다. 그것이 사유다. `변수=값`으로 나온 설정은 sldd나 워크스페이스의 값을 읽은 것이다.
 
 돌려줄 것: 화면 캡처 한 장. 블록 종류와 숫자만 찍힌다. 변수로 된 설정은 이름 대신 `변수=값`으로 찍는다.
+
+## 4. 선택한 Switch가 어떤 조건에서만 실행되는지 보기
+
+왜: 3절 결과에서 선택한 Switch의 제어 입력(u2)은 From → Goto → Unit Delay(초기값 0, uint8)에서 온다. 초기값이 0이니 첫 계산에서
+u2 = 0 < 1이 되어야 한다. 그러면 "u2 ≥ 1 거짓"에 닿을 수 있어야 하는데, SLDV는 닿을 수 없다고 증명했다. 이렇게 되는 흔한 이유는,
+그 Switch가 조건부로 실행되는 Subsystem 안에 있는 경우다. Enable, Trigger, If/Switch Case의 Action, Function-Call 같은 것이다.
+그 Subsystem을 실행시키는 조건이 이미 "지연값 ≥ 1"을 보장하면, 안쪽 Switch의 검사는 중복이 되어 거짓이 될 수 없다.
+선택한 블록에서 위로 올라가며, 각 Subsystem이 무엇에 의해 실행되는지 찍는다. 그 실행 조건이 If 블록이면 If 식도 찍는다.
+If 식은 u1, u2 같은 포트 이름만 쓴다. 블록 이름은 찍지 않는다. 3절과 같은 Switch를 선택한 채로 붙여 넣는다.
+
+```matlab
+clearvars; clc; warnState = warning('off', 'all');
+current = gcb; level = 0;
+fprintf('선택 블록 | 종류 %s\n', get_param(current, 'BlockType'));
+while true
+    parentBlock = get_param(current, 'Parent');
+    if strcmp(parentBlock, bdroot(current)), break; end
+    level = level + 1;
+    ports = get_param(parentBlock, 'PortHandles');
+    kinds = {};
+    if ~isempty(ports.Enable), kinds{end + 1} = 'Enable'; end %#ok<SAGROW>
+    if ~isempty(ports.Trigger), kinds{end + 1} = ['Trigger(' get_param(find_system(parentBlock, 'SearchDepth', 1, 'BlockType', 'TriggerPort'), 'TriggerType'){1} ')']; end %#ok<SAGROW>
+    if ~isempty(ports.Ifaction), kinds{end + 1} = 'Action'; end %#ok<SAGROW>
+    if isempty(kinds), kinds = {'항상 실행'}; end
+    fprintf('위 %d단계 Subsystem | 실행: %s\n', level, strjoin(kinds, ', '));
+    controlPorts = [ports.Enable, ports.Trigger, ports.Ifaction];
+    for c = 1:numel(controlPorts)
+        controlLine = get_param(controlPorts(c), 'Line'); if controlLine < 0, continue; end
+        controlSource = get_param(controlLine, 'SrcBlockHandle'); sourceType = get_param(controlSource, 'BlockType');
+        detail = '';
+        if strcmp(sourceType, 'If')
+            outputPort = get_param(get_param(controlLine, 'SrcPortHandle'), 'PortNumber');
+            elseExpressions = strsplit(get_param(controlSource, 'ElseIfExpressions'), ',');
+            expressions = [{get_param(controlSource, 'IfExpression')}, elseExpressions(~cellfun(@isempty, elseExpressions))];
+            if outputPort <= numel(expressions), detail = [' | 이 Action의 조건: ' expressions{outputPort}];
+            else, detail = ' | 이 Action은 else 쪽'; end
+            detail = [detail ' | If 식 전체: ' strjoin(expressions, ' / ')];
+        elseif any(strcmp(sourceType, {'RelationalOperator', 'CompareToConstant', 'Logic'}))
+            try, detail = [' | Operator ' get_param(controlSource, 'Operator')]; catch, end
+        end
+        fprintf('   실행 신호의 출처 | 종류 %s%s\n', sourceType, detail);
+    end
+    current = parentBlock;
+end
+warning(warnState);
+```
+
+확인할 것: 선택한 Switch 위에 Enable/Action/Trigger로 실행되는 Subsystem이 있는지. 있다면 그 실행 조건(If 식이나 비교 연산)이 지연값을
+1 이상일 때만 실행되게 하는지.
+
+돌려줄 것: 화면 캡처 한 장.
