@@ -51,39 +51,45 @@ Aggregated Coverage Results의 %가 CVF 없이 볼 때와 다른지.
 돌려줄 것: 화면 캡처 한 장과 "Coverage Filters에 CVF 있음/없음, %가 바뀜/안 바뀜" 한 줄.
 Coverage 표는 블록 이름이 보이므로 캡처하지 마세요.
 
-## 2. standalone 결과에서 CVF가 실제로 무언가를 빼는지 확인
+## 2. standalone 결과가 어느 모델과 어느 CVF로 만들어졌는지 확인
 
-왜: 1절 결과는 Coverage Filters 칸에 CVF가 있고 CVF 규칙도 standalone 모델의 블록을 제대로 찾는다(16개 중
-CUT 안 4, CUT 밖 12). 그런데 보고서에 필터로 뺀 항목이 나오지 않고, 모델에서도 하위 Subsystem에 Coverage가
-그대로 칠해진다. 결과의 Coverage를 CVF를 건 채로 한 번, CVF를 뗀 채로 한 번 세어 숫자가 달라지는지 본다.
-규칙 종류도 센다. 같은 MATLAB에서 1절을 돌린 뒤 이어서 붙여 넣는다(결과와 모델이 열려 있어야 한다).
+왜: 앞 확인에서 결과 3개 모두 CVF를 뗀 결정 커버리지가 30/49로 똑같았다. CVF가 실제로 빼는 것이 있는 결과는
+3번뿐이었다(30/49 → 11/22). 1·2번은 CVF가 걸려 있어도 숫자가 그대로였다. 그래서 세 Test Case가 모두 같은
+standalone 모델(3번)을 돌렸고, 1·2번 CVF는 다른 모델의 블록을 가리켜 아무것도 빼지 못했다고 의심한다.
+결과마다 Test Case, 분석한 모델, 걸린 CVF가 몇 번 대상의 것인지 번호로 찍는다. 이름은 찍지 않는다.
+같은 MATLAB에서 1절을 돌린 뒤 이어서 붙여 넣는다(결과와 모델이 열려 있어야 한다).
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
 cfg = st_config();
 pipeline = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir, 'LATEST');
-for k = 1:numel(pipeline.Targets)
-    target = pipeline.Targets(k); cutPath = char(string(target.StandaloneCUTPath));
-    rules = slcoverage.Filter(char(string(target.PackagedCVF))).rules;
-    insideSub = 0; insideOther = 0; excludeCount = 0; instanceCount = 0;
-    for r = 1:numel(rules)
-        excludeCount = excludeCount + (rules(r).Mode == slcoverage.FilterMode.Exclude);
-        instanceCount = instanceCount + (rules(r).Selector.Type == slcoverage.BlockSelectorType.BlockInstance);
-        rulePath = Simulink.ID.getFullName(char(string(rules(r).Selector.Id)));
-        if startsWith(rulePath, [cutPath '/'])
-            if strcmp(get_param(rulePath, 'BlockType'), 'SubSystem') && strcmp(get_param(rulePath, 'Parent'), cutPath)
-                insideSub = insideSub + 1;
-            else
-                insideOther = insideOther + 1;
-            end
-        end
+targetCount = numel(pipeline.Targets);
+caseNames = strings(1, targetCount); modelNames = strings(1, targetCount); cutPaths = strings(1, targetCount); cvfNames = strings(1, targetCount);
+for t = 1:targetCount
+    caseNames(t) = string(pipeline.Targets(t).TestCaseName);
+    [~, modelNames(t)] = fileparts(char(string(pipeline.Targets(t).PackagedStandaloneModel)));
+    cutPaths(t) = string(pipeline.Targets(t).StandaloneCUTPath);
+    [~, cvfName, cvfExt] = fileparts(char(string(pipeline.Targets(t).PackagedCVF))); cvfNames(t) = lower(string([cvfName cvfExt]));
+end
+fprintf('대상 %d | 서로 다른 모델 이름 %d | 서로 다른 CVF 이름 %d\n', targetCount, numel(unique(modelNames)), numel(unique(cvfNames)));
+for t = 1:targetCount
+    if bdIsLoaded(char(modelNames(t)))
+        sameFile = strcmpi(get_param(char(modelNames(t)), 'FileName'), char(string(pipeline.Targets(t).PackagedStandaloneModel)));
+        fprintf('대상 %d 모델 | 열림 | 패키지 파일과 같은 파일 %d\n', t, sameFile);
+    else
+        fprintf('대상 %d 모델 | 안 열림\n', t);
     end
-    childSubs = numel(find_system(cutPath, 'SearchDepth', 1, 'LookUnderMasks', 'all', 'BlockType', 'SubSystem')) - 1;
-    fprintf('대상 %d | Exclude %d / Justify %d | BlockInstance %d / 그 외 %d | CUT 바로 아래 Subsystem %d개, 규칙이 가리킴 %d, 다른 블록 가리킴 %d\n', ...
-        k, excludeCount, numel(rules) - excludeCount, instanceCount, numel(rules) - instanceCount, childSubs, insideSub, insideOther);
 end
 resultSets = sltest.testmanager.getResultSets;
 for k = 1:numel(resultSets)
+    caseIndex = [];
+    fileResults = getTestFileResults(resultSets(k));
+    for f = 1:numel(fileResults)
+        caseResults = getTestCaseResults(fileResults(f));
+        suiteResults = getTestSuiteResults(fileResults(f));
+        for s = 1:numel(suiteResults), caseResults = [caseResults, getTestCaseResults(suiteResults(s))]; end %#ok<AGROW>
+        for c = 1:numel(caseResults), caseIndex = [caseIndex, find(caseNames == string(caseResults(c).Name))]; end %#ok<AGROW>
+    end
     pending = {getCoverageResults(resultSets(k))}; covObjects = {};
     while ~isempty(pending)
         item = pending{1}; pending(1) = [];
@@ -92,23 +98,23 @@ for k = 1:numel(resultSets)
         elseif isa(item, 'cvdata'), covObjects = [covObjects, num2cell(item(:)')]; end %#ok<AGROW>
     end
     for j = 1:numel(covObjects)
-        cvd = covObjects{j}; root = char(string(cvd.modelinfo.analyzedModel)); savedFilter = cvd.filter;
-        try
-            withFilter = decisioninfo(cvd, root);
-            cvd.filter = ''; withoutFilter = decisioninfo(cvd, root); cvd.filter = savedFilter;
-            fprintf('결과 %d-%d | 결정: CVF 있음 %d/%d, CVF 없음 %d/%d\n', k, j, withFilter(1), withFilter(2), withoutFilter(1), withoutFilter(2));
-        catch infoError
-            cvd.filter = savedFilter;
-            fprintf('결과 %d-%d | 지표 읽기 실패 | 식별자 %s\n', k, j, infoError.identifier);
+        cvd = covObjects{j}; root = string(cvd.modelinfo.analyzedModel);
+        modelIndex = find(cutPaths == root | modelNames == root | modelNames == extractBefore(root + "/", "/"));
+        filterIndex = [];
+        refs = string(cvd.filter); refs = refs(strlength(refs) > 0 & ~ismissing(refs));
+        for r = 1:numel(refs)
+            [~, refName, refExt] = fileparts(char(refs(r))); if isempty(refExt), refExt = '.cvf'; end
+            filterIndex = [filterIndex, find(cvfNames == lower(string([refName refExt])))]; %#ok<AGROW>
         end
+        fprintf('결과 %d-%d | Test Case 대상 %s | 분석 모델 대상 %s | CVF 대상 %s\n', k, j, ...
+            mat2str(caseIndex), mat2str(modelIndex), mat2str(filterIndex));
     end
 end
 warning(warnState);
 ```
 
-확인할 것: 결과마다 CVF 있음과 없음의 숫자가 같으면 CVF가 결과에 걸렸어도 아무것도 빼지 않는 것이다.
-대상 줄에서 "BlockInstance"가 많으면 하위 Subsystem 블록 자체만 빼고 그 안 내용은 남기는 설정
-(`CoverageFilterMode=SUBSYSTEM`)이다. 이때는 하위 Subsystem 안에 Coverage가 칠해지는 것이 정상이다.
+확인할 것: 결과마다 세 번호가 같아야 정상이다. "분석 모델 대상"이 모두 같은 번호이거나 "서로 다른 모델 이름"이 대상
+수보다 작으면, 세 Test Case가 같은 모델을 돌린 것이다. 이름이 같은 standalone 모델이 여러 개라서 Test Manager가
+그중 하나만 쓴 경우다.
 
 돌려줄 것: 화면 캡처 한 장.
-
