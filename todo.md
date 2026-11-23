@@ -64,22 +64,26 @@ git checkout -- src/config/st_config.m && git pull
 
 돌려줄 것: 오류가 나면 그 화면. 정상이면 "됨" 한 줄.
 
-## 3. 빈 빌드 폴더에서 다시 돌리면 파이프라인과 같아지는지 확인
+## 3. 모델을 미리 열지 않고 재실행하면 파이프라인과 같아지는지 확인
 
-왜: 절대 경로로 바꿔도 대상마다 재실행이 실패 1·CUT 결정 11/22·실행 41/45다. 새 파이프라인은 PASSED·20/22·45/45다. 그래서 입력
-경로는 원인이 아니다. 남은 큰 차이는 빌드 캐시다. 재실행은 매번 같은 임시 폴더(`st_open_standalone_run`)에서 돈다. Test Sequence와
-Test Assessment는 Stateflow로 빌드되고, 그 산출물(`slprj`, `.slxc`)이 현재 폴더에 남는다. standalone 모델은 Harness와 이름이 같다.
-그래서 예전 실행이 남긴, 옛 기대값으로 빌드된 산출물을 다시 쓸 수 있다. 파이프라인은 실행할 때마다 새 폴더에서 빌드한다.
-이번에는 실행마다 새로 만든 빈 폴더를 현재 폴더와 빌드·캐시 폴더로 쓰고 돌린다. 끝나면 설정을 되돌린다.
-6단계를 돌린 MATLAB(standalone 모델과 Test File이 열려 있는 상태)에서 이어서 붙여 넣는다. CUT 수만큼 다시 시뮬레이션한다.
+왜: 빈 빌드 폴더에서 돌려도 재실행은 대상마다 실패 1·CUT 결정 11/22·실행 41/45였다. 새 파이프라인은 PASSED·20/22·45/45다. 빌드 캐시도
+입력 경로도 원인이 아니다. 남은 차이 하나는 모델을 여는 방식이다. 6단계(`LoadModels`)는 standalone 모델 세 개를 실행 전에 모두
+`load_system`으로 열어 둔다. 파이프라인은 모델을 미리 열지 않고, CUT마다 Test Manager가 그 모델 하나만 열어 돌린 뒤 닫는다.
+이번에는 파이프라인처럼 모델을 모두 닫은 상태에서 Test Case를 하나씩 돌리고, 돌린 뒤 그 모델을 닫는다. 어느 Iteration이
+실패하는지도 번호로 찍는다.
+6단계를 돌린 MATLAB(Test File이 열려 있는 상태)에서 이어서 붙여 넣는다. 저장 안 한 모델이 있으면 멈춘다. CUT 수만큼 다시 시뮬레이션한다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
 pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
 testFiles = sltest.testmanager.getTestFiles; allCases = getAllTestCases(testFiles(1));
+loadedNames = find_system('type', 'block_diagram');
+if any(strcmp(get_param(loadedNames, 'Dirty'), 'on')), fprintf('저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요\n'); warning(warnState); return; end
+bdclose('all');
 oldGen = Simulink.fileGenControl('getConfig');
 for t = 1:numel(pipeline.Targets)
     target = pipeline.Targets(t); cutPath = char(string(target.StandaloneCUTPath));
+    [~, modelName] = fileparts(char(string(target.PackagedStandaloneModel)));
     fprintf('대상 %d 파이프라인 | 판정 %s | CUT 결정 %d/%d | CUT 실행 %d/%d\n', t, char(string(target.InitialOutcome)), ...
         target.DecisionCovered, target.DecisionTotal, target.ExecutionCovered, target.ExecutionTotal);
     freshFolder = tempname; mkdir(freshFolder); previousFolder = cd(freshFolder);
@@ -88,8 +92,13 @@ for t = 1:numel(pipeline.Targets)
         addpath(char(string(target.OutputDirectory)), '-begin');
         caseIndex = find(string({allCases.Name}) == string(target.TestCaseName), 1);
         coverage = getCoverageSettings(allCases(caseIndex)); coverage.CoverageFilterFilename = char(string(target.PackagedCVF));
-        evalc('freshRun = run(allCases(caseIndex));');
-        pending = {getCoverageResults(freshRun)}; covObjects = {};
+        evalc('closedRun = run(allCases(caseIndex));');
+        caseResults = getTestCaseResults(closedRun); iterationOutcomes = '';
+        for c = 1:numel(caseResults)
+            iterationResults = getIterationResults(caseResults(c));
+            for i = 1:numel(iterationResults), iterationOutcomes = [iterationOutcomes ' ' char(string(iterationResults(i).Outcome))]; end %#ok<AGROW>
+        end
+        pending = {getCoverageResults(closedRun)}; covObjects = {};
         while ~isempty(pending)
             item = pending{1}; pending(1) = [];
             if iscell(item), pending = [pending, item(:)']; %#ok<AGROW>
@@ -98,16 +107,17 @@ for t = 1:numel(pipeline.Targets)
         end
         cvd = covObjects{1}; cvd.filter = char(string(target.PackagedCVF));
         decision = decisioninfo(cvd, cutPath); executed = executioninfo(cvd, cutPath);
-        fprintf('대상 %d 빈 폴더 재실행 | 통과 %d | 실패 %d | CUT 결정 %d/%d | CUT 실행 %d/%d\n', t, ...
-            freshRun.NumPassed, freshRun.NumFailed, decision(1), decision(2), executed(1), executed(2));
-    catch freshError
-        fprintf('대상 %d | 실패 | 식별자 %s\n', t, freshError.identifier);
+        fprintf('대상 %d 모델 닫고 재실행 | 통과 %d | 실패 %d | CUT 결정 %d/%d | CUT 실행 %d/%d | Iteration:%s\n', t, ...
+            closedRun.NumPassed, closedRun.NumFailed, decision(1), decision(2), executed(1), executed(2), iterationOutcomes);
+    catch closedError
+        fprintf('대상 %d | 실패 | 식별자 %s\n', t, closedError.identifier);
     end
     Simulink.fileGenControl('setConfig', 'config', oldGen); cd(previousFolder);
+    if bdIsLoaded(modelName), close_system(modelName, 0); end
 end
 warning(warnState);
 ```
 
-확인할 것: 대상마다 "빈 폴더 재실행" 줄이 "파이프라인" 줄과 같아지는지(실패 0, CUT 결정 20/22, 실행 45/45).
+확인할 것: 대상마다 "모델 닫고 재실행" 줄이 "파이프라인" 줄과 같아지는지. 다르면 Iteration 목록에서 몇 번째가 Failed인지.
 
 돌려줄 것: 화면 캡처 한 장.
