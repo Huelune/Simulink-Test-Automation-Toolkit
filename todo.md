@@ -93,7 +93,15 @@ while ~isempty(queue) && numel(visited) < 40
     visited{end + 1} = sourcePath; %#ok<SAGROW>
     detail = '';
     for name = {'InitialCondition', 'X0', 'UpperLimit', 'LowerLimit', 'Value', 'Threshold', 'Criteria', 'Operator', 'Inputs', 'Function', 'OutDataTypeStr'}
-        try, detail = [detail ' | ' name{1} ' ' char(string(get_param(source, name{1})))]; catch, end %#ok<AGROW>
+        try
+            settingText = char(string(get_param(source, name{1})));
+            % 변수 이름은 내부 정보다. 숫자로 읽히지 않는 값 설정은 그 값을 sldd·워크스페이스에서 찾아 숫자로 바꾼다.
+            if any(strcmp(name{1}, {'InitialCondition', 'X0', 'UpperLimit', 'LowerLimit', 'Value', 'Threshold'})) && isempty(str2num(settingText)) %#ok<ST2NM>
+                try, settingText = ['변수=' mat2str(slResolve(settingText, source))]; catch, settingText = '변수(값 못 읽음)'; end
+            end
+            detail = [detail ' | ' name{1} ' ' settingText]; %#ok<AGROW>
+        catch
+        end
     end
     fprintf('%s%s%s\n', indent, sourceType, detail);
     if any(strcmp(sourceType, {'Inport', 'From', 'Constant'})), continue; end
@@ -105,7 +113,6 @@ warning(warnState);
 
 확인할 것: 화면에서 상태 블록(UnitDelay, Memory, Delay, DiscreteIntegrator 등)의 초기값과, 고리 안의 Sum·Saturation·Constant 값을 본다.
 그것으로 제어 신호가 시작값에서 어느 쪽으로만 움직이는지 본다. 예를 들어 초기값이 Threshold 이상이고 고리가 더하기만 하면,
-제어 신호는 영영 Threshold 아래로 내려가지 않는다. 그것이 사유다. `Value`나 `InitialCondition`이 숫자가 아니라 변수 이름으로 나오면
-그 변수는 sldd에 있다.
+제어 신호는 영영 Threshold 아래로 내려가지 않는다. 그것이 사유다. `변수=값`으로 나온 설정은 sldd나 워크스페이스의 값을 읽은 것이다.
 
-돌려줄 것: 화면 캡처 한 장(블록 종류와 숫자만 찍힌다. 변수 이름이 찍혀 나오면 그 부분은 가리고 보내 달라).
+돌려줄 것: 화면 캡처 한 장. 블록 종류와 숫자만 찍힌다. 변수로 된 설정은 이름 대신 `변수=값`으로 찍는다.
