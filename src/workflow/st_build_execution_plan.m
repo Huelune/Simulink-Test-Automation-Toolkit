@@ -239,7 +239,8 @@ sldv.DisableLibraryLink = cfg.DisableLibraryLinkForSldvTargets;
 sldv.IgnoreUnexpectedInputs = cfg.IgnoreUnexpectedSldvInputs;
 sldv.AllowSubsystemPathMismatch = cfg.AllowSldvSubsystemPathMismatch;
 % Only when it changes sldvrun, so rows without a filter keep their cache.
-if row.SldvMode == "GENERATE" && string(row.CoverageFilterMode) ~= "OFF"
+if row.SldvMode == "GENERATE" && string(row.CoverageFilterMode) ~= "OFF" && ...
+        (~isfield(cfg, 'SldvCoverageFilter') || logical(cfg.SldvCoverageFilter))
     sldv.CoverageFilterMode = char(row.CoverageFilterMode);
     sldv.CoverageFilterAction = char(row.CoverageFilterAction);
 end

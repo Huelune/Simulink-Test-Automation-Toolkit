@@ -403,6 +403,17 @@ Harness 입력 인터페이스 검증은 어느 쪽이든 그대로 수행합니
 cfg.SldvMaxProcessTime = 1800;   % st_config.m에서 30분으로
 ```
 
+### `SldvCoverageFilter` — 기본 `true`
+
+`true`이면, `SldvMode=GENERATE`이고 `CoverageFilterMode`가 `OFF`가 아닌 행에서 커버리지 필터를 `sldvrun`에도
+넘깁니다. 이 필터는 CUT 바로 아래 하위 Subsystem을 빼는 것입니다(`CovFilter`). `false`이면 넘기지 않으므로, SLDV가 필터를
+넣기 전과 똑같이 돕니다. 실제 모델 하나에서 필터를 켜자 `sldvrun`이 `MaxProcessTime`을 한참 넘겨도 끝나지 않은 일이
+있었습니다. 그럴 때 `false`로 비교합니다. 값을 바꾸면 해당 행의 SLDV 단계를 다시 돕니다.
+
+```matlab
+cfg.SldvCoverageFilter = false;   % st_config.m에서
+```
+
 ## 7. 커버리지
 
 ### `CoverageStructuralLevel` / `CoverageMetricSettings`

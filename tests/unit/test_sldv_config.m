@@ -102,3 +102,21 @@ plan = fileread(fullfile(st_project_root(), ...
 verifyTrue(testCase, contains(plan, ...
     "sldv.CoverageFilterMode = char(row.CoverageFilterMode);"));
 end
+
+
+function testSldvCoverageFilterCanBeSwitchedOff(testCase)
+% One real model stayed in sldvrun far past MaxProcessTime with the filter
+% on. The switch must skip the filter and keep the plan signature as it was
+% before the filter existed, so switching it rewrites only the SLDV stage.
+cfg = st_config();
+verifyTrue(testCase, cfg.SldvCoverageFilter);
+source = fileread(fullfile(st_project_root(), ...
+    'src', 'sldv', 'st_prepare_sldv_targets.m'));
+skipAt = strfind(source, 'coverage filter skipped: cfg.SldvCoverageFilter=false');
+applyAt = strfind(source, "opts.CovFilter = 'on';");
+verifyNotEmpty(testCase, skipAt);
+verifyLessThan(testCase, skipAt(1), applyAt(1));
+plan = fileread(fullfile(st_project_root(), ...
+    'src', 'workflow', 'st_build_execution_plan.m'));
+verifyTrue(testCase, contains(plan, 'logical(cfg.SldvCoverageFilter)'));
+end
