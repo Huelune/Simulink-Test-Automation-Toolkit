@@ -50,61 +50,7 @@ warning(warnState);
 돌려줄 것: 화면 캡처 한 장과 "보고서에 필터 항목 나옴/안 나옴, 모델 색 표시 됨/안 됨" 한 줄. 보고서와 모델 화면은 블록
 이름이 보이므로 캡처하지 마세요.
 
-## 2. CUT를 C 코드로 만들어 로직 읽기
-
-왜: 되먹임과 Goto/From이 얽혀 블록을 손으로 따라가기 어렵다. Simulink Coder로 CUT를 C 코드로 만들면 카운터, 리셋 조건, Enable 조건이
-한 함수 안에 위에서 아래로 풀려 나온다. 그러면 안쪽 Switch의 거짓 쪽에 닿을 수 없는 사유를 읽기 쉽다. 코드에는 블록·신호 이름이
-그대로 들어 있으니 보내지 말고 직접 읽는다. 모델이 AUTOSAR 대상이면 Subsystem만 따로 코드로 만들 수 없다. 그래서 지금 설정을 복사해 대상만 일반 C(ert.tlc)로 바꾼 임시 설정을
-잠깐 쓰고, 끝나면 원래 설정으로 되돌린 뒤 임시 설정을 지운다. 모델은 저장하지 않는다.
-코드는 `tempdir` 아래 새 폴더에 만들고 컴파일은 하지 않는다(코드만 만든다).
-
-순서: 모델 프로젝트를 열고 `st_setup`을 돌린다. Top Model을 열고 **CUT Subsystem을 클릭해 선택**한 뒤 붙여 넣는다. CUT가 크면 몇 분 걸린다.
-
-```matlab
-clearvars; clc; warnState = warning('off', 'all');
-fprintf('라이선스 | Simulink Coder %d | Embedded Coder %d\n', license('test', 'Real-Time_Workshop'), license('test', 'RTW_Embedded_Coder'));
-if ~license('test', 'Real-Time_Workshop'), fprintf('Simulink Coder 라이선스가 없어 코드를 만들 수 없습니다\n'); warning(warnState); return; end
-cutBlock = gcb; topName = bdroot(cutBlock);
-fprintf('선택 블록 종류 %s\n', get_param(cutBlock, 'BlockType'));
-if strcmp(get_param(topName, 'Dirty'), 'on'), fprintf('모델에 저장 안 한 변경이 있습니다. 저장하거나 되돌린 뒤 다시 돌려 주세요\n'); warning(warnState); return; end
-codeFolder = tempname; mkdir(codeFolder);
-oldGen = Simulink.fileGenControl('getConfig');
-% 모델이 AUTOSAR 대상이라 Subsystem만 따로 코드로 만들 수 없다(RTW:autosar:obsoleteSSAsASWC).
-% 지금 설정을 복사해 대상만 일반 C(ert.tlc)로 바꾼 임시 설정을 잠깐 쓰고, 끝나면 원래 설정으로 되돌린다.
-oldConfigName = get_param(getActiveConfigSet(topName), 'Name'); tempConfigName = 'stt_code_read_tmp';
-activeConfig = getActiveConfigSet(topName);
-if isa(activeConfig, 'Simulink.ConfigSetRef'), activeConfig = getRefConfigSet(activeConfig); end
-try
-    Simulink.fileGenControl('set', 'CodeGenFolder', codeFolder, 'CacheFolder', codeFolder, 'keepPreviousPath', true);
-    tempConfig = copy(activeConfig); set_param(tempConfig, 'Name', tempConfigName);
-    attachConfigSet(topName, tempConfig, true); tempConfigName = get_param(tempConfig, 'Name');
-    switchTarget(tempConfig, 'ert.tlc', []);
-    set_param(tempConfig, 'GenCodeOnly', 'on', 'GenerateReport', 'on');
-    setActiveConfigSet(topName, tempConfigName);
-    evalc('slbuild(cutBlock);');
-    sourceFiles = dir(fullfile(codeFolder, '**', '*.c'));
-    fprintf('코드 생성 완료 | C 파일 %d개 | 가장 큰 파일 줄 수 %d\n', numel(sourceFiles), ...
-        max([0, arrayfun(@(f) numel(splitlines(fileread(fullfile(f.folder, f.name)))), sourceFiles)']));
-catch buildError
-    fprintf('코드 생성 실패 | 식별자 %s\n', buildError.identifier);
-end
-try, setActiveConfigSet(topName, oldConfigName); catch, end
-try, detachConfigSet(topName, tempConfigName); catch, end
-set_param(topName, 'Dirty', 'off');
-Simulink.fileGenControl('setConfig', 'config', oldGen);
-fprintf('코드 폴더를 탐색기로 엽니다(코드는 보내지 마세요)\n'); winopen(codeFolder);
-warning(warnState);
-```
-
-확인할 것: 코드 생성 완료가 나오는지. 열린 폴더에서 CUT 이름의 `.c` 파일을 연다. 그 안의 `_step` 함수(또는 `_Outputs`, `_Update`)에서 다음을 찾는다.
-- 50과 비교하는 줄(Enable 조건)
-- `== 2`인 줄(카운터 1 리셋 조건)
-- 안쪽 Switch의 `>= 1` 줄
-`== 2`의 왼쪽 값이 어디서 대입되는지 위로 올라가 보면, Enable이 켜진 동안 그 값이 2가 될 수 없는 이유가 보인다.
-
-돌려줄 것: 화면 캡처 한 장(개수만 찍힌다). 그리고 찾은 사유를 블록·변수 이름 없이 말로 한 줄.
-
-## 3. Justify 근거용 SLDV Dead Logic 보고서 만들기
+## 2. Justify 근거용 SLDV Dead Logic 보고서 만들기
 
 왜: CUT 결정 22개 중 2개(Switch 하나, Max 하나)를 SLDV가 Unsatisfiable(어떤 입력으로도 닿을 수 없음)로 증명했다. 커버리지 보고서에서 이
 둘을 CVF로 Justify하려면 근거 자료가 필요하다. SLDV의 Design Error Detection 모드에서 Dead Logic 검사를 하면, 실행될 수 없는 블록
@@ -145,7 +91,7 @@ try
     end
     if isfield(files, 'Report') && isfile(files.Report)
         [~, reportName, reportExt] = fileparts(files.Report);
-        fprintf('보고서: result\\sldv_dead_logic\\%s\\%s%s\n', stamp, reportName, reportExt);
+        fprintf('%s\n', ['보고서: ' fullfile('result', 'sldv_dead_logic', stamp, [reportName reportExt])]);
         winopen(files.Report);
     else
         fprintf('보고서가 만들어지지 않았습니다\n');
