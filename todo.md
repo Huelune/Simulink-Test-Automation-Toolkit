@@ -64,56 +64,39 @@ git checkout -- src/config/st_config.m && git pull
 
 돌려줄 것: 오류가 나면 그 화면. 정상이면 "됨" 한 줄.
 
-## 3. Iteration에 무엇이 들어 있는지 구조 보기
+## 3. 시나리오 2의 입력 데이터가 파이프라인과 같은지 비교
 
-왜: 재실행의 Iteration 2는 "Failed criteria: Verification"이다. 시뮬레이션은 오류 없이 돌았지만, 기대값과 출력이 달랐다. 시나리오
-1·3은 파이프라인과 같은 출력이 나왔다. 그러니 시나리오 2에만 들어가는 무언가가 재실행에서 빠졌다. 툴킷은 SLDV가 만든 파라미터
-값을 Iteration마다 `setVariable`로 넣는다. 그런데 지난 확인에서 `TestParams`에는 보이지 않았다. 그래서 Iteration 객체의 속성 이름과,
-속성마다 담긴 항목 수를 센다. 이름과 값은 찍지 않는다. 앞 단계를 다시 돌릴 필요는 없다. 블록이 제출물의 Test File을 실행 없이
-열기만 한다. MATLAB을 새로 켰다면 모델 프로젝트를 열고 툴킷 폴더에서 `st_setup`을 먼저 돌린다.
+왜: 세 Iteration의 설정 구조가 똑같다. 파라미터 덮어쓰기(Variables, ModelParams)는 하나도 없고, TestParams 항목 수도 같다.
+그러니 시나리오 2만 다르게 도는 이유는 Iteration 설정이 아니다. 남은 것은 입력 데이터다. 파이프라인은 실행 작업 공간의 입력
+MAT를 읽었고, 재실행은 제출물 폴더에 복사된 입력 MAT를 읽는다. 두 파일의 해시와, 시나리오마다 담긴 데이터가 같은지 비교한다.
+이름과 값은 찍지 않는다. 시뮬레이션은 하지 않는다. MATLAB에서 `st_setup`이 된 상태면 어디서든 붙여 넣는다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
 pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
-evalc('openInfo = st_open_standalone_test_manager(''ClearTestManager'', true, ''View'', false);');
-allCases = getAllTestCases(openInfo.TestFile);
-caseIndex = find(string({allCases.Name}) == string(pipeline.Targets(1).TestCaseName), 1);
-iterations = getIterations(allCases(caseIndex));
-propertyNames = properties(iterations(1));
-fprintf('Iteration 속성: %s\n', strjoin(propertyNames, ', '));
-for i = 1:numel(iterations)
-    counts = strings(1, numel(propertyNames));
-    for p = 1:numel(propertyNames)
-        try
-            value = iterations(i).(propertyNames{p});
-            if istable(value), counts(p) = sprintf('%s=%d행(%s)', propertyNames{p}, height(value), strjoin(value.Properties.VariableNames, '/'));
-            elseif isstruct(value), counts(p) = sprintf('%s=%d(%s)', propertyNames{p}, numel(value), strjoin(fieldnames(value), '/'));
-            elseif iscell(value), counts(p) = sprintf('%s=%dx%d', propertyNames{p}, size(value, 1), size(value, 2));
-            else, counts(p) = sprintf('%s=%d', propertyNames{p}, numel(value)); end
-        catch
-            counts(p) = sprintf('%s=?', propertyNames{p});
+for t = 1:numel(pipeline.Targets)
+    target = pipeline.Targets(t);
+    packagedFile = char(string(target.PackagedInput)); workFile = char(string(target.SignalEditorInput));
+    if ~isfile(packagedFile) || ~isfile(workFile)
+        fprintf('대상 %d | 제출물 입력 있음 %d | 작업 공간 입력 있음 %d\n', t, isfile(packagedFile), isfile(workFile)); continue;
+    end
+    sameHash = strcmpi(st_file_signature(packagedFile).SHA256, st_file_signature(workFile).SHA256);
+    packagedData = load(packagedFile); workData = load(workFile);
+    packagedNames = fieldnames(packagedData); workNames = fieldnames(workData);
+    perScenario = strings(1, numel(packagedNames));
+    for k = 1:numel(packagedNames)
+        if k <= numel(workNames) && strcmp(packagedNames{k}, workNames{k})
+            perScenario(k) = string(double(isequaln(packagedData.(packagedNames{k}), workData.(workNames{k}))));
+        else
+            perScenario(k) = "이름다름";
         end
     end
-    fprintf('Iteration %d | %s\n', i, strjoin(counts, ' | '));
-    try
-        vars = iterations(i).Variables; if istable(vars), vars = table2struct(vars); end
-        if isstruct(vars) && isfield(vars, 'Source')
-            [~, modelName] = fileparts(char(string(pipeline.Targets(1).PackagedStandaloneModel)));
-            src = string({vars.Source});
-            fprintf('  Variables Source | 비어 있음 %d | sldd %d | standalone 모델 %d | Top Model %d | 그 외 %d\n', ...
-                sum(strlength(src) == 0), sum(endsWith(src, '.sldd', 'IgnoreCase', true)), sum(src == string(modelName)), ...
-                sum(src == string(st_config().TopModel)), sum(strlength(src) > 0 & ~endsWith(src, '.sldd', 'IgnoreCase', true) & ...
-                src ~= string(modelName) & src ~= string(st_config().TopModel)));
-        end
-    catch
-    end
+    fprintf('대상 %d | 해시 같음 %d | 시나리오 수 제출물 %d, 작업 공간 %d | 시나리오별 같음 %s\n', t, sameHash, ...
+        numel(packagedNames), numel(workNames), strjoin(perScenario, ' '));
 end
-caseVariables = '';
-try, caseVariables = sprintf('%d', numel(getVariables(allCases(caseIndex)))); catch, caseVariables = '?'; end
-fprintf('Test Case 변수(getVariables) %s개\n', caseVariables);
 warning(warnState);
 ```
 
-확인할 것: Iteration 2에만 항목 수가 다른 속성이 있는지. 특히 Variables, ParameterOverrides, ModelParams 같은 이름의 속성.
+확인할 것: 해시가 같으면 입력 데이터도 원인이 아니다. 해시가 다르면 "시나리오별 같음"에서 몇 번째가 0인지 본다(2번째만 0이면 원인이다).
 
-돌려줄 것: 화면 캡처 한 장. 속성 이름은 MathWorks API 이름이라 찍혀도 된다.
+돌려줄 것: 화면 캡처 한 장.
