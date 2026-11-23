@@ -32,6 +32,14 @@ standalone Harness는 원본 모델 사본에서 다시 복사한 임시 모델�
 생성했습니다. 따라서 원본 모델과 `models/`의 모델에는 내부 Harness가 그대로
 남아 있습니다.
 
+## 결과 보기
+
+- 시험 결과는 `results/{selected-result}/raw/`의 `.mldatx`를 열어 봅니다. Test Manager의
+  Results and Artifacts에 결과가 들어오며, 모델이나 Library 없이 열립니다.
+- `test-manager/`의 Test File은 Test Case 정의를 보관하는 용도입니다. 이 번들에서 Run하면
+  Library 등 dependency가 없어 `Simulink:Libraries:FailedToLoadLibraryForBlock` 오류로 실패합니다.
+  다시 실행하려면 원본 프로젝트에서 `st_export_test_bundle`로 재실행 번들을 만드십시오.
+
 ## 상태 확인
 
 - `OK`: 선택 결과 보고서와 Coverage가 모두 생성 또는 복사되었습니다.
