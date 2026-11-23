@@ -547,6 +547,13 @@ DecisionPoints가 `FULL`과 같게 나옵니다. 커버리지를 standalone 파�
 `simtest:CollectLeanWithoutCoverage`로 멈춥니다. 1단계 실행의 CUT별 커버리지 HTML을
 검토해야 할 때는 `FULL`로 정리하십시오.
 
+저장된 `Results.mldatx`에는 CVF가 들어 있지 않습니다. 파일을 Test Manager로 가져오면 필터 없는
+Coverage가 보입니다. CVF를 적용한 값은 `initial/`·`final/`의 보고서에 있습니다. Test Manager에서
+보려면 결과를 가져온 뒤 Results and Artifacts에서 그 결과의 맨 위 Results 항목을 누르고, **Coverage
+Filters** 칸의 **Add**로 CUT 폴더 `filter/`의 `.cvf`를 고릅니다. 필터를 적용한 값은 맨 위 Results
+항목의 Aggregated Coverage Results에만 나옵니다. Test Case 수준에서는 필터 없는 값이 그대로 보입니다.
+`cvdata.filter`에 CVF를 걸어도 이 칸에는 등록되지 않으며, ResultSet에 필터를 거는 공개 API도 없습니다.
+
 ### `st_export_test_asset_bundle`
 
 선택한 Test Manager 결과와 그 결과에 대응하는 자산을 한 폴더에 모읍니다.
