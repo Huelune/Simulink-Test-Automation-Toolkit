@@ -5,7 +5,6 @@ function varargout = st_collect_per_cut_results(varargin)
 % st_collect_per_cut_results('RunId', 'LATEST')
 % st_collect_per_cut_results('RunId', runId, 'ReportMode', 'FULL')
 % st_collect_per_cut_results('Mode', 'LEAN')   % only what the final document reads
-% st_collect_per_cut_results('Mode', 'VIEW')   % open in Test Manager with the CVF
 %
 % PER_CUT runs a Test Case alone because some Test Cases only work alone.
 % The coverage filter is not part of that: it shapes the coverage data of
@@ -35,14 +34,11 @@ addParameter(p, 'ReportMode', '', ...
 % FINAL stage when the run reran, otherwise INITIAL, with verdicts and
 % decision points but no coverage review artifacts.
 addParameter(p, 'Mode', 'FULL', ...
-    @(x) ismember(upper(string(x)), ["FULL","LEAN","VIEW"]));
+    @(x) ismember(upper(string(x)), ["FULL","LEAN"]));
 parse(p, varargin{:});
 
 cfg = st_require_runtime_target();
 lean = strcmpi(char(string(p.Results.Mode)), 'LEAN');
-% A saved ResultSet carries no CVF; the CVF is attached in memory. VIEW
-% attaches it and leaves the results in Test Manager, writing nothing.
-viewOnly = strcmpi(char(string(p.Results.Mode)), 'VIEW');
 if lean && strcmpi(char(string(cfg.FinalDocumentCoverageSource)), 'TEST_RUN')
     error('simtest:CollectLeanWithoutCoverage', ...
         ['Mode=LEAN writes no coverage, but cfg.FinalDocumentCoverageSource' ...
@@ -75,9 +71,7 @@ st_log(cfg, 'INFO', 'Collect PER_CUT Results | RunId=%s | Directory=%s', ...
 openedModels = containers.Map();
 openedModels('names') = strings(0,1);
 openedModels('clean') = strings(0,1);
-if ~viewOnly
-    modelCleanup = onCleanup(@() close_opened_models(openedModels, cfg)); %#ok<NASGU>
-end
+modelCleanup = onCleanup(@() close_opened_models(openedModels, cfg)); %#ok<NASGU>
 Collected = strings(height(targets),1);
 Message = strings(height(targets),1);
 totalTimer = tic;
@@ -117,31 +111,12 @@ for i = 1:height(targets)
     openedModels('clean') = [openedModels('clean'); clean];
     filterPath = "";
     ruleCount = 0;
-    filterDirectory = fullfile(targetDirectory, 'filter');
-    existingFilter = st_per_cut_coverage_filter_file(filterDirectory, row);
-    if viewOnly && st_coverage_filter_active(row) && isfile(existingFilter)
-        filterPath = string(existingFilter);
-    elseif st_coverage_filter_active(row)
-        [filterPath, ruleCount] = generate_filter(row, filterDirectory, cfg);
+    if st_coverage_filter_active(row)
+        [filterPath, ruleCount] = generate_filter(row, ...
+            fullfile(targetDirectory, 'filter'), cfg);
     end
 
     finalSaved = fullfile(targetDirectory, 'final', 'Results.mldatx');
-    if viewOnly
-        % The stage the final document reads: FINAL when the run reran.
-        viewSaved = initialSaved;
-        if isfile(finalSaved), viewSaved = finalSaved; end
-        attach_one(viewSaved, row, filterPath, cfg);
-        Collected(i) = "OK";
-        Message(i) = "Opened in Test Manager with its CVF";
-        if strlength(filterPath) == 0
-            Message(i) = "Opened in Test Manager; this CUT has no CVF";
-        end
-        st_log_progress(cfg, i, height(targets), Collected(i), ...
-            char(testCaseName), 'Elapsed', toc(rowTimer), ...
-            'Message', Message(i), 'Detail', cutPath, ...
-            'Eta', st_progress_eta(toc(totalTimer), i, height(targets)));
-        continue;
-    end
     % The final document reads FINAL whenever the run reran, so LEAN leaves
     % the INITIAL report out in that case.
     if ~(lean && isfile(finalSaved))
@@ -160,13 +135,6 @@ for i = 1:height(targets)
         char(testCaseName), 'Elapsed', toc(rowTimer), ...
         'Message', Message(i), 'Detail', cutPath, ...
         'Eta', st_progress_eta(toc(totalTimer), i, height(targets)));
-end
-
-if viewOnly
-    sltest.testmanager.view;
-    st_log(cfg, 'INFO', ['PER_CUT results opened in Test Manager | ' ...
-        'models stay loaded for coverage highlighting | Opened=%d'], ...
-        sum(Collected == "OK"));
 end
 
 result = table(targets.No, string(targets.TestCaseName), ...
@@ -192,26 +160,6 @@ end
 function collect_one( ...
         savedFile, row, folder, label, filterPath, reportMode, reportScope, cfg)
 %COLLECT_ONE Attach the CVF to one saved ResultSet and report on it.
-resultObj = attach_one(savedFile, row, filterPath, cfg);
-
-reportInfo = st_export_result_set_report( ...
-    resultObj, row, folder, ...
-    [char(string(row.TestCaseName)) ' ' lower(label)], ...
-    'CoverageReportMode', reportMode, ...
-    'IncludeOfficialReport', strcmp(reportMode, 'FULL'), ...
-    'IncludePortableCoverageDetail', true, ...
-    'LogConfig', cfg, ...
-    'ResultLabel', label, ...
-    'Scope', reportScope);
-if ~strcmp(reportInfo.Status, 'OK')
-    error('simtest:CollectReportIncomplete', ...
-        '%s report is incomplete: %s', label, reportInfo.Summary);
-end
-end
-
-
-function resultObj = attach_one(savedFile, row, filterPath, cfg)
-%ATTACH_ONE Import one saved ResultSet and attach its CVF in memory.
 imported = sltest.testmanager.importResults(savedFile);
 if isempty(imported)
     error('simtest:CollectResultEmpty', ...
@@ -230,6 +178,20 @@ if strlength(filterPath) > 0
             'CVF registration failed for %s: %s', ...
             char(string(row.TestCaseName)), char(string(attachInfo.Message)));
     end
+end
+
+reportInfo = st_export_result_set_report( ...
+    resultObj, row, folder, ...
+    [char(string(row.TestCaseName)) ' ' lower(label)], ...
+    'CoverageReportMode', reportMode, ...
+    'IncludeOfficialReport', strcmp(reportMode, 'FULL'), ...
+    'IncludePortableCoverageDetail', true, ...
+    'LogConfig', cfg, ...
+    'ResultLabel', label, ...
+    'Scope', reportScope);
+if ~strcmp(reportInfo.Status, 'OK')
+    error('simtest:CollectReportIncomplete', ...
+        '%s report is incomplete: %s', label, reportInfo.Summary);
 end
 end
 
