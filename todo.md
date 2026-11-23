@@ -51,12 +51,12 @@ Aggregated Coverage Results의 %가 CVF 없이 볼 때와 다른지.
 돌려줄 것: 화면 캡처 한 장과 "Coverage Filters에 CVF 있음/없음, %가 바뀜/안 바뀜" 한 줄.
 Coverage 표는 블록 이름이 보이므로 캡처하지 마세요.
 
-## 2. standalone 실행 결과의 Coverage가 하나도 없는 이유 확인
+## 2. standalone 결과에서 CVF가 실제로 무언가를 빼는지 확인
 
-왜: 1절로 Test Case마다 돌리니 CVF는 걸렸지만 Coverage가 하나도 잡히지 않았다. 원인 후보는 두 가지다.
-(가) CVF 규칙이 CUT 자체나 그 위 Subsystem을 가리켜 CUT까지 빠짐. 규칙은 블록 SID로 블록을 가리키므로,
-CVF를 만든 모델과 standalone 모델의 SID가 다르면 엉뚱한 블록을 뺀다. (나) CUT이 실행되지 않음.
-1절을 돌린 뒤 MATLAB을 닫지 않은 상태에서(모델과 결과가 열려 있어야 한다) 이어서 붙여 넣는다.
+왜: 1절 결과는 Coverage Filters 칸에 CVF가 있고 CVF 규칙도 standalone 모델의 블록을 제대로 찾는다(16개 중
+CUT 안 4, CUT 밖 12). 그런데 보고서에 필터로 뺀 항목이 나오지 않고, 모델에서도 하위 Subsystem에 Coverage가
+그대로 칠해진다. 결과의 Coverage를 CVF를 건 채로 한 번, CVF를 뗀 채로 한 번 세어 숫자가 달라지는지 본다.
+규칙 종류도 센다. 같은 MATLAB에서 1절을 돌린 뒤 이어서 붙여 넣는다(결과와 모델이 열려 있어야 한다).
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
@@ -64,23 +64,23 @@ cfg = st_config();
 pipeline = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir, 'LATEST');
 for k = 1:numel(pipeline.Targets)
     target = pipeline.Targets(k); cutPath = char(string(target.StandaloneCUTPath));
-    try
-        rules = slcoverage.Filter(char(string(target.PackagedCVF))).rules;
-        resolved = 0; hitsCut = 0; insideCut = 0;
-        for r = 1:numel(rules)
-            try
-                rulePath = Simulink.ID.getFullName(char(string(rules(r).Selector.Id))); resolved = resolved + 1;
-            catch
-                continue;
+    rules = slcoverage.Filter(char(string(target.PackagedCVF))).rules;
+    insideSub = 0; insideOther = 0; excludeCount = 0; instanceCount = 0;
+    for r = 1:numel(rules)
+        excludeCount = excludeCount + (rules(r).Mode == slcoverage.FilterMode.Exclude);
+        instanceCount = instanceCount + (rules(r).Selector.Type == slcoverage.BlockSelectorType.BlockInstance);
+        rulePath = Simulink.ID.getFullName(char(string(rules(r).Selector.Id)));
+        if startsWith(rulePath, [cutPath '/'])
+            if strcmp(get_param(rulePath, 'BlockType'), 'SubSystem') && strcmp(get_param(rulePath, 'Parent'), cutPath)
+                insideSub = insideSub + 1;
+            else
+                insideOther = insideOther + 1;
             end
-            if strcmp(rulePath, cutPath) || startsWith(cutPath, [rulePath '/']), hitsCut = hitsCut + 1;
-            elseif startsWith(rulePath, [cutPath '/']), insideCut = insideCut + 1; end
         end
-        fprintf('대상 %d | CVF 규칙 %d | 블록 찾음 %d | CUT나 그 위를 가리킴 %d | CUT 안 %d | CUT 밖 %d\n', ...
-            k, numel(rules), resolved, hitsCut, insideCut, resolved - hitsCut - insideCut);
-    catch ruleError
-        fprintf('대상 %d | CVF 규칙 읽기 실패 | 식별자 %s\n', k, ruleError.identifier);
     end
+    childSubs = numel(find_system(cutPath, 'SearchDepth', 1, 'LookUnderMasks', 'all', 'BlockType', 'SubSystem')) - 1;
+    fprintf('대상 %d | Exclude %d / Justify %d | BlockInstance %d / 그 외 %d | CUT 바로 아래 Subsystem %d개, 규칙이 가리킴 %d, 다른 블록 가리킴 %d\n', ...
+        k, excludeCount, numel(rules) - excludeCount, instanceCount, numel(rules) - instanceCount, childSubs, insideSub, insideOther);
 end
 resultSets = sltest.testmanager.getResultSets;
 for k = 1:numel(resultSets)
@@ -92,12 +92,13 @@ for k = 1:numel(resultSets)
         elseif isa(item, 'cvdata'), covObjects = [covObjects, num2cell(item(:)')]; end %#ok<AGROW>
     end
     for j = 1:numel(covObjects)
-        cvd = covObjects{j}; root = char(string(cvd.modelinfo.analyzedModel));
+        cvd = covObjects{j}; root = char(string(cvd.modelinfo.analyzedModel)); savedFilter = cvd.filter;
         try
-            withFilter = decisioninfo(cvd, root); executed = executioninfo(cvd, root);
-            fprintf('결과 %d-%d | CVF %d개 | 결정 %d/%d | 실행 %d/%d\n', k, j, numel(string(cvd.filter)), ...
-                withFilter(1), withFilter(2), executed(1), executed(2));
+            withFilter = decisioninfo(cvd, root);
+            cvd.filter = ''; withoutFilter = decisioninfo(cvd, root); cvd.filter = savedFilter;
+            fprintf('결과 %d-%d | 결정: CVF 있음 %d/%d, CVF 없음 %d/%d\n', k, j, withFilter(1), withFilter(2), withoutFilter(1), withoutFilter(2));
         catch infoError
+            cvd.filter = savedFilter;
             fprintf('결과 %d-%d | 지표 읽기 실패 | 식별자 %s\n', k, j, infoError.identifier);
         end
     end
@@ -105,7 +106,9 @@ end
 warning(warnState);
 ```
 
-확인할 것: 대상마다 "CUT나 그 위를 가리킴"이 0이 아니면 (가). 결과마다 "실행 0/N"이면 (나).
-"결정 0/0"처럼 분모가 0이면 CVF가 분석 대상을 모두 뺀 것이다.
+확인할 것: 결과마다 CVF 있음과 없음의 숫자가 같으면 CVF가 결과에 걸렸어도 아무것도 빼지 않는 것이다.
+대상 줄에서 "BlockInstance"가 많으면 하위 Subsystem 블록 자체만 빼고 그 안 내용은 남기는 설정
+(`CoverageFilterMode=SUBSYSTEM`)이다. 이때는 하위 Subsystem 안에 Coverage가 칠해지는 것이 정상이다.
 
 돌려줄 것: 화면 캡처 한 장.
+
