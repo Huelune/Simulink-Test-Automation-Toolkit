@@ -339,3 +339,71 @@ warning(warnState);
 다르니, 하늘색 두 블록이 어떤 관계인지 모델에서 본다.
 
 돌려줄 것: 화면 캡처 한 장.
+
+## 5. 리셋 조건에 쓰인 두 입력의 형식과 범위 보기
+
+왜: 카운터 1은 `(한 스텝 전 입력 A == 2) AND (입력 B == 1)`일 때만 0으로 리셋된다. 카운터 2는 50에서 멈추는 타이머라, Enable은 50스텝부터
+계속 켜진다. 입력 A, B가 정말 아무 값이나 될 수 있다면, 50스텝 뒤에 리셋을 일으켜 안쪽 Switch의 거짓 쪽에 닿을 수 있어야 한다.
+그런데 SLDV는 닿을 수 없다고 증명했다. 그러니 SLDV가 보는 입력 A, B의 **형식이나 범위**가 2나 1을 허용하지 않을 가능성이 크다.
+예를 들어 A가 boolean이면 2가 될 수 없다. 또는 Inport에 최솟값/최댓값이 걸려 있어 그 값이 범위 밖일 수 있다. SLDV는 CUT 입력의
+최솟값·최댓값을 제약으로 쓴다. 두 입력을 CUT 경계까지 거슬러 올라가며, 지나는 Inport마다 형식과 최솟값·최댓값을 찍는다.
+블록 이름은 찍지 않는다. 4절과 같은 안쪽 Switch를 선택한 채로 붙여 넣는다. 모델을 저장하지 않는다.
+
+```matlab
+clearvars; clc; warnState = warning('off', 'all');
+cfg = st_config(); startBlock = gcb;
+if ~strcmp(get_param(startBlock, 'BlockType'), 'Switch'), fprintf('안쪽 Switch를 선택한 뒤 다시 붙여 넣어 주세요\n'); warning(warnState); return; end
+targetRows = st_load_targets(cfg.OnlyEnabled); cutPath = '';
+for t = 1:height(targetRows)
+    candidate = st_normalize_cut_path(targetRows.CUTPath(t), cfg.TopModel);
+    if startsWith(startBlock, [candidate '/']), cutPath = candidate; end
+end
+fprintf('CUT 찾음 %d\n', ~isempty(cutPath));
+% 리셋 조건의 두 비교(== 2, == 1)는 CUT 안의 "상수와 == 비교" 블록이다.
+compareBlocks = find_system(cutPath, 'FollowLinks', 'on', 'LookUnderMasks', 'all', 'BlockType', 'RelationalOperator', 'Operator', '==');
+fprintf('CUT 안의 == 비교 블록 %d개\n', numel(compareBlocks));
+for c = 1:numel(compareBlocks)
+    handles = get_param(compareBlocks{c}, 'PortHandles'); constantText = ''; otherPort = 0;
+    for q = 1:numel(handles.Inport)
+        line = get_param(handles.Inport(q), 'Line'); if line < 0, continue; end
+        source = get_param(line, 'SrcBlockHandle');
+        if strcmp(get_param(source, 'BlockType'), 'Constant'), constantText = get_param(source, 'Value'); else, otherPort = q; end
+    end
+    if ~any(strcmp(constantText, {'1', '2'})) || otherPort == 0, continue; end
+    fprintf('비교 "== %s"의 다른 입력을 거슬러 올라감\n', constantText);
+    line = get_param(handles.Inport(otherPort), 'Line'); hops = 0;
+    while line > 0 && hops < 30
+        hops = hops + 1; source = get_param(line, 'SrcBlockHandle'); sourceType = get_param(source, 'BlockType'); sourcePath = getfullname(source);
+        if any(strcmp(sourceType, {'Inport'}))
+            minText = get_param(source, 'OutMin'); maxText = get_param(source, 'OutMax');
+            try, minText = mat2str(slResolve(minText, source)); catch, end
+            try, maxText = mat2str(slResolve(maxText, source)); catch, end
+            parentPath = get_param(sourcePath, 'Parent');
+            where = 'CUT 안'; if strcmp(parentPath, cutPath), where = 'CUT 경계'; elseif ~startsWith(parentPath, cutPath), where = 'CUT 밖'; end
+            fprintf('   Inport (%s) | 형식 %s | 최솟값 %s | 최댓값 %s\n', where, get_param(source, 'OutDataTypeStr'), minText, maxText);
+            if strcmp(parentPath, bdroot(sourcePath)), break; end
+            parentHandles = get_param(parentPath, 'PortHandles'); line = get_param(parentHandles.Inport(str2double(get_param(source, 'Port'))), 'Line');
+        elseif strcmp(sourceType, 'From')
+            gotoBlocks = find_system(bdroot(sourcePath), 'FollowLinks', 'on', 'LookUnderMasks', 'all', 'BlockType', 'Goto', 'GotoTag', get_param(source, 'GotoTag'));
+            if isempty(gotoBlocks), break; end, gotoHandles = get_param(gotoBlocks{1}, 'PortHandles'); line = get_param(gotoHandles.Inport(1), 'Line');
+        elseif strcmp(sourceType, 'SubSystem')
+            portNumber = get_param(get_param(line, 'SrcPortHandle'), 'PortNumber');
+            outportBlock = find_system(sourcePath, 'SearchDepth', 1, 'FollowLinks', 'on', 'LookUnderMasks', 'all', 'BlockType', 'Outport', 'Port', num2str(portNumber));
+            if isempty(outportBlock), break; end, outHandles = get_param(outportBlock{1}, 'PortHandles'); line = get_param(outHandles.Inport(1), 'Line');
+        elseif any(strcmp(sourceType, {'UnitDelay', 'DataTypeConversion', 'Delay', 'Memory'}))
+            dataType = ''; try, dataType = get_param(source, 'OutDataTypeStr'); catch, end
+            fprintf('   %s 거침 %s\n', sourceType, dataType);
+            sourceHandles = get_param(source, 'PortHandles'); line = get_param(sourceHandles.Inport(1), 'Line');
+        else
+            dataType = ''; try, dataType = get_param(source, 'OutDataTypeStr'); catch, end
+            fprintf('   계산 블록에서 나옴 | 종류 %s %s\n', sourceType, dataType); break;
+        end
+    end
+end
+warning(warnState);
+```
+
+확인할 것: "== 2"와 "== 1" 비교의 입력이 CUT 경계 Inport에서 어떤 형식과 최솟값·최댓값을 갖는지. 형식이 boolean이거나 범위가 2나 1을 빼면, 리셋은
+처음부터 일어날 수 없다. 그것이 사유다.
+
+돌려줄 것: 화면 캡처 한 장.
