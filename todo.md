@@ -6,32 +6,28 @@
 화면에는 개수, Simulink 블록 종류 이름, 정해 둔 안내 문구만 찍는다. 테스트 케이스·모델·블록
 이름, 경로, 계정은 찍지 않는다(회사 내부 정보).
 
-## 1. 재실행 커버리지와 파이프라인 커버리지를 같은 기준으로 비교
+## 1. 실행할 때 CVF를 거는 것이 커버리지를 바꾸는지 확인
 
-왜: 이제 자기 입력 MAT로 돌아가는데도 재실행은 결정 11/22·실행 42/46이고, 파이프라인 `CoverageSummary.xlsx`는
-20/22·45/45다. 지금까지 재실행 숫자는 모델 전체를 기준으로 셌고, 파이프라인은 CUT 경로를 기준으로 셌다. 실행
-분모(46과 45)가 다른 것도 그 때문일 수 있다. 같은 기준으로 다시 센다. 재실행 결과와, 파이프라인이 남긴
-Coverage 원본(CUT 폴더의 `.cvt`)에 같은 CVF를 걸어 CUT 경로에서 센다. 파이프라인 원본도 11/22라면 Excel 쪽
-집계가 다른 것이다. 원본이 20/22이고 재실행만 11/22라면 재실행이 다르게 돈 것이다.
-`RunPerTestCase`로 연 MATLAB을 닫지 않은 상태에서 붙여 넣는다(재실행 결과와 모델이 열려 있어야 한다).
+왜: 같은 CUT 기준으로 세어도 파이프라인 원본은 결정 20/22·실행 45/45이고, 재실행은 11/22·41/45다. 재실행이 실제로
+다르게 돈 것이다. 모델 파일, 입력 MAT, CVF, Iteration 수는 같다. 남은 차이 가운데 가장 큰 것은 CVF를 거는 때다.
+파이프라인은 CVF 없이 실행하고 결과에 나중에 CVF를 건다. `RunPerTestCase`는 실행 전에 Test Case 설정에 CVF를 넣는다.
+이번에는 CVF를 빼고 실행한 뒤 결과에 CVF를 걸어 센다. 20/22가 나오면 실행 때 건 CVF가 원인이다.
+`RunPerTestCase`로 연 MATLAB을 닫지 않은 상태에서 붙여 넣는다. CUT 수만큼 다시 시뮬레이션한다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
 pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
-resultSets = sltest.testmanager.getResultSets;
+testFiles = sltest.testmanager.getTestFiles; allCases = getAllTestCases(testFiles(1));
+runFolder = fullfile(tempdir, 'st_open_standalone_run'); if ~isfolder(runFolder), mkdir(runFolder); end
+previousFolder = cd(runFolder);
 for t = 1:numel(pipeline.Targets)
-    target = pipeline.Targets(t); cutPath = char(string(target.StandaloneCUTPath)); cvfFile = char(string(target.PackagedCVF));
+    target = pipeline.Targets(t); cutPath = char(string(target.StandaloneCUTPath));
+    addpath(char(string(target.OutputDirectory)), '-begin');
+    caseIndex = find(string({allCases.Name}) == string(target.TestCaseName), 1);
     try
-        [~, savedData] = cvload(char(string(target.CoverageResult)));
-        if iscell(savedData), savedData = savedData{1}; end
-        savedData.filter = cvfFile;
-        savedDecision = decisioninfo(savedData, cutPath); savedExec = executioninfo(savedData, cutPath);
-        fprintf('대상 %d 파이프라인 원본 | CUT 결정 %d/%d | CUT 실행 %d/%d\n', t, savedDecision(1), savedDecision(2), savedExec(1), savedExec(2));
-    catch savedError
-        fprintf('대상 %d 파이프라인 원본 | 읽기 실패 | 식별자 %s\n', t, savedError.identifier);
-    end
-    for k = 1:numel(resultSets)
-        pending = {getCoverageResults(resultSets(k))}; covObjects = {};
+        coverage = getCoverageSettings(allCases(caseIndex)); coverage.CoverageFilterFilename = '';
+        evalc('noFilterRun = run(allCases(caseIndex));');
+        pending = {getCoverageResults(noFilterRun)}; covObjects = {};
         while ~isempty(pending)
             item = pending{1}; pending(1) = [];
             if iscell(item), pending = [pending, item(:)']; %#ok<AGROW>
@@ -39,19 +35,18 @@ for t = 1:numel(pipeline.Targets)
             elseif isa(item, 'cvdata'), covObjects = [covObjects, num2cell(item(:)')]; end %#ok<AGROW>
         end
         for j = 1:numel(covObjects)
-            try
-                rerunDecision = decisioninfo(covObjects{j}, cutPath); rerunExec = executioninfo(covObjects{j}, cutPath);
-                fprintf('대상 %d 재실행 결과 %d | CUT 결정 %d/%d | CUT 실행 %d/%d\n', t, k, rerunDecision(1), rerunDecision(2), rerunExec(1), rerunExec(2));
-            catch
-                % 다른 대상의 결과에는 이 CUT 경로가 없다
-            end
+            cvd = covObjects{j}; cvd.filter = char(string(target.PackagedCVF));
+            decision = decisioninfo(cvd, cutPath); executed = executioninfo(cvd, cutPath);
+            fprintf('대상 %d | CVF 없이 실행 후 CVF 적용 | 통과 %d | CUT 결정 %d/%d | CUT 실행 %d/%d\n', t, ...
+                noFilterRun.NumPassed, decision(1), decision(2), executed(1), executed(2));
         end
+    catch runError
+        fprintf('대상 %d | 실패 | 식별자 %s\n', t, runError.identifier);
     end
 end
-warning(warnState);
+cd(previousFolder); warning(warnState);
 ```
 
-확인할 것: 대상마다 "파이프라인 원본"과 "재실행 결과"의 CUT 결정 수가 같은지. 대상마다 재실행 결과 줄이 하나만
-나와야 한다.
+확인할 것: 대상마다 CUT 결정이 20/22인지(파이프라인과 같은지), 11/22인지(재실행과 같은지).
 
 돌려줄 것: 화면 캡처 한 장.
