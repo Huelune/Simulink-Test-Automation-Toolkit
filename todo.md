@@ -163,7 +163,11 @@ while true
     ports = get_param(parentBlock, 'PortHandles');
     kinds = {};
     if ~isempty(ports.Enable), kinds{end + 1} = 'Enable'; end %#ok<SAGROW>
-    if ~isempty(ports.Trigger), kinds{end + 1} = ['Trigger(' get_param(find_system(parentBlock, 'SearchDepth', 1, 'BlockType', 'TriggerPort'), 'TriggerType'){1} ')']; end %#ok<SAGROW>
+    if ~isempty(ports.Trigger)
+        triggerBlocks = find_system(parentBlock, 'SearchDepth', 1, 'BlockType', 'TriggerPort');
+        triggerType = '?'; if ~isempty(triggerBlocks), triggerType = get_param(triggerBlocks{1}, 'TriggerType'); end
+        kinds{end + 1} = ['Trigger(' triggerType ')']; %#ok<SAGROW>
+    end
     if ~isempty(ports.Ifaction), kinds{end + 1} = 'Action'; end %#ok<SAGROW>
     if isempty(kinds), kinds = {'항상 실행'}; end
     fprintf('위 %d단계 Subsystem | 실행: %s\n', level, strjoin(kinds, ', '));
