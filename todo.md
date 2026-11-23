@@ -64,44 +64,64 @@ git checkout -- src/config/st_config.m && git pull
 
 돌려줄 것: 오류가 나면 그 화면. 정상이면 "됨" 한 줄.
 
-## 3. 실패하는 Iteration 2의 SLDV 파라미터가 어디를 가리키는지 확인
+## 3. 파이프라인이 실제로 돌린 작업 공간 파일로 다시 돌려 보기
 
-왜: 모델을 미리 열지 않아도 재실행은 대상마다 Iteration 2만 Failed이고, CUT 결정은 11/22에 그친다. 파이프라인은 PASSED·20/22다.
-툴킷은 SLDV가 만든 파라미터 값을 Iteration마다 변수 덮어쓰기(`setVariable`)로 넣는다. 덮어쓰기는 값이 있는 곳(Source)을 함께
-적는다. 그곳이 원래 Top Model이나 Harness 쪽이면, standalone 모델로 돌릴 때는 덮어쓰기가 먹지 않는다. 그러면 Iteration 2가 SLDV가
-의도한 파라미터 없이 돌아 실패할 수 있다. Iteration마다 덮어쓰기 개수와 Source 종류를 센다. 이름과 값은 찍지 않는다.
-6단계를 돌린 MATLAB(Test File이 열려 있는 상태)에서 이어서 붙여 넣는다.
+왜: Iteration에서 파라미터 덮어쓰기는 보이지 않았다(모두 0). 그래서 그 가설로는 설명이 안 된다. 이번에는 범위를 반으로 나눈다.
+파이프라인은 실행 작업 공간에 있는 Test File과 standalone 모델로 돌렸고, 패키지 단계는 그것을 복사한 뒤 Signal Editor를 바꿔
+저장했다. 작업 공간 원본으로 똑같이 돌린다. 그때 PASSED·20/22가 나오면 패키지 단계에서 무언가 바뀐 것이다. 그때도 Iteration 2가
+실패하면 파이프라인 실행기만 하는 무언가가 있는 것이다.
+Test Manager의 Test File과 결과를 닫는다. 저장 안 한 모델이 없을 때만 모든 모델을 닫고 시작한다. CUT 수만큼 시뮬레이션한다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
-cfg = st_config();
-pipeline = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir, 'LATEST');
-testFiles = sltest.testmanager.getTestFiles; allCases = getAllTestCases(testFiles(1));
+pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
+workFile = char(string(pipeline.TestManagerWorkFile));
+fprintf('작업 공간 Test File 있음 %d\n', isfile(workFile));
+if ~isfile(workFile), warning(warnState); return; end
+loadedNames = find_system('type', 'block_diagram');
+if any(strcmp(get_param(loadedNames, 'Dirty'), 'on')), fprintf('저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요\n'); warning(warnState); return; end
+bdclose('all'); sltest.testmanager.clearResults; sltest.testmanager.clear;
+workTestFile = sltest.testmanager.load(workFile); allCases = getAllTestCases(workTestFile);
+oldGen = Simulink.fileGenControl('getConfig');
 for t = 1:numel(pipeline.Targets)
-    target = pipeline.Targets(t);
-    [~, modelName] = fileparts(char(string(target.PackagedStandaloneModel)));
-    caseIndex = find(string({allCases.Name}) == string(target.TestCaseName), 1);
-    iterations = getIterations(allCases(caseIndex));
-    for i = 1:numel(iterations)
-        try
-            paramText = jsonencode(iterations(i).TestParams);
-        catch
-            paramText = evalc('disp(iterations(i).TestParams)');
+    target = pipeline.Targets(t); cutPath = char(string(target.StandaloneCUTPath));
+    workModel = char(string(target.StandaloneModelFile)); [~, modelName] = fileparts(workModel);
+    fprintf('대상 %d 파이프라인 | 판정 %s | CUT 결정 %d/%d | CUT 실행 %d/%d | 작업 공간 모델 있음 %d\n', t, ...
+        char(string(target.InitialOutcome)), target.DecisionCovered, target.DecisionTotal, target.ExecutionCovered, ...
+        target.ExecutionTotal, isfile(workModel));
+    freshFolder = tempname; mkdir(freshFolder); previousFolder = cd(freshFolder);
+    try
+        Simulink.fileGenControl('set', 'CacheFolder', freshFolder, 'CodeGenFolder', freshFolder, 'keepPreviousPath', true);
+        addpath(fileparts(workModel), '-begin');
+        caseIndex = find(string({allCases.Name}) == string(target.TestCaseName), 1);
+        coverage = getCoverageSettings(allCases(caseIndex)); coverage.CoverageFilterFilename = char(string(target.PackagedCVF));
+        evalc('workRun = run(allCases(caseIndex));');
+        caseResults = getTestCaseResults(workRun); iterationOutcomes = '';
+        for c = 1:numel(caseResults)
+            iterationResults = getIterationResults(caseResults(c));
+            for i = 1:numel(iterationResults), iterationOutcomes = [iterationOutcomes ' ' char(string(iterationResults(i).Outcome))]; end %#ok<AGROW>
         end
-        allSources = regexp(paramText, '"Source"\s*:\s*"([^"]*)"', 'tokens');
-        allSources = string(cellfun(@(c) c{1}, allSources, 'UniformOutput', false));
-        nameCount = numel(regexp(paramText, '"Name"\s*:', 'start'));
-        fprintf(['대상 %d Iteration %d | 파라미터 항목 %d | Source 지정 %d | 비어 있음 %d | sldd %d | standalone 모델 %d | ' ...
-            'Top Model %d | 그 외 %d\n'], t, i, nameCount, numel(allSources), sum(strlength(allSources) == 0), ...
-            sum(endsWith(allSources, '.sldd', 'IgnoreCase', true)), sum(allSources == string(modelName)), ...
-            sum(allSources == string(cfg.TopModel)), sum(strlength(allSources) > 0 & ~endsWith(allSources, '.sldd', 'IgnoreCase', true) & ...
-            allSources ~= string(modelName) & allSources ~= string(cfg.TopModel)));
+        pending = {getCoverageResults(workRun)}; covObjects = {};
+        while ~isempty(pending)
+            item = pending{1}; pending(1) = [];
+            if iscell(item), pending = [pending, item(:)']; %#ok<AGROW>
+            elseif isa(item, 'cv.cvdatagroup'), pending = [pending, getAll(item)']; %#ok<AGROW>
+            elseif isa(item, 'cvdata'), covObjects = [covObjects, num2cell(item(:)')]; end %#ok<AGROW>
+        end
+        cvd = covObjects{1}; cvd.filter = char(string(target.PackagedCVF));
+        decision = decisioninfo(cvd, cutPath); executed = executioninfo(cvd, cutPath);
+        fprintf('대상 %d 작업 공간 재실행 | 통과 %d | 실패 %d | CUT 결정 %d/%d | CUT 실행 %d/%d | Iteration:%s\n', t, ...
+            workRun.NumPassed, workRun.NumFailed, decision(1), decision(2), executed(1), executed(2), iterationOutcomes);
+    catch workError
+        fprintf('대상 %d | 실패 | 식별자 %s\n', t, workError.identifier);
     end
+    Simulink.fileGenControl('setConfig', 'config', oldGen); cd(previousFolder);
+    if bdIsLoaded(modelName), close_system(modelName, 0); end
+    rmpath(fileparts(workModel));
 end
 warning(warnState);
 ```
 
-확인할 것: 실패하는 Iteration 2에만 파라미터 항목이 있거나, Source가 "Top Model"이나 "그 외"로 나오면 덮어쓰기가 standalone 모델에
-닿지 않는 것이다. 모든 Iteration의 파라미터 항목이 0이면 이 가설은 틀렸다.
+확인할 것: "작업 공간 재실행" 줄이 "파이프라인" 줄과 같은지(실패 0, 20/22, 45/45). 작업 공간 파일이 이미 지워졌으면 "있음 0"으로 나온다.
 
 돌려줄 것: 화면 캡처 한 장.
