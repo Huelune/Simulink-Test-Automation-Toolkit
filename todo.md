@@ -224,6 +224,9 @@ for s = 1:size(starts, 1)
     end
     if isempty(delayFound), fprintf('%s | Unit Delay를 찾지 못함\n', starts{s, 3}); resetSources{end + 1} = ''; continue; end %#ok<SAGROW>
     hilite_system(delayFound, 'user2'); fprintf(fid, '초록색 %s | %s\n', starts{s, 3}, delayFound);
+    if ~exist('treeSeen', 'var'), treeSeen = {}; end
+    if ~any(strcmp(treeSeen, delayFound)), treeSeen{end + 1} = delayFound; end %#ok<SAGROW>
+    fprintf('%s = UnitDelay#%d\n', starts{s, 3}, find(strcmp(treeSeen, delayFound), 1));
     delayHandles = get_param(delayFound, 'PortHandles'); feeder = get_param(get_param(delayHandles.Inport(1), 'Line'), 'SrcBlockHandle');
     feederType = get_param(feeder, 'BlockType'); resetSource = '';
     if strcmp(feederType, 'Switch')
@@ -261,9 +264,10 @@ for s = 1:size(starts, 1)
                     inputTexts{end + 1} = inputType; %#ok<SAGROW>
                 end
                 fprintf('   리셋 조건 블록 | 연산자 %s | 입력: %s\n', operatorText, strjoin(inputTexts, ', '));
-                % 리셋 조건을 만드는 계산을 5단계 아래까지 나무 모양으로 찍는다(Goto/From·Subsystem 경계와 형식 변환은 건너간다).
+                % 리셋 조건을 만드는 계산을 8단계 아래까지(최대 30줄) 나무 모양으로 찍는다. 상태 블록은 번호를 붙여 안으로도 한 번 따라간다(Goto/From·Subsystem 경계와 형식 변환은 건너간다).
                 % 각 줄은 (블록 경로, 들어간 입력 포트 번호, 깊이). 꺼낼 때 찍고 그 블록의 입력을 다시 쌓아, 자식이 부모 바로 아래에 찍힌다.
-                stack = {}; rootHandles = get_param(cursorPath, 'PortHandles');
+                stack = {}; rootHandles = get_param(cursorPath, 'PortHandles'); treeLines = 0;
+                if ~exist('treeSeen', 'var'), treeSeen = {}; end
                 for q = numel(rootHandles.Inport):-1:1, stack(end + 1, :) = {cursorPath, q, 1}; end %#ok<SAGROW>
                 while ~isempty(stack)
                     nodePath = stack{end, 1}; q = stack{end, 2}; nodeDepth = stack{end, 3}; stack(end, :) = [];
@@ -299,8 +303,17 @@ for s = 1:size(starts, 1)
                         catch
                         end
                     end
-                    fprintf('%s입력 %d: %s%s\n', repmat('    ', 1, nodeDepth), q, childType, settingText);
-                    if nodeDepth < 5 && ~any(strcmp(childType, {'Constant', 'Inport', 'UnitDelay', 'Delay', 'Memory'}))
+                    % 상태 블록은 번호를 붙여 같은 것이 다시 나오면 알아보게 하고, 한 번만 안으로 따라간다.
+                    seenIndex = find(strcmp(treeSeen, childPath), 1); seenNote = '';
+                    if any(strcmp(childType, {'UnitDelay', 'Delay', 'Memory'}))
+                        if isempty(seenIndex), treeSeen{end + 1} = childPath; seenIndex = numel(treeSeen); else, seenNote = ' (앞에 나온 상태, 되먹임)'; end %#ok<SAGROW>
+                        childType = sprintf('%s#%d', childType, seenIndex);
+                    end
+                    if strcmp(childType, 'Inport'), seenNote = ' (모델 바깥 입력)'; end
+                    treeLines = treeLines + 1;
+                    if treeLines > 30, fprintf('%s... 이하 생략\n', repmat('    ', 1, nodeDepth)); stack = {}; continue; end
+                    fprintf('%s입력 %d: %s%s%s\n', repmat('    ', 1, nodeDepth), q, childType, settingText, seenNote);
+                    if isempty(seenNote) && nodeDepth < 8 && ~any(strcmp(childType, {'Constant', 'Inport'}))
                         childHandles = get_param(childPath, 'PortHandles');
                         for p = numel(childHandles.Inport):-1:1, stack(end + 1, :) = {childPath, p, nodeDepth + 1}; end %#ok<SAGROW>
                     end
