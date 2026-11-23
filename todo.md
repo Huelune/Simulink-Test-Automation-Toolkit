@@ -81,14 +81,13 @@ caseIndex = find(string({allCases.Name}) == string(pipeline.Targets(1).TestCaseN
 iterations = getIterations(allCases(caseIndex));
 propertyNames = properties(iterations(1));
 fprintf('Iteration 속성: %s\n', strjoin(propertyNames, ', '));
-fprintf('Iteration 메서드 중 get/Variable/Param: %s\n', strjoin(methods(iterations(1)) ...
-    (contains(methods(iterations(1)), {'get', 'Variable', 'Param'}, 'IgnoreCase', true)), ', '));
 for i = 1:numel(iterations)
     counts = strings(1, numel(propertyNames));
     for p = 1:numel(propertyNames)
         try
             value = iterations(i).(propertyNames{p});
-            if isstruct(value), counts(p) = sprintf('%s=%d(%s)', propertyNames{p}, numel(value), strjoin(fieldnames(value), '/'));
+            if istable(value), counts(p) = sprintf('%s=%d행(%s)', propertyNames{p}, height(value), strjoin(value.Properties.VariableNames, '/'));
+            elseif isstruct(value), counts(p) = sprintf('%s=%d(%s)', propertyNames{p}, numel(value), strjoin(fieldnames(value), '/'));
             elseif iscell(value), counts(p) = sprintf('%s=%dx%d', propertyNames{p}, size(value, 1), size(value, 2));
             else, counts(p) = sprintf('%s=%d', propertyNames{p}, numel(value)); end
         catch
@@ -96,6 +95,18 @@ for i = 1:numel(iterations)
         end
     end
     fprintf('Iteration %d | %s\n', i, strjoin(counts, ' | '));
+    try
+        vars = iterations(i).Variables; if istable(vars), vars = table2struct(vars); end
+        if isstruct(vars) && isfield(vars, 'Source')
+            [~, modelName] = fileparts(char(string(pipeline.Targets(1).PackagedStandaloneModel)));
+            src = string({vars.Source});
+            fprintf('  Variables Source | 비어 있음 %d | sldd %d | standalone 모델 %d | Top Model %d | 그 외 %d\n', ...
+                sum(strlength(src) == 0), sum(endsWith(src, '.sldd', 'IgnoreCase', true)), sum(src == string(modelName)), ...
+                sum(src == string(st_config().TopModel)), sum(strlength(src) > 0 & ~endsWith(src, '.sldd', 'IgnoreCase', true) & ...
+                src ~= string(modelName) & src ~= string(st_config().TopModel)));
+        end
+    catch
+    end
 end
 caseVariables = '';
 try, caseVariables = sprintf('%d', numel(getVariables(allCases(caseIndex)))); catch, caseVariables = '?'; end
