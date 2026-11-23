@@ -64,63 +64,45 @@ git checkout -- src/config/st_config.m && git pull
 
 돌려줄 것: 오류가 나면 그 화면. 정상이면 "됨" 한 줄.
 
-## 3. 매뉴얼 6단계 결과에서 CVF가 붙어 있는데도 값이 그대로인 이유 확인
+## 3. 새 파이프라인과 6단계 재실행의 판정·커버리지 비교
 
-왜: 새로 돌린 파이프라인 결과를 매뉴얼 6단계(`RunPerTestCase`)로 열었다. Coverage Filters 칸에 CVF는 있는데, 하위 Subsystem이
-빠지지 않고 % 값도 그대로다. 예전 실행에서는 같은 방법으로 값이 줄었다. 그래서 이번 CVF 규칙이 지금 열린 standalone 모델의
-블록을 제대로 가리키는지 본다. 그리고 결과를 CVF를 건 채와 뗀 채로 세어 비교한다. 이름은 찍지 않는다.
-6단계를 돌린 MATLAB을 닫지 않은 상태에서 이어서 붙여 넣는다.
+왜: 6단계로 다시 돌리면 기대값 FAIL이 나는 TC가 있고, CUT 결정 커버리지도 11/22로 낮다. 이것이 재실행만의 문제인지,
+아니면 새 파이프라인도 같은지 가린다. 새 파이프라인도 같으면 재실행은 정상이다. 그 경우 차이는 standalone 모델과 원래
+Harness 사이에 있다(원래 Harness로 갱신한 기대값이 standalone에서는 맞지 않음). 새 파이프라인은 PASS에 20/22인데 재실행만
+다르면 재실행 쪽 문제다.
+6단계를 돌린 MATLAB을 닫지 않은 상태에서 이어서 붙여 넣는다(재실행 결과가 Test Manager에 있어야 한다).
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
 pipeline = st_load_standalone_pipeline_manifest(st_config().StandaloneCoverageRootDir, 'LATEST');
+resultSets = sltest.testmanager.getResultSets;
 for t = 1:numel(pipeline.Targets)
     target = pipeline.Targets(t); cutPath = char(string(target.StandaloneCUTPath));
-    try
-        rules = slcoverage.Filter(char(string(target.PackagedCVF))).rules;
-        resolved = 0; inside = 0; outside = 0; hitsCut = 0;
-        for r = 1:numel(rules)
-            try
-                rulePath = Simulink.ID.getFullName(char(string(rules(r).Selector.Id))); resolved = resolved + 1;
-            catch
-                continue;
-            end
-            if strcmp(rulePath, cutPath) || startsWith(cutPath, [rulePath '/']), hitsCut = hitsCut + 1;
-            elseif startsWith(rulePath, [cutPath '/']), inside = inside + 1;
-            else, outside = outside + 1; end
+    fprintf('대상 %d 파이프라인 | 판정 %s | CUT 결정 %d/%d | CUT 실행 %d/%d\n', t, char(string(target.InitialOutcome)), ...
+        target.DecisionCovered, target.DecisionTotal, target.ExecutionCovered, target.ExecutionTotal);
+    for k = 1:numel(resultSets)
+        pending = {getCoverageResults(resultSets(k))}; covObjects = {};
+        while ~isempty(pending)
+            item = pending{1}; pending(1) = [];
+            if iscell(item), pending = [pending, item(:)']; %#ok<AGROW>
+            elseif isa(item, 'cv.cvdatagroup'), pending = [pending, getAll(item)']; %#ok<AGROW>
+            elseif isa(item, 'cvdata'), covObjects = [covObjects, num2cell(item(:)')]; end %#ok<AGROW>
         end
-        fprintf('대상 %d | CVF 규칙 %d | 블록 찾음 %d | CUT 안 %d | CUT 밖 %d | CUT나 그 위 %d\n', ...
-            t, numel(rules), resolved, inside, outside, hitsCut);
-    catch ruleError
-        fprintf('대상 %d | CVF 규칙 읽기 실패 | 식별자 %s\n', t, ruleError.identifier);
-    end
-end
-resultSets = sltest.testmanager.getResultSets;
-for k = 1:numel(resultSets)
-    pending = {getCoverageResults(resultSets(k))}; covObjects = {};
-    while ~isempty(pending)
-        item = pending{1}; pending(1) = [];
-        if iscell(item), pending = [pending, item(:)']; %#ok<AGROW>
-        elseif isa(item, 'cv.cvdatagroup'), pending = [pending, getAll(item)']; %#ok<AGROW>
-        elseif isa(item, 'cvdata'), covObjects = [covObjects, num2cell(item(:)')]; end %#ok<AGROW>
-    end
-    for j = 1:numel(covObjects)
-        cvd = covObjects{j}; root = char(string(cvd.modelinfo.analyzedModel)); savedFilter = cvd.filter;
-        try
-            withFilter = decisioninfo(cvd, root);
-            cvd.filter = ''; withoutFilter = decisioninfo(cvd, root); cvd.filter = savedFilter;
-            fprintf('결과 %d-%d | 걸린 CVF %d | 결정: CVF 있음 %d/%d, CVF 없음 %d/%d\n', k, j, ...
-                numel(string(savedFilter)), withFilter(1), withFilter(2), withoutFilter(1), withoutFilter(2));
-        catch infoError
-            cvd.filter = savedFilter;
-            fprintf('결과 %d-%d | 지표 읽기 실패 | 식별자 %s\n', k, j, infoError.identifier);
+        for j = 1:numel(covObjects)
+            cvd = covObjects{j}; cvd.filter = char(string(target.PackagedCVF));
+            try
+                decision = decisioninfo(cvd, cutPath); executed = executioninfo(cvd, cutPath);
+            catch
+                continue; % 다른 대상의 결과
+            end
+            fprintf('대상 %d 재실행 결과 %d | 통과 %d | 실패 %d | CUT 결정 %d/%d | CUT 실행 %d/%d\n', t, k, ...
+                resultSets(k).NumPassed, resultSets(k).NumFailed, decision(1), decision(2), executed(1), executed(2));
         end
     end
 end
 warning(warnState);
 ```
 
-확인할 것: "블록 찾음"이 규칙 수보다 작으면, CVF가 지금 모델에 없는 블록을 가리키는 것이다. 결과마다 CVF 있음과 없음의
-숫자가 같으면, CVF가 결과에 붙어 있어도 아무것도 빼지 못하는 것이다.
+확인할 것: 대상마다 "파이프라인" 줄과 "재실행" 줄의 판정과 숫자가 같은지.
 
 돌려줄 것: 화면 캡처 한 장.
