@@ -86,12 +86,12 @@ switch stage
             signal = signal_state(harness,row,cfg);
             assess = st_find_assessment_block(harness);
             require_names(sltest.testsequence.getAllScenarios(assess),profile.ScenarioNames,'Assessment');
-            expected = profile.ScenarioNames;
-            if strcmp(profile.Mode,'OFF'), expected = {'Iteration 1'}; end
-            require_names({evidence.Iterations.Name},expected,'Iterations');
+            [expectedNames,boundScenarios] = st_expected_iteration_bindings(profile);
+            require_names({evidence.Iterations.Name},expectedNames,'Iterations');
             for k = 1:numel(iterations)
-                scenario = char(iterations(k).Name);
-                if strcmp(profile.Mode,'OFF'), scenario = profile.ScenarioNames{1}; end
+                position = find(strcmp(expectedNames,char(iterations(k).Name)),1);
+                if isempty(position), position = 1; end % OFF mode: single iteration
+                scenario = boundScenarios{position};
                 params = iterations(k).TestParams;
                 if ~st_iteration_binding_matches(params,{'TestSequenceScenario'},scenario) || ...
                         (signal.Available && ~st_iteration_binding_matches(params, ...

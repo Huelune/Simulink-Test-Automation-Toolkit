@@ -289,11 +289,8 @@ for i = 1:n
             i, n, numel(iterationNames), ...
             strjoin(iterationNames, ', '));
 
-        if strcmp(profile.Mode, 'OFF')
-            expectedIterationNames = {'Iteration 1'};
-        else
-            expectedIterationNames = expected;
-        end
+        [expectedIterationNames, boundScenarios] = ...
+            st_expected_iteration_bindings(profile);
         assert_same_scenario_set( ...
             expectedIterationNames, iterationNames, ...
             'Test Manager iterations');
@@ -302,7 +299,8 @@ for i = 1:n
          TestSequenceScenarioParameterCount(i)] = ...
             assert_iteration_scenario_parameters( ...
                 iterations, ...
-                expected, ...
+                expectedIterationNames, ...
+                boundScenarios, ...
                 SignalEditorAvailable(i), ...
                 strcmp(profile.Mode, 'OFF'));
 
@@ -420,25 +418,27 @@ end
 
 function [signalEditorCount, testSequenceCount] = ...
         assert_iteration_scenario_parameters( ...
-        iterations, expected, requireSignalEditor, offMode)
+        iterations, expectedNames, boundScenarios, requireSignalEditor, offMode)
 %ASSERT_ITERATION_SCENARIO_PARAMETERS Check both scenario consumers.
 
 signalEditorCount = 0;
 testSequenceCount = 0;
-expected = normalize_cellstr(expected);
+expectedNames = normalize_cellstr(expectedNames);
+boundScenarios = normalize_cellstr(boundScenarios);
 
 for i = 1:numel(iterations)
     if offMode
-        scenarioName = expected{1};
+        position = 1;
     else
-        scenarioName = char(iterations(i).Name);
+        iterationName = char(iterations(i).Name);
+        position = find(strcmp(expectedNames, iterationName), 1);
+        if isempty(position)
+            error( ...
+                'Iteration has an unexpected name: %s', ...
+                iterationName);
+        end
     end
-
-    if ~ismember(scenarioName, expected)
-        error( ...
-            'Iteration has an unexpected name: %s', ...
-            scenarioName);
-    end
+    scenarioName = boundScenarios{position};
 
     testParams = iterations(i).TestParams;
 
