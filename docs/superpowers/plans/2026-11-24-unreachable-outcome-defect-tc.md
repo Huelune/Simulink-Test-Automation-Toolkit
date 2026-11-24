@@ -279,26 +279,33 @@
 - Test: `tests/unit/test_unreachable_objectives.m`
 
 **Interfaces:**
-- Consumes: Task 1이 확인한 `sldvData` 필드 이름과 경로 구조. `st_build_defect_iterations`(3 작업).
-- Produces: `[objectives, counts] = st_unreachable_objectives(sldvData)`
-  - `objectives`: 3 작업에서 정의한 표
-  - `counts`: struct(`Decision`, `Unsatisfiable`, `Approximate`, `Undecided`)
+- Consumes: Task 1이 확인한 `sldvData` 필드 이름과 경로 구조(아래). `st_build_defect_iterations`(3 작업).
+  - 실험 결과(R2025b 실제 데이터): `Objectives` 필드는 `type, status, descr, label, outcomeValue, modelObjectIdx, ...`, `ModelObjects` 필드는 `descr, typeDesc, slPath, sfObjType, sfObjNum, sid, designSid, replacementSid, ...`, `ModelInformation` 필드는 `Name, Version, TimeStamp, Checksum, Author, SubsystemPath, ExtractedModel`이다.
+  - `slPath`의 첫 요소는 `ModelInformation.Name`이 아니고, 둘째 요소는 언제나 CUT 이름이며, `SubsystemPath`로 시작하지 않는다. 그래서 상대 경로는 **앞의 두 요소를 뗀 나머지**다. 요소를 나눌 때 `//`(이름 속 `/`)는 나누지 않는다. 남은 경로의 `//` 표기와 줄바꿈은 그대로 둔다(9 작업 콜백이 이 경로로 하네스 블록을 찾는다).
+- Produces: `[objectives, counts] = st_unreachable_objectives(sldvData, coverageFilterMode)`
+  - `objectives`: 3 작업에서 정의한 표. `Sid`는 `designSid`가 있으면 그것, 없으면 `sid`. `BlockType`은 `typeDesc`.
+  - `counts`: struct(`Decision`, `Unsatisfiable`, `Approximate`, `Undecided`, `FilteredByCvf`, `CutItself`)
   - type이 `Decision`이 아닌 목표와, status가 두 Unsatisfiable 종류가 아닌 목표는 버린다.
-  - `RelativePath`는 Task 1이 확인한 규칙으로 분석 모델 이름(과 CUT 이름)을 떼어 만든다.
+  - 요소가 둘뿐인 목표(CUT 자신)는 버리고 `CutItself`로 센다.
+  - CVF 거름(설계 5.2, 사용자 결정): `coverageFilterMode`가 `SUBSYSTEM`이면 상대 경로에 `/`가 없고 `typeDesc`에 `subsystem`이 든(대소문자 무시) 목표를 버린다. `ALL_CONTENT`면 그에 더해 상대 경로에 (`//`가 아닌) `/`가 있는 목표를 모두 버린다. `OFF`·빈 값은 거르지 않는다. 버린 수는 `FilteredByCvf`.
 
-- [ ] **Step 1: 테스트 작성** — Task 1 결과의 필드 이름으로 가짜 `sldvData`를 만든다.
+- [ ] **Step 1: 테스트 작성** — 위 필드 이름으로 가짜 `sldvData`를 만든다(`slPath`는 `Secret_Root/Secret_CUT/...`).
   - `testOnlyDecisionUnsatisfiableAreKept`
   - `testApproximateStatusIsFlagged`
   - `testUndecidedIsCountedNotKept`
-  - `testRelativePathDropsAnalysisRoot`(바로 아래 블록 → 이름만, 하위 → `Sub/Blk`)
+  - `testRelativePathDropsRootAndCut`(바로 아래 블록 → 이름만, 하위 → `Sub/Blk`, 이름 속 `//`는 유지)
+  - `testCutItselfIsCountedNotKept`
+  - `testCvfOffKeepsAll`, `testCvfSubsystemDropsDirectChildSubsystemOutcomes`, `testCvfAllContentDropsNestedBlocks`
+  - `testDesignSidPreferredOverSid`
   - `testDataWithoutObjectivesYieldsNoDefects`(필드 없음 → 빈 표, WARN)
 - [ ] **Step 2: 정적 확인**
 - [ ] **Step 3: 구현과 연결**
   - `st_get_sldv_profile`은 `cfg.UnreachableDefectTests`가 참이고 `profile.DataFileFormat`이 `'SLDV'`일 때만 결함을 계산한다. 계산 순서는 이렇다.
     1. `load(profile.EffectiveDataFile)`
-    2. `st_unreachable_objectives`
+    2. `st_unreachable_objectives(sldvData, row.CoverageFilterMode)`
     3. `st_build_defect_iterations(objectives, profile.ScenarioNames, profile.CUTName, row.DefectInputScenario)`
-  - 행에 `DefectInputScenario` 열이 없으면 `""`를 쓴다.
+  - 행에 `DefectInputScenario`·`CoverageFilterMode` 열이 없으면 `""`·`"OFF"`를 쓴다. 이 계산의 실패(파일 읽기 등)는 profile 전체를 막지 않는다: WARN을 남기고 `DefectIterations`를 비운다. 단 `simtest:DefectInputScenarioInvalid`는 사용자가 고칠 입력 오류이므로 그대로 던진다.
+  - 최종 문서 라벨 보정(`src/exporting/st_final_document_defect_rows.m`): `typeDesc`가 Simulink BlockType 이름과 다를 수 있으므로, D 줄을 찾은 경우에는 catalog `TwoWay` 조회에 `details.BlockType`(D 목록의 실제 BlockType)을 쓴다. 테스트 `testTwoWayLookupUsesDetailsBlockType`을 `tests/unit/test_final_document_defects.m`에 추가한다.
   - 로그는 DEBUG로 `[UnreachableDefect] profile | CUT=… | Unsatisfiable=… | Approximate=… | Undecided=… | Defects=…`를 남긴다. 이 함수는 여러 단계에서 불리므로 INFO 로그는 9 작업에서 한 번만 남긴다.
   - `% shortcut: 호출마다 sldvData를 다시 읽는다, 느려지면 manifest에 결과를 캐시한다`
 - [ ] **Step 4: 정적 확인 후 커밋** — `feat(sldv): SLDV 도달 불가 목표로 결함 Iteration 목록을 profile에 채운다`
@@ -321,7 +328,8 @@
     - 결함 Iteration이 아니면 바로 `return`한다.
     - 결함이면 결과마다 `verifyGreaterThan(실행 횟수, 0, '<BlockType> [<결과 문구>] 실행 횟수')`를 한다.
     - 커버리지를 못 읽으면 `error('simtest:DefectCriteriaNoCoverage', ...)`를 던진다.
-    - 블록 경로는 `[test.sltest_sut '/' RelativePath]`다.
+    - 커버리지는 `getCoverageResults(test.TestResult)`로 얻는다(실험으로 확인). 결과가 배열·그룹일 수 있으니 `diagnostics/matlab/st_probe_defect_criteria.m`의 콜백 문자열이 펼치는 방식을 그대로 옮긴다(툴킷 함수 호출 없이).
+    - 블록 경로는 하네스 기준 `[test.sltest_bdroot '/' cutName '/' RelativePath]`다. `cutName`은 `get_param(test.sltest_sut,'Name')`의 `/`를 `//`로 바꾼 값이다. `test.sltest_sut`(원래 모델 경로)로는 `decisioninfo`가 빈 값을 돌려준다(실험으로 확인).
   - `action = st_defect_criteria_action(currentCallback, defects)`
     - 반환 `'SET' | 'CLEAR' | 'NONE'`
     - 표식 없는 비어 있지 않은 콜백이 있고 결함이 있으면 `error('simtest:DefectCriteriaForeign', ...)`를 던진다. 문구에는 할 일("Test Case의 Custom Criteria를 비우거나 cfg.UnreachableDefectTests=false")을 넣는다.
@@ -361,11 +369,12 @@
     1. 8·9 작업 단위 테스트(`test_unreachable_objectives`, `test_defect_criteria`)를 7 작업과 같은 형식으로 돌린다.
     2. 그 CUT을 `PreparationFromStage` TEST_MANAGER로 다시 준비하고 테스트를 실행한다. 명령은 user-manual의 PER_CUT 실행 명령을 따른다. 기대값 갱신은 기본값(APPLY) 그대로 두어, 갱신 뒤에도 결함 TC가 FAIL로 남는지 함께 본다.
     3. 결과에서 숫자만 한 줄씩 찍는다.
-       - 결함 Iteration 수
+       - 결함 Iteration 수, 결함마다 한 줄(블록 종류, CUT 아래 깊이, 결과 수, 근사 여부)
+       - CVF로 거른 수, CUT 자신이라 뺀 수
        - 결함 FAIL·PASS·오류 수
        - 보통 Iteration의 이전 대비 판정 변화 수
        - 결정 커버리지 분자/분모
-  - 확인할 것: 결함 2, FAIL 2, 판정 변화 0, 커버리지 숫자가 이전과 같다(20/22 등 직전 값과 비교).
+  - 확인할 것: 결함 TC가 Switch와 Max 2건(블록 종류로 확인), FAIL 2, 판정 변화 0, 커버리지 숫자가 이전과 같다(20/22 등 직전 값과 비교). SLDV 도달 불가 3개 중 나머지가 CVF 거름이나 같은 블록의 두 번째 결과로 설명되는가.
   - 돌려줄 것: 화면 캡처 한 장.
 - [ ] **Step 2: 마무리 문서**
   - CHANGELOG에 기능 항목을 적는다.

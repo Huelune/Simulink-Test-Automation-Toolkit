@@ -1,7 +1,7 @@
 # 도달 불가 결정 결과를 결함 TC로 남기는 설계
 
 - 작성일: 2026-11-24
-- 상태: 설계 (구현 전, 실험 1건 선행)
+- 상태: 구현 중 (실험 완료, 6절 결과 참고)
 - 대상 브랜치: main
 
 ## 1. 배경과 의도
@@ -122,6 +122,17 @@ FAIL은 진짜여야 한다. `verify(false)`처럼 무조건 실패하는 검증
   한다. 실행 전에 만드는 결함 목록이 그 목록에 기대면 범위와 번호가 어긋날 수 있다.
 - 그래서 **profile과 Custom Criteria에는 D 번호를 넣지 않는다.** 블록 종류, CUT 기준 상대 경로, SID,
   결과 문구만 둔다. D 번호는 최종 문서가 자기 D 목록에서 붙인다(5.6).
+- **CVF가 커버리지에서 빼는 곳의 결과는 결함으로 만들지 않는다(사용자 결정).** 그 Test Case가 책임지는
+  범위가 아니기 때문이다. SLDV는 `cfg.SldvCoverageFilter=false`(기본)일 때 CVF가 뺀 하위 Subsystem 안까지
+  분석하므로 이 거름이 필요하다. 규칙은 그 행의 `CoverageFilterMode`로 정한다(CVF를 만드는 규칙과 같다).
+  - `OFF`: 거르지 않는다.
+  - `SUBSYSTEM`: CUT 바로 아래 Subsystem 블록 자체의 결과(Enable·Trigger 등)를 뺀다.
+  - `ALL_CONTENT`: 위에 더해, 그 Subsystem 안의 모든 블록 결과를 뺀다(상대 경로에 `/`가 있는 블록).
+  - 뺀 개수는 로그(WARN 아님, INFO)에 남긴다. `CoverageBoundaryMode`는 CUT 바깥만 다루므로 상관없다.
+- **상대 경로 규칙(실험으로 확인)**: `ModelObjects.slPath`는 `<분석 루트>/<CUT 이름>/...` 꼴이다. 앞의
+  두 요소를 떼면 CUT 기준 상대 경로가 된다. 이름 속 `/`의 `//` 표기와 줄바꿈은 그대로 둔다(콜백이 이
+  경로로 블록을 찾기 때문). 최종 문서는 비교할 때만 공백을 접는다(5.6). 요소가 둘뿐인(CUT 자신) 목표는
+  결함 대상이 아니다.
 - `profile.Mode`가 `OFF`이거나 데이터 형식이 MAT(SLDV 데이터가 아님)이면 이 단계는 아무것도 하지 않는다.
 
 ### 5.3 결함 목록은 profile 한 곳에 둔다
@@ -144,6 +155,10 @@ FAIL은 진짜여야 한다. `verify(false)`처럼 무조건 실패하는 검증
     같은 검증을 한다(블록 종류 + 결과 문구, D 번호 없음). 실행되지 않았으니 이 검증이 실패하고
     Iteration이 FAIL이 된다.
   - 커버리지를 읽지 못하면 검증하지 않고 오류를 던진다. FAIL이 아니라 오류로 끝나야 한다.
+  - **접근 경로(실험으로 확인)**: 커버리지는 `getCoverageResults(test.TestResult)`로 얻는다. 블록은 하네스
+    경로 `[test.sltest_bdroot '/' <CUT 블록 이름> '/' <상대 경로>]`로 찾는다. `test.sltest_sut`는 원래 모델의
+    Subsystem 경로를 가리키며, 그 경로로는 `decisioninfo`가 빈 값을 돌려준다. CUT 블록 이름은
+    `test.sltest_sut`의 마지막 요소(하네스 안 CUT 블록은 원래 Subsystem과 이름이 같다)이다.
   - 콜백 첫 줄에 툴킷이 만든 콜백이라는 표식 주석을 둔다. 툴킷은 이 표식이 있는 콜백만 바꾸거나 끈다.
     표식 없는 콜백(사람이 쓴 것)이 이미 있으면 덮어쓰지 않고, 이유와 할 일을 말하며 실패한다.
 - 결함 목록이 비면 툴킷 표식이 있는 Custom Criteria를 끈다(모델이 고쳐진 경우).
@@ -243,6 +258,17 @@ FAIL은 진짜여야 한다. `verify(false)`처럼 무조건 실패하는 검증
 
 2가 "아니오"면 4절의 대체 판정으로 5.4를 다시 설계한다.
 
+**결과 (2026-11-24, R2025b)**: 커버리지 판정 방식이 성립한다.
+
+- Custom Criteria의 `test`에 `TestResult`(TestIterationResult)가 있고, `getCoverageResults`로 그 시점의
+  커버리지를 얻었다. 도달 불가 결과의 실행 횟수는 0이었고, Iteration 판정은 Failed였다.
+- 실행 뒤 같은 Iteration의 커버리지에서도 실행 횟수 0이었다(대조군 일치).
+- 블록은 `sltest_bdroot` 기준 하네스 경로로만 찾아졌다. `sltest_sut`와 원래 모델 경로는 빈 값을 돌려줬다.
+- Test File을 저장·닫기·다시 열기 해도 콜백이 남았고, 다시 실행해도 Failed였다.
+- 실제 SLDV 데이터: 대상마다 결정 목표 30개 중 Unsatisfiable 3개, 근사 0, Undecided 0. 커버리지 결정
+  수(22)보다 많은 것은 CVF가 뺀 하위 Subsystem까지 분석했기 때문으로 보며, 5.2의 CVF 거름을 넣었다.
+- `slPath` 경로 구조와 `designSid` 필드가 있다는 것을 확인했다(5.2 상대 경로 규칙).
+
 ## 7. 검증
 
 - 단위 테스트(이름에 `Secret`을 넣어 출력에 이름이 새지 않는지 함께 확인):
@@ -274,3 +300,4 @@ FAIL은 진짜여야 한다. `verify(false)`처럼 무조건 실패하는 검증
 - 근사 판정(`Unsatisfiable under approximation`)도 결함 TC로 만들고 확인 필요로 표시한다.
 - 분석한 사유는 대상 워크북의 새 시트에 적는다.
 - 계기가 된 모델의 두 블록은 CUT 바로 아래에 있다. 하위 Subsystem 안의 블록은 경로로 적는다.
+- CVF가 커버리지에서 빼는 곳의 도달 불가 결과는 결함 TC로 만들지 않는다.
