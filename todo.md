@@ -170,6 +170,7 @@ catch beforeError
     beforeText = ['읽기 실패 ' idOf(beforeError)];
     fprintf(fid, '[실행 전 판정]\n%s\n\n', getReport(beforeError, 'extended', 'hyperlinks', 'off'));
 end
+screenLines{end+1} = sprintf('실행 전 판정 %s', beforeText);
 runText = 'OK'; collectText = '건너뜀';
 try
     st_run_from_harness('PreparationMode', 'FORCE', 'FromStage', 'TEST_MANAGER', 'ExecutionMode', 'PER_CUT');
@@ -197,13 +198,21 @@ if strcmp(collectText, 'OK')
         fprintf(fid, '[실행 후 판정]\n%s\n\n', getReport(afterError, 'extended', 'hyperlinks', 'off'));
     end
 end
-screenLines{end+1} = sprintf('준비·실행 %s | 결과 정리 %s | 실행 전 판정 %s', runText, collectText, beforeText);
+screenLines{end+1} = sprintf('준비·실행 %s | 결과 정리 %s', runText, collectText);
 try
     evalc('T = st_load_targets(cfg.OnlyEnabled);');
 catch loadError
     T = table();
     screenLines{end+1} = sprintf('대상 목록 읽기 실패 | %s', idOf(loadError));
     fprintf(fid, '[대상 목록]\n%s\n\n', getReport(loadError, 'extended', 'hyperlinks', 'off'));
+end
+knownTypes = "subsystem";
+try
+    evalc('typeCatalog = st_specification_decision_catalog(''ALL'');');
+    knownTypes = lower([typeCatalog.BlockType; typeCatalog.DisplayType; "SubSystem"; "Min"; "Max"]);
+catch catalogError
+    screenLines{end+1} = sprintf('블록 종류 목록 읽기 실패 | %s', idOf(catalogError));
+    fprintf(fid, '[블록 종류 목록]\n%s\n\n', getReport(catalogError, 'extended', 'hyperlinks', 'off'));
 end
 for rowIndex = 1:height(T)
     rowNo = double(T.No(rowIndex));
@@ -271,7 +280,10 @@ for rowIndex = 1:height(T)
             hitVerdicts = caseRows.Verdict(caseRows.IterationName == string(defects(k).Name));
             if ~isempty(hitVerdicts), verdictText = char(hitVerdicts(end)); end
         end
-        screenLines{end+1} = sprintf('  결함 %d | %s | 깊이 %d | 결과 %d | 근사 %s | 판정 %s', k, defects(k).BlockType, ...
+        typeText = '기타 블록';
+        if ismember(lower(strtrim(string(defects(k).BlockType))), knownTypes), typeText = defects(k).BlockType; end
+        fprintf(fid, '[대상 %d 결함 %d 블록 종류] %s\n', rowNo, k, defects(k).BlockType);
+        screenLines{end+1} = sprintf('  결함 %d | %s | 깊이 %d | 결과 %d | 근사 %s | 판정 %s', k, typeText, ...
             blockDepth, numel(defects(k).Outcomes), approxText, verdictText);
     end
 end
@@ -283,14 +295,18 @@ fprintf('진단 전문 파일: %s (임시 폴더)\n', diagFile);
 warning(warnState);
 ```
 
-화면: 대상 행마다 숫자 세 줄과 결함마다 한 줄이 나온다. 대상은 Excel 행 번호(`No`)로만 적고, 결함 줄의 이름 칸에는
-Simulink 블록 종류만 찍는다. `깊이`는 CUT 바로 아래 블록이 1이다.
+화면: 대상 행마다 숫자 세 줄과 결함마다 한 줄이 나온다. 대상은 Excel 행 번호(`No`)로만 적는다. 결함 줄의 종류 칸에는
+툴킷이 아는 Simulink 블록 종류만 찍고, 모르는 종류는 `기타 블록`으로 찍는다(원래 종류는 진단 파일에만 쓴다). `깊이`는
+CUT 바로 아래 블록이 1이다.
 
 확인할 것:
 
-- 둘째 줄이 `준비·실행 OK | 결과 정리 OK`인가. 아니면 식별자를 보고, 진단 파일에서 그 절의 첫 줄을 경로·이름 없이
+- `준비·실행 OK | 결과 정리 OK` 줄이 나왔는가. 아니면 식별자를 보고, 진단 파일에서 그 절의 첫 줄을 경로·이름 없이
   말로 옮겨 달라.
 - 대상마다 `DefectStatus OK`, `결함 TC 2`이고, 결함 줄의 블록 종류가 Switch와 Max(SLDV가 `MinMax`로 적을 수 있다)인가.
+  `기타 블록`이 있으면 진단 파일의 `블록 종류` 줄에서 그 종류를 보고, Switch인지 Max인지 아니면 다른 것인지 말로 알려
+  달라(종류 이름은 적지 않는다).
+- `판정 -`이면 그 대상의 결과 정리 파일(판정)을 읽지 못한 것이다. 결과 정리 줄과 진단 파일을 본다.
 - SLDV는 대상마다 도달 불가 결과 3개를 냈다. `Unsatisfiable + Approximate`(3) = 결함 줄 `결과`의 합 + `FilteredByCvf` +
   `CutItself` + `Stateflow`여야 한다. 셋째 결과가 CVF가 빼는 곳(`FilteredByCvf 1`), CUT 자신(`CutItself 1`), Stateflow,
   같은 블록의 두 번째 결과(어느 결함 줄이 `결과 2`) 중 무엇으로 설명되는가.
@@ -298,10 +314,15 @@ Simulink 블록 종류만 찍는다. `깊이`는 CUT 바로 아래 블록이 1�
   판단(`sfObjType`이 있으면 Stateflow로 봄)이 틀린 것이다.
 - `결함 FAIL`이 결함 TC 수와 같고 `PASS 0 기타 0`인가. 결함 줄의 판정이 모두 `FAIL`인가. `판정 FINAL`이면 기대값 갱신 뒤
   재실행한 결과이고, `INITIAL`이면 재실행이 없었던 것이다.
+- 그 FAIL이 진짜 FAIL인가. 판정 콜백은 커버리지나 블록을 읽지 못하면 검증 대신 오류를 던지는데, Test Manager가 이것도
+  Failed로 적을 수 있다. Test Manager의 Results and Artifacts에서 이번 실행 결과 → 한 대상의 Test Case → 번호가 가장 큰
+  Iteration(결함 Iteration) → Custom Criteria Results를 연다. `실행 횟수`가 든 검증이 실패로 나오면 `verify 실패`,
+  오류 메시지가 나오면 `오류`다. 이 화면에는 블록 이름이 보이므로 캡처하지 않는다.
 - 보통 Iteration의 PASS·FAIL 수가 전에 알던 값과 같고 `이전과 다름 0`인가. `이전 판정 없음`이면 직전 실행이 정리되지
   않았던 것이니 수만 비교한다.
 - `결정 커버리지`가 이전과 같은가(1절에서 대상마다 20/22). 이 값은 결과 정리가 CVF를 붙여 쓴 CUT별 `TestSummary.xlsx`의
   `Coverage` 시트(CUT·Decision 행)에서 읽는다. 1절 값은 standalone의 `CoverageSummary.xlsx`라 출처가 다르다. 다르면
   두 값을 함께 적어 달라.
 
-돌려줄 것: 화면 캡처 한 장. 진단 파일은 사용자 PC에서만 보고 밖으로 보내지 않는다.
+돌려줄 것: 화면 캡처 한 장과 Custom Criteria 결과 한 단어(`verify 실패` 또는 `오류`). `기타 블록`이 있었으면 그 종류가
+Switch/Max/다른 것 중 무엇인지 한 줄. 진단 파일과 Test Manager 결과 화면은 사용자 PC에서만 보고 밖으로 보내지 않는다.
