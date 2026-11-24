@@ -425,6 +425,14 @@ cfg.WorkflowStateSummaryFile = ...
 % per row with DEFAULT, OFF, or APPLY. DEFAULT uses this global setting.
 cfg.ExpectedUpdateMode = 'APPLY';
 
+% Add a defect Test Manager iteration for every decision outcome that SLDV
+% proved unreachable. Set false to build only the SLDV scenarios.
+cfg.UnreachableDefectTests = true;
+
+% Sheet of the management workbook that holds the reason text for each
+% defect iteration (columns TestName/결함TC and Reason/사유).
+cfg.DefectReasonSheet = 'DefectReasons';
+
 % Simulation time used as the expected-value sample point [sec].
 cfg.ExpectedValueSampleTime = 0.01;
 

@@ -28,9 +28,14 @@ inputs.ASSESSMENT = st_hash_value(struct('Outports',cfg.VerifyHarnessOutportsOnl
     'Sample',cfg.ExpectedValueSampleTime));
 % The coverage columns are not preparation inputs. Nothing in preparation
 % reads them any more, so a filter change must not rebuild the Test File.
+defectInput = "";
+if ismember('DefectInputScenario', row.Properties.VariableNames)
+    defectInput = row.DefectInputScenario;
+end
 inputs.TEST_MANAGER = st_hash_value(struct('File',cfg.TestFile, ...
     'Suite',cfg.TestSuiteName,'Case',char(row.TestCaseName), ...
     'Metrics',cfg.CoverageMetricSettings,'StructuralLevel',cfg.CoverageStructuralLevel, ...
-    'Referenced',cfg.CoverageIncludeReferencedModels));
+    'Referenced',cfg.CoverageIncludeReferencedModels, ...
+    'DefectTests',cfg.UnreachableDefectTests,'DefectInput',char(defectInput)));
 inputs.ALIGNMENT = st_hash_value('SCENARIO_BINDINGS_V1');
 end

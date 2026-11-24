@@ -164,6 +164,17 @@ Excel의 `ExpectedUpdateMode` 열이 행마다 이 값을 덮어씁니다.
 > 이미 승인된 기준값이 있는 프로젝트라면 이 값을 `'OFF'`로 바꾸십시오. 그대로 두면
 > 실패한 테스트가 조용히 통과로 바뀝니다.
 
+### `UnreachableDefectTests` — 기본 `true`
+
+SLDV가 "어떤 입력으로도 실행할 수 없다"고 증명한 결정 결과마다 결함 Iteration을
+Test Manager에 추가합니다. `false`면 SLDV 시나리오만 만듭니다. 값이 바뀌면 Test Manager
+단계가 다시 준비됩니다.
+
+### `DefectReasonSheet` — 기본 `'DefectReasons'`
+
+결함 Iteration의 사유 문장을 적는 관리 워크북 시트 이름입니다. 열은
+`TestName`/`결함TC`, `Reason`/`사유`입니다.
+
 ### `RerunAfterExpectedUpdate` — 기본 `true`
 
 기대값이 하나라도 바뀌면 같은 범위를 다시 실행할지 정합니다. `PER_CUT`에서는 같은

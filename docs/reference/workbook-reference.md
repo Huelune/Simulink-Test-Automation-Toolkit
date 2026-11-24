@@ -34,6 +34,7 @@ CUT 하나이고, 그 행에 적은 값이 그 CUT을 어떻게 준비하고 실
 | `MatVariableName` | `MATVariableName`, `MAT Variable Name`, `MAT변수명` |
 | `SldvTestCases` | `SLDVTestCases`, `SLDV Test Cases`, `SLDV테스트케이스` |
 | `ExpectedUpdateMode` | `Expected Update Mode`, `기대값갱신모드` |
+| `DefectInputScenario` | `Defect Input Scenario`, `결함입력시나리오` |
 | `CoverageFilterMode` | `Coverage Filter Mode`, `커버리지필터모드` |
 | `CoverageFilterAction` | `Coverage Filter Action`, `커버리지필터동작` |
 | `CoverageFilterRationale` | `Coverage Filter Rationale`, `커버리지필터사유` |
@@ -57,6 +58,7 @@ CUT 하나이고, 그 행에 적은 값이 그 CUT을 어떻게 준비하고 실
 | [`MatVariableName`](#matvariablename) | 아니요 | 빈 값 | MAT 안에서 쓸 변수 하나 |
 | [`SldvTestCases`](#sldvtestcases) | 아니요 | 빈 값 | SLDV TestCase 중 쓸 번호 |
 | [`ExpectedUpdateMode`](#expectedupdatemode) | 아니요 | `DEFAULT` | 실패 시 기대값을 고칠지 |
+| [`DefectInputScenario`](#defectinputscenario) | 아니요 | 빈 값 | 결함 Iteration이 입력으로 쓸 시나리오 |
 | [`CoverageFilterMode`](#coveragefiltermode) | 아니요 | `OFF` | CUT 내부를 커버리지에서 뺄지 |
 | [`CoverageBoundaryMode`](#coverageboundarymode) | 아니요 | `OFF` | CUT 바깥을 커버리지에서 뺄지 |
 | [`CoverageFilterAction`](#coveragefilteraction) | 조건부 | 빈 값 | 뺄지, 정당화할지 |
@@ -271,6 +273,15 @@ SLDV 결과(`sldvData.TestCases`) 가운데 **어느 TestCase만** Scenario로 �
   필터를 복원합니다.
 
 후보를 사람이 검토한 뒤 승인하는 `REVIEW` 모드는 아직 없습니다.
+
+### `DefectInputScenario`
+
+도달 불가 결과용 결함 Iteration이 입력으로 쓸 시나리오를 정합니다. 값은 비움, 시나리오
+번호, 시나리오 이름 중 하나입니다. 비우면 마지막 시나리오를 씁니다. 값의 검증은 결함
+Iteration을 만들 때 합니다.
+
+사유 문장은 `DefectReasons` 시트에 적습니다(시트 이름은 `cfg.DefectReasonSheet`). 열은
+`TestName`(`결함TC`)과 `Reason`(`사유`)입니다.
 
 ## 6. 커버리지 필터
 

@@ -5,7 +5,7 @@ function T = st_load_targets(onlyEnabled)
 %   CUTName, CUTPath, HarnessName, TestCaseName
 % Optional:
 %   No, Enabled, SldvMode, SldvDataFile, DataFileFormat,
-%   MatVariableName, SldvTestCases, ExpectedUpdateMode,
+%   MatVariableName, SldvTestCases, ExpectedUpdateMode, DefectInputScenario,
 %   CoverageFilterMode, CoverageFilterAction, CoverageFilterRationale,
 %   CoverageBoundaryMode,
 %   PreparationMode, PreparationFromStage
@@ -77,6 +77,8 @@ idxSldvTestCases = find_column_optional(names, ...
 
 idxExpectedUpdateMode = find_column_optional(names, ...
     {'ExpectedUpdateMode','Expected Update Mode','기대값갱신모드'});
+idxDefectInputScenario = find_column_optional(names, ...
+    {'DefectInputScenario','Defect Input Scenario','결함입력시나리오'});
 
 idxCoverageFilterMode = find_column_optional(names, ...
     {'CoverageFilterMode','Coverage Filter Mode','커버리지필터모드'});
@@ -132,6 +134,14 @@ ExpectedUpdateMode = repmat("DEFAULT", n, 1);
 
 if ~isempty(idxExpectedUpdateMode)
     ExpectedUpdateMode = string(raw{:, idxExpectedUpdateMode});
+end
+
+% Kept as text; the value is validated where the defect iterations are built.
+DefectInputScenario = strings(n, 1);
+
+if ~isempty(idxDefectInputScenario)
+    DefectInputScenario = strtrim(string(raw{:, idxDefectInputScenario}));
+    DefectInputScenario(ismissing(DefectInputScenario)) = "";
 end
 
 CoverageFilterMode = repmat("OFF", n, 1);
@@ -257,6 +267,7 @@ DataFileFormat = DataFileFormat(keep);
 MatVariableName = MatVariableName(keep);
 SldvTestCases = SldvTestCases(keep);
 ExpectedUpdateMode = ExpectedUpdateMode(keep);
+DefectInputScenario = DefectInputScenario(keep);
 CoverageFilterMode = CoverageFilterMode(keep);
 CoverageFilterAction = CoverageFilterAction(keep);
 CoverageFilterRationale = CoverageFilterRationale(keep);
@@ -343,6 +354,7 @@ T = table( ...
     MatVariableName, ...
     SldvTestCases, ...
     ExpectedUpdateMode, ...
+    DefectInputScenario, ...
     CoverageFilterMode, ...
     CoverageFilterAction, ...
     CoverageFilterRationale, ...
