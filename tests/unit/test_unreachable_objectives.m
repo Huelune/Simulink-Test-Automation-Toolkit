@@ -116,6 +116,27 @@ verifyEqual(testCase, counts.FilteredByCvf, 2);
 end
 
 
+function testStateflowObjectivesAreCountedNotKept(testCase)
+% A Stateflow or MATLAB Function object is dropped first, so one that is
+% also the CUT itself or nested below a subsystem is counted only here.
+objects = model_objects(["Secret_Root/Secret_CUT/Secret_Switch", ...
+    "Secret_Root/Secret_CUT/Secret_Sub/Secret_Chart", "Secret_Root/Secret_CUT"], ...
+    ["Switch" "Stateflow" "Stateflow"]);
+objects(2).sfObjType = 'State';
+objects(3).sfObjType = 'Chart';
+data = fake_data(objects, decision_objectives(1:3, repmat("Unsatisfiable", 1, 3), ...
+    ones(1, 3), repmat("Secret false", 1, 3)));
+
+for mode = ["OFF" "ALL_CONTENT"]
+    [kept, counts] = st_unreachable_objectives(data, mode);
+    verifyEqual(testCase, kept.RelativePath, "Secret_Switch");
+    verifyEqual(testCase, counts.Stateflow, 2);
+    verifyEqual(testCase, counts.CutItself, 0);
+    verifyEqual(testCase, counts.FilteredByCvf, 0);
+end
+end
+
+
 function testDesignSidPreferredOverSid(testCase)
 objects = model_objects(["Secret_Root/Secret_CUT/Secret_A", ...
     "Secret_Root/Secret_CUT/Secret_B"], ["Switch" "Switch"]);
@@ -146,6 +167,7 @@ verifyEqual(testCase, height(kept), 0);
 verifyEqual(testCase, kept.Properties.VariableNames, {'Sid','BlockType', ...
     'RelativePath','OutcomeIndex','OutcomeText','Approximate'});
 verifyEqual(testCase, counts.Decision, 0);
+verifyEqual(testCase, counts.Stateflow, 0);
 verifyTrue(testCase, contains(output, "WARN"));
 verifyFalse(testCase, contains(output, "Secret"));
 % Without cfg nothing prints.
@@ -188,6 +210,14 @@ verifyEqual(testCase, profile.DefectCounts.Unsatisfiable, 1);
 verifyEmpty(testCase, output);
 target.DefectInputScenario = "";
 
+% Data without Objectives is a read failure too, printed nowhere.
+sldvData = struct('ModelInformation', struct('Name', 'Secret_Model')); %#ok<NASGU>
+save(char(target.SldvDataFile), 'sldvData');
+output = evalc('profile = st_get_sldv_profile(target, cfg);');
+verifyEqual(testCase, profile.DefectStatus, 'READ_FAILED');
+verifyEmpty(testCase, profile.DefectIterations);
+verifyEmpty(testCase, output);
+
 % An unreadable data file leaves the list empty and the profile usable.
 fileId = fopen(char(target.SldvDataFile), 'w');
 fprintf(fileId, 'Secret not a MAT-file');
@@ -229,7 +259,8 @@ function objects = model_objects(slPaths, typeDescs)
 count = numel(slPaths);
 objects = struct('descr', 'Secret block', 'typeDesc', cellstr(typeDescs), ...
     'slPath', cellstr(slPaths), ...
-    'sid', cellstr(compose("Secret_Root:%d", 1:count)), 'designSid', '');
+    'sid', cellstr(compose("Secret_Root:%d", 1:count)), 'designSid', '', ...
+    'sfObjType', '');
 end
 
 

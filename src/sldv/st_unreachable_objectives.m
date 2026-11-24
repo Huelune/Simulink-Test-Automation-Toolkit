@@ -16,16 +16,19 @@ function [objectives, counts] = st_unreachable_objectives(sldvData, coverageFilt
 %   OutcomeText   Objectives.descr (label when descr is empty)
 %   Approximate   true for Unsatisfiable under approximation
 %
-% The CUT's own objectives (an slPath of two elements) are dropped. So are
-% the outcomes the row's coverage filter removes, which that test case is
-% not responsible for (COVERAGEFILTERMODE):
-%   OFF, ""      nothing
-%   SUBSYSTEM    a subsystem directly below the CUT (its Enable, Trigger...)
-%   ALL_CONTENT  that, and every block below the CUT's direct children
+% Unsatisfiable outcomes are dropped, each counted once, in this order:
+%   Stateflow      the model object has an sfObjType (Stateflow, MATLAB
+%                  Function): the criteria callback finds blocks by path
+%   CutItself      the CUT's own objectives (an slPath of two elements)
+%   FilteredByCvf  what the row's coverage filter removes, which that test
+%                  case is not responsible for (COVERAGEFILTERMODE):
+%     OFF, ""      nothing
+%     SUBSYSTEM    a subsystem directly below the CUT (its Enable, Trigger...)
+%     ALL_CONTENT  that, and every block below the CUT's direct children
 %
 % COUNTS: Decision (every Decision objective), Unsatisfiable and Approximate
-% (before anything is dropped), Undecided (counted, never kept),
-% FilteredByCvf and CutItself (dropped). With CFG, data that has no
+% (before anything is dropped), Undecided (counted, never kept), and the
+% three drops above. With CFG, data that has no
 % Objectives or ModelObjects logs a WARN; the table is empty either way.
 % Called without arguments it returns the empty table and zero counts, the
 % profile defaults.
@@ -34,7 +37,7 @@ if nargin < 1, sldvData = []; end
 if nargin < 2, coverageFilterMode = ""; end
 if nargin < 3, cfg = []; end
 counts = struct('Decision', 0, 'Unsatisfiable', 0, 'Approximate', 0, ...
-    'Undecided', 0, 'FilteredByCvf', 0, 'CutItself', 0);
+    'Undecided', 0, 'FilteredByCvf', 0, 'CutItself', 0, 'Stateflow', 0);
 sid = strings(0, 1);
 blockType = strings(0, 1);
 relativePath = strings(0, 1);
@@ -70,6 +73,12 @@ else
         end
 
         object = objects(objective.modelObjectIdx);
+        % Each drop below ends with continue, so an outcome is counted once.
+        % shortcut: Stateflow 내부 결과는 결함으로 만들지 않는다, Stateflow 분기 목록을 설계할 때 넣는다
+        if field_text(object, 'sfObjType') ~= ""
+            counts.Stateflow = counts.Stateflow + 1;
+            continue;
+        end
         % A '/' inside a block name is written '//' in a Simulink path.
         parts = regexp(char(object.slPath), '(?<!/)/(?!/)', 'split');
         if numel(parts) <= 2
