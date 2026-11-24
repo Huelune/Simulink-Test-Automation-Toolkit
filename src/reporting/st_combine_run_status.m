@@ -7,7 +7,8 @@ function status = st_combine_run_status(varargin)
 
 values = strings(0,1);
 for i = 1:numel(varargin)
-    values = [values; upper(string(varargin{i}(:)))]; %#ok<AGROW>
+    % string() first: char 'OK'(:) would split into one status per letter.
+    values = [values; reshape(upper(string(varargin{i})), [], 1)]; %#ok<AGROW>
 end
 
 if isempty(values)
