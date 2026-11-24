@@ -65,12 +65,18 @@ clearvars; clc; warnState = warning('off', 'all');
 toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
 if isequal(toolkitDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다\n'); warning(warnState); return; end
 oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir);
+fprintf('MATLAB %s\n', version('-release'));
+evalc('testResults = runtests(fullfile(st_project_root(), ''tests'', ''unit'', ''test_probe_sldv_objectives.m''));');
+fprintf('단위 테스트 %d | 통과 %d | 실패 %d\n', numel(testResults), sum([testResults.Passed]), sum([testResults.Failed]));
+failedTests = testResults([testResults.Failed] | [testResults.Incomplete]);
+for k = 1:numel(failedTests), fprintf('실패 | %s\n', failedTests(k).Name); end
 try, st_probe_defect_criteria; catch probeError, fprintf('Custom Criteria 실험 실패 | 식별자 %s\n', probeError.identifier); end
 try, st_probe_sldv_objectives; catch probeError, fprintf('SLDV 데이터 확인 실패 | 식별자 %s\n', probeError.identifier); end
 warning(warnState);
 ```
 
-확인할 것: [2]가 "있음"이고 [5]가 Failed인가. [4]도 Failed인가. SLDV 줄마다 결정 목표 수가 0이 아닌가.
+확인할 것: [2]가 "있음"이고 [5]가 Failed인가. [4]도 Failed이고 "실행 뒤 커버리지 있음 | false 횟수 0"인가. 단위 테스트
+실패 0. SLDV 줄마다 결정 목표 수가 0이 아닌가.
 
 돌려줄 것: 화면 캡처 한 장.
 
