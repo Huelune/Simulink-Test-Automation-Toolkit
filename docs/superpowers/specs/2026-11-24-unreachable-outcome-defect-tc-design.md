@@ -158,7 +158,10 @@ FAIL은 진짜여야 한다. `verify(false)`처럼 무조건 실패하는 검증
   - **접근 경로(실험으로 확인)**: 커버리지는 `getCoverageResults(test.TestResult)`로 얻는다. 블록은 하네스
     경로 `[test.sltest_bdroot '/' <CUT 블록 이름> '/' <상대 경로>]`로 찾는다. `test.sltest_sut`는 원래 모델의
     Subsystem 경로를 가리키며, 그 경로로는 `decisioninfo`가 빈 값을 돌려준다. CUT 블록 이름은
-    `test.sltest_sut`의 마지막 요소(하네스 안 CUT 블록은 원래 Subsystem과 이름이 같다)이다.
+    `profile.CUTPath`의 마지막 요소(`//` 표기 그대로)이고, 콜백에 상수로 박는다. 하네스 안 CUT 블록과
+    standalone 번들의 내보낸 모델 안 CUT 블록(`identify_standalone_cut`이 최상위에서 같은 이름으로 찾는다)이
+    모두 루트 바로 아래에 그 이름으로 있다. standalone Test Case는 내보낸 모델을 가리키고 HarnessOwner가
+    비어 있어 `test.sltest_sut`로는 CUT 이름을 얻을 수 없다.
   - 콜백 첫 줄에 툴킷이 만든 콜백이라는 표식 주석을 둔다. 툴킷은 이 표식이 있는 콜백만 바꾸거나 끈다.
     표식 없는 콜백(사람이 쓴 것)이 이미 있으면 덮어쓰지 않고, 이유와 할 일을 말하며 실패한다.
 - 결함 목록이 비면 툴킷 표식이 있는 Custom Criteria를 끈다(모델이 고쳐진 경우).

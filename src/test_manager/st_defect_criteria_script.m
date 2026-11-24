@@ -1,9 +1,11 @@
-function script = st_defect_criteria_script(defects)
+function script = st_defect_criteria_script(defects, cutBlockName)
 %ST_DEFECT_CRITERIA_SCRIPT Custom Criteria callback that fails defect iterations.
 %
-%   script = st_defect_criteria_script(defects)
+%   script = st_defect_criteria_script(defects, cutBlockName)
 %
-% DEFECTS is profile.DefectIterations. The returned char is the body Test
+% DEFECTS is profile.DefectIterations. CUTBLOCKNAME is the last element of
+% profile.CUTPath as a block path spells it (a '/' in the name stays '//').
+% The returned char is the body Test
 % Manager runs as customCriteria(test) for every iteration of the Test
 % Case. Its first line is the marker st_defect_criteria_action looks for.
 % It calls no toolkit function, because standalone bundles run it without
@@ -20,9 +22,13 @@ function script = st_defect_criteria_script(defects)
 % errors every iteration of the Test Case. For a
 % defect iteration it reads that iteration's decision coverage
 % (getCoverageResults(test.TestResult)) and finds the block through the
-% harness, [test.sltest_bdroot '/' <CUT block name> '/' RelativePath];
-% test.sltest_sut is the original model's subsystem, where decisioninfo
-% finds nothing (runtime check 2026-11-24, R2025b). Each target outcome is
+% model under test, [test.sltest_bdroot '/' CUTBLOCKNAME '/' RelativePath]:
+% the harness, or in a standalone bundle the exported model, both of which
+% keep the CUT as a block of that name directly below the root. The name is
+% a constant because test.sltest_sut is the original model's subsystem,
+% where decisioninfo finds nothing (runtime check 2026-11-24, R2025b), and
+% a standalone Test Case no longer has a harness owner. The path is built
+% before coverage is read. Each target outcome is
 % matched to the block's coverage outcome whose text the SLDV outcome text
 % contains, ignoring case and spacing:
 %   one match         verifyGreaterThan(count, 0, '<BlockType> [<text>] 실행 횟수')
@@ -68,6 +74,8 @@ code = [
     'dcTexts = {'}
     texts
     {'    };'
+    '% The CUT block directly below the root of the model under test.'
+    ['dcCut = ' literal(cutBlockName) ';']
     '% The Korean for " execution count", as character codes to keep this text ASCII.'
     ['dcSuffix = ' literal(' 실행 횟수') ';']
     '% The iteration name: the criteria property first, then the result name.'
@@ -93,6 +101,11 @@ code = [
     '    error(''simtest:DefectCriteriaNoIterationName'', ''The iteration name could not be read | Id=%s'', dcNameId);'
     'end'
     'if ~isempty(dcRow)'
+    '    try'
+    '        dcBlock = [char(test.sltest_bdroot) ''/'' dcCut ''/'' dcPaths{dcRow}];'
+    '    catch dcError'
+    '        error(''simtest:DefectCriteriaNoCoverage'', ''Path of the %s block not built | Id=%s'', dcTypes{dcRow}, dcError.identifier);'
+    '    end'
     '    dcCvd = {};'
     '    try'
     '        dcRaw = {getCoverageResults(test.TestResult)};'
@@ -114,12 +127,6 @@ code = [
     '    end'
     '    if isempty(dcCvd)'
     '        error(''simtest:DefectCriteriaNoCoverage'', ''This iteration has no coverage data | Record decision coverage'');'
-    '    end'
-    '    try'
-    '        dcCut = strrep(char(get_param(test.sltest_sut, ''Name'')), ''/'', ''//'');'
-    '        dcBlock = [char(test.sltest_bdroot) ''/'' dcCut ''/'' dcPaths{dcRow}];'
-    '    catch dcError'
-    '        error(''simtest:DefectCriteriaNoCoverage'', ''Harness path of the %s block not built | Id=%s'', dcTypes{dcRow}, dcError.identifier);'
     '    end'
     '    dcInfo = [];'
     '    dcLastId = ''none'';'

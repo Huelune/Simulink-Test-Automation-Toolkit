@@ -532,7 +532,7 @@ for i = 1:n
                 preparedIterationNames);
         end
         % Written only once the iterations it judges are in place.
-        write_defect_criteria(cfg, tc, criteriaAction, defects, profile.No);
+        write_defect_criteria(cfg, tc, criteriaAction, defects, profile);
         IterationCount(i) = numel(preparedIterations);
 
         st_log(cfg, 'DEBUG', ...
@@ -827,8 +827,11 @@ end
 end
 
 
-function write_defect_criteria(cfg, tc, action, defects, rowNo)
+function write_defect_criteria(cfg, tc, action, defects, profile)
 %WRITE_DEFECT_CRITERIA Apply what decide_defect_criteria returned.
+% The callback gets the CUT block name as a constant: the harness and the
+% exported standalone model both keep the CUT directly below the root under
+% the name its CUTPath ends with ('//' for a '/' in the name stays).
 
 if strcmp(action, 'NONE')
     return;
@@ -836,7 +839,8 @@ end
 try
     criteria = getCustomCriteria(tc);
     if strcmp(action, 'SET')
-        criteria.Callback = st_defect_criteria_script(defects);
+        cutParts = regexp(char(profile.CUTPath), '(?<!/)/(?!/)', 'split');
+        criteria.Callback = st_defect_criteria_script(defects, cutParts{end});
         criteria.Enabled = true;
     else
         criteria.Callback = '';
@@ -844,7 +848,7 @@ try
     end
 catch ME
     st_log(cfg, 'ERROR', ['[UnreachableDefect] Custom Criteria not written | ' ...
-        'No=%g | Action=%s | Defects=%d | Id=%s'], rowNo, action, ...
+        'No=%g | Action=%s | Defects=%d | Id=%s'], profile.No, action, ...
         numel(defects), ME.identifier);
     rethrow(ME);
 end
