@@ -26,6 +26,13 @@ verifyEqual(testCase, st_find_iteration_result(struct('Name', {}, 'TestSequenceS
 end
 
 
+function testDefectIsNotPickedWhenOriginalIsMissing(testCase)
+iterations = make_iteration('UT_REQ_Secret_004', 'UT_REQ_Secret_001');
+verifyEqual(testCase, st_find_iteration_result(iterations, 'UT_REQ_Secret_001', false), 0);
+verifyEqual(testCase, st_find_iteration_result(iterations, 'UT_REQ_Secret_001', true), 0);
+end
+
+
 function testFallbackReturnsLastIteration(testCase)
 iterations = [make_iteration('Iteration 1', 'A'), make_iteration('Iteration 2', 'B')];
 verifyEqual(testCase, st_find_iteration_result(iterations, 'Z', true), 2);

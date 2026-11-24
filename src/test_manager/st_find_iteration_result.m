@@ -2,8 +2,9 @@ function index = st_find_iteration_result(iterations, scenarioName, allowFallbac
 %ST_FIND_ITERATION_RESULT Index of the iteration result for a scenario name.
 % Matches the iteration name first, so a defect iteration that binds another
 % iteration's scenario is never taken for it; then the Test Sequence scenario
-% binding (OFF mode names iterations "Iteration N"); then, if allowed, the
-% last iteration. Returns 0 when nothing matches.
+% binding, accepted only for default-named "Iteration N" results (OFF mode),
+% so a named defect iteration is never taken; then, if allowed, the last such
+% default-named iteration. Returns 0 when nothing matches.
 index = 0;
 target = string(scenarioName);
 for i = 1:numel(iterations)
@@ -13,6 +14,9 @@ for i = 1:numel(iterations)
     end
 end
 for i = 1:numel(iterations)
+    if ~is_default_name(iterations(i), i)
+        continue;
+    end
     try
         scenario = iterations(i).TestSequenceScenario;
         if isstruct(scenario) && isfield(scenario, 'TestSequenceScenario') && ...
@@ -23,7 +27,17 @@ for i = 1:numel(iterations)
     catch
     end
 end
-if allowFallback && ~isempty(iterations)
-    index = numel(iterations);
+if allowFallback
+    for i = numel(iterations):-1:1
+        if is_default_name(iterations(i), i)
+            index = i;
+            return;
+        end
+    end
 end
+end
+
+
+function tf = is_default_name(iterResult, i)
+tf = ~isempty(regexp(char(st_result_iteration_name(iterResult, i)), '^Iteration \d+$', 'once'));
 end
