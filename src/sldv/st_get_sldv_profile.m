@@ -1,5 +1,7 @@
 function profile = st_get_sldv_profile(targetRow, cfg)
 %ST_GET_SLDV_PROFILE Return the prepared SLDV runtime profile for one row.
+% DefectIterations is worked out here from the SLDV data file on every call
+% (st_unreachable_objectives, st_build_defect_iterations).
 
 if nargin < 2
     cfg = st_config();
@@ -123,6 +125,46 @@ if isempty(profile.EffectiveDataFile) || ~isfile(profile.EffectiveDataFile)
     error('Prepared FILE/SLDV data file is missing: %s', ...
         profile.EffectiveDataFile);
 end
+profile.DefectIterations = defect_iterations(profile, targetRow, cfg);
+end
+
+
+function defects = defect_iterations(profile, targetRow, cfg)
+%DEFECT_ITERATIONS Defect iterations for the outcomes SLDV proved unreachable.
+% Only SLDV data has objectives. A cfg without the toggle (hand-built in
+% older tests) computes nothing. A failure leaves the list empty with a WARN
+% so every other stage still gets its profile, except a DefectInputScenario
+% that names no scenario: the user must fix that cell.
+% shortcut: 호출마다 sldvData를 다시 읽는다, 느려지면 manifest에 결과를 캐시한다
+defects = st_build_defect_iterations();
+if ~isfield(cfg, 'UnreachableDefectTests') || ~cfg.UnreachableDefectTests || ...
+        ~strcmp(profile.DataFileFormat, 'SLDV')
+    return;
+end
+try
+    loaded = load(profile.EffectiveDataFile, 'sldvData');
+    [objectives, counts] = st_unreachable_objectives(loaded.sldvData, ...
+        target_text(targetRow, 'CoverageFilterMode', 'OFF'), cfg);
+    defects = st_build_defect_iterations(objectives, profile.ScenarioNames, ...
+        profile.CUTName, target_text(targetRow, 'DefectInputScenario', ''));
+catch ME
+    if strcmp(ME.identifier, 'simtest:DefectInputScenarioInvalid')
+        rethrow(ME);
+    end
+    % The console line leaves the company: identifier only, the message
+    % (it holds the path) goes to the log file.
+    kind = ME.identifier;
+    if isempty(kind), kind = 'unidentified'; end
+    st_log(cfg, 'WARN', ['[UnreachableDefect] SLDV objectives unreadable | ' ...
+        'No=%g | Kind=%s | No defect iterations for this target'], ...
+        profile.No, kind);
+    st_log(cfg, 'DEBUG', '[UnreachableDefect] SLDV objectives error | No=%g | %s', ...
+        profile.No, ME.message);
+    return;
+end
+st_log(cfg, 'DEBUG', ['[UnreachableDefect] profile | CUT=%s | Unsatisfiable=%d | ' ...
+    'Approximate=%d | Undecided=%d | Defects=%d'], profile.CUTName, ...
+    counts.Unsatisfiable, counts.Approximate, counts.Undecided, numel(defects));
 end
 
 

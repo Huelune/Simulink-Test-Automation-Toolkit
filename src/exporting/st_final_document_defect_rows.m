@@ -27,8 +27,7 @@ for k = 1:height(defects)
         if defect.Approximate, code(row) = "APPROXIMATE"; end
         reason(row) = reason_text(reasons, defect.Name, code(row));
         line = defect_line(specification.DecisionBlocks(row), ...
-            specification.CUTPath(row), row, details, defect, ...
-            any(twoWayTypes == defect.BlockType));
+            specification.CUTPath(row), row, details, defect, twoWayTypes);
         specification.DecisionBlocks(row) = line;
         specification.("verify 내용")(row) = line + "가 한 번 이상 실행된다";
     end
@@ -48,7 +47,7 @@ st_log(cfg, 'INFO', 'Final document defect rows | Rows=%d | Defects=%d', ...
 end
 
 
-function line = defect_line(description, cutPath, row, details, defect, twoWay)
+function line = defect_line(description, cutPath, row, details, defect, twoWayTypes)
 % A block with exactly one D line in this row keeps that line with the
 % unreachable outcome in its bracket. A block that is not in the D list
 % (inside a nested subsystem), or that has several D lines (If with elseif,
@@ -73,6 +72,8 @@ if isscalar(decision)
     if ~isempty(entry)
         parts = regexp(char(entry(1)), '^([^\[]*\[)[^\]]*(\].*)$', 'tokens', 'once');
         if ~isempty(parts)
+            % SLDV's typeDesc need not be a Simulink BlockType; the D line's is.
+            twoWay = any(twoWayTypes == rowDetails.BlockType(find(match, 1)));
             line = string(parts{1}) + outcome_label(texts, twoWay) + string(parts{2});
             return;
         end
