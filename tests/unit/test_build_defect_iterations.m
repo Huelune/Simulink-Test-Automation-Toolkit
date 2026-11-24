@@ -4,7 +4,7 @@ end
 
 
 function testGroupsByBlockAndNamesAfterLastScenario(testCase)
-names = scenarios_for_test();
+names = scenario_names();
 objectives = make_objectives( ...
     ["S2" "S1" "S2"], ["Switch" "Switch" "Switch"], ...
     ["Zeta" "Alpha" "Zeta"], [2 1 1], ["o2" "o1" "o1"], [false false true]);
@@ -20,7 +20,7 @@ end
 
 
 function testEmptySelectorUsesLastScenario(testCase)
-defects = st_build_defect_iterations(one_objective(), scenarios_for_test(), ...
+defects = st_build_defect_iterations(one_objective(), scenario_names(), ...
     "Secret_CUT", "");
 verifyEqual(testCase, defects.SourceScenario, st_scenario_name("Secret_CUT", 3));
 verifyEqual(testCase, defects.SourceIndex, 3);
@@ -28,9 +28,9 @@ end
 
 
 function testNumberAndNameSelectorsPickTheSameScenario(testCase)
-byNumber = st_build_defect_iterations(one_objective(), scenarios_for_test(), ...
+byNumber = st_build_defect_iterations(one_objective(), scenario_names(), ...
     "Secret_CUT", "2");
-byName = st_build_defect_iterations(one_objective(), scenarios_for_test(), ...
+byName = st_build_defect_iterations(one_objective(), scenario_names(), ...
     "Secret_CUT", st_scenario_name("Secret_CUT", 2));
 verifyEqual(testCase, byNumber, byName);
 verifyEqual(testCase, byNumber.SourceIndex, 2);
@@ -40,11 +40,11 @@ end
 function testInvalidSourceSelectorIsRejected(testCase)
 for selector = ["9" "abc" "0" "2.5"]
     verifyError(testCase, @() st_build_defect_iterations(one_objective(), ...
-        scenarios_for_test(), "Secret_CUT", selector), ...
+        scenario_names(), "Secret_CUT", selector), ...
         'simtest:DefectInputScenarioInvalid');
 end
 try
-    st_build_defect_iterations(one_objective(), scenarios_for_test(), ...
+    st_build_defect_iterations(one_objective(), scenario_names(), ...
         "Secret_CUT", "9");
     verifyFail(testCase, 'selector 9 should have been rejected');
 catch err
@@ -57,7 +57,7 @@ end
 function testNoObjectivesGiveEmptyStructWithFields(testCase)
 % A bad selector is not checked when there is no defect.
 defects = st_build_defect_iterations(one_objective(false), ...
-    scenarios_for_test(), "Secret_CUT", "abc");
+    scenario_names(), "Secret_CUT", "abc");
 verifyTrue(testCase, isempty(defects));
 verifyTrue(testCase, isfield(defects, 'Outcomes'));
 verifyEqual(testCase, size(defects), [0 1]);
@@ -70,13 +70,13 @@ end
 function testApproximateFlagIsKeptPerOutcome(testCase)
 objectives = make_objectives(["S1" "S1"], ["Switch" "Switch"], ...
     ["A" "A"], [1 2], ["o1" "o2"], [true false]);
-defects = st_build_defect_iterations(objectives, scenarios_for_test(), ...
+defects = st_build_defect_iterations(objectives, scenario_names(), ...
     "Secret_CUT", "");
 verifyEqual(testCase, [defects.Outcomes.Approximate], [true false]);
 end
 
 
-function names = scenarios_for_test()
+function names = scenario_names()
 names = {st_scenario_name("Secret_CUT", 1), st_scenario_name("Secret_CUT", 2), ...
     st_scenario_name("Secret_CUT", 3)};
 end

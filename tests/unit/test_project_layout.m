@@ -163,7 +163,10 @@ for k = 1:numel(files)
         if isempty(regexpi(name, '^test|test$', 'once'))
             continue;
         end
-        args = strtrim(tokens{t}{2});
+        args = '';
+        if numel(tokens{t}) >= 2
+            args = strtrim(tokens{t}{2});
+        end
         if isempty(args) || numel(strsplit(args, ',')) ~= 1
             offenders(end+1, 1) = string(files(k).name) + ":" + name; %#ok<AGROW>
         end
