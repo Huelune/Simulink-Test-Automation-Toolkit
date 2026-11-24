@@ -226,7 +226,8 @@ FAIL은 진짜여야 한다. `verify(false)`처럼 무조건 실패하는 검증
 - `cfg.UnreachableDefectTests = true`가 기본이다. 팀 규칙이고, `Unsatisfiable`이 없는 모델에서는 아무것도
   바뀌지 않는다. *(이 문서의 판단)*
 - 이 설정값과 5.1의 워크북 열은 `st_stage_inputs` 지문(fingerprint)에 넣는다. 값이 바뀌면 Test Manager
-  생성 단계가 다시 돈다.
+  생성 단계가 다시 돈다. 설정이 켜져 있으면 행의 `CoverageFilterMode`(5.2의 CVF 거름)도 같은 지문에 넣는다.
+  꺼진 행은 이 열이 지문에 들어가지 않아 캐시가 그대로다.
 
 ### 5.9 실행 흐름에 미치는 영향
 

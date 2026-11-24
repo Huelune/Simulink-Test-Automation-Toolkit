@@ -359,7 +359,7 @@ winopen(latest.Summary)      % CUT별 결과 요약 Excel
 | 요약 Excel의 `Targets` 시트 | 모든 CUT의 `Status`가 `PASS` |
 | CUT 폴더의 `TestSummary.xlsx` → `Iterations` 시트 | 모든 iteration이 `Passed` (재실행이 있었으면 `final/` 쪽) |
 | Simulink 모델 창 | Harness가 Excel의 `HarnessName`대로 생겼음 |
-| Test Manager | `TestCaseName`대로 Test Case가 있고 Iteration 수가 Scenario 수와 같음 |
+| Test Manager | `TestCaseName`대로 Test Case가 있고 Iteration 수가 Scenario 수와 같음(결함 TC가 있으면 Scenario 수 + 결함 수, 아래) |
 
 포인터 파일이 없거나 `Status`가 비어 있으면 결과 정리를 안 한 것입니다. `Failed`가
 있으면 `result/per_cut_runs/` 아래 그 CUT 폴더의 `.mldatx`를 Test Manager에서 열어
@@ -392,7 +392,7 @@ CVF가 커버리지에서 빼는 곳(`CoverageFilterMode`), CUT 자신, Stateflo
 | Harness StopTime 등 설정 | `... 'FromStage','HARNESS_CONFIG' ...` |
 | verify 대상, Assessment | `... 'FromStage','ASSESSMENT' ...` |
 | Test Case 이름, Iteration | `... 'FromStage','TEST_MANAGER' ...` |
-| `Coverage*` 네 열만 | **다시 돌리지 않습니다.** `st_collect_per_cut_results`만 다시 합니다 |
+| `Coverage*` 네 열만 | **다시 돌리지 않습니다.** `st_collect_per_cut_results`만 다시 합니다. 단, `cfg.UnreachableDefectTests`가 켜져 있으면 `CoverageFilterMode`가 결함 TC 목록을 정하므로, 이 열을 바꾼 뒤의 `st_run_from_harness`는 `TEST_MANAGER` 단계부터 다시 준비하고 실행합니다 |
 | 전부 처음부터 | `st_run_from_harness('PreparationMode','FORCE')` |
 
 **어느 경우든 실행이 다시 돌았으면 `st_collect_per_cut_results`를 다시 부릅니다.**

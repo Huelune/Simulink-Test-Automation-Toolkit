@@ -261,8 +261,9 @@ assessment = struct('Upstream', signatures.SIGNAL_EDITOR, ...
     'ExpectedValueSampleTime', cfg.ExpectedValueSampleTime);
 signatures.ASSESSMENT = st_hash_value(assessment);
 
-% Preparation does not read the coverage columns, so they are not inputs to
-% this stage. Changing a filter setting rebuilds the artifacts, not the
+% Preparation reads one coverage column: with defect tests on,
+% CoverageFilterMode decides which unreachable outcomes become defect
+% iterations. Any other filter setting rebuilds the artifacts, not the
 % Test File.
 defectInput = "";
 if ismember('DefectInputScenario', row.Properties.VariableNames)
@@ -278,6 +279,14 @@ testManager = struct('Upstream', signatures.ASSESSMENT, ...
         cfg.CoverageIncludeReferencedModels, ...
     'DefectTests', cfg.UnreachableDefectTests, ...
     'DefectInput', char(string(defectInput)));
+% Only with defect tests on, so rows with the feature off keep their cache.
+if cfg.UnreachableDefectTests
+    filterMode = "OFF";
+    if ismember('CoverageFilterMode', row.Properties.VariableNames)
+        filterMode = row.CoverageFilterMode;
+    end
+    testManager.CoverageFilterMode = char(string(filterMode));
+end
 signatures.TEST_MANAGER = st_hash_value(testManager);
 signatures.ALIGNMENT = st_hash_value(struct( ...
     'Upstream', signatures.TEST_MANAGER, 'RuleVersion', 1));

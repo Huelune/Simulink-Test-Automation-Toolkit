@@ -26,16 +26,26 @@ inputs.SIGNAL_EDITOR = st_hash_value(cfg.SignalEditorSampleTime);
 inputs.ASSESSMENT = st_hash_value(struct('Outports',cfg.VerifyHarnessOutportsOnly, ...
     'FirstBus',cfg.VerifyFirstBusElementOnly,'AtSample',cfg.VerifyAtSampleTimeOnly, ...
     'Sample',cfg.ExpectedValueSampleTime));
-% The coverage columns are not preparation inputs. Nothing in preparation
-% reads them any more, so a filter change must not rebuild the Test File.
+% Of the coverage columns preparation reads only CoverageFilterMode, and
+% only with defect tests on: it decides which unreachable outcomes become
+% defect iterations. Any other filter change must not rebuild the Test File.
 defectInput = "";
 if ismember('DefectInputScenario', row.Properties.VariableNames)
     defectInput = row.DefectInputScenario;
 end
-inputs.TEST_MANAGER = st_hash_value(struct('File',cfg.TestFile, ...
+testManager = struct('File',cfg.TestFile, ...
     'Suite',cfg.TestSuiteName,'Case',char(row.TestCaseName), ...
     'Metrics',cfg.CoverageMetricSettings,'StructuralLevel',cfg.CoverageStructuralLevel, ...
     'Referenced',cfg.CoverageIncludeReferencedModels, ...
-    'DefectTests',cfg.UnreachableDefectTests,'DefectInput',char(string(defectInput))));
+    'DefectTests',cfg.UnreachableDefectTests,'DefectInput',char(string(defectInput)));
+% Only with defect tests on, so rows with the feature off keep their cache.
+if cfg.UnreachableDefectTests
+    filterMode = "OFF";
+    if ismember('CoverageFilterMode', row.Properties.VariableNames)
+        filterMode = row.CoverageFilterMode;
+    end
+    testManager.CoverageFilterMode = char(string(filterMode));
+end
+inputs.TEST_MANAGER = st_hash_value(testManager);
 inputs.ALIGNMENT = st_hash_value('SCENARIO_BINDINGS_V1');
 end
