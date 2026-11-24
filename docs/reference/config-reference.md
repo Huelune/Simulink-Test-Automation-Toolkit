@@ -174,7 +174,7 @@ Test Manager에 추가합니다. `false`면 SLDV 시나리오만 만듭니다. �
 ### `DefectReasonSheet` — 기본 `'DefectReasons'`
 
 결함 Iteration의 사유 문장을 적는 관리 워크북 시트 이름입니다. 열은
-`TestName`/`결함TC`, `Reason`/`사유`입니다.
+`TestName`/`결함TC`, `Reason`/`사유`, 선택 열 `Block`/`블록`입니다.
 
 ### `RerunAfterExpectedUpdate` — 기본 `true`
 

@@ -13,6 +13,12 @@ function specification = st_final_document_defect_rows(specification, details, d
 % DefectCode ("", EXACT or APPROXIMATE) and DefectReason are appended for
 % st_final_document_table, which uses them for the ID, the output value
 % and the reason codes. Every other row is left as it was.
+%
+% A reason whose Block cell is filled is used only when that cell names the
+% defect's block, by its path below the CUT or by its block type, spacing
+% and case ignored. Otherwise the name now stands for another block (the
+% scenarios or the defects changed), so the default sentence is used and a
+% WARN gives the count.
 count = height(specification);
 code = strings(count, 1);
 reason = strings(count, 1);
@@ -20,12 +26,16 @@ caseNames = text_column(specification, '테스트 케이스명');
 iterations = text_column(specification, 'Iteration명');
 catalog = st_specification_decision_catalog();
 twoWayTypes = string(catalog.BlockType(string(catalog.TwoWay) == "YES"));
+otherBlock = strings(0,1);
 for k = 1:height(defects)
     defect = defects(k,:);
+    defectCode = "EXACT";
+    if defect.Approximate, defectCode = "APPROXIMATE"; end
+    [defectReason, refused] = reason_text(reasons, defect, defectCode);
+    if refused, otherBlock(end+1,1) = defect.Name; end %#ok<AGROW>
     for row = find(caseNames == defect.TestCaseName & iterations == defect.Name)'
-        code(row) = "EXACT";
-        if defect.Approximate, code(row) = "APPROXIMATE"; end
-        reason(row) = reason_text(reasons, defect.Name, code(row));
+        code(row) = defectCode;
+        reason(row) = defectReason;
         line = defect_line(specification.DecisionBlocks(row), ...
             specification.CUTPath(row), row, details, defect, twoWayTypes);
         specification.DecisionBlocks(row) = line;
@@ -39,6 +49,12 @@ if ~isempty(unknown)
         numel(unknown));
     st_log(cfg, 'DEBUG', 'Defect reasons ignored | Names=%s', ...
         strjoin(reshape(unknown, 1, []), ', '));
+end
+if ~isempty(otherBlock)
+    st_log(cfg, 'WARN', ['Defect reasons name another block | Reasons=%d | ' ...
+        'Default reasons used | Check the Block column'], numel(otherBlock));
+    st_log(cfg, 'DEBUG', 'Defect reasons for another block | Names=%s', ...
+        strjoin(reshape(otherBlock, 1, []), ', '));
 end
 specification.DefectCode = code;
 specification.DefectReason = reason;
@@ -98,15 +114,28 @@ label = strjoin(reshape(labels, 1, []), "/");
 end
 
 
-function text = reason_text(reasons, name, code)
-text = reasons.Reason(reasons.TestName == name);
-if ~isempty(text)
-    text = text(1);
+function [text, refused] = reason_text(reasons, defect, code)
+% REFUSED: the reason's Block cell names neither this block's path nor its
+% type, so the sentence was written for another block.
+at = find(reasons.TestName == defect.Name, 1);
+refused = false;
+if ~isempty(at)
+    block = folded(reasons.Block(at));
+    refused = block ~= "" && block ~= folded(defect.RelativePath) && ...
+        block ~= folded(defect.BlockType);
+end
+if ~isempty(at) && ~refused
+    text = reasons.Reason(at);
 elseif code == "APPROXIMATE"
     text = "SLDV 근사 분석에서 실행할 수 없다고 판정함(확인 필요)";
 else
     text = "SLDV가 어떤 입력으로도 실행할 수 없음을 증명함";
 end
+end
+
+
+function text = folded(text)
+text = lower(strtrim(regexprep(string(text), '\s+', ' ')));
 end
 
 

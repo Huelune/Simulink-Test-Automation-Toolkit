@@ -124,6 +124,46 @@ verifyEqual(testCase, specification.DefectReason(2), ...
     "SLDV가 어떤 입력으로도 실행할 수 없음을 증명함");
 end
 
+function testBlockColumnMatchingTheDefectKeepsTheReason(testCase)
+% The Block cell may give the path below the CUT or the block type, with
+% any case and spacing; a blank cell keeps the reason as before.
+for block = ["Secret_Switch", " secret_SWITCH ", "switch", ""]
+    cfg = reason_config(testCase, "DefectReasons", ["TestName", "Reason", "Block"], ...
+        "UT_REQ_Secret_004", "입력 범위가 0 이하로 제한됨", block);
+    reasons = st_read_defect_reasons(cfg);
+    verifyEqual(testCase, reasons.Block, strtrim(block));
+    specification = st_final_document_defect_rows(defect_specification(), ...
+        sample_details(), defect_list("Secret_Switch", "Switch", "false", false), ...
+        reasons, cfg);
+    verifyEqual(testCase, specification.DefectReason(2), "입력 범위가 0 이하로 제한됨", block);
+end
+end
+
+function testBlockColumnNamingAnotherBlockUsesTheDefaultSentence(testCase)
+% The name was renumbered onto another block: the reason must not follow it.
+cfg = reason_config(testCase, "도달불가사유", ["결함TC", "사유", "블록"], ...
+    "UT_REQ_Secret_004", "입력 범위가 0 이하로 제한됨", "Secret_Max");
+spec = defect_specification();
+details = sample_details();
+defects = defect_list("Secret_Switch", "Switch", "false", false);
+output = evalc('readReasons = st_read_defect_reasons(cfg);');
+verifyEqual(testCase, readReasons.Block, "Secret_Max");
+output = [output evalc( ...
+    'rewritten = st_final_document_defect_rows(spec, details, defects, readReasons, cfg);')];
+verifyEqual(testCase, rewritten.DefectReason(2), ...
+    "SLDV가 어떤 입력으로도 실행할 수 없음을 증명함");
+verifyTrue(testCase, contains(output, "Defect reasons name another block | Reasons=1"));
+verifyFalse(testCase, contains(output, "Secret"));
+end
+
+function testReasonSheetWithoutBlockColumnGivesBlankBlocks(testCase)
+cfg = reason_config(testCase, "DefectReasons", ["TestName", "Reason"], ...
+    "UT_REQ_Secret_004", "입력 범위가 0 이하로 제한됨");
+reasons = st_read_defect_reasons(cfg);
+verifyEqual(testCase, reasons.Properties.VariableNames, {'TestName','Reason','Block'});
+verifyEqual(testCase, reasons.Block, "");
+end
+
 function testLowerCaseSheetNameIsRead(testCase)
 cfg = reason_config(testCase, "defectreasons", ["TestName", "Reason"], ...
     "UT_REQ_Secret_004", "입력 범위가 0 이하로 제한됨");
@@ -267,13 +307,14 @@ end
 
 
 function reasons = no_reasons()
-reasons = table(strings(0,1), strings(0,1), 'VariableNames', {'TestName','Reason'});
+reasons = table(strings(0,1), strings(0,1), strings(0,1), ...
+    'VariableNames', {'TestName','Reason','Block'});
 end
 
 
-function cfg = reason_config(testCase, sheet, headers, names, texts)
+function cfg = reason_config(testCase, sheet, headers, names, texts, blocks)
 % A management workbook with a Targets sheet and, when SHEET is not empty,
-% a reason sheet.
+% a reason sheet. BLOCKS, when given, is its third column.
 folder = tempname;
 mkdir(folder);
 testCase.addTeardown(@() rmdir(folder, 's'));
@@ -283,9 +324,10 @@ cfg.ManagementExcel = fullfile(folder, 'targets.xlsx');
 writetable(table("Secret", 'VariableNames', {'CUTName'}), cfg.ManagementExcel, ...
     'Sheet', 'Targets', 'UseExcel', false);
 if strlength(sheet) > 0
-    writetable(table(string(names(:)), string(texts(:)), ...
-        'VariableNames', cellstr(headers)), cfg.ManagementExcel, ...
-        'Sheet', char(sheet), 'UseExcel', false);
+    columns = {string(names(:)), string(texts(:))};
+    if nargin > 5, columns{end+1} = string(blocks(:)); end
+    writetable(table(columns{:}, 'VariableNames', cellstr(headers)), ...
+        cfg.ManagementExcel, 'Sheet', char(sheet), 'UseExcel', false);
 end
 end
 

@@ -281,7 +281,10 @@ SLDV 결과(`sldvData.TestCases`) 가운데 **어느 TestCase만** Scenario로 �
 Iteration을 만들 때 합니다.
 
 사유 문장은 `DefectReasons` 시트에 적습니다(시트 이름은 `cfg.DefectReasonSheet`). 열은
-`TestName`(`결함TC`)과 `Reason`(`사유`)입니다.
+`TestName`(`결함TC`)과 `Reason`(`사유`)이고, 선택 열 `Block`(`블록`)이 있습니다. 결함 Iteration
+이름은 시나리오 수나 결함 목록이 바뀌면 다른 블록으로 옮겨 가므로, `Block` 칸에 그 사유를 쓴 블록의
+CUT 기준 경로(CUT 바로 아래 블록은 이름)나 블록 종류(`Switch` 등)를 적어 두면 이름이 다른 블록을
+가리키게 됐을 때 사유를 쓰지 않습니다. 대소문자와 공백은 가리지 않습니다. 칸이 비면 이름만 봅니다.
 
 ## 6. 커버리지 필터
 

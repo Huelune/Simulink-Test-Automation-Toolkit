@@ -2,14 +2,18 @@ function reasons = st_read_defect_reasons(cfg)
 %ST_READ_DEFECT_REASONS Reasons a person wrote for the defect iterations.
 % The management workbook may carry a sheet, cfg.DefectReasonSheet or its
 % Korean name 도달불가사유, with one defect iteration name (TestName or
-% 결함TC) and one reason (Reason or 사유) per row. Only the final document
-% reads it, so it is in no stage fingerprint: after editing a reason only
-% the final document has to be exported again.
+% 결함TC) and one reason (Reason or 사유) per row. An optional Block or 블록
+% column names the block the reason was written for, so a reason does not
+% follow its name to another block once the names are renumbered. Only the
+% final document reads it, so it is in no stage fingerprint: after editing
+% a reason only the final document has to be exported again.
 %
-% REASONS is a table of TestName and Reason. No workbook, no sheet or no
-% usable column gives an empty table, and every defect row then uses its
-% default sentence. A name given twice keeps its first row.
-reasons = table(strings(0,1), strings(0,1), 'VariableNames', {'TestName','Reason'});
+% REASONS is a table of TestName, Reason and Block ("" when the column or
+% the cell is empty). No workbook, no sheet or no usable column gives an
+% empty table, and every defect row then uses its default sentence. A name
+% given twice keeps its first row.
+reasons = table(strings(0,1), strings(0,1), strings(0,1), ...
+    'VariableNames', {'TestName','Reason','Block'});
 file = char(string(config_value(cfg, 'ManagementExcel', '')));
 if isempty(file) || ~isfile(file)
     st_log(cfg, 'WARN', ...
@@ -36,6 +40,7 @@ catch ME
 end
 [names, hasNames] = column(raw, ["TestName", "결함TC"]);
 [texts, hasTexts] = column(raw, ["Reason", "사유"]);
+blocks = column(raw, ["Block", "블록"]);
 if ~hasNames || ~hasTexts
     st_log(cfg, 'WARN', ['Defect reasons | Columns TestName/결함TC and Reason/사유 ' ...
         'not found | Default reasons used']);
@@ -49,8 +54,8 @@ if ~isempty(repeated)
     st_log(cfg, 'WARN', 'Defect reasons repeat a name | Rows=%s | First row used', ...
         strjoin(string(keep(repeated)' + 1), ','));
 end
-reasons = table(names(keep(first)), texts(keep(first)), ...
-    'VariableNames', {'TestName','Reason'});
+reasons = table(names(keep(first)), texts(keep(first)), blocks(keep(first)), ...
+    'VariableNames', {'TestName','Reason','Block'});
 st_log(cfg, 'INFO', 'Defect reasons read | Reasons=%d', height(reasons));
 end
 
