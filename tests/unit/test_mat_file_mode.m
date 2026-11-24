@@ -112,11 +112,8 @@ function testDatasetWithoutTimeFails(testCase)
 assumeDatasetRuntime(testCase);
 folder = temporary_folder(testCase);
 path = fullfile(folder, 'no_time.mat');
-Scenario = Simulink.SimulationData.Dataset;
-signal = Simulink.SimulationData.Signal;
-signal.Name = 'A';
-signal.Values = [1 2];
-Scenario = addElement(Scenario, signal); %#ok<NASGU>
+% An empty timeseries has no time; R2025b rejects a bare double array here.
+Scenario = one_element_dataset(testCase, timeseries()); %#ok<NASGU>
 save(path, 'Scenario');
 verifyError(testCase, ...
     @() st_inspect_mat_data(path, 'CUT', 0.01, '', quiet_cfg()), ...
@@ -127,12 +124,8 @@ function testStructureWithTimeContributesEndTime(testCase)
 assumeDatasetRuntime(testCase);
 folder = temporary_folder(testCase);
 path = fullfile(folder, 'structure_time.mat');
-Scenario = Simulink.SimulationData.Dataset;
-signal = Simulink.SimulationData.Signal;
-signal.Name = 'A';
-signal.Values = struct('time', [0; 2.25], 'signals', ...
-    struct('values', [1; 2], 'dimensions', 1));
-Scenario = addElement(Scenario, signal); %#ok<NASGU>
+Scenario = one_element_dataset(testCase, struct('time', [0; 2.25], ...
+    'signals', struct('values', [1; 2], 'dimensions', 1))); %#ok<NASGU>
 save(path, 'Scenario');
 meta = st_inspect_mat_data(path, 'CUT', 0.01, '', quiet_cfg());
 verifyEqual(testCase, meta.EndTimes, 2.25, 'AbsTol', 1e-12);
@@ -197,6 +190,26 @@ for i = 1:numel(names)
     signal.Name = names{i};
     signal.Values = timeseries(data, times{i}(:));
     dataset = addElement(dataset, signal);
+end
+end
+
+function dataset = one_element_dataset(testCase, values)
+% R2025b rejects some forms as Signal.Values (a structure with time among
+% them); a named bare element is the other way in. Skip when neither works.
+dataset = Simulink.SimulationData.Dataset;
+try
+    signal = Simulink.SimulationData.Signal;
+    signal.Name = 'A';
+    signal.Values = values;
+    dataset = addElement(dataset, signal);
+    return;
+catch
+end
+try
+    dataset = addElement(dataset, values, 'A');
+catch
+    assumeFail(testCase, ['This MATLAB release accepts this value neither ' ...
+        'as Signal.Values nor as a Dataset element.']);
 end
 end
 
