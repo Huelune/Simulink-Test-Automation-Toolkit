@@ -1,7 +1,9 @@
 function profile = st_get_sldv_profile(targetRow, cfg)
 %ST_GET_SLDV_PROFILE Return the prepared SLDV runtime profile for one row.
-% DefectIterations is worked out here from the SLDV data file on every call
-% (st_unreachable_objectives, st_build_defect_iterations).
+% DefectIterations, DefectStatus, DefectMessage and DefectCounts are worked
+% out here from the SLDV data file on every call (st_unreachable_objectives,
+% st_build_defect_iterations). That never throws: the Test Manager stage
+% reports an invalid DefectInputScenario from DefectStatus.
 
 if nargin < 2
     cfg = st_config();
@@ -125,46 +127,50 @@ if isempty(profile.EffectiveDataFile) || ~isfile(profile.EffectiveDataFile)
     error('Prepared FILE/SLDV data file is missing: %s', ...
         profile.EffectiveDataFile);
 end
-profile.DefectIterations = defect_iterations(profile, targetRow, cfg);
+profile = add_defect_iterations(profile, targetRow, cfg);
 end
 
 
-function defects = defect_iterations(profile, targetRow, cfg)
-%DEFECT_ITERATIONS Defect iterations for the outcomes SLDV proved unreachable.
+function profile = add_defect_iterations(profile, targetRow, cfg)
+%ADD_DEFECT_ITERATIONS Defect iterations for the outcomes SLDV proved unreachable.
 % Only SLDV data has objectives. A cfg without the toggle (hand-built in
-% older tests) computes nothing. A failure leaves the list empty with a WARN
-% so every other stage still gets its profile, except a DefectInputScenario
-% that names no scenario: the user must fix that cell.
+% older tests) computes nothing. A failure leaves the list empty and is
+% logged at DEBUG only, because every stage calls this; the stage that
+% builds the defect iterations reports it from DefectStatus.
 % shortcut: 호출마다 sldvData를 다시 읽는다, 느려지면 manifest에 결과를 캐시한다
-defects = st_build_defect_iterations();
-if ~isfield(cfg, 'UnreachableDefectTests') || ~cfg.UnreachableDefectTests || ...
-        ~strcmp(profile.DataFileFormat, 'SLDV')
+[~, profile.DefectCounts] = st_unreachable_objectives();
+profile.DefectIterations = st_build_defect_iterations();
+profile.DefectMessage = '';
+if ~strcmp(profile.DataFileFormat, 'SLDV')
+    profile.DefectStatus = 'NOT_SLDV';
+    return;
+elseif ~isfield(cfg, 'UnreachableDefectTests') || ~cfg.UnreachableDefectTests
+    profile.DefectStatus = 'DISABLED';
     return;
 end
 try
     loaded = load(profile.EffectiveDataFile, 'sldvData');
-    [objectives, counts] = st_unreachable_objectives(loaded.sldvData, ...
-        target_text(targetRow, 'CoverageFilterMode', 'OFF'), cfg);
-    defects = st_build_defect_iterations(objectives, profile.ScenarioNames, ...
-        profile.CUTName, target_text(targetRow, 'DefectInputScenario', ''));
+    [objectives, profile.DefectCounts] = st_unreachable_objectives( ...
+        loaded.sldvData, target_text(targetRow, 'CoverageFilterMode', 'OFF'), cfg);
+    profile.DefectIterations = st_build_defect_iterations(objectives, ...
+        profile.ScenarioNames, profile.CUTName, ...
+        target_text(targetRow, 'DefectInputScenario', ''));
+    profile.DefectStatus = 'OK';
 catch ME
+    profile.DefectStatus = 'READ_FAILED';
     if strcmp(ME.identifier, 'simtest:DefectInputScenarioInvalid')
-        rethrow(ME);
+        profile.DefectStatus = 'INVALID_INPUT_SCENARIO';
+        profile.DefectMessage = ME.message;
     end
-    % The console line leaves the company: identifier only, the message
-    % (it holds the path) goes to the log file.
-    kind = ME.identifier;
-    if isempty(kind), kind = 'unidentified'; end
-    st_log(cfg, 'WARN', ['[UnreachableDefect] SLDV objectives unreadable | ' ...
-        'No=%g | Kind=%s | No defect iterations for this target'], ...
-        profile.No, kind);
-    st_log(cfg, 'DEBUG', '[UnreachableDefect] SLDV objectives error | No=%g | %s', ...
-        profile.No, ME.message);
+    st_log(cfg, 'DEBUG', '[UnreachableDefect] profile | No=%g | Status=%s | %s', ...
+        profile.No, profile.DefectStatus, ME.message);
     return;
 end
+counts = profile.DefectCounts;
 st_log(cfg, 'DEBUG', ['[UnreachableDefect] profile | CUT=%s | Unsatisfiable=%d | ' ...
     'Approximate=%d | Undecided=%d | Defects=%d'], profile.CUTName, ...
-    counts.Unsatisfiable, counts.Approximate, counts.Undecided, numel(defects));
+    counts.Unsatisfiable, counts.Approximate, counts.Undecided, ...
+    numel(profile.DefectIterations));
 end
 
 

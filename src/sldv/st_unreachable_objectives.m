@@ -27,7 +27,10 @@ function [objectives, counts] = st_unreachable_objectives(sldvData, coverageFilt
 % (before anything is dropped), Undecided (counted, never kept),
 % FilteredByCvf and CutItself (dropped). With CFG, data that has no
 % Objectives or ModelObjects logs a WARN; the table is empty either way.
+% Called without arguments it returns the empty table and zero counts, the
+% profile defaults.
 
+if nargin < 1, sldvData = []; end
 if nargin < 2, coverageFilterMode = ""; end
 if nargin < 3, cfg = []; end
 counts = struct('Decision', 0, 'Unsatisfiable', 0, 'Approximate', 0, ...

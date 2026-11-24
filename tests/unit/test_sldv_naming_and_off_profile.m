@@ -43,6 +43,8 @@ verifyEqual(testCase, sort(fieldnames(profile)), ...
     sort(fieldnames(st_empty_sldv_profile())));
 verifyEqual(testCase, profile.Status, 'OK');
 verifyEqual(testCase, profile.AtomicAction, 'NOT_APPLICABLE');
+verifyEqual(testCase, profile.DefectStatus, 'NOT_SLDV');
+verifyEqual(testCase, profile.DefectCounts.Decision, 0);
 
 profiles = repmat(st_empty_sldv_profile(), 2, 1);
 profiles(1) = profile;

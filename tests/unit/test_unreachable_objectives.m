@@ -155,10 +155,15 @@ verifyEqual(testCase, height(quiet), 0);
 end
 
 
-function testProfileFillsDefectsAndRethrowsOnlyBadSelector(testCase)
-% st_get_sldv_profile reads the prepared data file of an SLDV row.
+function testProfileFillsDefectsAndReportsStatus(testCase)
+% st_get_sldv_profile reads the prepared data file of an SLDV row and never
+% throws for it; DefectStatus says what happened. Every stage calls it, so
+% a failure prints nothing (DEBUG only).
 [target, cfg] = prepared_target(testCase);
 profile = st_get_sldv_profile(target, cfg);
+verifyEqual(testCase, profile.DefectStatus, 'OK');
+verifyEqual(testCase, profile.DefectMessage, '');
+verifyEqual(testCase, profile.DefectCounts.Unsatisfiable, 1);
 verifyEqual(testCase, numel(profile.DefectIterations), 1);
 verifyEqual(testCase, profile.DefectIterations.RelativePath, 'Secret_Switch');
 verifyEqual(testCase, profile.DefectIterations.Name, st_scenario_name('Secret_CUT', 4));
@@ -166,25 +171,34 @@ verifyEqual(testCase, profile.DefectIterations.SourceIndex, 2);
 
 % The toggle turns it off.
 cfg.UnreachableDefectTests = false;
-verifyEmpty(testCase, st_get_sldv_profile(target, cfg).DefectIterations);
+profile = st_get_sldv_profile(target, cfg);
+verifyEqual(testCase, profile.DefectStatus, 'DISABLED');
+verifyEmpty(testCase, profile.DefectIterations);
 cfg.UnreachableDefectTests = true;
 
-% A DefectInputScenario naming no scenario is the user's to fix.
+% A DefectInputScenario naming no scenario keeps the text of what to fix
+% for the stage that builds the defect iterations.
 target.DefectInputScenario = "9";
-verifyError(testCase, @() st_get_sldv_profile(target, cfg), ...
-    'simtest:DefectInputScenarioInvalid');
+output = evalc('profile = st_get_sldv_profile(target, cfg);');
+verifyEqual(testCase, profile.DefectStatus, 'INVALID_INPUT_SCENARIO');
+verifySubstring(testCase, profile.DefectMessage, 'DefectInputScenario');
+verifySubstring(testCase, profile.DefectMessage, '1~3');
+verifyEmpty(testCase, profile.DefectIterations);
+verifyEqual(testCase, profile.DefectCounts.Unsatisfiable, 1);
+verifyEmpty(testCase, output);
 target.DefectInputScenario = "";
 
 % An unreadable data file leaves the list empty and the profile usable.
 fileId = fopen(char(target.SldvDataFile), 'w');
 fprintf(fileId, 'Secret not a MAT-file');
 fclose(fileId);
-profile = [];
 output = evalc('profile = st_get_sldv_profile(target, cfg);');
+verifyEqual(testCase, profile.DefectStatus, 'READ_FAILED');
+verifyEqual(testCase, profile.DefectMessage, '');
+verifyEqual(testCase, profile.DefectCounts.Decision, 0);
 verifyEmpty(testCase, profile.DefectIterations);
 verifyEqual(testCase, profile.Status, 'OK');
-verifyTrue(testCase, contains(output, "WARN"));
-verifyFalse(testCase, contains(output, "Secret"));
+verifyEmpty(testCase, output);
 end
 
 
