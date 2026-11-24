@@ -104,6 +104,7 @@ testNames = {'test_defect_settings', 'test_build_defect_iterations', 'test_expec
     'test_library_link_harness_protection', 'test_sldv_config', 'test_project_layout'};
 diagFile = 'st_defect_unit_tests.txt';
 fid = fopen(fullfile(tempdir, diagFile), 'w');
+if fid < 0, fprintf('진단 파일을 만들지 못해 화면 정보만 보입니다\n'); fid = fopen('nul', 'w'); end
 failLines = {}; totalPassed = 0; totalFailed = 0; totalIncomplete = 0; errorCount = 0;
 fprintf('MATLAB %s\n', version('-release'));
 for k = 1:numel(testNames)
@@ -111,7 +112,8 @@ for k = 1:numel(testNames)
         evalc('fileResults = runtests(fullfile(st_project_root(), ''tests'', ''unit'', [testNames{k} ''.m'']));');
     catch runError
         errorCount = errorCount + 1;
-        fprintf('%s | 실행 오류 | %s\n', testNames{k}, runError.identifier);
+        errorId = runError.identifier; if isempty(errorId), errorId = '(식별자 없음)'; end
+        fprintf('%s | 실행 오류 | %s\n', testNames{k}, errorId);
         fprintf(fid, '[%s] 실행 오류: %s\n\n', testNames{k}, runError.message);
         continue
     end
@@ -119,7 +121,19 @@ for k = 1:numel(testNames)
     totalPassed = totalPassed + passedCount; totalFailed = totalFailed + failedCount; totalIncomplete = totalIncomplete + incompleteCount;
     fprintf('%s | 통과 %d | 실패 %d | 미완료 %d\n', testNames{k}, passedCount, failedCount, incompleteCount);
     for j = find([fileResults.Failed] | [fileResults.Incomplete])
-        failLines{end+1} = sprintf('실패 | %s', fileResults(j).Name); %#ok<SAGROW>
+        label = '실패'; if fileResults(j).Incomplete && ~fileResults(j).Failed, label = '미완료'; end
+        kindText = '종류 확인 못 함';
+        try
+            firstRecord = fileResults(j).Details.DiagnosticRecord(1);
+            kindText = char(string(firstRecord.Event));
+            if strcmp(kindText, 'ExceptionThrown')
+                exceptionId = char(string(firstRecord.Exception.identifier));
+                if isempty(exceptionId), exceptionId = '(식별자 없음)'; end
+                kindText = [kindText ' ' exceptionId];
+            end
+        catch, kindText = '종류 확인 못 함';
+        end
+        failLines{end+1} = sprintf('%s | %s | %s', label, fileResults(j).Name, kindText); %#ok<SAGROW>
         fprintf(fid, '[%s]\n', fileResults(j).Name);
         try
             diagRecords = fileResults(j).Details.DiagnosticRecord;
@@ -137,7 +151,7 @@ fprintf('진단 전문 파일: %s (임시 폴더)\n', diagFile);
 warning(warnState);
 ```
 
-확인할 것: 합계의 실패, 미완료, 실행 오류가 모두 0인가. 0이 아니면 파일 줄과 `실패 | 테스트 이름` 줄을 본다.
+확인할 것: 합계의 실패, 미완료, 실행 오류가 모두 0인가. 0이 아니면 파일 줄과 `실패`/`미완료 | 테스트 이름 | 종류` 줄을 본다.
 
 돌려줄 것: 화면 캡처 한 장. 진단 파일은 사용자 PC에서만 보고 밖으로 보내지 않는다. 실패한 테스트가 있으면, 파일에서
 찾은 진단의 첫 줄을 경로와 이름을 뺀 말로 바꿔 적어 달라.
