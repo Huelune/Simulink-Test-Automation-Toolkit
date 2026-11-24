@@ -1648,36 +1648,17 @@ if isempty(iterations)
 end
 
 
-%% Scenario가 일치하는 Iteration 우선
-
-for i = 1:numel(iterations)
-
-    try
-
-        tsScenario = ...
-            iterations(i).TestSequenceScenario;
+index = ...
+    st_find_iteration_result( ...
+        iterations, ...
+        scenarioName, ...
+        allowFallback);
 
 
-        if isstruct(tsScenario) && ...
-                isfield(tsScenario, 'TestSequenceScenario') && ...
-                strcmp( ...
-                    char(tsScenario.TestSequenceScenario), ...
-                    scenarioName)
+if index > 0
 
-            iterResult = ...
-                iterations(i);
-
-            return;
-        end
-
-    catch
-    end
-end
-
-
-if allowFallback
-    %% Legacy OFF mode has one iteration and retains the historical fallback.
-    iterResult = iterations(end);
+    iterResult = ...
+        iterations(index);
 end
 
 end

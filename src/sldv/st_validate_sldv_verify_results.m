@@ -192,15 +192,8 @@ end
 function iterResult = find_iteration_result(tcResult, scenarioName)
 iterResult = [];
 iterations = getIterationResults(tcResult);
-for i = 1:numel(iterations)
-    try
-        scenario = iterations(i).TestSequenceScenario;
-        if isstruct(scenario) && isfield(scenario, 'TestSequenceScenario') && ...
-                strcmp(char(scenario.TestSequenceScenario), scenarioName)
-            iterResult = iterations(i);
-            return;
-        end
-    catch
-    end
+index = st_find_iteration_result(iterations, scenarioName, false);
+if index > 0
+    iterResult = iterations(index);
 end
 end
