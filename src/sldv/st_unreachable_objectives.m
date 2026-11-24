@@ -1,7 +1,7 @@
-function [objectives, counts] = st_unreachable_objectives(sldvData, coverageFilterMode, cfg)
+function [objectives, counts] = st_unreachable_objectives(sldvData, coverageFilterMode, cutName, cfg)
 %ST_UNREACHABLE_OBJECTIVES Decision outcomes SLDV proved unreachable in the CUT.
 %
-% [objectives, counts] = st_unreachable_objectives(sldvData, coverageFilterMode)
+% [objectives, counts] = st_unreachable_objectives(sldvData, coverageFilterMode, cutName)
 % reads sldvData.Objectives and the ModelObjects entry each one points at
 % (modelObjectIdx). Decision objectives whose status is Unsatisfiable or
 % Unsatisfiable under approximation give one row each, in the table
@@ -11,7 +11,12 @@ function [objectives, counts] = st_unreachable_objectives(sldvData, coverageFilt
 %   RelativePath  ModelObjects.slPath without its first two elements, the
 %                 analysis root and the CUT. A '/' inside a name stays '//'
 %                 and a newline stays: the criteria callback finds the
-%                 harness block by this path.
+%                 harness block by this path. The second element of a kept
+%                 objective must be CUTNAME (the target row's CUTName, as
+%                 measured on real data), compared with '//' read as '/' and
+%                 whitespace folded; any other raises
+%                 simtest:SldvObjectiveOutsideCut, because its relative path
+%                 would name a block of something else.
 %   OutcomeIndex  Objectives.outcomeValue
 %   OutcomeText   Objectives.descr (label when descr is empty)
 %   Approximate   true for Unsatisfiable under approximation
@@ -30,12 +35,15 @@ function [objectives, counts] = st_unreachable_objectives(sldvData, coverageFilt
 % (before anything is dropped), Undecided (counted, never kept), and the
 % three drops above. With CFG, data that has no
 % Objectives or ModelObjects logs a WARN; the table is empty either way.
+% The error and the WARN carry no names: st_get_sldv_profile turns the
+% error into DefectStatus READ_FAILED and prints nothing.
 % Called without arguments it returns the empty table and zero counts, the
 % profile defaults.
 
 if nargin < 1, sldvData = []; end
 if nargin < 2, coverageFilterMode = ""; end
-if nargin < 3, cfg = []; end
+if nargin < 3, cutName = ""; end
+if nargin < 4, cfg = []; end
 counts = struct('Decision', 0, 'Unsatisfiable', 0, 'Approximate', 0, ...
     'Undecided', 0, 'FilteredByCvf', 0, 'CutItself', 0, 'Stateflow', 0);
 sid = strings(0, 1);
@@ -53,6 +61,7 @@ if ~isstruct(sldvData) || ~isfield(sldvData, 'Objectives') || ...
     end
 else
     filterMode = upper(strtrim(string(coverageFilterMode)));
+    cutKey = folded_name(cutName);
     objects = sldvData.ModelObjects;
     for k = 1:numel(sldvData.Objectives)
         objective = sldvData.Objectives(k);
@@ -94,6 +103,11 @@ else
             continue;
         end
 
+        if folded_name(parts{2}) ~= cutKey
+            error('simtest:SldvObjectiveOutsideCut', ['An SLDV objective path ' ...
+                'does not run through the CUT | Regenerate the SLDV data of this target']);
+        end
+
         id = field_text(object, 'designSid');
         if id == "", id = field_text(object, 'sid'); end
         outcome = field_text(objective, 'descr');
@@ -110,6 +124,13 @@ end
 objectives = table(sid, blockType, relativePath, outcomeIndex, outcomeText, ...
     approximate, 'VariableNames', {'Sid','BlockType','RelativePath', ...
     'OutcomeIndex','OutcomeText','Approximate'});
+end
+
+
+function key = folded_name(name)
+% A '/' in a block name is '//' in slPath but '/' in the CUTName column; a
+% newline or doubled space in a name is compared as one space.
+key = strtrim(regexprep(replace(string(name), "//", "/"), '\s+', ' '));
 end
 
 

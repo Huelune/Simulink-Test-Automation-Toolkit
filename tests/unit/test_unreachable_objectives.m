@@ -15,7 +15,7 @@ objectives(3).type = 'Condition';
 data = fake_data(model_objects("Secret_Root/Secret_CUT/Secret_Switch", "Switch"), ...
     objectives);
 
-[kept, counts] = st_unreachable_objectives(data, "OFF");
+[kept, counts] = st_unreachable_objectives(data, "OFF", "Secret_CUT");
 
 verifyEqual(testCase, height(kept), 1);
 verifyEqual(testCase, kept.Sid, "Secret_Root:1");
@@ -35,7 +35,7 @@ data = fake_data(model_objects("Secret_Root/Secret_CUT/Secret_Switch", "Switch")
     ["Unsatisfiable" "Unsatisfiable under approximation"], [1 2], ...
     ["Secret false" "Secret true"]));
 
-[kept, counts] = st_unreachable_objectives(data, "OFF");
+[kept, counts] = st_unreachable_objectives(data, "OFF", "Secret_CUT");
 
 verifyEqual(testCase, kept.Approximate, [false; true]);
 verifyEqual(testCase, kept.OutcomeIndex, [1; 2]);
@@ -49,7 +49,7 @@ data = fake_data(model_objects("Secret_Root/Secret_CUT/Secret_Switch", "Switch")
     decision_objectives([1 1], ["Undecided" "Undecided due to approximations"], ...
     [1 2], ["Secret false" "Secret true"]));
 
-[kept, counts] = st_unreachable_objectives(data, "OFF");
+[kept, counts] = st_unreachable_objectives(data, "OFF", "Secret_CUT");
 
 verifyEqual(testCase, height(kept), 0);
 verifyEqual(testCase, counts.Undecided, 2);
@@ -60,20 +60,60 @@ end
 
 function testRelativePathDropsRootAndCut(testCase)
 % A '/' inside a name is written '//' and stays; so does the newline of a
-% default block name. The CUT name itself may hold a '//'.
+% default block name.
 paths = ["Secret_Root/Secret_CUT/Secret_Switch", ...
     "Secret_Root/Secret_CUT/Secret_Sub/Secret_Max", ...
     "Secret_Root/Secret_CUT/Secret_a//b", ...
-    "Secret_Root/Secret//CUT/Secret_Switch", ...
     "Secret_Root/Secret_CUT/Secret" + newline + "Switch"];
-data = fake_data(model_objects(paths, repmat("Switch", 1, 5)), ...
-    decision_objectives(1:5, repmat("Unsatisfiable", 1, 5), ones(1, 5), ...
-    repmat("Secret false", 1, 5)));
+data = fake_data(model_objects(paths, repmat("Switch", 1, 4)), ...
+    decision_objectives(1:4, repmat("Unsatisfiable", 1, 4), ones(1, 4), ...
+    repmat("Secret false", 1, 4)));
 
-kept = st_unreachable_objectives(data, "OFF");
+kept = st_unreachable_objectives(data, "OFF", "Secret_CUT");
 
 verifyEqual(testCase, kept.RelativePath, ["Secret_Switch"; "Secret_Sub/Secret_Max"; ...
-    "Secret_a//b"; "Secret_Switch"; "Secret" + newline + "Switch"]);
+    "Secret_a//b"; "Secret" + newline + "Switch"]);
+end
+
+
+function testCutNameWithSlashOrLineBreakMatchesItsPath(testCase)
+% slPath writes a '/' in the CUT name as '//' and keeps a newline; the
+% CUTName column holds the plain name, maybe with a space for the newline.
+data = fake_data(model_objects(["Secret_Root/Secret//CUT/Secret_Switch", ...
+    "Secret_Root/Secret//CUT/Secret_Max"], ["Switch" "MinMax"]), ...
+    decision_objectives(1:2, ["Unsatisfiable" "Unsatisfiable"], [1 1], ...
+    ["Secret false" "Secret input 1"]));
+for cutName = ["Secret/CUT", "Secret//CUT", " Secret/CUT "]
+    kept = st_unreachable_objectives(data, "OFF", cutName);
+    verifyEqual(testCase, kept.RelativePath, ["Secret_Switch"; "Secret_Max"], cutName);
+end
+
+data.ModelObjects(1).slPath = ['Secret_Root/Secret' newline 'CUT/Secret_Switch'];
+data.ModelObjects(2).slPath = 'Secret_Root/Secret  CUT/Secret_Max';
+kept = st_unreachable_objectives(data, "OFF", "Secret CUT");
+verifyEqual(testCase, height(kept), 2);
+end
+
+
+function testObjectiveOutsideTheCutIsAnError(testCase)
+% A kept objective whose second slPath element is not the CUT would give a
+% relative path into something else. The message names nothing.
+data = fake_data(model_objects(["Secret_Root/Secret_CUT/Secret_Switch", ...
+    "Secret_Root/Secret_Other/Secret_Switch"], ["Switch" "Switch"]), ...
+    decision_objectives(1:2, ["Unsatisfiable" "Unsatisfiable"], [1 1], ...
+    ["Secret false" "Secret false"]));
+
+verifyError(testCase, @() st_unreachable_objectives(data, "OFF", "Secret_CUT"), ...
+    'simtest:SldvObjectiveOutsideCut');
+try
+    st_unreachable_objectives(data, "OFF", "Secret_CUT");
+catch err
+    verifyFalse(testCase, contains(err.message, "Secret"));
+end
+% Only kept objectives are checked: a dropped one is never resolved.
+data.ModelObjects(2).sfObjType = 'State';
+kept = st_unreachable_objectives(data, "OFF", "Secret_CUT");
+verifyEqual(testCase, kept.RelativePath, "Secret_Switch");
 end
 
 
@@ -81,7 +121,7 @@ function testCutItselfIsCountedNotKept(testCase)
 data = fake_data(model_objects("Secret_Root/Secret_CUT", "SubSystem"), ...
     decision_objectives(1, "Unsatisfiable", 1, "Secret enable"));
 
-[kept, counts] = st_unreachable_objectives(data, "SUBSYSTEM");
+[kept, counts] = st_unreachable_objectives(data, "SUBSYSTEM", "Secret_CUT");
 
 verifyEqual(testCase, height(kept), 0);
 verifyEqual(testCase, counts.CutItself, 1);
@@ -91,7 +131,7 @@ end
 
 function testCvfOffKeepsAll(testCase)
 for mode = ["OFF" ""]
-    [kept, counts] = st_unreachable_objectives(cvf_data(), mode);
+    [kept, counts] = st_unreachable_objectives(cvf_data(), mode, "Secret_CUT");
     verifyEqual(testCase, height(kept), 4);
     verifyEqual(testCase, counts.FilteredByCvf, 0);
 end
@@ -99,7 +139,7 @@ end
 
 
 function testCvfSubsystemDropsDirectChildSubsystemOutcomes(testCase)
-[kept, counts] = st_unreachable_objectives(cvf_data(), "SUBSYSTEM");
+[kept, counts] = st_unreachable_objectives(cvf_data(), "SUBSYSTEM", "Secret_CUT");
 
 verifyEqual(testCase, kept.RelativePath, ...
     ["Secret_Sub/Secret_Switch"; "Secret_Switch"; "Secret_a//b"]);
@@ -109,7 +149,7 @@ end
 
 function testCvfAllContentDropsNestedBlocks(testCase)
 % A '//' inside a direct child's name is not a level.
-[kept, counts] = st_unreachable_objectives(cvf_data(), "ALL_CONTENT");
+[kept, counts] = st_unreachable_objectives(cvf_data(), "ALL_CONTENT", "Secret_CUT");
 
 verifyEqual(testCase, kept.RelativePath, ["Secret_Switch"; "Secret_a//b"]);
 verifyEqual(testCase, counts.FilteredByCvf, 2);
@@ -128,7 +168,7 @@ data = fake_data(objects, decision_objectives(1:3, repmat("Unsatisfiable", 1, 3)
     ones(1, 3), repmat("Secret false", 1, 3)));
 
 for mode = ["OFF" "ALL_CONTENT"]
-    [kept, counts] = st_unreachable_objectives(data, mode);
+    [kept, counts] = st_unreachable_objectives(data, mode, "Secret_CUT");
     verifyEqual(testCase, kept.RelativePath, "Secret_Switch");
     verifyEqual(testCase, counts.Stateflow, 2);
     verifyEqual(testCase, counts.CutItself, 0);
@@ -144,12 +184,12 @@ objects(1).designSid = 'Secret_Design:7';
 data = fake_data(objects, decision_objectives([1 2], ...
     ["Unsatisfiable" "Unsatisfiable"], [1 1], ["Secret false" "Secret false"]));
 
-kept = st_unreachable_objectives(data, "OFF");
+kept = st_unreachable_objectives(data, "OFF", "Secret_CUT");
 verifyEqual(testCase, kept.Sid, ["Secret_Design:7"; "Secret_Root:2"]);
 
 % Data without the designSid field uses sid.
 data.ModelObjects = rmfield(objects, 'designSid');
-kept = st_unreachable_objectives(data, "OFF");
+kept = st_unreachable_objectives(data, "OFF", "Secret_CUT");
 verifyEqual(testCase, kept.Sid, ["Secret_Root:1"; "Secret_Root:2"]);
 end
 
@@ -161,7 +201,7 @@ cfg = struct('VerboseLogging', false);
 % Declared first: a name only evalc assigns would bind to a function.
 kept = [];
 counts = [];
-output = evalc('[kept, counts] = st_unreachable_objectives(data, "OFF", cfg);');
+output = evalc('[kept, counts] = st_unreachable_objectives(data, "OFF", "Secret_CUT", cfg);');
 
 verifyEqual(testCase, height(kept), 0);
 verifyEqual(testCase, kept.Properties.VariableNames, {'Sid','BlockType', ...
@@ -172,7 +212,7 @@ verifyTrue(testCase, contains(output, "WARN"));
 verifyFalse(testCase, contains(output, "Secret"));
 % Without cfg nothing prints.
 quiet = [];
-verifyEmpty(testCase, evalc('quiet = st_unreachable_objectives(data, "OFF");'));
+verifyEmpty(testCase, evalc('quiet = st_unreachable_objectives(data, "OFF", "Secret_CUT");'));
 verifyEqual(testCase, height(quiet), 0);
 end
 
@@ -209,6 +249,15 @@ verifyEmpty(testCase, profile.DefectIterations);
 verifyEqual(testCase, profile.DefectCounts.Unsatisfiable, 1);
 verifyEmpty(testCase, output);
 target.DefectInputScenario = "";
+
+% An objective outside the row's CUT is a read failure, printed nowhere.
+sldvData = fake_data(model_objects("Secret_Root/Secret_Other/Secret_Switch", "Switch"), ...
+    decision_objectives(1, "Unsatisfiable", 1, "Secret false")); %#ok<NASGU>
+save(char(target.SldvDataFile), 'sldvData');
+output = evalc('profile = st_get_sldv_profile(target, cfg);');
+verifyEqual(testCase, profile.DefectStatus, 'READ_FAILED');
+verifyEmpty(testCase, profile.DefectIterations);
+verifyEmpty(testCase, output);
 
 % Data without Objectives is a read failure too, printed nowhere.
 sldvData = struct('ModelInformation', struct('Name', 'Secret_Model')); %#ok<NASGU>
