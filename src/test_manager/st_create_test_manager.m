@@ -34,6 +34,15 @@ function R = st_create_test_manager(stageSelection, varargin)
 %   Signal Editor block, regardless of direct CUT Inports.
 %   FILE/GENERATE always assign SignalEditorScenario from the prepared
 %   Harness scenario, even when the CUT has no direct Inport.
+%   profile.DefectIterations append one iteration each, named after the
+%   last scenario and replaying its source scenario. IterationCount counts
+%   them; ParameterOverrideCount does not.
+%
+% Custom Criteria:
+%   With defect iterations the Test Case gets st_defect_criteria_script,
+%   which fails a defect iteration whose unreachable outcome never ran.
+%   Without them a toolkit-written callback is cleared. A hand-written
+%   callback is never overwritten (simtest:DefectCriteriaForeign).
 %
 % Coverage:
 %   RecordCoverage = true at Test File level and Test Case level.
@@ -253,6 +262,10 @@ for i = 1:n
                 'TestCaseName is empty. Row No=%d', ...
                 T.No(i));
         end
+
+        % Before anything is touched: a bad DefectInputScenario cell stops
+        % this row here.
+        defects = profile_defects(cfg, profile, testCaseName);
 
         %% ====================================================
         % Direct CUT Inport (diagnostic only for scenario binding)
@@ -478,34 +491,36 @@ for i = 1:n
         preparedIterations = cell(numel(scenarioNames), 1);
         preparedIterationNames = cell(numel(scenarioNames), 1);
         for scenarioIndex = 1:numel(scenarioNames)
-            currentScenario = scenarioNames{scenarioIndex};
-            iter = sltest.testmanager.TestIteration;
-            iter.Enabled = true;
-
+            [iter, parameterCount] = prepare_iteration(profile, ...
+                scenarioIndex, applySignalEditorScenario);
             if applySignalEditorScenario
-                setTestParam(iter, 'SignalEditorScenario', currentScenario);
                 SignalEditorScenarioApplied(i) = true;
             end
-            setTestParam(iter, 'TestSequenceScenario', currentScenario);
+            ParameterOverrideCount(i) = ParameterOverrideCount(i) + ...
+                parameterCount;
 
             if strcmp(profile.Mode, 'OFF')
                 iterationName = 'Iteration 1';
-            elseif strcmp(profile.DataFileFormat, 'MAT')
-                % Ordinary MAT Dataset scenarios have no SLDV parameter
-                % override payload. ParameterCounts is normalized to zero.
-                iterationName = currentScenario;
             else
-                [~, params] = sldvsimdata(profile.EffectiveDataFile, ...
-                    profile.SourceIndices(scenarioIndex));
-                ParameterOverrideCount(i) = ParameterOverrideCount(i) + ...
-                    st_apply_sldv_parameters(iter, params, ...
-                    profile.SourceIndices(scenarioIndex));
-                iterationName = currentScenario;
+                iterationName = scenarioNames{scenarioIndex};
             end
 
             preparedIterations{scenarioIndex} = iter;
             preparedIterationNames{scenarioIndex} = iterationName;
         end
+
+        % A defect iteration replays its source scenario under its own name
+        % and fails only through the Custom Criteria. Its parameter
+        % overrides copy the source's, so ParameterOverrideCount skips them.
+        for d = 1:numel(defects)
+            preparedIterations{end + 1, 1} = prepare_iteration(profile, ...
+                defects(d).SourceIndex, applySignalEditorScenario); %#ok<AGROW>
+            preparedIterationNames{end + 1, 1} = defects(d).Name; %#ok<AGROW>
+        end
+
+        % Before the iterations change, so a refused hand-written
+        % callback leaves an existing Test Case as it was.
+        criteriaAction = apply_defect_criteria(cfg, tc, defects, profile.No);
 
         if ExistingTestCase(i)
             replace_test_iterations(tc, preparedIterations, ...
@@ -521,6 +536,9 @@ for i = 1:n
         st_log(cfg, 'DEBUG', ...
             '[TestManager %d/%d] iterations added=%d', ...
             i, n, IterationCount(i));
+        st_log(cfg, 'INFO', ...
+            '[UnreachableDefect] end | Iterations=%d | Criteria=%s', ...
+            IterationCount(i), criteriaAction);
 
 
         %% ====================================================
@@ -558,10 +576,12 @@ for i = 1:n
         if ~strcmp(profile.Mode, 'OFF')
 
             Message(i) = sprintf(['SLDV target initialized; iterations=%d, ' ...
-                'parameterOverrides=%d, harnessScenarioInputs=%d'], ...
+                'parameterOverrides=%d, harnessScenarioInputs=%d, ' ...
+                'defectIterations=%d'], ...
                 IterationCount(i), ...
                 ParameterOverrideCount(i), ...
-                HarnessScenarioInputCount(i));
+                HarnessScenarioInputCount(i), ...
+                numel(defects));
 
         elseif SignalEditorAvailable(i)
 
@@ -720,6 +740,96 @@ st_log(cfg, 'INFO', ...
     'Create Test Manager complete | elapsed=%.3f sec', ...
     toc(totalTimer));
 
+end
+
+
+%% ============================================================
+% Iteration for one scenario
+%% ============================================================
+
+function [iter, parameterCount] = prepare_iteration(profile, ...
+    scenarioIndex, applySignalEditor)
+%PREPARE_ITERATION Table iteration replaying scenario SCENARIOINDEX.
+% A defect iteration is built from its source scenario here too, so it
+% carries the same Signal Editor, Test Sequence and SLDV parameters.
+
+currentScenario = profile.ScenarioNames{scenarioIndex};
+iter = sltest.testmanager.TestIteration;
+iter.Enabled = true;
+parameterCount = 0;
+
+if applySignalEditor
+    setTestParam(iter, 'SignalEditorScenario', currentScenario);
+end
+setTestParam(iter, 'TestSequenceScenario', currentScenario);
+
+if strcmp(profile.Mode, 'OFF')
+    % The legacy single iteration has no SLDV payload.
+elseif strcmp(profile.DataFileFormat, 'MAT')
+    % Ordinary MAT Dataset scenarios have no SLDV parameter
+    % override payload. ParameterCounts is normalized to zero.
+else
+    [~, params] = sldvsimdata(profile.EffectiveDataFile, ...
+        profile.SourceIndices(scenarioIndex));
+    parameterCount = st_apply_sldv_parameters(iter, params, ...
+        profile.SourceIndices(scenarioIndex));
+end
+end
+
+
+%% ============================================================
+% Unreachable-outcome defects
+%% ============================================================
+
+function defects = profile_defects(cfg, profile, testCaseName)
+%PROFILE_DEFECTS Defect iterations of PROFILE, or the error a bad cell asks for.
+% st_get_sldv_profile never throws for defects; it leaves DefectStatus
+% (OK, DISABLED, NOT_SLDV, INVALID_INPUT_SCENARIO, READ_FAILED) instead.
+% A READ_FAILED profile already holds no defect iterations.
+
+defects = profile.DefectIterations(:);
+counts = profile.DefectCounts;
+st_log(cfg, 'INFO', ['[UnreachableDefect] start | TestCase=%s | Defects=%d | ' ...
+    'Status=%s | Unsatisfiable=%d | Approximate=%d | FilteredByCvf=%d | ' ...
+    'CutItself=%d | Stateflow=%d'], testCaseName, numel(defects), ...
+    profile.DefectStatus, counts.Unsatisfiable, counts.Approximate, ...
+    counts.FilteredByCvf, counts.CutItself, counts.Stateflow);
+
+switch profile.DefectStatus
+    case 'INVALID_INPUT_SCENARIO'
+        st_log(cfg, 'ERROR', ['[UnreachableDefect] DefectInputScenario invalid | ' ...
+            'No=%g | Id=simtest:DefectInputScenarioInvalid | ' ...
+            'Fix the Targets sheet cell'], profile.No);
+        error('simtest:DefectInputScenarioInvalid', '%s', profile.DefectMessage);
+    case 'READ_FAILED'
+        st_log(cfg, 'WARN', ['[UnreachableDefect] SLDV objectives unreadable | ' ...
+            'No=%g | No defect iterations | Regenerate the SLDV data; ' ...
+            'the DEBUG log has the cause'], profile.No);
+end
+end
+
+
+function action = apply_defect_criteria(cfg, tc, defects, rowNo)
+%APPLY_DEFECT_CRITERIA Write, clear or keep the Test Case's Custom Criteria.
+% Only a callback carrying the toolkit marker is replaced or cleared;
+% st_defect_criteria_action refuses to overwrite a hand-written one.
+
+try
+    criteria = getCustomCriteria(tc);
+    action = st_defect_criteria_action(criteria.Callback, defects);
+    switch action
+        case 'SET'
+            criteria.Callback = st_defect_criteria_script(defects);
+            criteria.Enabled = true;
+        case 'CLEAR'
+            criteria.Callback = '';
+            criteria.Enabled = false;
+    end
+catch ME
+    st_log(cfg, 'ERROR', ['[UnreachableDefect] Custom Criteria not applied | ' ...
+        'No=%g | Defects=%d | Id=%s'], rowNo, numel(defects), ME.identifier);
+    rethrow(ME);
+end
 end
 
 
