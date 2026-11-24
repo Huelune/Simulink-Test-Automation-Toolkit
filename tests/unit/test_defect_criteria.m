@@ -84,6 +84,16 @@ verifyTrue(testCase, contains(source, ...
 end
 
 
+function testTestManagerStartLogCountsUndecided(testCase)
+% Undecided outcomes never become defects, so the start line counts them.
+source = fileread(fullfile(st_project_root(), 'src', 'test_manager', ...
+    'st_create_test_manager.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    '\[UnreachableDefect\] start \|[^\n]*\n[^\n]*Undecided=%d', 'once'));
+verifyTrue(testCase, contains(source, 'counts.Undecided'));
+end
+
+
 function testScriptPassesAnIterationThatIsNoDefect(testCase)
 script = st_defect_criteria_script(sample_defects(), 'Secret_CUT');
 fakeTest = struct('sltest_iterationName', st_scenario_name("Secret_CUT", 1));
