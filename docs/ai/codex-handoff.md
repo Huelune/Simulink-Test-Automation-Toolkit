@@ -58,6 +58,20 @@
   `MaxProcessTime=300 s` for 30+ min on the first of three GENERATE targets. The same
   model with the filter off finished quickly, so
   `cfg.SldvCoverageFilter` now defaults to false; why the filter stalls sldvrun is still open.
+- 실기 미확인: 결함 TC(2026-11-24, `9cd7b00..4307e41`, 설계
+  `docs/superpowers/specs/2026-11-24-unreachable-outcome-defect-tc-design.md`). 단위 테스트는 `todo.md` 3절, 실제
+  모델 확인은 4절이다. 볼 것: 계기 모델에서 대상마다 결함 TC 2건(Switch, Max)이 생기고 APPLY 재실행 뒤에도 FAIL인지,
+  보통 Iteration 판정과 결정 커버리지(20/22)가 그대로인지, SLDV 도달 불가 3개 중 셋째가 CVF 거름·CUT 자신·Stateflow·같은
+  블록의 두 번째 결과 중 무엇으로 빠지는지, Stateflow 거름(`sfObjType`이 있으면 Stateflow)이 Stateflow 없는 모델에서 0인지,
+  standalone 파이프라인으로 옮긴 Test File에서도 Custom Criteria가 도는지(실험은 저장·다시 열기까지만 봤다).
+  설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
+  1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
+     실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
+  2. 블록은 `test.sltest_bdroot` 기준 하네스 경로로만 찾아졌다(`sltest_sut`와 원래 모델 경로는 빈 값). Test File을
+     저장·닫기·다시 열기 해도 콜백이 남았고 다시 실행해도 Failed였다.
+  3. 실제 SLDV 데이터는 대상마다 결정 목표 30개 중 Unsatisfiable 3, 근사 0, Undecided 0이었다. `slPath`는
+     `<분석 루트>/<CUT>/...`이고 `designSid`가 있다. 커버리지 결정 수(22)보다 많은 것은 CVF가 뺀 하위 Subsystem까지
+     분석했기 때문으로 보고 CVF 거름을 넣었다.
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
   (관측 1건), `Simulink.io.SLDVMatFile` import 결과도 같은 이름인지.
 - 데모 모델 생성기 `st_create_demo_model`(2026-10-12): 2026-10-15 사용자 MATLAB의 새 세션에서

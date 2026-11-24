@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **SLDV가 실행할 수 없다고 증명한 결정 결과마다 결함 TC가 생깁니다.** SLDV 데이터의 결정 목표 중 `Unsatisfiable`
+  (근사 판정 포함)인 결과를 블록 단위로 묶어, 그 CUT의 Test Case에 결함 Iteration `UT_REQ_{CUT}_{N+k}`를 붙입니다.
+  결함 Iteration은 기존 시나리오 하나(Targets의 `DefectInputScenario`, 비우면 마지막 시나리오)의 입력을 그대로 쓰고,
+  Test Case의 Custom Criteria가 그 Iteration의 커버리지에서 그 결과의 실행 횟수를 읽어 0이면 FAIL로 만듭니다. 무조건
+  실패하는 검증은 쓰지 않고, 커버리지를 읽지 못하면 FAIL이 아니라 오류로 끝납니다. 기대값 갱신(APPLY)과 SLDV 검증은
+  결함 Iteration을 건드리지 않습니다. 최종 문서에는 결함 행으로 적힙니다. Test Case ID는 Iteration 이름, 출력값은
+  `DefectReasons` 시트의 사유(없으면 기본 문장), 확인 사유는 `UNREACHABLE_DEFECT`(정보성),
+  `UNREACHABLE_DEFECT_APPROXIMATE`, `UNREACHABLE_DEFECT_PASSED`입니다. CVF가 커버리지에서 빼는 곳, CUT 자신, Stateflow
+  내부의 결과는 결함으로 만들지 않습니다. 결함 TC가 있는 CUT은 PER_CUT 상태가 `WARN`이 됩니다. 끄려면
+  `cfg.UnreachableDefectTests = false`입니다. 실제 모델 확인은 아직입니다.
+
 - **SLDV에 커버리지 필터를 넘기는 것은 이제 `cfg.SldvCoverageFilter = true`일 때만 합니다(기본 `false`).** 실제 모델
   하나에서 필터를 켜자 `sldvrun`이 `MaxProcessTime`(300초)을 30분 넘게 지나도 끝나지 않았습니다. 같은 모델에서 끄면 금방
   끝났습니다. 끈 상태에서도 SLDV는 나머지 목표를 모두 채우려 하고, 하위 Subsystem은 커버리지 계산에서 CVF가 뺍니다.
