@@ -50,3 +50,27 @@ warning(warnState);
 돌려줄 것: 화면 캡처 한 장과 "보고서에 필터 항목 나옴/안 나옴, 모델 색 표시 됨/안 됨" 한 줄. 보고서와 모델 화면은 블록
 이름이 보이므로 캡처하지 마세요.
 
+## 2. Custom Criteria 안에서 Iteration 커버리지를 읽을 수 있는지 보기
+
+왜: 도달 불가 결정 결과를 결함 TC로 남기려면, Custom Criteria가 그 Iteration의 결정 커버리지를 읽어 그 결과가 실행됐는지
+확인할 수 있어야 한다. 그 시점에 커버리지가 붙어 있는지는 공식 문서에 없다. `st_probe_defect_criteria`는 임시 폴더에 작은
+모델(Switch 제어 입력이 상수라 false 결과가 실행될 수 없음), 하네스, Test File을 만들어 실행하고 끝나면 지운다. 회사 모델은
+쓰지 않는다. `st_probe_sldv_objectives`는 대상마다 실제 SLDV 데이터에서 결정 목표를 status별로 세고 필드 구조를 찍는다.
+
+순서: 모델 프로젝트(.prj)를 연다. 클론에서 main을 pull한다. 아래 블록을 붙여 넣는다. 툴킷 폴더(`st_setup.m`이 있는 폴더)를
+고르는 창이 뜬다. 끝나면 Test Manager에 실험 결과 두 개가 남는다. 캡처한 뒤 지워도 된다.
+
+```matlab
+clearvars; clc; warnState = warning('off', 'all');
+toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
+if isequal(toolkitDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다\n'); warning(warnState); return; end
+oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir);
+try, st_probe_defect_criteria; catch probeError, fprintf('Custom Criteria 실험 실패 | 식별자 %s\n', probeError.identifier); end
+try, st_probe_sldv_objectives; catch probeError, fprintf('SLDV 데이터 확인 실패 | 식별자 %s\n', probeError.identifier); end
+warning(warnState);
+```
+
+확인할 것: [2]가 "있음"이고 [5]가 Failed인가. [4]도 Failed인가. SLDV 줄마다 결정 목표 수가 0이 아닌가.
+
+돌려줄 것: 화면 캡처 한 장.
+
