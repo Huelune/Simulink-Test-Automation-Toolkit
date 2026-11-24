@@ -92,8 +92,14 @@ try
     decisionOutcomes = st_final_document_decision_outcomes(cfg, source);
     % Renders the DecisionBlocks JSON into the Description text, with the
     % outcome each row's test took where the run recorded one.
-    [specification, ~, outcomeReasons] = st_format_specification_decision_blocks( ...
+    [specification, details, outcomeReasons] = st_format_specification_decision_blocks( ...
         specification, cfg, decisionOutcomes.Lookup);
+    % A defect iteration repeats its source scenario's row; that row is
+    % rewritten to name the outcome SLDV found unreachable.
+    specification = st_final_document_defect_rows(specification, details, ...
+        st_final_document_defects(cfg), st_read_defect_reasons(cfg), cfg);
+    % The outcome codes explain a Description a defect row no longer shows.
+    outcomeReasons(specification.DefectCode ~= "") = "";
     outcomes = st_final_document_outcomes(cfg, source);
     coverage = st_final_document_coverage(cfg, coverageSource, ...
         char(string(p.Results.CoveragePipelineId)), source);

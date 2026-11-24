@@ -19,6 +19,12 @@ expected = column_text(specification, 'verify 내용');
 action = replace_not_applicable(column_text(specification, 'input 시나리오 내용'), naText);
 material = replace_not_applicable(column_text(specification, ...
     '하네스 input 파일명'), naText);
+% A defect row (st_final_document_defect_rows) gives its reason sentence
+% as the output value; every other row repeats the expected result.
+output = expected;
+defect = column_text(specification, 'DefectCode') ~= "";
+defectReason = column_text(specification, 'DefectReason');
+output(defect) = defectReason(defect);
 
 document.ResultHeaders = {'Row', 'Test Case ID', 'TestCaseName', ...
     'Iteration명', '판정 결과', '확인 필요', '확인 사유', '확인 위치', '추출상태'};
@@ -29,7 +35,7 @@ blank = repmat("", count, 1);
 document.Sheet1 = table(identifier, caseId, blank, ...
     column_number(specification, 'MaxTime'), ...
     column_text(specification, 'DecisionBlocks'), action, expected, ...
-    blank, blank, blank, blank, expected, blank, material, ...
+    blank, blank, blank, blank, output, blank, material, ...
     'VariableNames', {'TestCaseID','CaseId','Dash03','PreCondition', ...
     'Description','Action','ExpectedResult','Dash08','Dash09','Dash10', ...
     'Dash11','OutputValue','Judgement','TestData'});
@@ -94,7 +100,14 @@ function [identifier, caseId, reasons] = build_identifiers(specification)
 % appending a digest, so the scenario may read UT_REQ_A_B_C_3f9a2c_001. The
 % splice keeps whatever that scenario actually is, so column 1 always
 % matches a real scenario with only the ID added.
+%
+% A defect row shares its source row's scenario, so its own iteration name
+% (UT_REQ_{CUT}_{N+k}) takes the scenario's place; the ID would otherwise
+% repeat the source row's and read as DUPLICATE_TEST_CASE_ID.
 scenario = column_text(specification, 'Test Sequence scenario 명');
+iterationName = column_text(specification, 'Iteration명');
+defect = column_text(specification, 'DefectCode') ~= "";
+scenario(defect) = iterationName(defect);
 testCase = column_text(specification, '테스트 케이스명');
 cutName = strtrim(column_text(specification, '대상 모델명'));
 count = numel(scenario);
@@ -148,6 +161,7 @@ iterationName = column_text(specification, 'Iteration명');
 extractStatus = column_text(specification, '추출상태');
 remarks = column_text(specification, '비고');
 maxTime = column_number(specification, 'MaxTime');
+defectCode = column_text(specification, 'DefectCode');
 location = repmat("", count, 1);
 reasons = repmat("", count, 1);
 needsReview = repmat("", count, 1);
@@ -164,7 +178,11 @@ for i = 1:count
     location(i) = resultSet;
     reasons(i) = join_reasons(idReasons(i), reason);
     if verdict == "FAIL"
-        reasons(i) = join_reasons(reasons(i), "FAILED");
+        reasons(i) = join_reasons(reasons(i), failure_code(defectCode(i)));
+    elseif verdict == "PASS" && strlength(defectCode(i)) > 0
+        % SLDV found this outcome unreachable and the test still ran it:
+        % the SLDV result is out of date or the model changed.
+        reasons(i) = join_reasons(reasons(i), "UNREACHABLE_DEFECT_PASSED");
     elseif strlength(verdict) > 0 && verdict ~= "PASS"
         reasons(i) = join_reasons(reasons(i), "NOT_PASSED:" + verdict);
     end
@@ -215,12 +233,28 @@ end
 end
 
 
+function code = failure_code(defectCode)
+% A defect row is meant to fail. A proved unreachable outcome is a known
+% defect, not a finding; one found only under approximation still needs a
+% person to confirm it.
+switch defectCode
+    case "EXACT"
+        code = "UNREACHABLE_DEFECT";
+    case "APPROXIMATE"
+        code = "UNREACHABLE_DEFECT_APPROXIMATE";
+    otherwise
+        code = "FAILED";
+end
+end
+
+
 function tf = only_informational(reason)
 % MAXTIME_UNAVAILABLE explains a blank cell the exporter already reported,
-% and the DECISION_OUTCOME codes explain a [T/F] left in Description.
-% Neither sends anyone to Test Manager on its own.
+% the DECISION_OUTCOME codes explain a [T/F] left in Description, and
+% UNREACHABLE_DEFECT is the expected failure of a proved defect.
+% None sends anyone to Test Manager on its own.
 informational = ["MAXTIME_UNAVAILABLE", "DECISION_OUTCOME_UNAVAILABLE", ...
-    "DECISION_OUTCOME_MISMATCH"];
+    "DECISION_OUTCOME_MISMATCH", "UNREACHABLE_DEFECT"];
 tf = all(ismember(strtrim(split(string(reason), "|")), informational));
 end
 

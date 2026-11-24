@@ -255,7 +255,58 @@ Signal Editor가 없는 `OFF` 대상은 명세서에서 `하네스 input 파일�
 
 ### `출력값`은 `Test Steps.Expected result`의 복제입니다
 
-두 열의 내용이 같습니다. 고객 양식이 그렇게 되어 있습니다.
+두 열의 내용이 같습니다. 고객 양식이 그렇게 되어 있습니다. 결함 행만 다릅니다
+(아래 절).
+
+### 결함 행 — SLDV가 도달 불가로 판정한 결과
+
+SLDV가 결정 결과 하나를 어떤 입력으로도 실행할 수 없다고 판정하면, 그 블록마다
+결함 Iteration(`UT_REQ_{CUT}_{N+k}`)이 Test Manager에 붙습니다. 결함 Iteration은
+원본 시나리오에 묶이므로 명세 추출이 원본 행과 같은 입력·`MaxTime`·테스트 자료를
+가진 행을 하나 더 만듭니다. 최종 문서는 그 행을 이렇게 고쳐 적습니다. 결함 행은
+`테스트 케이스명`과 `Iteration명`이 결함 목록(`profile.DefectIterations`)과 같은
+행입니다.
+
+| 칸 | 보통 행 | 결함 행 |
+| --- | --- | --- |
+| `Test Case ID` | Test Sequence 시나리오명 + ID | **Iteration명** + ID (`UT_REQ_Controller_12345_004`) |
+| `Description` | D 목록 전체 | 결함 블록의 줄 하나 (아래 표기) |
+| `Test Steps.Expected result` | verify 내용 | `<Description>가 한 번 이상 실행된다` |
+| `출력값` | verify 내용 | 사유 문장 (아래) |
+| `판정 결과` | 실행 결과 | 실행 결과 (보통 `FAIL`) |
+| `Test Steps.Action`, `테스트 자료` | 시나리오 | 원본 시나리오 그대로 |
+
+시나리오명을 쓰면 원본 행과 ID가 같아져 `DUPLICATE_TEST_CASE_ID`가 되므로 결함
+행은 Iteration명으로 ID를 만듭니다.
+
+`Description` 표기:
+
+- 블록이 그 행의 D 목록에 줄 하나로 있으면 그 D 줄을 쓰고 대괄호 안만 도달 불가
+  결과로 바꿉니다. true/false 블록(If, Switch 등)은 `D1 [F]Switch (u2 >= 1)`처럼
+  `T`/`F`로, 그 밖의 블록은 Coverage 결과 문구 그대로 `D2 [input 1]Max`처럼
+  적습니다. 한 블록에 도달 불가 결과가 여럿이면 `/`로 잇습니다.
+- D 목록에 없으면(중첩 Subsystem 안의 블록) D 번호 없이
+  `Switch [false] (Sub/Switch1)`처럼 블록 종류, 결과 문구, CUT 기준 경로를 적습니다.
+  D 줄이 여럿인 블록(elseif가 있는 If, Saturate 등)도 결과가 어느 줄의 것인지
+  정할 수 없으므로 이 표기를 씁니다.
+
+사유 문장은 관리 Excel의 사유 시트에서 읽습니다. 시트가 없거나 그 결함 이름이
+없으면 기본 문장을 씁니다.
+
+| 시트 | `cfg.DefectReasonSheet`(기본 `DefectReasons`) 또는 `도달불가사유` |
+| --- | --- |
+| 열 | `TestName` 또는 `결함TC` (결함 Iteration 이름), `Reason` 또는 `사유` |
+| 기본 문장 (증명됨) | `SLDV가 어떤 입력으로도 실행할 수 없음을 증명함` |
+| 기본 문장 (근사 판정) | `SLDV 근사 분석에서 실행할 수 없다고 판정함(확인 필요)` |
+
+- 같은 이름이 두 번 있으면 첫 줄을 쓰고 WARN 로그에 행 번호를 남깁니다.
+- 결함 목록에 없는 이름(모델이 고쳐졌거나 오타)은 무시하고 WARN 로그에 개수를
+  남깁니다. 이름은 실행 로그 파일에만 적힙니다.
+- 이 시트는 최종 문서만 읽습니다. 사유를 고친 뒤에는 최종 문서만 다시 만들면
+  됩니다.
+
+대상 하나의 SLDV profile을 읽지 못하면 그 대상은 WARN 로그를 남기고 건너뛰며, 그
+대상의 결함 행은 보통 행으로 남습니다. 문서는 계속 만들어집니다.
 
 ### 한 대상의 `Description`이 여러 행에 반복됩니다
 
@@ -387,6 +438,9 @@ manifest에 적힌 체크섬과 실제 `CoverageSummary.xlsx`가 다르면 **중
 | `DECISION_OUTCOME_UNAVAILABLE` | 이 행의 분기 결과가 기록되지 않아 `Description`에 `[T/F]`를 남겼습니다. 정보성이며 `확인 필요`를 켜지 않습니다 |
 | `DECISION_OUTCOME_MISMATCH` | 블록의 D 줄 수와 기록된 결정 수가 다르거나, D 줄의 결정 이름이 기록된 결정과 하나도 맞지 않거나 여럿과 맞아(벡터 입력) `[T/F]`를 남겼습니다. 정보성입니다 |
 | `DECISION_OUTCOME_AMBIGUOUS` | 같은 행·블록에 서로 다른 결과가 기록돼 그 블록을 `[T/F]`로 두었습니다 |
+| `UNREACHABLE_DEFECT` | 결함 행이 예정대로 실패했습니다. SLDV가 증명한 알려진 결함이라 `FAILED` 대신 남기며 정보성입니다 |
+| `UNREACHABLE_DEFECT_APPROXIMATE` | 결함 행이 실패했지만 SLDV가 근사 분석으로만 도달 불가라고 판정했습니다. 사람이 확인하십시오 |
+| `UNREACHABLE_DEFECT_PASSED` | 결함 행이 통과했습니다. 도달 불가라던 결과가 실행됐으므로 SLDV 결과가 오래됐거나 모델이 바뀌었습니다 |
 | `DUPLICATE_TEST_CASE_ID` | 같은 `Test Case ID`가 여러 행에 있습니다. 값은 바꾸지 않습니다 |
 | `TESTCASE_ID_PATTERN_UNMATCHED` | 이름이 `{CUT}_{ID}` / `UT_REQ_{CUT}_{NUM}` 규칙과 달라 ID를 나누지 못했습니다. 1·2열은 원문입니다 |
 | `COVERAGE_ROW_MISSING` | 그 CUT의 커버리지 행이 없습니다 |
@@ -488,6 +542,7 @@ Simulink Coverage가 그 모델과 Harness를 미저장(Dirty)으로 표시하�
 ```matlab
 st_setup
 assertSuccess(runtests('tests/unit/test_export_final_document.m'));
+assertSuccess(runtests('tests/unit/test_final_document_defects.m'));
 assertSuccess(runtests('tests/unit/test_export_test_specification.m'));
 assertSuccess(runtests('tests/unit/test_project_layout.m'));
 ```

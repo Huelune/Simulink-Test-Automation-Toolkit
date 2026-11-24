@@ -1,0 +1,105 @@
+function specification = st_final_document_defect_rows(specification, details, defects, reasons, cfg)
+%ST_FINAL_DOCUMENT_DEFECT_ROWS Rewrite the rows of the defect iterations.
+% A defect iteration binds its source scenario, so the specification
+% collector already gives it a row that repeats the source row. That row is
+% found by test case name and iteration name, the key the verdict lookup
+% uses, and rewritten: Description keeps only the block the defect is
+% about, showing the outcome SLDV found unreachable, and the expected result
+% says that outcome runs at least once.
+%
+% DETAILS is the DecisionBlockDetails table of
+% st_format_specification_decision_blocks, DEFECTS comes from
+% st_final_document_defects and REASONS from st_read_defect_reasons.
+% DefectCode ("", EXACT or APPROXIMATE) and DefectReason are appended for
+% st_final_document_table, which uses them for the ID, the output value
+% and the reason codes. Every other row is left as it was.
+count = height(specification);
+code = strings(count, 1);
+reason = strings(count, 1);
+caseNames = text_column(specification, '테스트 케이스명');
+iterations = text_column(specification, 'Iteration명');
+catalog = st_specification_decision_catalog();
+twoWayTypes = string(catalog.BlockType(string(catalog.TwoWay) == "YES"));
+for k = 1:height(defects)
+    defect = defects(k,:);
+    for row = find(caseNames == defect.TestCaseName & iterations == defect.Name)'
+        code(row) = "EXACT";
+        if defect.Approximate, code(row) = "APPROXIMATE"; end
+        reason(row) = reason_text(reasons, defect.Name, code(row));
+        line = defect_line(specification.DecisionBlocks(row), ...
+            specification.CUTPath(row), row, details, defect, ...
+            any(twoWayTypes == defect.BlockType));
+        specification.DecisionBlocks(row) = line;
+        specification.("verify 내용")(row) = line + "가 한 번 이상 실행된다";
+    end
+end
+unknown = setdiff(reasons.TestName, defects.Name);
+if ~isempty(unknown)
+    % The names stay in the run log file; the console shows only the count.
+    st_log(cfg, 'WARN', 'Defect reasons name no defect iteration | Names=%d | Ignored', ...
+        numel(unknown));
+    st_log(cfg, 'DEBUG', 'Defect reasons ignored | Names=%s', ...
+        strjoin(reshape(unknown, 1, []), ', '));
+end
+specification.DefectCode = code;
+specification.DefectReason = reason;
+st_log(cfg, 'INFO', 'Final document defect rows | Rows=%d | Defects=%d', ...
+    sum(code ~= ""), height(defects));
+end
+
+
+function line = defect_line(description, cutPath, row, details, defect, twoWay)
+% A block with exactly one D line in this row keeps that line with the
+% unreachable outcome in its bracket. A block that is not in the D list
+% (inside a nested subsystem), or that has several D lines (If with elseif,
+% Saturate) where the outcome cannot be tied to one line, is written by
+% its path below the CUT.
+texts = split(defect.OutcomeTexts, "|");
+match = details.TestSpecificationRow == string(row + 1) & ...
+    details.Path == cutPath + "/" + defect.RelativePath;
+decision = unique(details.Decision(match));
+if isscalar(decision)
+    lines = split(description, newline);
+    entry = lines(startsWith(lines, decision + " ["));
+    if ~isempty(entry)
+        parts = regexp(char(entry(1)), '^([^\[]*\[)[^\]]*(\].*)$', 'tokens', 'once');
+        if ~isempty(parts)
+            line = string(parts{1}) + outcome_label(texts, twoWay) + string(parts{2});
+            return;
+        end
+    end
+end
+line = defect.BlockType + " [" + strjoin(reshape(texts, 1, []), "/") + "] (" + ...
+    defect.RelativePath + ")";
+end
+
+
+function label = outcome_label(texts, twoWay)
+% A true/false block reads like the rest of the D list ([T], [F]); any
+% other block keeps the coverage outcome text (input 1).
+labels = texts;
+if twoWay
+    lowered = lower(texts);
+    labels(contains(lowered, "true")) = "T";
+    labels(contains(lowered, "false")) = "F";
+end
+label = strjoin(reshape(labels, 1, []), "/");
+end
+
+
+function text = reason_text(reasons, name, code)
+text = reasons.Reason(reasons.TestName == name);
+if ~isempty(text)
+    text = text(1);
+elseif code == "APPROXIMATE"
+    text = "SLDV 근사 분석에서 실행할 수 없다고 판정함(확인 필요)";
+else
+    text = "SLDV가 어떤 입력으로도 실행할 수 없음을 증명함";
+end
+end
+
+
+function text = text_column(T, name)
+text = string(T.(name));
+text(ismissing(text)) = "";
+end
