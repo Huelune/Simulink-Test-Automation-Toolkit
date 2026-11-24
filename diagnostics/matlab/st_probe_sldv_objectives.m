@@ -8,13 +8,14 @@ function lines = st_probe_sldv_objectives(files)
 % ModelObjects entry each objective points at. Before that is built, this
 % shows what real data looks like:
 %
-%   대상 1 | 결정 목표 12 | Satisfied 9 | Unsatisfiable 1 | 근사 1 | Undecided 1 | 기타 0
+%   대상 1 | 결정 목표 12 | Satisfied 8 | Unsatisfiable 1 | 근사 1 | Undecided 1 | 기타 1 (Excluded)
 %   Objectives 필드: ...            (first readable file)
 %   ModelObjects 필드: ...
 %   ModelInformation 필드: ...
 %   경로 구조 | 첫 요소=분석 모델 예(5/5) | 둘째 요소=CUT 예(5/5) | ...
 %
-% Counts are over objectives whose type is Decision. In the last line, over
+% Counts are over objectives whose type is Decision; 기타 lists its distinct
+% status texts (fixed MathWorks values). In the last line, over
 % every ModelObjects.slPath of every file read:
 %   첫 요소=분석 모델     the first element is ModelInformation.Name
 %   둘째 요소=CUT         the second element is the CUT name (the target
@@ -23,14 +24,31 @@ function lines = st_probe_sldv_objectives(files)
 %   designSid             files whose ModelObjects has a designSid field
 % 모름 means the reference was missing. Paths are compared here and never
 % printed, so the screen can leave the company. Targets with SldvMode OFF
-% or a MAT data file are only counted. Nothing is changed or saved.
+% or a MAT data file are only counted. A failure prints its identifier, or
+% for a toolkit error without one a fixed kind and what to do; never the
+% message, which holds paths. Nothing is changed or saved.
 
 cfg = [];
-try, cfg = st_config(); catch, end
+configError = [];
+try, cfg = st_config(); catch configError, end
+if isstruct(cfg)
+    % DEBUG lines carry paths, and this screen leaves the company.
+    cfg.ConsoleLogLevel = 'STEP';
+end
 log_line(cfg, 'INFO', 'SLDV objective probe start | FilesGiven=%d', nargin >= 1);
 lines = {};
 skipped = 0;
 if nargin < 1 || isempty(files)
+    if isempty(cfg)
+        lines = {['툴킷 설정 읽기 실패 | ' kind_text(configError)]};
+    elseif ~isfile(cfg.SldvManifestFile)
+        lines = {'SLDV manifest 없음: SLDV 준비 단계를 먼저 돌려 주세요'};
+        log_line(cfg, 'WARN', 'SLDV objective probe stopped: the SLDV manifest is missing');
+    end
+    if ~isempty(lines)
+        fprintf('%s\n', lines{1});
+        return;
+    end
     [targets, skipped, lines] = target_files(cfg);
 else
     files = cellstr(string(files));
@@ -46,10 +64,9 @@ for t = 1:numel(targets)
         data = loaded.sldvData;
         lines{end+1} = count_line(targets(t).Index, data.Objectives); %#ok<AGROW>
     catch readError
-        lines{end+1} = sprintf('대상 %d | 읽기 실패 | 식별자 %s', ...
-            targets(t).Index, id_text(readError)); %#ok<AGROW>
-        log_line(cfg, 'WARN', 'SLDV objective probe could not read a data file | Target=%d | Id=%s', ...
-            targets(t).Index, id_text(readError));
+        lines{end+1} = sprintf('대상 %d | 읽기 실패 | %s', ...
+            targets(t).Index, kind_text(readError)); %#ok<AGROW>
+        log_failure(cfg, 'could not read a data file', targets(t).Index, readError);
         continue;
     end
     if isempty(fieldLines)
@@ -83,18 +100,17 @@ lines = {};
 try
     rows = st_load_targets(true);
 catch loadError
-    lines{end+1} = sprintf('대상 목록 읽기 실패 | 식별자 %s', id_text(loadError));
-    log_line(cfg, 'WARN', 'SLDV objective probe could not load targets | Id=%s', id_text(loadError));
+    lines{end+1} = ['대상 목록 읽기 실패 | ' kind_text(loadError)];
+    log_failure(cfg, 'could not load targets', 0, loadError);
     return;
 end
 for k = 1:height(rows)
     try
         profile = st_get_sldv_profile(rows(k,:), cfg);
     catch profileError
-        lines{end+1} = sprintf('대상 %d | SLDV 프로필 실패 | 식별자 %s', ...
-            k, id_text(profileError)); %#ok<AGROW>
-        log_line(cfg, 'WARN', 'SLDV objective probe skipped a target | Target=%d | Id=%s', ...
-            k, id_text(profileError));
+        lines{end+1} = sprintf('대상 %d | SLDV 프로필 실패 | %s', ...
+            k, kind_text(profileError)); %#ok<AGROW>
+        log_failure(cfg, 'skipped a target', k, profileError);
         continue;
     end
     if strcmp(profile.Mode, 'OFF') || ~strcmp(profile.DataFileFormat, 'SLDV')
@@ -110,15 +126,18 @@ end
 function text = count_line(index, objectives)
 types = string({objectives.type});
 statuses = strtrim(string({objectives(strcmpi(types, 'Decision')).status}));
-unsatisfiable = sum(statuses == "Unsatisfiable");
-approximate = sum(startsWith(statuses, "Unsatisfiable") & ...
-    contains(statuses, "approximation", 'IgnoreCase', true));
-undecided = sum(startsWith(statuses, "Undecided", 'IgnoreCase', true));
-satisfied = sum(startsWith(statuses, "Satisfied", 'IgnoreCase', true));
-other = numel(statuses) - unsatisfiable - approximate - undecided - satisfied;
+unsatisfiable = statuses == "Unsatisfiable";
+approximate = startsWith(statuses, "Unsatisfiable") & ...
+    contains(statuses, "approximation", 'IgnoreCase', true);
+undecided = startsWith(statuses, "Undecided", 'IgnoreCase', true);
+satisfied = startsWith(statuses, "Satisfied", 'IgnoreCase', true);
+other = ~(unsatisfiable | approximate | undecided | satisfied);
 text = sprintf(['대상 %d | 결정 목표 %d | Satisfied %d | Unsatisfiable %d | ' ...
-    '근사 %d | Undecided %d | 기타 %d'], index, numel(statuses), satisfied, ...
-    unsatisfiable, approximate, undecided, other);
+    '근사 %d | Undecided %d | 기타 %d'], index, numel(statuses), sum(satisfied), ...
+    sum(unsatisfiable), sum(approximate), sum(undecided), sum(other));
+if any(other)
+    text = sprintf('%s (%s)', text, char(strjoin(unique(statuses(other)), ', ')));
+end
 end
 
 
@@ -196,9 +215,36 @@ end
 end
 
 
-function text = id_text(err)
-text = err.identifier;
-if isempty(text), text = '없음'; end
+function text = kind_text(err)
+%KIND_TEXT The identifier, or for a toolkit error without one a fixed kind
+% and what to do, matched on the start of its fixed message text.
+if ~isempty(err.identifier)
+    text = ['식별자 ' err.identifier];
+    return;
+end
+kinds = {
+    'SLDV manifest is missing', 'SLDV manifest 없음: SLDV 준비 단계를 먼저 돌려 주세요'
+    'SLDV manifest is invalid', 'SLDV manifest가 다른 모델 것이거나 깨짐: SLDV 준비 단계를 다시 돌려 주세요'
+    'SLDV target preparation was not successful', 'SLDV 준비가 실패한 대상: SLDV 준비 단계 결과를 보세요'
+    'Prepared FILE/SLDV data file is missing', 'SLDV 데이터 파일 없음: SLDV 준비 단계를 다시 돌려 주세요'
+    'Management Excel not found', '관리 Excel 없음: 대상 모델을 다시 고르세요'
+    'Targets sheet is empty', 'Targets 시트가 비어 있음'
+    'Required Excel column not found', 'Targets 시트에 필수 열 없음'};
+text = '식별자 없는 오류(분류 밖): 로그 파일을 보세요';
+for k = 1:size(kinds, 1)
+    if startsWith(err.message, kinds{k, 1})
+        text = kinds{k, 2};
+        return;
+    end
+end
+end
+
+
+function log_failure(cfg, what, index, err)
+% WARN reaches the screen, so it carries the identifier only; the message,
+% which holds paths, goes to the log file at DEBUG.
+log_line(cfg, 'WARN', 'SLDV objective probe %s | Target=%d | Id=%s', what, index, err.identifier);
+log_line(cfg, 'DEBUG', 'SLDV objective probe %s | Target=%d | %s', what, index, err.message);
 end
 
 

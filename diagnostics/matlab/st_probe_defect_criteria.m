@@ -19,17 +19,21 @@ function st_probe_defect_criteria()
 %
 %   [1] Iteration 결과 객체 예 | test.<property> | <class>
 %   [2] 커버리지 있음 | 얻은 경로 <candidate>
-%   [3] false 결과 실행 횟수 0 | decisioninfo sltest_sut 경로 예 | sltest_sut=<kind>
-%   [4] Iteration 판정 Failed
+%   [3] false 결과 실행 횟수 0 | decisioninfo sltest_sut 예, 원래 모델 예, sltest_bdroot 예 | sltest_sut=<kind>
+%   [4] Iteration 판정 Failed | 실행 뒤 커버리지 있음 | false 횟수 0
 %   [5] 다시 연 뒤 콜백 남음 예 | 다시 실행 판정 Failed
 %   [6] test 속성: <public property names of the criteria's test object>
 %
 % Coverage candidates, tried in this order: getCoverageResults on the
 % result object, the cvdata variables in test.sltest_simout, any property
-% of test that holds cvdata. A step that fails prints 아니오 and the error
-% identifier only. What the probe created (model, harness, Test File,
-% folder, MAT) is closed and removed at the end; other Test Files are left
-% alone.
+% of test that holds cvdata. decisioninfo is asked for the Switch through
+% test.sltest_sut, the original model and test.sltest_bdroot, each answer
+% reported. [4] also reads the iteration's coverage after the run the way
+% the toolkit does: coverage there but not in [2] is a platform limit,
+% coverage missing in both is this probe's setup. A step that fails prints
+% 아니오 and the error identifier only. What the probe created (model,
+% harness, Test File, folder, MAT) is closed and removed at the end; other
+% Test Files are left alone.
 
 cfg = [];
 try, cfg = st_config(); catch, end
@@ -75,7 +79,7 @@ end
 log_line(cfg, 'INFO', 'Defect criteria probe setup done');
 
 if isfile(probeFile), delete(probeFile); end
-outcome = run_outcome(cfg, tc, 'run(testCase)');
+[outcome, iteration] = run_outcome(cfg, tc, 'run(testCase)');
 probe = [];
 try
     loaded = load(probeFile, 'probe');
@@ -84,7 +88,8 @@ catch
     % No file means the criteria never reached its save; the lines say so.
 end
 lines = describe_probe(probe, owner, harness);
-lines{4} = ['[4] Iteration 판정 ' outcome];
+lines{4} = sprintf('[4] Iteration 판정 %s | %s', outcome, ...
+    after_run_coverage(iteration, [owner '/Choose']));
 
 try
     saveToFile(tf);
@@ -149,13 +154,17 @@ end
 function text = callback_text(marker, owner)
 %CALLBACK_TEXT The Custom Criteria script. Test Manager runs it with only
 % `test` defined, so it calls no toolkit function, and it stays ASCII.
-% The decisioninfo path is tried first from test.sltest_sut, then from the
-% Subsystem path in the original model, which coverage of a harness run
-% answers to elsewhere in the toolkit.
+% It saves once right after the property names, so a criteria that dies
+% later still leaves them (Stage stays 'properties'), and again at the end.
+% decisioninfo is asked for the Switch through test.sltest_sut, the
+% original model path (what harness coverage answers to elsewhere in the
+% toolkit) and test.sltest_bdroot; every path's answer is kept.
 code = [
     string(marker)
     "% Written by st_probe_defect_criteria: records what a Custom Criteria can reach."
+    "probeFile = fullfile(tempdir, 'st_probe_defect_criteria.mat');"
     "probe = struct();"
+    "probe.Stage = 'properties';"
     "probe.Properties = {};"
     "probe.PropertiesError = '';"
     "probe.ResultProperty = '';"
@@ -165,14 +174,19 @@ code = [
     "probe.CoverageErrors = {'-', '-', '-'};"
     "probe.Sut = '';"
     "probe.SutError = '';"
+    "probe.Bdroot = '';"
+    "probe.BdrootError = '';"
+    "probe.PathResults = {'-', '-', '-'};"
     "probe.CountPath = 0;"
     "probe.CountError = '';"
+    "probe.OutcomeCount = 0;"
     "probe.FalseCount = NaN;"
     "try"
     "    probe.Properties = properties(test);"
     "catch probeError"
     "    probe.PropertiesError = probeError.identifier;"
     "end"
+    "save(probeFile, 'probe');"
     "probeResult = [];"
     "try"
     "    probeResult = test.TestResult;"
@@ -196,8 +210,8 @@ code = [
     "end"
     "probeCvd = {};"
     "for probeC = 1:3"
-    "    probeRaw = {};"
     "    try"
+    "        probeRaw = {};"
     "        if probeC == 1"
     "            if isempty(probeResult)"
     "                error('simtest:ProbeNoResult', 'No result object reached.');"
@@ -217,25 +231,27 @@ code = [
     "                end"
     "            end"
     "        end"
+    "        probeList = {};"
+    "        while ~isempty(probeRaw)"
+    "            probeValue = probeRaw{1};"
+    "            probeRaw(1) = [];"
+    "            if iscell(probeValue)"
+    "                probeRaw = [probeRaw, reshape(probeValue, 1, [])];"
+    "            elseif isa(probeValue, 'cv.cvdatagroup')"
+    "                probeRaw{end+1} = getAll(probeValue);"
+    "            elseif isa(probeValue, 'cvdata')"
+    "                for probeK = 1:numel(probeValue)"
+    "                    probeList{end+1} = probeValue(probeK);"
+    "                end"
+    "            end"
+    "        end"
     "    catch probeError"
     "        probe.CoverageErrors{probeC} = probeError.identifier;"
     "        if isempty(probe.CoverageErrors{probeC}), probe.CoverageErrors{probeC} = 'no-identifier'; end"
     "        continue;"
     "    end"
-    "    while ~isempty(probeRaw)"
-    "        probeValue = probeRaw{1};"
-    "        probeRaw(1) = [];"
-    "        if iscell(probeValue)"
-    "            probeRaw = [probeRaw, reshape(probeValue, 1, [])];"
-    "        elseif isa(probeValue, 'cv.cvdatagroup')"
-    "            probeRaw{end+1} = getAll(probeValue);"
-    "        elseif isa(probeValue, 'cvdata')"
-    "            for probeK = 1:numel(probeValue)"
-    "                probeCvd{end+1} = probeValue(probeK);"
-    "            end"
-    "        end"
-    "    end"
-    "    if ~isempty(probeCvd)"
+    "    if ~isempty(probeList)"
+    "        probeCvd = probeList;"
     "        probe.CoverageSource = probeC;"
     "        break;"
     "    end"
@@ -245,40 +261,56 @@ code = [
     "    probe.Sut = char(test.sltest_sut);"
     "catch probeError"
     "    probe.SutError = probeError.identifier;"
+    "    if isempty(probe.SutError), probe.SutError = 'no-identifier'; end"
     "end"
+    "try"
+    "    probe.Bdroot = char(test.sltest_bdroot);"
+    "catch probeError"
+    "    probe.BdrootError = probeError.identifier;"
+    "    if isempty(probe.BdrootError), probe.BdrootError = 'no-identifier'; end"
+    "end"
+    "probePaths = {'', '" + string(owner) + "/Choose', ''};"
+    "if ~isempty(probe.Sut), probePaths{1} = [probe.Sut '/Choose']; end"
+    "if ~isempty(probe.Bdroot), probePaths{3} = [probe.Bdroot '/" + string(extractAfter(owner, '/')) + "/Choose']; end"
     "probeInfo = [];"
-    "probePaths = {[probe.Sut '/Choose'], '" + string(owner) + "/Choose'};"
-    "for probeP = 1:2"
-    "    if probeP == 1 && isempty(probe.Sut), continue; end"
+    "for probeP = 1:3"
+    "    if isempty(probePaths{probeP}) || isempty(probeCvd), continue; end"
+    "    probe.PathResults{probeP} = 'empty';"
     "    for probeK = 1:numel(probeCvd)"
     "        try"
     "            [probeValues, probeFound] = decisioninfo(probeCvd{probeK}, probePaths{probeP});"
     "            if ~isempty(probeValues)"
-    "                probeInfo = probeFound;"
+    "                probe.PathResults{probeP} = 'ok';"
+    "                if isempty(probeInfo)"
+    "                    probeInfo = probeFound;"
+    "                    probe.CountPath = probeP;"
+    "                end"
     "                break;"
     "            end"
     "        catch probeError"
-    "            if probeP == 1, probe.SutError = probeError.identifier; end"
+    "            probe.PathResults{probeP} = probeError.identifier;"
+    "            if isempty(probe.PathResults{probeP}), probe.PathResults{probeP} = 'no-identifier'; end"
     "        end"
-    "    end"
-    "    if ~isempty(probeInfo)"
-    "        probe.CountPath = probeP;"
-    "        break;"
     "    end"
     "end"
     "if ~isempty(probeInfo)"
     "    try"
     "        probeOutcomes = probeInfo.decision(1).outcome;"
+    "        probe.OutcomeCount = numel(probeOutcomes);"
+    "        probe.CountError = 'no-false-outcome';"
     "        for probeK = 1:numel(probeOutcomes)"
     "            if startsWith(lower(strtrim(char(probeOutcomes(probeK).text))), 'false')"
     "                probe.FalseCount = double(probeOutcomes(probeK).executionCount);"
+    "                probe.CountError = '';"
     "            end"
     "        end"
     "    catch probeError"
     "        probe.CountError = probeError.identifier;"
+    "        if isempty(probe.CountError), probe.CountError = 'no-identifier'; end"
     "    end"
     "end"
-    "save(fullfile(tempdir, 'st_probe_defect_criteria.mat'), 'probe');"
+    "probe.Stage = 'done';"
+    "save(probeFile, 'probe');"
     "if isnan(probe.FalseCount)"
     "    error('simtest:ProbeCoverageUnreadable', 'The criteria could not read the false outcome count.');"
     "end"
@@ -288,22 +320,62 @@ text = strjoin(cellstr(code).', newline);
 end
 
 
-function text = run_outcome(cfg, tc, label)
+function [text, iteration] = run_outcome(cfg, tc, label)
 %RUN_OUTCOME Outcome of the Test Case's only iteration, or why there is none.
 % Every run leaves a result set in Test Manager. There is no documented API
 % that removes one result set, and clearResults would also take the user's
 % own results, so they stay.
+iteration = [];
 try
     resultSet = st_call_quiet(cfg, label, @() run(tc));
     caseResults = st_collect_test_case_results(resultSet);
     iterations = getIterationResults(caseResults{1});
-    text = char(string(iterations(1).Outcome));
+    iteration = iterations(1);
+    text = char(string(iteration.Outcome));
     log_line(cfg, 'INFO', 'Defect criteria probe run | Label=%s | Outcome=%s', label, text);
 catch runError
     text = ['아니오 | 식별자 ' id_text(runError)];
     log_line(cfg, 'WARN', 'Defect criteria probe run failed | Label=%s | Id=%s', ...
         label, id_text(runError));
 end
+end
+
+
+function text = after_run_coverage(iteration, switchPath)
+%AFTER_RUN_COVERAGE The control for [2]: the iteration's own coverage read
+% after the run the way st_collect_decision_outcomes reads it.
+if isempty(iteration)
+    text = '실행 뒤 커버리지 확인 못 함';
+    return;
+end
+try
+    objects = st_flatten_coverage_results(getCoverageResults(iteration));
+catch coverageError
+    text = ['실행 뒤 커버리지 없음(' id_text(coverageError) ')'];
+    return;
+end
+if isempty(objects)
+    text = '실행 뒤 커버리지 없음(비어 있음)';
+    return;
+end
+reason = '비어 있음';
+for k = 1:numel(objects)
+    try
+        [values, description] = decisioninfo(objects{k}, switchPath);
+    catch lookupError
+        reason = id_text(lookupError);
+        continue;
+    end
+    if isempty(values), continue; end
+    counts = st_decision_outcome_counts(description);
+    if isempty(counts)
+        text = '실행 뒤 커버리지 있음 | false 횟수 아니오(true/false 결과 아님)';
+    else
+        text = sprintf('실행 뒤 커버리지 있음 | false 횟수 %d', counts(1, 2));
+    end
+    return;
+end
+text = ['실행 뒤 커버리지 있음 | false 횟수 아니오(decisioninfo ' reason ')'];
 end
 
 
@@ -317,6 +389,9 @@ if isempty(probe)
     lines{6} = '[6] test 속성 아니오 | 콜백 기록 없음';
     return;
 end
+% Saved only by the early save: the criteria stopped after the names.
+stopped = '';
+if ~strcmp(probe.Stage, 'done'), stopped = ' | 콜백이 속성 기록 뒤 멈춤'; end
 
 if startsWith(probe.ResultClass, 'sltest.testmanager.')
     lines{1} = sprintf('[1] Iteration 결과 객체 예 | test.%s | %s', ...
@@ -325,24 +400,19 @@ elseif ~isempty(probe.ResultClass)
     lines{1} = sprintf('[1] Iteration 결과 객체 아니오 | test.%s | %s', ...
         probe.ResultProperty, probe.ResultClass);
 else
-    lines{1} = sprintf('[1] Iteration 결과 객체 아니오 | test.TestResult 식별자 %s', ...
-        none_text(probe.ResultError));
+    lines{1} = sprintf('[1] Iteration 결과 객체 아니오 | test.TestResult 식별자 %s%s', ...
+        none_text(probe.ResultError), stopped);
 end
 
 labels = {'getCoverageResults', 'sltest_simout', 'cvdata 속성'};
 if probe.CoverageSource > 0
     lines{2} = ['[2] 커버리지 있음 | 얻은 경로 ' labels{probe.CoverageSource}];
 else
-    lines{2} = '[2] 커버리지 없음';
+    lines{2} = ['[2] 커버리지 없음' stopped];
 end
 for c = 1:numel(labels)
-    reason = probe.CoverageErrors{c};
-    switch reason
-        case '-', continue;
-        case 'empty', reason = '비어 있음';
-        case 'no-identifier', reason = '식별자 없음';
-    end
-    lines{2} = sprintf('%s | %s: %s', lines{2}, labels{c}, reason);
+    if strcmp(probe.CoverageErrors{c}, '-'), continue; end
+    lines{2} = sprintf('%s | %s: %s', lines{2}, labels{c}, reason_text(probe.CoverageErrors{c}));
 end
 
 if strcmp(probe.Sut, owner)
@@ -354,27 +424,52 @@ elseif isempty(probe.Sut)
 else
     kind = '기타';
 end
-if probe.CountPath == 1
-    sut = '예';
-elseif probe.CoverageSource == 0
-    sut = '시도 못 함';
-else
-    sut = ['아니오(' empty_text(probe.SutError) ')'];
-    if probe.CountPath == 2, sut = [sut ', 원래 모델 경로 예']; end
-end
-if isnan(probe.FalseCount)
-    count = '아니오';
-    if ~isempty(probe.CountError), count = ['아니오(' probe.CountError ')']; end
-else
+haveCoverage = probe.CoverageSource > 0;
+paths = sprintf('sltest_sut %s, 원래 모델 %s, sltest_bdroot %s', ...
+    path_text(probe.PathResults{1}, probe.SutError, haveCoverage), ...
+    path_text(probe.PathResults{2}, '', haveCoverage), ...
+    path_text(probe.PathResults{3}, probe.BdrootError, haveCoverage));
+if ~isnan(probe.FalseCount)
     count = sprintf('%d', probe.FalseCount);
+elseif strcmp(probe.CountError, 'no-false-outcome')
+    count = sprintf('아니오(false 결과 없음, 결과 %d개)', probe.OutcomeCount);
+elseif ~isempty(probe.CountError)
+    count = ['아니오(' reason_text(probe.CountError) ')'];
+else
+    count = ['아니오(decisioninfo 답 없음)' stopped];
 end
-lines{3} = sprintf('[3] false 결과 실행 횟수 %s | decisioninfo sltest_sut 경로 %s | sltest_sut=%s', ...
-    count, sut, kind);
+lines{3} = sprintf('[3] false 결과 실행 횟수 %s | decisioninfo %s | sltest_sut=%s', ...
+    count, paths, kind);
 
 if isempty(probe.Properties)
     lines{6} = ['[6] test 속성 아니오 | 식별자 ' none_text(probe.PropertiesError)];
 else
     lines{6} = ['[6] test 속성: ' strjoin(reshape(probe.Properties, 1, []), ', ')];
+end
+end
+
+
+function text = path_text(result, readError, haveCoverage)
+%PATH_TEXT One decisioninfo path as the criteria recorded it.
+if ~isempty(readError)
+    text = ['읽기 실패(' reason_text(readError) ')'];
+elseif strcmp(result, 'ok')
+    text = '예';
+elseif ~strcmp(result, '-')
+    text = ['아니오(' reason_text(result) ')'];
+elseif haveCoverage
+    text = '값 비어 있음';
+else
+    text = '시도 못 함';
+end
+end
+
+
+function text = reason_text(reason)
+switch reason
+    case 'empty', text = '비어 있음';
+    case 'no-identifier', text = '식별자 없음';
+    otherwise, text = reason;
 end
 end
 
@@ -414,12 +509,6 @@ end
 function text = none_text(identifier)
 text = identifier;
 if isempty(text), text = '없음'; end
-end
-
-
-function text = empty_text(identifier)
-text = identifier;
-if isempty(text), text = '비어 있음'; end
 end
 
 
