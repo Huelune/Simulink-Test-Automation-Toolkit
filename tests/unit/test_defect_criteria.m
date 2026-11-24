@@ -43,8 +43,7 @@ function testScriptTableKeepsAwkwardPathsExactly(testCase)
 defects = sample_defects();
 defects(2).RelativePath = sprintf('Secret_Sub//A\nB/Secret''s Max');
 defects(2).Outcomes(1).Text = ['input' char(9) '1 ' char(233)];
-cutName = sprintf('Secret//C
-U%sT', char(233));
+cutName = ['Secret//C' newline 'U' char(233) 'T'];
 script = st_defect_criteria_script(defects, cutName);
 
 [paths, texts, cut] = evaluate_table(script);
