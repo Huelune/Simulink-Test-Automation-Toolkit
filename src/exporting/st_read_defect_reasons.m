@@ -17,22 +17,26 @@ if isempty(file) || ~isfile(file)
     return;
 end
 try
+    % Excel treats sheet names without case, so a hand-typed name matches
+    % the same way; the configured name is tried before the Korean one.
     candidates = [string(config_value(cfg, 'DefectReasonSheet', 'DefectReasons')), "도달불가사유"];
-    sheet = intersect(candidates, string(sheetnames(file)), 'stable');
-    if isempty(sheet)
+    sheets = string(sheetnames(file));
+    [~, at] = ismember(lower(candidates), lower(sheets));
+    at = at(at > 0);
+    if isempty(at)
         st_log(cfg, 'INFO', 'Defect reasons | No reason sheet | Default reasons used');
         return;
     end
-    raw = readtable(file, 'Sheet', char(sheet(1)), 'TextType', 'string', ...
+    raw = readtable(file, 'Sheet', char(sheets(at(1))), 'TextType', 'string', ...
         'VariableNamingRule', 'preserve');
 catch ME
     st_log(cfg, 'WARN', 'Defect reasons unreadable | Kind=%s | Default reasons used', ...
-        ME.identifier);
+        error_kind(ME));
     return;
 end
-names = column(raw, ["TestName", "결함TC"]);
-texts = column(raw, ["Reason", "사유"]);
-if isempty(names) || isempty(texts)
+[names, hasNames] = column(raw, ["TestName", "결함TC"]);
+[texts, hasTexts] = column(raw, ["Reason", "사유"]);
+if ~hasNames || ~hasTexts
     st_log(cfg, 'WARN', ['Defect reasons | Columns TestName/결함TC and Reason/사유 ' ...
         'not found | Default reasons used']);
     return;
@@ -51,15 +55,30 @@ st_log(cfg, 'INFO', 'Defect reasons read | Reasons=%d', height(reasons));
 end
 
 
-function values = column(raw, aliases)
+function [values, found] = column(raw, aliases)
 % Header aliases are matched ignoring case and surrounding spaces, as
 % st_load_targets matches the Targets columns.
-values = [];
+values = strings(height(raw), 1);
 headers = lower(strtrim(string(raw.Properties.VariableNames)));
 index = find(ismember(headers, lower(aliases)), 1);
-if isempty(index), return; end
-values = strtrim(string(raw{:, index}));
-values(ismissing(values)) = "";
+found = ~isempty(index);
+if ~found, return; end
+cells = raw{:, index};
+if isnumeric(cells)
+    % A column with no text is read as double and its empty cells as NaN,
+    % which string() would turn into "NaN".
+    valid = ~isnan(cells);
+    values(valid) = string(cells(valid));
+else
+    values = strtrim(string(cells));
+    values(ismissing(values)) = "";
+end
+end
+
+
+function kind = error_kind(ME)
+kind = ME.identifier;
+if isempty(kind), kind = 'unidentified'; end
 end
 
 

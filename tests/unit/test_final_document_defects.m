@@ -41,6 +41,19 @@ specification = st_final_document_defect_rows(defect_specification(), ...
 verifyEqual(testCase, specification.DecisionBlocks(2), "D2 [input 1/input 2]Max");
 end
 
+function testBlockNameWithLineBreakStillFindsItsDLine(testCase)
+% The model path keeps the newline of a default block name; the defect's
+% relative path may carry other whitespace. Both are folded before the
+% comparison, as the outcome lookup folds them.
+details = sample_details();
+details.Path(details.Path == "TOP/Secret/Secret_Switch") = ...
+    "TOP/Secret/Secret" + newline + "Switch";
+specification = st_final_document_defect_rows(defect_specification(), ...
+    details, defect_list("Secret  Switch", "Switch", "false", false), ...
+    no_reasons(), base_config());
+verifyEqual(testCase, specification.DecisionBlocks(2), "D1 [F]Switch (u2 >= 1)");
+end
+
 function testNestedBlockWithoutDLineUsesPath(testCase)
 specification = st_final_document_defect_rows(defect_specification(), ...
     sample_details(), defect_list("Sub/Secret_Switch", "Switch", "false", false), ...
@@ -86,6 +99,27 @@ specification = st_final_document_defect_rows(defect_specification(), ...
 document = st_final_document_table(cfg, specification, empty_outcomes(), ...
     empty_source());
 verifyEqual(testCase, document.Sheet1.OutputValue(2), "입력 범위가 0 이하로 제한됨");
+end
+
+function testEmptyReasonCellsUseTheDefaultSentence(testCase)
+% A Reason column with no text is read as double NaN; it must not reach the
+% output value as "NaN".
+cfg = reason_config(testCase, "DefectReasons", ["TestName", "Reason"], ...
+    "UT_REQ_Secret_004", "");
+reasons = st_read_defect_reasons(cfg);
+verifyEqual(testCase, height(reasons), 0);
+specification = st_final_document_defect_rows(defect_specification(), ...
+    sample_details(), defect_list("Secret_Switch", "Switch", "false", false), ...
+    reasons, cfg);
+verifyEqual(testCase, specification.DefectReason(2), ...
+    "SLDV가 어떤 입력으로도 실행할 수 없음을 증명함");
+end
+
+function testLowerCaseSheetNameIsRead(testCase)
+cfg = reason_config(testCase, "defectreasons", ["TestName", "Reason"], ...
+    "UT_REQ_Secret_004", "입력 범위가 0 이하로 제한됨");
+reasons = st_read_defect_reasons(cfg);
+verifyEqual(testCase, reasons.Reason, "입력 범위가 0 이하로 제한됨");
 end
 
 function testReasonSheetKoreanNamesAreRead(testCase)

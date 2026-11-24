@@ -54,10 +54,19 @@ function line = defect_line(description, cutPath, row, details, defect, twoWay)
 % (inside a nested subsystem), or that has several D lines (If with elseif,
 % Saturate) where the outcome cannot be tied to one line, is written by
 % its path below the CUT.
+%
+% Blocks are compared by their path below the CUT, folded the way the
+% outcome lookup folds them (st_cut_relative_path): a default block name
+% carries a newline, and a CUT name may end in a space.
 texts = split(defect.OutcomeTexts, "|");
-match = details.TestSpecificationRow == string(row + 1) & ...
-    details.Path == cutPath + "/" + defect.RelativePath;
-decision = unique(details.Decision(match));
+target = strtrim(regexprep(defect.RelativePath, '\s+', ' '));
+rowDetails = details(details.TestSpecificationRow == string(row + 1), :);
+match = false(height(rowDetails), 1);
+for j = 1:height(rowDetails)
+    match(j) = strlength(target) > 0 && ...
+        st_cut_relative_path(rowDetails.Path(j), cutPath) == target;
+end
+decision = unique(rowDetails.Decision(match));
 if isscalar(decision)
     lines = split(description, newline);
     entry = lines(startsWith(lines, decision + " ["));
@@ -69,8 +78,9 @@ if isscalar(decision)
         end
     end
 end
+% The folded path keeps the cell on one line.
 line = defect.BlockType + " [" + strjoin(reshape(texts, 1, []), "/") + "] (" + ...
-    defect.RelativePath + ")";
+    target + ")";
 end
 
 
