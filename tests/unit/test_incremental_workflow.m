@@ -17,8 +17,19 @@ verifyEqual(testCase, cfg.ExecutionMode, 'PER_CUT');
 verifyTrue(testCase, cfg.PerCutContinueOnFailure);
 verifyEqual(testCase, cfg.PerCutReportMode, 'SUMMARY');
 verifyFalse(testCase, cfg.PerCutFailOnNonPass);
-verifyTrue(testCase, endsWith(string(cfg.StandaloneCoverageRootDir), ...
-    fullfile('result', 'standalone_coverage')));
+% st_set_standalone_coverage_root may replace this default in the local,
+% untracked runtime_target.mat; st_config honors only a nonempty value.
+overrideDir = '';
+if isfile(cfg.RuntimeTargetFile)
+    saved = load(cfg.RuntimeTargetFile);
+    if isfield(saved, 'StandaloneCoverageRootDir')
+        overrideDir = strtrim(char(string(saved.StandaloneCoverageRootDir)));
+    end
+end
+if isempty(overrideDir)
+    verifyTrue(testCase, endsWith(string(cfg.StandaloneCoverageRootDir), ...
+        fullfile('result', 'standalone_coverage')));
+end
 verifyEqual(testCase, cfg.StandaloneBuildCacheDir, '');
 end
 
