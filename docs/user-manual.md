@@ -367,16 +367,19 @@ winopen(latest.Summary)      % CUT별 결과 요약 Excel
 기대값이 갱신되고 재실행에서 `Passed`로 바뀌어야 정상입니다.
 
 **도달 불가 결함 TC는 `Failed`가 정상입니다.** SLDV 데이터가 있는 행(`SldvMode`가 `GENERATE`이거나
-SLDV 형식의 `FILE`)에서 SLDV가 어떤 입력으로도 실행할 수 없다고 증명한 결정 결과가 있으면,
-`TEST_MANAGER` 단계가 그 블록마다 결함 Iteration을 Test Case에 하나씩 붙입니다. 이름은 그 CUT의
+SLDV 형식의 `FILE`)에서 SLDV가 어떤 입력으로도 실행할 수 없다고 판정한 결정 결과(`Unsatisfiable`)가 있으면,
+`TEST_MANAGER` 단계가 그 블록마다 결함 Iteration을 Test Case에 하나씩 붙입니다. 근사 분석으로만 그렇게
+판정한 결과(`Unsatisfiable under approximation`)도 결함 TC가 되고, 최종 문서에 `확인 필요`로 표시됩니다.
+CVF가 커버리지에서 빼는 곳(`CoverageFilterMode`), CUT 자신, Stateflow 내부(MATLAB Function 포함)의 결과는 결함 TC가 되지
+않습니다. 이름은 그 CUT의
 마지막 시나리오 다음 번호(`UT_REQ_{CUT}_{N+1}`, …)입니다. 결함 Iteration은 기존 시나리오 하나의 입력을
 그대로 다시 돌리고, 그 결과가 한 번도 실행되지 않았다는 것을 커버리지로 확인해 `Failed`가 됩니다.
 설계 결함을 덮지 않고 드러내려는 것이라, 이 CUT은 상태가 `WARN`이고 Iteration 수가 Scenario 수보다
 결함 수만큼 많습니다. 기대값 갱신은 결함 Iteration을 고치지 않습니다. 최종 문서에는 결함 행으로
 적힙니다([최종 문서 추출](reference/final-document.md)의 "결함 행" 절). 입력으로 쓸 시나리오는 Targets 시트의
 [`DefectInputScenario`](reference/workbook-reference.md#defectinputscenario) 열(번호나 이름, 비우면 마지막
-시나리오)로 고르고, 사람이 분석한 사유는 관리 Excel의 `DefectReasons` 시트(`TestName`, `Reason` 열)에
-적습니다. 사유는 최종 문서만 읽으므로 고친 뒤 최종 문서만 다시 만들면 됩니다. 결함 TC를 만들지 않으려면
+시나리오)로 고르고, 사람이 분석한 사유는 관리 Excel의 `DefectReasons` 또는 `도달불가사유` 시트(`TestName`/`결함TC`,
+`Reason`/`사유` 열)에 적습니다. 사유는 최종 문서만 읽으므로 고친 뒤 최종 문서만 다시 만들면 됩니다. 결함 TC를 만들지 않으려면
 `src/config/st_config.m`의 `cfg.UnreachableDefectTests`를 `false`로 바꿉니다. 다음 실행에서 Test Manager
 단계가 다시 준비되고 결함 Iteration이 빠집니다.
 
