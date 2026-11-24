@@ -140,8 +140,15 @@ end
 DefectInputScenario = strings(n, 1);
 
 if ~isempty(idxDefectInputScenario)
-    DefectInputScenario = strtrim(string(raw{:, idxDefectInputScenario}));
-    DefectInputScenario(ismissing(DefectInputScenario)) = "";
+    % An all-numeric column is read as double; empty cells arrive as NaN.
+    temp = raw{:, idxDefectInputScenario};
+    if isnumeric(temp)
+        valid = ~isnan(temp);
+        DefectInputScenario(valid) = string(temp(valid));
+    else
+        DefectInputScenario = strtrim(string(temp));
+        DefectInputScenario(ismissing(DefectInputScenario)) = "";
+    end
 end
 
 CoverageFilterMode = repmat("OFF", n, 1);
