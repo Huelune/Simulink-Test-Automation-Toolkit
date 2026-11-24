@@ -11,6 +11,8 @@ verifyEqual(testCase, scriptLines(1), "% simtest:unreachable-defect-criteria v1"
 verifyEmpty(testCase, regexp(script, '\<st_\w+\(', 'once'));
 % Test Manager stores and runs this text; character codes keep it ASCII.
 verifyTrue(testCase, all(double(script) < 128));
+% One statement per line, as in the verified probe callback.
+verifyFalse(testCase, contains(script, '...'));
 end
 
 
@@ -74,6 +76,24 @@ try
 catch err
     verifyFalse(testCase, contains(err.message, 'Secret'));
 end
+end
+
+
+function testScriptRaisesWhenNoIterationNameIsReadable(testCase)
+% Without a readable name a defect iteration would pass unjudged.
+script = st_defect_criteria_script(sample_defects());
+noName = struct('Secret_other', 1);
+nameOnlyInResult = struct('TestResult', struct('Name', 'Secret not a defect'));
+
+verifyError(testCase, @() run_script(script, noName), ...
+    'simtest:DefectCriteriaNoIterationName');
+try
+    run_script(script, noName);
+catch err
+    verifyFalse(testCase, contains(err.message, 'Secret'));
+end
+% One readable name that is no defect passes.
+verifyWarningFree(testCase, @() run_script(script, nameOnlyInResult));
 end
 
 

@@ -349,6 +349,9 @@ for i = 1:n
             end
             ExistingTestCase(i) = true;
             tc = existingTc(1);
+            % Decided before anything is changed, so a refused hand-written
+            % callback leaves the existing Test Case as it was.
+            criteriaAction = decide_defect_criteria(cfg, tc, defects, profile.No);
             if strcmp(profile.Mode, 'OFF')
                 Action(i) = 'UPDATED_INPUT';
             else
@@ -462,6 +465,7 @@ for i = 1:n
                     'simulation', ...
                     testCaseName);
             createdThisRun = true;
+            criteriaAction = decide_defect_criteria(cfg, tc, defects, profile.No);
         end
 
         st_log(cfg, 'DEBUG', ...
@@ -518,10 +522,6 @@ for i = 1:n
             preparedIterationNames{end + 1, 1} = defects(d).Name; %#ok<AGROW>
         end
 
-        % Before the iterations change, so a refused hand-written
-        % callback leaves an existing Test Case as it was.
-        criteriaAction = apply_defect_criteria(cfg, tc, defects, profile.No);
-
         if ExistingTestCase(i)
             replace_test_iterations(tc, preparedIterations, ...
                 preparedIterationNames);
@@ -531,6 +531,8 @@ for i = 1:n
             replace_test_iterations(tc, preparedIterations, ...
                 preparedIterationNames);
         end
+        % Written only once the iterations it judges are in place.
+        write_defect_criteria(cfg, tc, criteriaAction, defects, profile.No);
         IterationCount(i) = numel(preparedIterations);
 
         st_log(cfg, 'DEBUG', ...
@@ -809,25 +811,41 @@ end
 end
 
 
-function action = apply_defect_criteria(cfg, tc, defects, rowNo)
-%APPLY_DEFECT_CRITERIA Write, clear or keep the Test Case's Custom Criteria.
+function action = decide_defect_criteria(cfg, tc, defects, rowNo)
+%DECIDE_DEFECT_CRITERIA SET, CLEAR or NONE for the Test Case's Custom Criteria.
 % Only a callback carrying the toolkit marker is replaced or cleared;
 % st_defect_criteria_action refuses to overwrite a hand-written one.
 
 try
     criteria = getCustomCriteria(tc);
     action = st_defect_criteria_action(criteria.Callback, defects);
-    switch action
-        case 'SET'
-            criteria.Callback = st_defect_criteria_script(defects);
-            criteria.Enabled = true;
-        case 'CLEAR'
-            criteria.Callback = '';
-            criteria.Enabled = false;
+catch ME
+    st_log(cfg, 'ERROR', ['[UnreachableDefect] Custom Criteria not decided | ' ...
+        'No=%g | Defects=%d | Id=%s'], rowNo, numel(defects), ME.identifier);
+    rethrow(ME);
+end
+end
+
+
+function write_defect_criteria(cfg, tc, action, defects, rowNo)
+%WRITE_DEFECT_CRITERIA Apply what decide_defect_criteria returned.
+
+if strcmp(action, 'NONE')
+    return;
+end
+try
+    criteria = getCustomCriteria(tc);
+    if strcmp(action, 'SET')
+        criteria.Callback = st_defect_criteria_script(defects);
+        criteria.Enabled = true;
+    else
+        criteria.Callback = '';
+        criteria.Enabled = false;
     end
 catch ME
-    st_log(cfg, 'ERROR', ['[UnreachableDefect] Custom Criteria not applied | ' ...
-        'No=%g | Defects=%d | Id=%s'], rowNo, numel(defects), ME.identifier);
+    st_log(cfg, 'ERROR', ['[UnreachableDefect] Custom Criteria not written | ' ...
+        'No=%g | Action=%s | Defects=%d | Id=%s'], rowNo, action, ...
+        numel(defects), ME.identifier);
     rethrow(ME);
 end
 end
