@@ -10,10 +10,11 @@ function st_probe_defect_criteria_results()
 %     its callback is the toolkit's defect criteria (marker line)
 %   - the defect iterations of the saved PER_CUT result (FINAL, else
 %     INITIAL): outcome, and their verify results counted by result
-%   - getCustomCriteriaResult on a defect iteration, on an ordinary
-%     iteration and on the Test Case result
-%   - the iteration result's property and method names that mention
-%     criteria (MathWorks API names)
+%   - getCustomCriteriaResult on every defect iteration and on an ordinary
+%     one, named by st_defect_criteria_kind
+%   - which properties of the first defect iteration's diagnostic record
+%     cannot be read, and the classes of the two that hold the verify
+%     message (MathWorks API names)
 % Three lines per target; counts, API names and error identifiers only.
 clc;
 warnState = warning('off', 'all');
@@ -114,15 +115,17 @@ for i = 1:height(targets)
         no, stage_of(rows, hit), criteriaText, numel(defectIndex), sum(outcomes == "Failed"), ...
         verifyCounts, verifyText); %#ok<AGROW>
 
-    defectRead = '결함 Iteration 없음';
-    if ~isempty(defectIndex), defectRead = criteria_read(@() getCustomCriteriaResult(iterations(defectIndex(1)))); end
-    ordinaryRead = '보통 Iteration 없음';
+    defectReads = strings(1, numel(defectIndex));
+    for k = 1:numel(defectIndex)
+        defectReads(k) = sprintf('%d) %s', k, criteria_read(@() getCustomCriteriaResult(iterations(defectIndex(k)))));
+    end
+    ordinaryRead = '없음';
     if ~isempty(ordinaryIndex), ordinaryRead = criteria_read(@() getCustomCriteriaResult(iterations(ordinaryIndex))); end
-    caseRead = criteria_read(@() getCustomCriteriaResult(caseResult));
-    lines{end+1} = sprintf('대상 %d | 기준 결과 Iteration: 결함 %s | 보통 %s', no, ...
-        defectRead, ordinaryRead); %#ok<AGROW>
-    lines{end+1} = sprintf('대상 %d | 기준 결과 Test Case: %s | criteria 이름 %s', no, ...
-        caseRead, criteria_members(iterations(1))); %#ok<AGROW>
+    lines{end+1} = sprintf('대상 %d | 기준 결과 결함 %s | 보통 %s', no, ...
+        strjoin(defectReads, ' '), ordinaryRead); %#ok<AGROW>
+    recordText = '결함 Iteration 없음';
+    if ~isempty(defectIndex), recordText = record_fields(@() getCustomCriteriaResult(iterations(defectIndex(1)))); end
+    lines{end+1} = sprintf('대상 %d | 결함 1) 진단 기록 %s', no, recordText); %#ok<AGROW>
 end
 st_log(cfg, 'INFO', 'Defect criteria result probe complete | targets %d', height(targets));
 show(lines);
@@ -166,22 +169,51 @@ if isempty(result)
 end
 outcome = "";
 try, outcome = string(result(1).Outcome); catch, end
-kind = "종류 읽기 실패";
-detail = "";
-try, [kind, detail] = st_defect_criteria_kind(result(1)); catch, end
-className = class(result);
-className = className(find(className == '.', 1, 'last') + 1:end);
-text = sprintf('%d개 %s 판정 %s %s', numel(result), className, outcome, kind);
+try
+    [kind, detail] = st_defect_criteria_kind(result(1));
+catch ME
+    kind = "종류 읽기 실패";
+    detail = id_of(ME);
+end
+text = sprintf('%s %s', outcome, kind);
 if strlength(detail) > 0, text = sprintf('%s(%s)', text, detail); end
 end
 
 
-function text = criteria_members(iteration)
-%CRITERIA_MEMBERS Property and method names of the iteration result that mention criteria.
-names = [reshape(string(properties(iteration)), 1, []), reshape(string(methods(iteration)), 1, [])];
-names = unique(names(contains(lower(names), 'criteria')));
-text = '없음';
-if ~isempty(names), text = char(strjoin(names, ',')); end
+function text = record_fields(reader)
+%RECORD_FIELDS Which properties of the first diagnostic record read.
+% Classes are shown for the two that hold the verify message; a property
+% that raises shows its identifier. MathWorks API names only.
+try
+    result = reader();
+    records = result(1).DiagnosticRecord;
+catch ME
+    text = ['읽기 오류 ' id_of(ME)];
+    return;
+end
+text = sprintf('%d개(%s)', numel(records), short_class(records));
+if isempty(records), return; end
+if iscell(records), record = records{1}; else, record = records(1); end
+failures = strings(1, 0);
+classes = strings(1, 0);
+for name = {'Outcome', 'Event', 'Exception', 'TestDiagnosticResult', 'FrameworkDiagnosticResult', 'Report'}
+    try
+        value = record.(name{1});
+        if any(strcmp(name{1}, {'TestDiagnosticResult', 'Report'}))
+            classes(end+1) = sprintf('%s %s', name{1}, short_class(value)); %#ok<AGROW>
+        end
+    catch ME
+        failures(end+1) = sprintf('%s %s', name{1}, id_of(ME)); %#ok<AGROW>
+    end
+end
+if isempty(failures), failures = "없음"; end
+text = sprintf('%s | 못 읽은 속성 %s | %s', text, strjoin(failures, ', '), strjoin(classes, ', '));
+end
+
+
+function name = short_class(value)
+name = class(value);
+name = name(find(name == '.', 1, 'last') + 1:end);
 end
 
 
