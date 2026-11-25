@@ -957,4 +957,9 @@ Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e
   Switch, 둘 다 CUT 바로 아래), 셋째는 `FilteredByCvf`(CVF ALL_CONTENT가 빼는 하위 블록 안의 Switch), Stateflow 0. FINAL
   판정에서 결함 FAIL 2·PASS 0, 보통 Iteration PASS 3·FAIL 0이고 이전 판정과 다름 0.
 - 1단계 결과 정리의 CUT 결정 커버리지는 27/30이었다. SLDV 목표 30에서 도달 불가 3만 뺀 값이라 CVF가 빼는 하위 블록의 결정이
-  들어 있는 것으로 보인다. standalone `CoverageSummary.xlsx`는 20/22였다. todo 5절에서 저장 Coverage와 나란히 본다.
+  들어 있는 것으로 보인다. standalone `CoverageSummary.xlsx`는 20/22였다.
+- 이어서 standalone 파이프라인(`SaveTestResult`)과 최종 문서를 돌렸다. 파이프라인 OK, 결과 가져오기 IMPORTED, 대상마다 결함
+  Iteration 2개가 standalone에서도 FAIL(합계 FAIL 6, PASS 0)이었다. 최종 문서의 결함 행은 대상마다 2행 모두 D 줄, 확인 사유
+  `UNREACHABLE_DEFECT` 2, 다른 코드와 `DUPLICATE_TEST_CASE_ID` 0이었다. 같은 블록의 `ShowSavedCoverage`는 대상마다 CUT 결정
+  20/22, 실행 45/45로 `CoverageSummary.xlsx`와 같았다. 그래서 1단계 결과 정리 Coverage 시트의 27/30은 CVF가 반영되지 않은
+  값으로 본다(결함 TC와 별개, 아직 원인 미확인).

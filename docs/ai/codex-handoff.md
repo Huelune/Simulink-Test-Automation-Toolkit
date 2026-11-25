@@ -59,11 +59,11 @@
   model with the filter off finished quickly, so
   `cfg.SldvCoverageFilter` now defaults to false; why the filter stalls sldvrun is still open.
 - 실기 미확인: 결함 TC(2026-11-24, `9cd7b00..4307e41`, 설계
-  `docs/superpowers/specs/2026-11-24-unreachable-outcome-defect-tc-design.md`). 1단계(PER_CUT)는 2026-11-25 실제
-  모델에서 확인했다(작업 기록 같은 날 절). 남은 확인은 `todo.md` 5절이다. 볼 것: 결함 Iteration의 Custom Criteria가
-  verify 실패로 Failed인지(오류로 Failed가 아닌지), standalone 파이프라인으로 옮긴 Test File에서도 콜백이 돌아 FAIL인지
-  (실험은 저장·다시 열기까지만 봤다), 최종 문서에 결함 행이 D 줄과 `UNREACHABLE_DEFECT`로 적히고 Test Case ID가 겹치지
-  않는지.
+  `docs/superpowers/specs/2026-11-24-unreachable-outcome-defect-tc-design.md`). 2026-11-25 실제 모델에서 1단계(PER_CUT),
+  standalone 파이프라인, 최종 문서까지 숫자로 확인했다(작업 기록 같은 날 절). 남은 것: 결함 Iteration의 Failed가 Custom
+  Criteria의 verify 실패인지(콜백 오류로 Failed가 아닌지)를 1단계와 standalone 결과에서 사람이 본 기록.
+- 1단계(PER_CUT) 결과 정리의 Coverage 시트(CUT·Decision)가 CVF를 반영하지 않는 것으로 보인다(2026-11-25, 27/30, 같은
+  대상의 standalone 저장 Coverage는 20/22). 원인 미확인.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
