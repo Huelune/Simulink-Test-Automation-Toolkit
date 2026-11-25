@@ -182,6 +182,31 @@ end
 end
 
 
+function testCriteriaKindShowsOnlyFixedWordsAndIdentifiers(testCase)
+% The kind reaches a screen that leaves the company: block names in the
+% diagnostic text and the exception message must not come through.
+designed = criteria_record("Failed", "VerificationFailed", ...
+    {'Secret_Block [false] 실행 횟수'}, []);
+raisedError = MException('simtest:DefectCriteriaNoCoverage', ...
+    'Coverage has no decision for Secret_Block at C:/secret/model');
+raisedRecord = criteria_record("Failed", "ExceptionThrown", {}, raisedError);
+foreign = criteria_record("Failed", "AssertionFailed", {'Secret_Signal mismatch'}, []);
+passed = criteria_record("Passed", "VerificationPassed", ...
+    {'Secret_Block [true] 실행 횟수'}, MException.empty);
+
+cases = {criteria_result("Failed", designed), "verify 실패", ""
+    criteria_result("Failed", [passed, raisedRecord]), "오류", "simtest:DefectCriteriaNoCoverage"
+    criteria_result("Failed", foreign), "다른 실패", "AssertionFailed"
+    criteria_result("Passed", passed), "통과", ""
+    [], "기준 없음", ""};
+for k = 1:size(cases, 1)
+    [kind, detail] = st_defect_criteria_kind(cases{k, 1});
+    verifyEqual(testCase, [kind, detail], [cases{k, 2}, cases{k, 3}], sprintf('case %d', k));
+    verifyFalse(testCase, contains(lower(kind + detail), "secret"), sprintf('case %d', k));
+end
+end
+
+
 function run_script(script, test) %#ok<INUSD> test is read by the script
 eval(script);
 end
@@ -245,4 +270,17 @@ defects(2).Outcomes(2).Index = 2;
 defects(2).Outcomes(2).Text = 'input 2';
 defects(2).Outcomes(2).Approximate = true;
 defects = defects(:);
+end
+
+
+function record = criteria_record(outcome, event, diagnostics, exception)
+%CRITERIA_RECORD Stand-in for sltest.testmanager.DiagnosticRecord.
+record = struct('Outcome', outcome, 'Event', event, ...
+    'TestDiagnosticResult', {diagnostics}, 'Exception', exception);
+end
+
+
+function result = criteria_result(outcome, records)
+%CRITERIA_RESULT Stand-in for sltest.testmanager.CustomCriteriaResult.
+result = struct('Outcome', outcome, 'DiagnosticRecord', records);
 end
