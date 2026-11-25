@@ -118,8 +118,13 @@
   Harness, 또는 Harness를 만들 때 보내는 블록의 포트 수가 바뀐 것이다. `diagnostics/matlab/st_compare_harness_cut`이 대상마다 끊긴 선
   끝 수, Harness에만 끊긴 것의 블록 종류·출력 포트 수·링크 상태, 동기화 설정을 찍는다. 첫 실행에서 세 대상 모두 원래 CUT과
   Harness CUT 안에 끊긴 선 끝이 0이었다(synchronizationMode 1, rebuildOnOpen false). 사용자가 본 화면은 Harness CUT 안이 아니었을 수
-  있어서, 진단은 이제 Harness 전체(CUT 밖 포함)와 standalone 매니페스트의 standalone 모델(Harness와 이름이 같다)도 본다. 실기 확인은
-  `todo.md` 7절이다.
+  있어서, 진단은 이제 Harness 전체(CUT 밖 포함)와 standalone 매니페스트의 standalone 모델(Harness와 이름이 같다)도 본다. 두 번째
+  실행에서 끊긴 선은 standalone 모델에만 있었다. 세 대상 모두 CUT 밖에서 SubSystem으로 들어가는 입력 5개가 끊겼다. 짐작(미확인):
+  패키징(`st_package_standalone_coverage_artifacts`의 `rewire_packaged_input`)은 Signal Editor `Filename`을 폴더 없는 파일 이름으로
+  저장한다. 모델을 연 폴더나 경로에서 그 파일을 못 찾으면 Signal Editor 출력 포트가 줄어 선이 떨어진다. 실행
+  (`st_prepare_standalone_bundle_execution`)은 절대 경로를 다시 넣으므로, standalone 실행 결과는 영향이 없었을 수 있다. 진단은
+  Signal Editor 출력 포트 수(Harness와 standalone), 파일 이름 풀림(그대로, 경로, 모델 폴더), 모델 폴더에서 다시 연 결과를 찍는다.
+  실기 확인은 `todo.md` 7절이다.
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
