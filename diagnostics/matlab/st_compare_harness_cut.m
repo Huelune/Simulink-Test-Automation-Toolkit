@@ -229,6 +229,7 @@ notes{end+1} = sprintf('단계별 CUT 밖 끊긴 선 끝 | 내보낸 원본 %s |
 inputFile = field_of(item, 'SignalEditorInput');
 if isempty(inputFile) || ~isfile(inputFile), inputFile = field_of(item, 'PackagedInput'); end
 notes{end+1} = trial_text(templateFile, modelName, standaloneCut, inputFile);
+notes{end+1} = missing_file_trial(templateFile, modelName, standaloneCut, inputFile);
 end
 
 
@@ -276,16 +277,68 @@ end
 
 
 function text = stage_count(modelFile, modelName, cut)
-% Loose ends outside the CUT in one saved copy of the standalone model.
+% Loose ends outside the CUT in one saved copy of the standalone model, with
+% its Signal Editor's output port count right after loading and whether the
+% file that Signal Editor names exists.
 text = '없음';
 if isempty(modelFile) || ~isfile(modelFile), return; end
 try
+    close_if_loaded(modelName);
     load_system(modelFile);
     closeModel = onCleanup(@() close_if_loaded(modelName)); %#ok<NASGU>
     [~, outside] = dangling_ends(modelName, cut);
-    text = sprintf('%d', numel(outside));
+    editorText = '';
+    try
+        editor = st_find_signal_editor_block(modelName);
+        ports = get_param(editor, 'PortHandles');
+        filename = char(string(get_param(editor, 'Filename')));
+        editorText = sprintf('(포트 %d, 파일 %s)', numel(ports.Outport), ...
+            mark(isfile(filename) || ~isempty(which(filename))));
+    catch
+    end
+    text = sprintf('%d%s', numel(outside), editorText);
 catch ME
     text = ['오류 ' id_of(ME)];
+end
+end
+
+
+function text = missing_file_trial(templateFile, modelName, cut, inputFile)
+% Packaging opens a saved model whose Signal Editor still names the input in
+% the execution's short workspace, which is gone by then. Reproduce that on
+% copies in a scratch folder: point the Signal Editor at a scratch input,
+% save, delete the input, open again, count loose ends outside the CUT.
+text = '파일이 지워진 저장본 시험 | 원본이나 입력 파일 없음';
+if isempty(templateFile) || ~isfile(templateFile) || isempty(inputFile) || ~isfile(inputFile)
+    return;
+end
+scratch = tempname;
+try
+    mkdir(scratch);
+    [~, ~, modelExtension] = fileparts(templateFile);
+    [~, ~, inputExtension] = fileparts(inputFile);
+    copyModel = fullfile(scratch, [modelName modelExtension]);
+    copyInput = fullfile(scratch, ['input' inputExtension]);
+    copyfile(templateFile, copyModel, 'f');
+    copyfile(inputFile, copyInput, 'f');
+    close_if_loaded(modelName);
+    load_system(copyModel);
+    set_param(st_find_signal_editor_block(modelName), 'Filename', copyInput);
+    save_system(modelName);
+    close_system(modelName, 0);
+    delete(copyInput);
+    load_system(copyModel);
+    [~, outside] = dangling_ends(modelName, cut);
+    ports = get_param(st_find_signal_editor_block(modelName), 'PortHandles');
+    text = sprintf('파일이 지워진 저장본 시험 | 열면 CUT 밖 %d(포트 %d)', numel(outside), numel(ports.Outport));
+    close_system(modelName, 0);
+catch ME
+    close_if_loaded(modelName);
+    text = ['파일이 지워진 저장본 시험 | 오류 ' id_of(ME)];
+end
+try
+    rmdir(scratch, 's');
+catch
 end
 end
 
