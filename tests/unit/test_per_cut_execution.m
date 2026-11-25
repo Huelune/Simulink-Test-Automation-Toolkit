@@ -349,3 +349,15 @@ T = filter_table(["OFF"; "OFF"]);
 T.CoverageBoundaryMode(2) = "CUT_ONLY";
 verifyEqual(testCase, st_resolve_execution_mode('BATCH', T), 'BATCH');
 end
+
+
+function testCollectRefusesAStandaloneModelUnderTheHarnessName(testCase)
+% A packaged standalone model carries the Harness's name. Left open (for
+% example by ShowSavedCoverage), it made collect read coverage against the
+% wrong model and stop on a decisioninfo readback failure.
+source = fileread(fullfile(st_project_root(), 'src', 'execution', ...
+    'st_collect_per_cut_results.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'if ~loaded_as_harness\(harness\)\s*\n\s*error\(''simtest:CollectHarnessNameInUse''', 'once'));
+verifyNotEmpty(testCase, regexp(source, "get_param\(model, 'IsHarness'\)", 'once'));
+end

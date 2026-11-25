@@ -220,12 +220,31 @@ if isempty(harness)
     return;
 end
 if bdIsLoaded(harness)
+    % A packaged standalone model carries the Harness's name. Coverage read
+    % against it cannot resolve the CUT path, which surfaced only as a
+    % decisioninfo readback failure after the CVF was attached.
+    if ~loaded_as_harness(harness)
+        error('simtest:CollectHarnessNameInUse', ...
+            ['A model that is not the Harness is loaded under its name, ' ...
+             'such as an opened standalone model: %s. Close it and collect again.'], ...
+            harness);
+    end
     clean = [clean; clean_if_untracked(harness, openedModels)];
     return;
 end
 owner = st_normalize_cut_path(row.CUTPath, cfg.TopModel);
 sltest.harness.load(owner, harness);
 opened(end+1,1) = string(harness);
+end
+
+
+function tf = loaded_as_harness(model)
+% A release without the IsHarness parameter keeps the old behaviour.
+try
+    tf = strcmp(get_param(model, 'IsHarness'), 'on');
+catch
+    tf = true;
+end
 end
 
 
