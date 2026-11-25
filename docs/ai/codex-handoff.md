@@ -62,6 +62,15 @@
   `docs/superpowers/specs/2026-11-24-unreachable-outcome-defect-tc-design.md`). 2026-11-25 실제 모델에서 1단계(PER_CUT),
   standalone 파이프라인, 최종 문서까지 숫자로 확인했다(작업 기록 같은 날 절). 남은 것: 결함 Iteration의 Failed가 Custom
   Criteria의 verify 실패인지(콜백 오류로 Failed가 아닌지)를 1단계와 standalone 결과에서 사람이 본 기록.
+  2026-11-25 설계 변경(사용자 요청, 실기 미확인): 결함 Iteration이 원본 시나리오에 묶여 Signal Editor 시나리오와 Test
+  Assessment verify가 SLDV 수(3)에 머물렀다. 이제 `st_get_sldv_profile`이 결함마다 원본을 복사한 항목을 시나리오별 목록
+  (`ScenarioNames`, `SourceIndices`, `OriginalNames`, `EndTimes`, `ParameterCounts`) 끝에 붙인다. 그래서 Signal Editor,
+  Test Assessment, Test Manager가 결함 시나리오(004, 005)를 보통 시나리오처럼 만들고, Iteration은 제 이름의 시나리오에
+  묶인다. 결함 설정은 이제 `SIGNAL_EDITOR`·`ASSESSMENT` 단계 입력이기도 하다. 기대값 갱신은 결함 시나리오의 verify도
+  고친다(Failed Iteration이므로). 확인은 `todo.md` 6절(Harness와 Test File을 지우고 1단계를 처음부터 다시 돌려 대상마다
+  SLDV+결함, Signal Editor, Test Assessment, Iteration이 모두 5인지 센다)이다. `st_check_defect_criteria`가 결함
+  Iteration의 Custom Criteria 결과(`getCustomCriteriaResult`)를 읽어 verify 실패와 오류로 센다. 콜백 오류 때 결과 모양은
+  문서에 없어 `DiagnosticRecord.Exception`으로 짐작한다.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
