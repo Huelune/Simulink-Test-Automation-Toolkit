@@ -224,21 +224,41 @@ if bdIsLoaded(harness)
     % against it cannot resolve the CUT path, which surfaced only as a
     % decisioninfo readback failure after the CVF was attached.
     [isHarness, detail] = loaded_as_harness(harness, cfg.TopModel);
-    if ~isHarness
+    if isHarness
+        clean = [clean; clean_if_untracked(harness, openedModels)];
+        return;
+    end
+    file = get_param(harness, 'FileName');
+    if strcmp(get_param(harness, 'Dirty'), 'on')
         st_log(cfg, 'ERROR', ...
-            'Harness name in use by another model | %s | File=%s', ...
-            detail, get_param(harness, 'FileName'));
+            'Harness name in use by another model with unsaved changes | %s | File=%s', ...
+            detail, file);
         error('simtest:CollectHarnessNameInUse', ...
-            ['A model that is not the Harness is loaded under its name, ' ...
-             'such as an opened standalone model: %s. Close it and collect again.'], ...
+            ['A model that is not the Harness is loaded under its name and ' ...
+             'has unsaved changes: %s. Save or close it and collect again.'], ...
             harness);
     end
-    clean = [clean; clean_if_untracked(harness, openedModels)];
-    return;
+    % Nothing unsaved is lost, and the Harness needs the name.
+    st_log(cfg, 'WARN', ...
+        'Harness name in use by another model; closing it | %s | File=%s', ...
+        detail, file);
+    try
+        close_system(harness, 0);
+    catch ME
+        st_log(cfg, 'ERROR', ...
+            'Could not close the model under the Harness name | %s', ME.message);
+        error('simtest:CollectHarnessNameInUse', ...
+            ['A model that is not the Harness is loaded under its name and ' ...
+             'could not be closed: %s. Close it and collect again.'], harness);
+    end
 end
 owner = st_normalize_cut_path(row.CUTPath, cfg.TopModel);
 sltest.harness.load(owner, harness);
 opened(end+1,1) = string(harness);
+% The same judgement on a Harness this command loaded: if it says no here,
+% the judgement is wrong, not the model.
+[~, detail] = loaded_as_harness(harness, cfg.TopModel);
+st_log(cfg, 'DEBUG', 'Harness loaded for coverage | %s', detail);
 end
 
 
