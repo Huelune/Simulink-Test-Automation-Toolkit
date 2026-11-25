@@ -145,7 +145,7 @@
   끊긴 선 끝이 0이었다. 단계별로는 내보낸 원본 0, 실행용 복사본 0(포트 6, 파일 있음), 패키징본 0이었다(해결). 다시 만든 결과물의
   coverage 숫자가 이전과 같은지는 보지 않았다. 같은 실행에서 번들 단위 테스트 2개가 실패했다. 이번 수정과 무관하게 이전 리팩터링
   (`close_system(topModel, 0)`으로 바뀐 세션 정리, 결과 라벨로 만드는 산출물 이름)을 따라가지 못한 정적 테스트여서 테스트를
-  소스에 맞췄다(MATLAB 재실행은 `todo.md` 6절).
+  소스에 맞췄다(같은 날 MATLAB에서 51개 모두 통과).
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
