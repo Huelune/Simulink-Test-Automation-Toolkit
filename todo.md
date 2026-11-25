@@ -7,24 +7,13 @@
 화면에는 개수, Simulink 블록 종류 이름, 정해 둔 안내 문구만 찍는다. 테스트 케이스·모델·블록
 이름, 경로, 계정은 찍지 않는다(회사 내부 정보).
 
-## 6. 결함 TC 남은 눈 확인과 번들 단위 테스트
+## 6. 결함 TC 남은 눈 확인(MATLAB 블록 없음)
 
 왜: 1단계 결과 정리는 세 대상 모두 CUT 결정 20/22, 실행 45/45로 standalone 저장 Coverage와 같아졌다. standalone 모델의 끊긴
-입력선도 고쳐져, 다시 만든 결과물에서 세 대상 모두 끊긴 선이 0이었다. 그 실행에서 번들 단위 테스트 2개가 실패했는데, 이번 수정과
-무관하게 예전에 바뀐 소스를 따라가지 못한 테스트였다. 테스트를 지금 소스에 맞췄으니 다시 돌려 확인한다. 모델은 열지 않고 몇 초면
-끝난다. 5절에서 옮겨 온 눈 확인 세 가지도 남아 있다.
+입력선도 고쳐져 다시 만든 결과물에서 0이었고, 번들 단위 테스트 51개도 모두 통과했다. 5절에서 옮겨 온 눈 확인 세 가지만 남았다.
+돌릴 블록은 없다.
 
-순서: 클론에서 main을 pull한 뒤, 지난번 두 줄(`st_todo_check`를 부르는 것)을 명령 기록에서 다시 부르거나 아래에서 복사해 붙여
-넣는다. 화면 첫 줄 끝에 `번들 단위 테스트`가 있어야 이 절의 점검이다.
-
-```matlab
-clearvars; toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
-if ~isequal(toolkitDir, 0), oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir); st_todo_check; end
-```
-
-확인할 것: `단위 테스트 | 51 | 통과 51 | 실패 0 | 미완료 0`인가.
-
-눈 확인은 열려 있는 화면에서 본다. 이 화면들은 블록 이름이 보이므로 캡처하지 않는다.
+순서: 열려 있는 화면에서 본다. 이 화면들은 블록 이름이 보이므로 캡처하지 않는다.
 
 - standalone 결과: Test Manager의 Results and Artifacts에서 가져온 standalone 결과 → 한 대상의 Test Case → 번호가 가장 큰
   Iteration(결함 Iteration) → Custom Criteria Results. `실행 횟수`가 든 검증이 실패로 나오면 `verify 실패`, 오류 메시지가
@@ -33,6 +22,5 @@ if ~isequal(toolkitDir, 0), oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDi
 - 저장 Coverage 보고서(브라우저)의 Filter 항목에 뺀 것이 나오는지, standalone 모델에 Coverage 색이 칠해지고 하위 Subsystem이
   빠졌는지. 이미 닫았으면 `못 봄`.
 
-돌려줄 것: 단위 테스트 화면 캡처 한 장과 다음 세 줄. standalone Custom Criteria 결과 한 단어(`verify 실패`, `오류`, `못 봄`),
-1단계 Custom Criteria 결과 한 단어, "보고서에 필터 항목 나옴/안 나옴/못 봄, 모델 색 표시 됨/안 됨/못 봄". 눈 확인 화면은 사용자
-PC에서만 보고 밖으로 보내지 않는다.
+돌려줄 것: 다음 세 줄. standalone Custom Criteria 결과 한 단어(`verify 실패`, `오류`, `못 봄`), 1단계 Custom Criteria 결과 한
+단어, "보고서에 필터 항목 나옴/안 나옴/못 봄, 모델 색 표시 됨/안 됨/못 봄". 화면은 사용자 PC에서만 보고 밖으로 보내지 않는다.
