@@ -1,7 +1,8 @@
-function st_compare_harness_cut()
+function st_compare_harness_cut(extraLines)
 %ST_COMPARE_HARNESS_CUT Find unconnected lines in a target's Harness and standalone model.
 %
 % st_compare_harness_cut
+% st_compare_harness_cut(extraLines)   % cell of screen lines printed under the header
 %
 % A user saw input lines drawn unconnected (red dashed) in a model reached
 % from Test Manager, while the same lines in the Top Model's CUT are
@@ -29,6 +30,7 @@ warnState = warning('off', 'all');
 restoreWarnings = onCleanup(@() warning(warnState)); %#ok<NASGU>
 diagFile = 'st_harness_cut_compare.txt';
 lines = {sprintf('MATLAB %s | Harness CUT 비교', version('-release'))};
+if nargin >= 1, lines = [lines, reshape(extraLines, 1, [])]; end
 report = "";
 cfg = [];
 try
@@ -226,53 +228,6 @@ end
 notes{end+1} = sprintf('단계별 CUT 밖 끊긴 선 끝 | 내보낸 원본 %s | 실행용 복사본 %s | 패키징본 %d', ...
     stage_count(templateFile, modelName, standaloneCut), ...
     stage_count(workFile, modelName, standaloneCut), numel(outsideAgain));
-inputFile = field_of(item, 'SignalEditorInput');
-if isempty(inputFile) || ~isfile(inputFile), inputFile = field_of(item, 'PackagedInput'); end
-notes{end+1} = trial_text(templateFile, modelName, standaloneCut, inputFile);
-notes{end+1} = missing_file_trial(templateFile, modelName, standaloneCut, inputFile);
-end
-
-
-function text = trial_text(templateFile, modelName, cut, inputFile)
-% On the exported copy, which has no loose ends, repeat what the execution
-% step does to it and count loose ends outside the CUT after each: set the
-% Signal Editor file name as the execution step does, and select every
-% scenario in turn as the iterations do. Nothing is saved.
-text = '내보낸 원본에서 시험 | 원본 없음';
-if isempty(templateFile) || ~isfile(templateFile), return; end
-scenarioText = '-';
-try
-    load_system(templateFile);
-    closeModel = onCleanup(@() close_if_loaded(modelName));
-    editor = st_find_signal_editor_block(modelName);
-    options = st_normalize_options(get_param(editor, 'options@ActiveScenario'));
-    worst = 0;
-    for k = 1:numel(options)
-        set_param(editor, 'ActiveScenario', options{k});
-        [~, outside] = dangling_ends(modelName, cut);
-        worst = max(worst, numel(outside));
-    end
-    scenarioText = sprintf('%d개를 차례로 고르면 최대 %d', numel(options), worst);
-    clear closeModel
-catch ME
-    scenarioText = ['오류 ' id_of(ME)];
-end
-fileText = '입력 파일 없음';
-if ~isempty(inputFile) && isfile(inputFile)
-    try
-        close_if_loaded(modelName);   % start again from the saved copy
-        load_system(templateFile);
-        closeModel = onCleanup(@() close_if_loaded(modelName)); %#ok<NASGU>
-        editor = st_find_signal_editor_block(modelName);
-        set_param(editor, 'Filename', inputFile);
-        [~, outside] = dangling_ends(modelName, cut);
-        ports = get_param(editor, 'PortHandles');
-        fileText = sprintf('%d(출력 포트 %d)', numel(outside), numel(ports.Outport));
-    catch ME
-        fileText = ['오류 ' id_of(ME)];
-    end
-end
-text = sprintf('내보낸 원본에서 시험 | 시나리오 %s | 파일 이름 바꾸면 CUT 밖 %s', scenarioText, fileText);
 end
 
 
@@ -299,46 +254,6 @@ try
     text = sprintf('%d%s', numel(outside), editorText);
 catch ME
     text = ['오류 ' id_of(ME)];
-end
-end
-
-
-function text = missing_file_trial(templateFile, modelName, cut, inputFile)
-% Packaging opens a saved model whose Signal Editor still names the input in
-% the execution's short workspace, which is gone by then. Reproduce that on
-% copies in a scratch folder: point the Signal Editor at a scratch input,
-% save, delete the input, open again, count loose ends outside the CUT.
-text = '파일이 지워진 저장본 시험 | 원본이나 입력 파일 없음';
-if isempty(templateFile) || ~isfile(templateFile) || isempty(inputFile) || ~isfile(inputFile)
-    return;
-end
-scratch = tempname;
-try
-    mkdir(scratch);
-    [~, ~, modelExtension] = fileparts(templateFile);
-    [~, ~, inputExtension] = fileparts(inputFile);
-    copyModel = fullfile(scratch, [modelName modelExtension]);
-    copyInput = fullfile(scratch, ['input' inputExtension]);
-    copyfile(templateFile, copyModel, 'f');
-    copyfile(inputFile, copyInput, 'f');
-    close_if_loaded(modelName);
-    load_system(copyModel);
-    set_param(st_find_signal_editor_block(modelName), 'Filename', copyInput);
-    save_system(modelName);
-    close_system(modelName, 0);
-    delete(copyInput);
-    load_system(copyModel);
-    [~, outside] = dangling_ends(modelName, cut);
-    ports = get_param(st_find_signal_editor_block(modelName), 'PortHandles');
-    text = sprintf('파일이 지워진 저장본 시험 | 열면 CUT 밖 %d(포트 %d)', numel(outside), numel(ports.Outport));
-    close_system(modelName, 0);
-catch ME
-    close_if_loaded(modelName);
-    text = ['파일이 지워진 저장본 시험 | 오류 ' id_of(ME)];
-end
-try
-    rmdir(scratch, 's');
-catch
 end
 end
 
