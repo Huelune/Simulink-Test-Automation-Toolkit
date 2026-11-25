@@ -62,16 +62,6 @@
   `docs/superpowers/specs/2026-11-24-unreachable-outcome-defect-tc-design.md`). 2026-11-25 실제 모델에서 1단계(PER_CUT),
   standalone 파이프라인, 최종 문서까지 숫자로 확인했다(작업 기록 같은 날 절). 남은 것: 결함 Iteration의 Failed가 Custom
   Criteria의 verify 실패인지(콜백 오류로 Failed가 아닌지)를 1단계와 standalone 결과에서 사람이 본 기록.
-- 1단계(PER_CUT) 결과 정리의 Coverage 시트(CUT·Decision)가 CVF를 반영하지 않았다(2026-11-25, 27/30, 같은 대상의
-  standalone 저장 Coverage는 20/22). 원인: 보고서가 coverage를 다시 꺼낼 때 Test Manager가 CVF 없는 새 cvdata를 줬다.
-  `9efbb45`는 붙인 객체를 결과별로 기억했는데 결과 동일성(isequal) 판정이 틀려 결과 정리가
-  `ResultCoverageDecisionReadbackFailed`로 멈췄다. `b2f2aab`에서 붙인 객체를 `st_export_result_set_report`의
-  `CoverageObjects`로 직접 넘기게 다시 고쳤다(1단계 결과 정리와 즉시 보고 경로). 같은 오류가 또 난 원인은 따로였다.
-  standalone 모델이 Harness와 이름이 같아, 열려 있던 standalone 모델을 결과 정리가 Harness로 썼다. `c48fe75`에서 그런
-  모델이 열려 있으면 `simtest:CollectHarnessNameInUse`로 멈추게 했다. 실기 확인은 `todo.md` 6절: 결과 정리
-  뒤 CUT 결정 20/22, 결정 목록(`DecisionPoints`) 수와 그에 따른 최종 문서 D 줄 수 변화.
-- BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
-  꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
@@ -84,6 +74,17 @@
      `sfObjNum`은 모두 -1이었다. 처음의 "`sfObjType`이 있으면 Stateflow" 판정이 도달 불가 3개를 모두 Stateflow로 빼
      결함 TC가 0이 됐으므로 `sfObjNum > 0`으로 바꿨다. 도달 불가 3개는 Switch(CUT 바로 아래 하위 블록 안),
      Switch와 MinMax(CUT 바로 아래)였다.
+- 1단계(PER_CUT) 결과 정리의 Coverage 시트(CUT·Decision)가 CVF를 반영하지 않았다(2026-11-25, 27/30, 같은 대상의
+  standalone 저장 Coverage는 20/22). 원인: 보고서가 coverage를 다시 꺼낼 때 Test Manager가 CVF 없는 새 cvdata를 줬다.
+  `9efbb45`는 붙인 객체를 결과별로 기억하게 했다(같은 결과인지 isequal로 판정). 결과 정리가
+  `ResultCoverageDecisionReadbackFailed`로 멈춰 isequal 오판으로 보고, `b2f2aab`에서 붙인 객체를
+  `st_export_result_set_report`의 `CoverageObjects`로 직접 넘기게 바꿨다(1단계 결과 정리와 즉시 보고 경로). 그런데 같은
+  오류가 또 났고, 실제 원인은 따로였다(두 번 다 첫 대상의 첫 CVF 붙이기에서 멈춤). standalone 모델이 Harness와 이름이
+  같아, 열려 있던 standalone 모델을 결과 정리가 Harness로 썼다. `c48fe75`에서 그런 모델이 열려 있으면
+  `simtest:CollectHarnessNameInUse`로 멈추게 했다. 실기 확인은 `todo.md` 6절: 결과 정리
+  뒤 CUT 결정 20/22, 결정 목록(`DecisionPoints`) 수와 그에 따른 최종 문서 D 줄 수 변화.
+- BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
+  꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
   (관측 1건), `Simulink.io.SLDVMatFile` import 결과도 같은 이름인지.
 - 데모 모델 생성기 `st_create_demo_model`(2026-10-12): 2026-10-15 사용자 MATLAB의 새 세션에서
