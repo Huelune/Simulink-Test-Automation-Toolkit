@@ -12,14 +12,18 @@
 저장한 ResultSet에서 coverage 객체를 꺼내 CVF를 붙인 뒤 보고서를 쓴다. 그런데 보고서는 Coverage 표, CVT·HTML, CVF 복사,
 결정 목록을 만들 때마다 coverage를 다시 꺼냈다. Test Manager는 꺼낼 때마다 새 객체를 줄 수 있어서, CVF가 빠진 객체로
 계산됐다. 지난번 이 절의 `전` 로그에서 CVF 복사가 6번 모두 0개였던 것이 그 증거다. 첫 수정은 결과 정리를 다시 할 때
-`ResultCoverageDecisionReadbackFailed`로 멈춰서, CVF를 붙인 객체를 보고서에 직접 넘기는 방식으로 다시 고쳤다. 이 블록은
-시뮬레이션 없이 결과 정리만 다시 하고, 전후 숫자를 비교한다. 결정 목록(`DecisionPoints`)은 CVF가 빼는 블록을 빼고 고르므로, 그 수도 바뀔 수 있다.
+`ResultCoverageDecisionReadbackFailed`로 멈춰서, CVF를 붙인 객체를 보고서에 직접 넘기는 방식으로 다시 고쳤다. 그래도 같은
+오류가 났는데, 원인은 따로 있었다. standalone 모델은 Harness와 이름이 같아서, 5절이 열어 둔 standalone 모델을 결과 정리가
+Harness로 여기고 coverage를 읽었다. 이제 결과 정리는 그런 모델이 열려 있으면 닫으라는 오류로 멈추고, 이 블록은 시작할 때 열린
+모델을 모두 닫는다. 이 블록은 시뮬레이션 없이 결과 정리만 다시 하고, 전후 숫자를 비교한다. 결정 목록(`DecisionPoints`)은 CVF가
+빼는 블록을 빼고 고르므로, 그 수도 바뀔 수 있다.
 
 5절(standalone과 최종 문서)은 숫자가 모두 기대대로였다. 남은 것은 눈으로 볼 세 가지뿐이라 이 절에 옮겼다.
 
 순서:
 
-1. 블록을 붙여 넣기 전에, 5절 실행 뒤 열려 있는 화면에서 두 가지를 본다. 이 화면들은 블록 이름이 보이므로 캡처하지 않는다.
+1. 블록을 붙여 넣기 전에, 5절 실행 뒤 열려 있는 화면에서 두 가지를 본다(블록이 열린 모델을 닫으므로 먼저 본다). 이 화면들은
+   블록 이름이 보이므로 캡처하지 않는다.
    - standalone 결과: Test Manager의 Results and Artifacts에서 가져온 결과 → 한 대상의 Test Case → 번호가 가장 큰
      Iteration(결함 Iteration) → Custom Criteria Results. `실행 횟수`가 든 검증이 실패로 나오면 `verify 실패`, 오류 메시지가
      나오면 `오류`. 결과가 이미 닫혀 있으면 `못 봄`.
@@ -37,6 +41,7 @@ if isequal(toolkitDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다\n
 oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir);
 loadedNames = find_system('type', 'block_diagram');
 if any(strcmp(get_param(loadedNames, 'Dirty'), 'on')), fprintf('저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요\n'); warning(warnState); return; end
+bdclose('all');
 idOf = @(ex) char(strjoin([string(ex.identifier) repmat("(식별자 없음)", 1, double(isempty(ex.identifier)))], ''));
 dashText = @(value) strrep(value, 'NaN', '-');
 diagFile = 'st_cvf_collect_check.txt';
@@ -46,7 +51,8 @@ cfg = st_config();
 screenLines = {sprintf('MATLAB %s', version('-release'))};
 % 가. 단위 테스트
 try
-    evalc('testResults = runtests(fullfile(st_project_root(), ''tests'', ''unit'', ''test_coverage_filters.m''));');
+    evalc(['testResults = runtests({fullfile(st_project_root(), ''tests'', ''unit'', ''test_coverage_filters.m''), ' ...
+        'fullfile(st_project_root(), ''tests'', ''unit'', ''test_per_cut_execution.m'')});']);
     screenLines{end+1} = sprintf('단위 테스트 | %d | 통과 %d | 실패 %d | 미완료 %d', numel(testResults), sum([testResults.Passed]), ...
         sum([testResults.Failed]), sum([testResults.Incomplete]));
     failedTests = testResults([testResults.Failed] | [testResults.Incomplete]);
