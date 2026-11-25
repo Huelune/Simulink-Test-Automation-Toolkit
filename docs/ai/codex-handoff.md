@@ -81,15 +81,17 @@
   `st_export_result_set_report`의 `CoverageObjects`로 직접 넘기게 바꿨다(1단계 결과 정리와 즉시 보고 경로). 그런데 같은
   오류가 또 났고, 실제 원인은 따로였다. standalone 모델은 Harness와 이름이 같다. 첫 실행은 5절이 열어 둔 standalone
   모델을 결과 정리가 Harness로 써서 첫 대상에서 멈췄다. `c48fe75`에서 그런 모델이 열려 있으면
-  `simtest:CollectHarnessNameInUse`로 멈추게 했고, 모델을 모두 닫고 돌린 실행에서 이 확인이 둘째 대상에서 걸렸다(첫 대상은
-  CVF 복사 2번 모두 성공). `st_generate_coverage_filter_file`이 결과 정리가 열어 둔 Harness를 닫았고, 그 뒤 coverage를
-  읽을 때 그 이름이 경로(standalone 파이프라인이 `addpath`한 bundle 폴더)의 standalone 모델로 풀렸다. 4절 때는 standalone
-  모델이 없어 드러나지 않았다. CVF 생성기가 자기가 연 Harness만 닫게 고쳤다. 그 뒤에도(이전 블록으로 돌림)
-  `CollectHarnessNameInUse`가 났고, 직전 실행 로그에 CVF 복사가 0번이라 첫 대상에서 걸린 것으로 보인다. 모델을 모두 닫은 뒤
-  첫 대상까지 그 이름의 모델을 여는 코드는 찾지 못했다(미해결). 판정이 틀렸을 가능성에 대비해 `IsHarness`가 on이 아니어도 Top
-  Model의 열린 Harness 목록(`sltest.harness.find ... 'OpenOnly'`)에 있으면 Harness로 인정하고, 판정 근거(IsHarness,
-  OpenHarness, File)를 ERROR 로그에 남긴다. 6절 블록은 이 줄과 결과 정리 전후 상태를 종류로만 찍는다. 실기 확인은 `todo.md` 6절: 결과 정리
-  뒤 CUT 결정 20/22, 결정 목록(`DecisionPoints`) 수와 그에 따른 최종 문서 D 줄 수 변화.
+  `simtest:CollectHarnessNameInUse`로 멈추게 했다. 그 뒤 세 번의 실행이 모두 첫 대상에서 이 오류로 멈췄다(로그에 CVF 복사
+  0번). 화면의 단위 테스트 수(22, 23, 23)가 `test_coverage_filters` 하나의 테스트 수와 같아서, 세 번 모두 `aca8f47` 때의
+  6절 블록(명령 기록에서 다시 부른 것으로 보임)이 돌았다고 판명했다. 그 블록은 열린 모델을 닫지 않는다. 그래서 눈 확인 때 연
+  standalone 모델이 Harness 이름을 차지한 채 남아 있었다. 그 사이에 고친 두 가지는 이번 원인은 아니었지만 그대로 둔다.
+  하나는 CVF 생성기가 자기가 연 Harness만 닫게 한 것이다(`e1cd062`). 닫으면 coverage를 읽을 때 그 이름이 경로(standalone
+  파이프라인이 `addpath`한 bundle 폴더)의 standalone 모델로 풀릴 수 있다. 다른 하나는 `IsHarness`가 on이 아니어도 Top Model의
+  열린 Harness 목록에 있으면 Harness로 인정하게 한 것이다(`3917c9d`). 이제 결과 정리는 Harness 이름의 다른 모델에 저장 안 한
+  변경이 없으면 WARN을 남기고 닫은 뒤 Harness를 연다. 변경이 있으면 멈춘다. 연 Harness에 같은 판정을 한 결과는 DEBUG로
+  남긴다. 6절 점검은 `diagnostics/matlab/st_check_per_cut_collect_cvf`로 옮겼다. 붙여 넣는 블록은 두 줄이라, 예전 블록을
+  다시 부를 일이 줄어든다. 실기 확인은 `todo.md` 6절이다. 결과 정리 뒤 CUT 결정이 20/22인지, 결정 목록(`DecisionPoints`) 수와
+  그에 따른 최종 문서 D 줄 수가 바뀌는지 본다.
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
