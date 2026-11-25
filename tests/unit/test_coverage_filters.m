@@ -328,3 +328,28 @@ verifyNotEmpty(testCase, regexp(source, ...
 verifyNotEmpty(testCase, regexp(source, "'LookUnderMasks', 'all'", 'once'));
 verifyNotEmpty(testCase, regexp(source, "'FollowLinks', 'on'", 'once'));
 end
+
+
+function testCvfBoundCoverageObjectsComeBackForTheSameResult(testCase)
+% Test Manager can hand out a new cvdata instance per query, and a CVF set
+% on one is not on the next, so reports must get the instances the CVF was
+% bound to. A PER_CUT collect wrote unfiltered CUT coverage without this.
+testCase.addTeardown(@() clear('st_collect_result_coverage_objects'));
+resultA = struct('Secret', 'result A');
+resultB = struct('Secret', 'result B');
+boundA = {'Secret bound A1'; 'Secret bound A2'};
+st_collect_result_coverage_objects(resultA, boundA);
+st_collect_result_coverage_objects(resultB, {'Secret bound B'});
+verifyEqual(testCase, st_collect_result_coverage_objects(resultA), boundA);
+verifyEqual(testCase, st_collect_result_coverage_objects(resultB), {'Secret bound B'});
+st_collect_result_coverage_objects(resultA, {'Secret rebound A'});
+verifyEqual(testCase, st_collect_result_coverage_objects(resultA), {'Secret rebound A'});
+
+source = fileread(fullfile(st_project_root(), 'src', 'coverage', ...
+    'st_apply_result_coverage_filters.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'st_collect_result_coverage_objects\(resultObj, coverageObjects\)', 'once'));
+batch = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
+    'st_generate_test_report.m'));
+verifyEmpty(testCase, regexp(batch, 'getCoverageResults\(resultObj\)', 'once'));
+end

@@ -75,7 +75,10 @@ try
         end
         metricCount = metricCount + verify_metric_readback( ...
             cvd, char(string(p.Results.CoveragePath)));
+        coverageObjects{i} = cvd;
     end
+    % Reports query the result again later; hand them these bound instances.
+    st_collect_result_coverage_objects(resultObj, coverageObjects);
     result.MetricReadbackCount = metricCount;
     st_log(cfg, 'INFO', ...
         'Result coverage filter attach complete | elapsed=%.3f sec', ...

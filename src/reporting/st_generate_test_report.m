@@ -268,7 +268,8 @@ end
 function artifacts = coverage_html_artifacts( ...
         artifacts, resultObj, folder, cfg)
 try
-    coverageObjects = getCoverageResults(resultObj);
+    % Through the shared collector, so the HTML uses the CVF-bound instances.
+    coverageObjects = st_collect_result_coverage_objects(resultObj);
 catch ME
     artifacts = record_artifact(artifacts, 'HTML', folder, ...
         'FAIL', ME.message);
@@ -281,12 +282,12 @@ if isempty(coverageObjects)
 end
 
 for i = 1:numel(coverageObjects)
-    root = coverage_root(coverageObjects(i));
+    root = coverage_root(coverageObjects{i});
     fileName = sprintf('%02d_%s.html', i, safe_file_name(root));
     path = fullfile(folder, fileName);
     try
         report = st_call_quiet(cfg, 'cvhtml', ...
-            @() cvhtml(path, coverageObjects(i), '-sRT=0'));
+            @() cvhtml(path, coverageObjects{i}, '-sRT=0'));
         if isstruct(report) && isfield(report, 'fileName') && ...
                 isfield(report, 'path')
             path = fullfile(char(report(1).path), char(report(1).fileName));
