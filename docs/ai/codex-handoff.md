@@ -141,8 +141,11 @@
   포트 1, 끊김 5였다. 고친 것은 둘이다. `run_exported_tests.m`은 `copy_workspace_back` 뒤, `remove_short_workspace` 전에
   `rebase_signal_editor_inputs`로 standalone 모델의 Filename을 기록 위치로 바꿔 저장한다(포트 수가 바뀌면 오류). 패키징
   `rewire_packaged_input`은 Filename을 바꾼 뒤 최상위에 출발점 없는 선이 있으면 `simtest:StandalonePackageLinesDetached`로 멈춘다.
-  기존 패키징본은 끊긴 채라 파이프라인을 다시 돌려야 한다. 실기 확인은 `todo.md` 7절(파이프라인과 최종 문서를 다시 만들고 끊긴
-  선을 다시 센다)이다.
+  2026-11-25 일곱 번째 실행에서 파이프라인과 최종 문서를 다시 만들었고(둘 다 OK), 세 대상 모두 Harness와 standalone CUT 안팎의
+  끊긴 선 끝이 0이었다. 단계별로는 내보낸 원본 0, 실행용 복사본 0(포트 6, 파일 있음), 패키징본 0이었다(해결). 다시 만든 결과물의
+  coverage 숫자가 이전과 같은지는 보지 않았다. 같은 실행에서 번들 단위 테스트 2개가 실패했다. 이번 수정과 무관하게 이전 리팩터링
+  (`close_system(topModel, 0)`으로 바뀐 세션 정리, 결과 라벨로 만드는 산출물 이름)을 따라가지 못한 정적 테스트여서 테스트를
+  소스에 맞췄다(MATLAB 재실행은 `todo.md` 6절).
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
