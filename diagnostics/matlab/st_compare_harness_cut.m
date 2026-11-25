@@ -51,11 +51,11 @@ try
     if height(config) == 0
         error('simtest:CompareNoHarness', 'Harness가 있는 대상이 없습니다');
     end
-    [standaloneTargets, standaloneNote] = standalone_targets(cfg);
+    [standaloneManifest, standaloneNote] = standalone_targets(cfg);
     if strlength(standaloneNote) > 0, lines{end+1} = char(standaloneNote); end
     topWasDirty = strcmp(get_param(cfg.TopModel, 'Dirty'), 'on');
     for r = 1:height(config)
-        [targetLines, targetReport] = compare_target(config(r, :), cfg, standaloneTargets);
+        [targetLines, targetReport] = compare_target(config(r, :), cfg, standaloneManifest);
         lines = [lines, targetLines]; %#ok<AGROW>
         report = report + targetReport;
     end
@@ -85,19 +85,18 @@ if strlength(report) > 0, fprintf('진단 전문 파일: %s (임시 폴더)\n', 
 end
 
 
-function [targets, note] = standalone_targets(cfg)
-targets = [];
+function [manifest, note] = standalone_targets(cfg)
+manifest = [];
 note = "";
 try
     manifest = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir, 'LATEST');
-    targets = manifest.Targets;
 catch ME
     note = "standalone 매니페스트를 읽지 못함 | " + string(id_of(ME));
 end
 end
 
 
-function [out, report] = compare_target(row, cfg, standaloneTargets)
+function [out, report] = compare_target(row, cfg, standaloneManifest)
 no = double(row.No);
 report = "";
 harness = char(strtrim(string(row.HarnessName)));
@@ -107,7 +106,7 @@ counts = nan(1, 5);   % original CUT, Harness CUT, Harness outside, standalone C
 settings = '-';
 groups = {};
 harnessInfo = struct('Sources', containers.Map('KeyType', 'char', 'ValueType', 'any'), ...
-    'EditorPorts', NaN);
+    'EditorPorts', NaN, 'EditorFile', '-');
 standaloneLines = {};
 loadedHere = false;
 failures = {};
@@ -124,7 +123,8 @@ try
     end
     [inside, outside] = dangling_ends(harness, harnessCut);
     counts(2:3) = [numel(inside), numel(outside)];
-    harnessInfo = source_side(harness, harnessCut);
+    harnessInfo = source_side(harness, harnessCut, fileparts(char(cfg.ModelFile)));
+    standaloneLines{end+1} = ['Harness Signal Editor | ' harnessInfo.EditorFile];
     groups = [groups, labelled('Harness CUT 안', describe_inside(setdiff(inside, original), owner, harnessCut)), ...
         labelled('Harness CUT 밖', describe_outside(outside, harness, harnessCut))];
 catch ME
@@ -138,9 +138,10 @@ if loadedHere && ~isempty(owner)
     end
 end
 try
-    [groupsHere, standaloneCounts, standaloneLines] = scan_standalone( ...
-        row, standaloneTargets, original, owner, harnessInfo);
+    [groupsHere, standaloneCounts, standaloneNotes] = scan_standalone( ...
+        row, standaloneManifest, original, owner, harnessInfo, cfg);
     counts(4:5) = standaloneCounts;
+    standaloneLines = [standaloneLines, standaloneNotes];
     groups = [groups, groupsHere];
 catch ME
     failures{end+1} = sprintf('standalone %s%s', id_of(ME), own_reason(ME));
@@ -156,16 +157,16 @@ if numel(groups) > 8, out{end+1} = sprintf('  그 밖 %d가지', numel(groups) -
 end
 
 
-function [groups, counts, notes] = scan_standalone(row, standaloneTargets, original, owner, harnessInfo)
+function [groups, counts, notes] = scan_standalone(row, manifest, original, owner, harnessInfo, cfg)
 % The packaged standalone model of this target, loaded from its own file:
 % first from the current folder, as Test Manager would, then from the
 % model's own folder, where its relative Signal Editor file name resolves.
 groups = {};
 counts = [NaN NaN];
 notes = {};
-if isempty(standaloneTargets), return; end
+if isempty(manifest) || ~isfield(manifest, 'Targets'), return; end
 % jsondecode gives a cell array when the target records differ in fields.
-items = standaloneTargets;
+items = manifest.Targets;
 if ~iscell(items), items = num2cell(items); end
 item = [];
 for k = 1:numel(items)
@@ -212,6 +213,34 @@ catch
 end
 notes{end+1} = char(sprintf('standalone 모델 폴더에서 열면 | 끊긴 선 끝 CUT 안 %d 밖 %d | Signal Editor 출력 포트 %s', ...
     numel(insideAgain), numel(outsideAgain), editorPorts));
+close_system(modelName, 0);
+% The same model at the earlier steps: as exported (bundle template) and as
+% prepared and run (execution workspace). Packaging copies the latter.
+workFile = field_of(item, 'StandaloneModelFile');
+workspace = field_of(manifest, 'Workspace');
+templateFile = '';
+if ~isempty(workFile) && ~isempty(workspace) && startsWith(workFile, [workspace filesep])
+    templateFile = fullfile(field_of(manifest, 'BundleDirectory'), 'template', ...
+        workFile(numel(workspace) + 2:end));
+end
+notes{end+1} = sprintf('단계별 CUT 밖 끊긴 선 끝 | 내보낸 원본 %s | 실행용 복사본 %s | 패키징본 %d', ...
+    stage_count(templateFile, modelName, standaloneCut), ...
+    stage_count(workFile, modelName, standaloneCut), numel(outsideAgain));
+end
+
+
+function text = stage_count(modelFile, modelName, cut)
+% Loose ends outside the CUT in one saved copy of the standalone model.
+text = '없음';
+if isempty(modelFile) || ~isfile(modelFile), return; end
+try
+    load_system(modelFile);
+    closeModel = onCleanup(@() close_if_loaded(modelName)); %#ok<NASGU>
+    [~, outside] = dangling_ends(modelName, cut);
+    text = sprintf('%d', numel(outside));
+catch ME
+    text = ['오류 ' id_of(ME)];
+end
 end
 
 
@@ -324,7 +353,7 @@ text = " | Harness에서 보내는 " + source.Type + " | 출력 포트 Harness "
 end
 
 
-function info = source_side(root, cut)
+function info = source_side(root, cut, topFolder)
 % While the Harness is loaded: what feeds each input outside its CUT, keyed
 % like dangling_ends, and the output port count of its Signal Editor. The
 % standalone model has the same name, so the two are never loaded together.
@@ -348,11 +377,24 @@ for h = reshape(handles, 1, [])
             'Rel', relative(sourceBlock, root), 'Outports', numel(ports.Outport));
     end
 end
+info.EditorFile = '-';
 try
-    ports = get_param(st_find_signal_editor_block(root), 'PortHandles');
+    editor = st_find_signal_editor_block(root);
+    ports = get_param(editor, 'PortHandles');
     info.EditorPorts = numel(ports.Outport);
+    info.EditorFile = file_text(char(string(get_param(editor, 'Filename'))), topFolder);
 catch
 end
+end
+
+
+function text = file_text(filename, modelFolder)
+% How a Signal Editor file name resolves: as written (current folder or an
+% absolute path), on the MATLAB path, beside the model. Kinds only.
+kind = '상대';
+if ~isempty(regexp(filename, '^([A-Za-z]:[\\/]|[\\/])', 'once')), kind = '절대'; end
+text = sprintf('파일 이름 %s | 그대로 %s 경로 %s 모델 폴더 %s', kind, mark(isfile(filename)), ...
+    mark(~isempty(which(filename))), mark(isfile(fullfile(modelFolder, filename))));
 end
 
 
