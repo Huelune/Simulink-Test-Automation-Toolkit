@@ -18,26 +18,30 @@ function [kind, detail] = st_defect_criteria_kind(criteriaResult)
 kind = "기준 없음";
 detail = "";
 if isempty(criteriaResult), return; end
-records = criteriaResult.DiagnosticRecord;
+outcome = string(read(criteriaResult, 'Outcome'));
+if isempty(outcome), outcome = "없음"; end
+records = read(criteriaResult, 'DiagnosticRecord');
 failed = false;
 defectCheck = false;
 events = strings(0, 1);
 for k = 1:numel(records)
-    record = records(k);
-    if raised(record.Exception)
+    if iscell(records), record = records{k}; else, record = records(k); end
+    exception = read(record, 'Exception');
+    if raised(exception)
         kind = "오류";
-        detail = string(record.Exception(1).identifier);
+        detail = string(exception(1).identifier);
         if strlength(detail) == 0, detail = "(식별자 없음)"; end
         return;
     end
-    events = [events; reshape(string(record.Event), [], 1)]; %#ok<AGROW>
-    if strcmpi(string(record.Outcome), "Failed")
+    events = [events; reshape(string(read(record, 'Event')), [], 1)]; %#ok<AGROW>
+    recordOutcome = string(read(record, 'Outcome'));
+    % An unreadable record outcome follows the criteria's own.
+    if isempty(recordOutcome), recordOutcome = outcome; end
+    if any(strcmpi(recordOutcome, "Failed"))
         failed = true;
         defectCheck = defectCheck || contains(diagnostic_text(record), "실행 횟수");
     end
 end
-outcome = string(criteriaResult.Outcome);
-if isempty(outcome), outcome = "없음"; end
 if failed && defectCheck
     kind = "verify 실패";
 elseif failed || strcmpi(outcome, "Failed")
@@ -52,19 +56,35 @@ end
 end
 
 
+function value = read(object, name)
+% A failed record of a saved result raised MATLAB:unassignedOutputs on
+% reading; a property that cannot be read counts as empty.
+value = [];
+try, value = object.(name); catch, end
+end
+
+
 function tf = raised(exception)
 % A record without an error may still hold an empty MException.
 tf = ~isempty(exception) && isa(exception, 'MException') && ...
-    (strlength(string(exception.identifier)) > 0 || strlength(string(exception.message)) > 0);
+    (strlength(string(exception(1).identifier)) > 0 || strlength(string(exception(1).message)) > 0);
 end
 
 
 function text = diagnostic_text(record)
+% The verify message sits in TestDiagnosticResult; Report repeats it.
+% Either may hold diagnostic result objects instead of text.
 text = "";
-try
-    parts = string(record.TestDiagnosticResult);
-    if ~isempty(parts), text = join(reshape(parts, 1, []), " "); end
-catch
-    % Not text: it cannot be the defect check's message.
+for name = {'TestDiagnosticResult', 'Report'}
+    value = read(record, name{1});
+    try
+        if isobject(value) && ~isempty(value) && isprop(value(1), 'DiagnosticText')
+            value = {value.DiagnosticText};
+        end
+        parts = string(value);
+        if ~isempty(parts), text = text + " " + join(reshape(parts, 1, []), " "); end
+    catch
+        % Not text: it cannot be the defect check's message.
+    end
 end
 end

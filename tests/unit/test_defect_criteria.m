@@ -207,6 +207,26 @@ end
 end
 
 
+function testCriteriaKindSurvivesUnreadableRecordFields(testCase)
+% A failed record of a saved result raised MATLAB:unassignedOutputs on
+% reading. A missing field stands in for a property that raises: the
+% message is still found in Report, and the outcome follows the criteria's.
+noException = struct('Outcome', "Failed", 'Event', "VerificationFailed", ...
+    'Report', 'Secret_Block [false] 실행 횟수');
+noOutcome = struct('Event', "VerificationFailed", ...
+    'TestDiagnosticResult', {{'Secret_Block [false] 실행 횟수'}});
+cases = {criteria_result("Failed", noException), "verify 실패", ""
+    criteria_result("Failed", noOutcome), "verify 실패", ""
+    criteria_result("Failed", {{noException}}), "verify 실패", ""
+    struct('Outcome', "Failed"), "다른 실패", ""};
+for k = 1:size(cases, 1)
+    [kind, detail] = st_defect_criteria_kind(cases{k, 1});
+    verifyEqual(testCase, [kind, detail], [cases{k, 2}, cases{k, 3}], sprintf('case %d', k));
+    verifyFalse(testCase, contains(lower(kind + detail), "secret"), sprintf('case %d', k));
+end
+end
+
+
 function run_script(script, test) %#ok<INUSD> test is read by the script
 eval(script);
 end
