@@ -15,7 +15,8 @@ info = struct('Starts', NaN, 'Copies', [NaN NaN], 'Held', "없음", 'Loaded', "-
 text = splitlines(string(fileread(logFile)));
 copies = text(contains(text, "Portable coverage filter copy complete"));
 info.Copies = [sum(contains(copies, "files=0")), sum(~contains(copies, "files=0"))];
-info.Starts = sum(contains(text, "] START"));
+% Target progress lines only; report steps log "[ResultReport 1/6] START" too.
+info.Starts = sum(contains(text, regexpPattern("\[\s*\d+/\d+\] START")));
 
 held = text(contains(text, "Harness name in use by another model"));
 if ~isempty(held)

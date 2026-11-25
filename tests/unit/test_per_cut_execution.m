@@ -392,6 +392,7 @@ standalone = fullfile(cfg.StandaloneCoverageRootDir, 'secret_bundle', 'secret_ha
 logFile = fullfile(folder, 'collect.log');
 logLines = [ ...
     "[t][STEP] [1/3] START  secret_case | secret_cut"
+    "[t][DEBUG] [ResultReport 1/6] START | Collect Test Result Hierarchy"
     "[t][DEBUG] Harness loaded for coverage | IsHarness=on | OpenHarness=1"
     "[t][INFO] Portable coverage filter copy complete | files=2 | secret_dir"
     "[t][INFO] Portable coverage filter copy complete | files=0"
