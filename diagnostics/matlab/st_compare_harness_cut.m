@@ -1,16 +1,23 @@
 function st_compare_harness_cut()
-%ST_COMPARE_HARNESS_CUT Compare each target's CUT in the Top Model with the CUT in its Harness.
+%ST_COMPARE_HARNESS_CUT Find unconnected lines in a target's Harness and standalone model.
 %
 % st_compare_harness_cut
 %
-% Input lines inside a Harness's CUT were drawn unconnected (red dashed)
-% while the same lines in the Top Model's CUT are connected (2026-11-25).
-% Test runs happen in the Harness, so those inputs read 0 there. For every
-% target with a Harness this counts the line ends that meet no port in both
-% CUTs. For the ends found only in the Harness it reports, by Simulink block
-% type, the block that receives the line, the block that feeds it in the Top
-% Model, that block's output port count in each model, and its library link
-% status in each model. It also prints the Harness synchronization settings.
+% A user saw input lines drawn unconnected (red dashed) in a model reached
+% from Test Manager, while the same lines in the Top Model's CUT are
+% connected (2026-11-25). Test runs happen in that model, so those inputs
+% read 0 there. A first version looked only inside each Harness's CUT and
+% found nothing, so this looks at the whole Harness and at the packaged
+% standalone model, which carries the Harness's name.
+%
+% For every target with a Harness it counts the line ends that meet no port:
+% inside the Top Model's CUT, inside and outside the Harness's CUT, and
+% inside and outside the standalone model's CUT. Ends found only in the
+% Harness or standalone CUT, or outside a CUT, are grouped by Simulink block
+% type; for an input that is connected in the Top Model it also reports the
+% block that feeds it there, that block's output port count in each model,
+% and its library link status in each model. It prints the Harness
+% synchronization settings.
 %
 % Nothing is saved. A Dirty flag the Top Model gets from loading a Harness is
 % cleared. Only counts, block types and setting values are printed, never a
@@ -30,7 +37,7 @@ try
         fprintf('저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요\n');
         return;
     end
-    % A packaged standalone model carries a Harness's name; it must not be loaded.
+    % A packaged standalone model carries a Harness's name; both cannot be loaded.
     bdclose('all');
     cfg = st_require_runtime_target();
     st_log(cfg, 'INFO', 'Harness CUT compare start');
@@ -44,9 +51,11 @@ try
     if height(config) == 0
         error('simtest:CompareNoHarness', 'Harness가 있는 대상이 없습니다');
     end
+    [standaloneTargets, standaloneNote] = standalone_targets(cfg);
+    if strlength(standaloneNote) > 0, lines{end+1} = char(standaloneNote); end
     topWasDirty = strcmp(get_param(cfg.TopModel, 'Dirty'), 'on');
     for r = 1:height(config)
-        [targetLines, targetReport] = compare_target(config(r, :), cfg);
+        [targetLines, targetReport] = compare_target(config(r, :), cfg, standaloneTargets);
         lines = [lines, targetLines]; %#ok<AGROW>
         report = report + targetReport;
     end
@@ -76,16 +85,33 @@ if strlength(report) > 0, fprintf('진단 전문 파일: %s (임시 폴더)\n', 
 end
 
 
-function [out, report] = compare_target(row, cfg)
+function [targets, note] = standalone_targets(cfg)
+targets = [];
+note = "";
+try
+    manifest = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir, 'LATEST');
+    targets = manifest.Targets;
+catch ME
+    note = "standalone 매니페스트를 읽지 못함 | " + string(id_of(ME));
+end
+end
+
+
+function [out, report] = compare_target(row, cfg, standaloneTargets)
 no = double(row.No);
-out = {};
 report = "";
 harness = char(strtrim(string(row.HarnessName)));
 owner = '';
+original = strings(0, 1);
+counts = nan(1, 5);   % original CUT, Harness CUT, Harness outside, standalone CUT, outside
+settings = '-';
+groups = {};
 loadedHere = false;
+failures = {};
 try
     owner = char(st_normalize_cut_path(row.CUTPath, cfg.TopModel));
-    original = dangling_ends(owner);
+    original = dangling_ends(owner, owner);
+    counts(1) = numel(original);
     settings = harness_settings(owner, harness);
     loadedHere = ~bdIsLoaded(harness);
     sltest.harness.load(owner, harness);
@@ -93,17 +119,13 @@ try
     if getSimulinkBlockHandle(harnessCut) == -1
         error('simtest:CompareNoHarnessCut', 'Harness에 CUT 이름의 블록이 없습니다');
     end
-    inHarness = dangling_ends(harnessCut);
-    only = setdiff(inHarness, original);
-    out{end+1} = sprintf('대상 %d | 끊긴 선 끝 원래 CUT %d | Harness CUT %d | Harness에만 %d', ...
-        no, numel(original), numel(inHarness), numel(only));
-    out{end+1} = sprintf('대상 %d Harness 설정 | %s', no, settings);
-    groups = describe_only(only, owner, harnessCut);
-    for k = 1:min(6, numel(groups)), out{end+1} = ['  ' groups{k}]; end %#ok<AGROW>
-    if numel(groups) > 6, out{end+1} = sprintf('  그 밖 %d가지', numel(groups) - 6); end
+    [inside, outside] = dangling_ends(harness, harnessCut);
+    counts(2:3) = [numel(inside), numel(outside)];
+    groups = [groups, labelled('Harness CUT 안', describe_inside(setdiff(inside, original), owner, harnessCut)), ...
+        labelled('Harness CUT 밖', describe_outside(outside, harness, harnessCut))];
 catch ME
-    out{end+1} = sprintf('대상 %d 실패 | %s%s', no, id_of(ME), own_reason(ME));
-    report = sprintf("[대상 %d]\n%s\n\n", no, getReport(ME, 'extended', 'hyperlinks', 'off'));
+    failures{end+1} = sprintf('Harness %s%s', id_of(ME), own_reason(ME));
+    report = report + sprintf("[대상 %d Harness]\n%s\n\n", no, getReport(ME, 'extended', 'hyperlinks', 'off'));
 end
 if loadedHere && ~isempty(owner)
     try
@@ -111,68 +133,174 @@ if loadedHere && ~isempty(owner)
     catch
     end
 end
+try
+    [groupsHere, standaloneCounts] = scan_standalone(row, standaloneTargets, original, owner);
+    counts(4:5) = standaloneCounts;
+    groups = [groups, groupsHere];
+catch ME
+    failures{end+1} = sprintf('standalone %s%s', id_of(ME), own_reason(ME));
+    report = report + sprintf("[대상 %d standalone]\n%s\n\n", no, getReport(ME, 'extended', 'hyperlinks', 'off'));
+end
+out = {strrep(sprintf(['대상 %d | 끊긴 선 끝 | 원래 CUT %g | Harness CUT 안 %g 밖 %g | ' ...
+    'standalone CUT 안 %g 밖 %g'], no, counts), 'NaN', '-')};
+out{end+1} = sprintf('대상 %d Harness 설정 | %s', no, settings);
+for k = 1:numel(failures), out{end+1} = sprintf('대상 %d 실패 | %s', no, failures{k}); end %#ok<AGROW>
+for k = 1:min(8, numel(groups)), out{end+1} = ['  ' groups{k}]; end %#ok<AGROW>
+if numel(groups) > 8, out{end+1} = sprintf('  그 밖 %d가지', numel(groups) - 8); end
 end
 
 
-function keys = dangling_ends(cut)
+function [groups, counts] = scan_standalone(row, standaloneTargets, original, owner)
+% The packaged standalone model of this target, loaded from its own file.
+groups = {};
+counts = [NaN NaN];
+if isempty(standaloneTargets), return; end
+% jsondecode gives a cell array when the target records differ in fields.
+items = standaloneTargets;
+if ~iscell(items), items = num2cell(items); end
+item = [];
+for k = 1:numel(items)
+    if strcmp(field_of(items{k}, 'TestCaseName'), char(string(row.TestCaseName)))
+        item = items{k};
+        break;
+    end
+end
+if isempty(item)
+    error('simtest:CompareNoStandalone', 'standalone 매니페스트에 이 대상이 없습니다');
+end
+modelFile = field_of(item, 'PackagedStandaloneModel');
+standaloneCut = field_of(item, 'StandaloneCUTPath');
+if isempty(modelFile) || ~isfile(modelFile) || isempty(standaloneCut)
+    error('simtest:CompareNoStandalone', 'standalone 모델 파일이나 CUT 경로가 없습니다');
+end
+[~, modelName] = fileparts(modelFile);
+if bdIsLoaded(modelName)
+    error('simtest:CompareNameTaken', '같은 이름의 모델이 열려 있어 standalone 모델을 열지 못했습니다');
+end
+load_system(modelFile);
+closeModel = onCleanup(@() close_system(modelName, 0)); %#ok<NASGU>
+[inside, outside] = dangling_ends(modelName, standaloneCut);
+counts = [numel(inside), numel(outside)];
+if isempty(owner)
+    insideGroups = describe_outside(inside, standaloneCut, '');
+else
+    insideGroups = describe_inside(setdiff(inside, original), owner, standaloneCut);
+end
+groups = [labelled('standalone CUT 안', insideGroups), ...
+    labelled('standalone CUT 밖', describe_outside(outside, modelName, standaloneCut))];
+end
+
+
+function [inside, outside] = dangling_ends(root, cut)
 % One key per port that a line with a loose end still meets:
 % "in|<receiving block>|<port type><n>" for a line with no source,
 % "out|<sending block>|<n>" for a line that reaches no block, and
-% "loose|<system>" for a line with neither end on a port. Block and system
-% paths are relative to cut, so the two models can be compared.
-keys = strings(0, 1);
-handles = find_system(cut, 'FindAll', 'on', 'LookUnderMasks', 'all', ...
+% "loose|<system>" for a line with neither end on a port. A key is inside
+% when its block lies below cut (or, for a loose line, its system is cut),
+% and its path is then relative to cut; otherwise it is relative to root.
+inside = strings(0, 1);
+outside = strings(0, 1);
+cut = string(cut);
+handles = find_system(root, 'FindAll', 'on', 'LookUnderMasks', 'all', ...
     'FollowLinks', 'on', 'Type', 'line');
 for h = reshape(handles, 1, [])
     src = get_param(h, 'SrcPortHandle');
     dst = get_param(h, 'DstPortHandle');
     connected = dst(dst ~= -1);
+    kinds = strings(0, 1);
+    blocks = strings(0, 1);
+    tails = strings(0, 1);
     if any(src == -1)
         for d = reshape(connected, 1, [])
-            keys(end+1, 1) = "in|" + relative(get_param(d, 'Parent'), cut) + "|" + ...
-                string(get_param(d, 'PortType')) + string(get_param(d, 'PortNumber')); %#ok<AGROW>
+            kinds(end+1, 1) = "in"; %#ok<AGROW>
+            blocks(end+1, 1) = string(get_param(d, 'Parent')); %#ok<AGROW>
+            tails(end+1, 1) = string(get_param(d, 'PortType')) + string(get_param(d, 'PortNumber')); %#ok<AGROW>
         end
         if isempty(connected)
-            keys(end+1, 1) = "loose|" + relative(get_param(h, 'Parent'), cut); %#ok<AGROW>
+            kinds(end+1, 1) = "loose";
+            blocks(end+1, 1) = string(get_param(h, 'Parent'));
+            tails(end+1, 1) = "";
         end
     elseif any(dst == -1)
-        keys(end+1, 1) = "out|" + relative(get_param(src, 'Parent'), cut) + "|" + ...
-            string(get_param(src, 'PortNumber')); %#ok<AGROW>
+        kinds(end+1, 1) = "out";
+        blocks(end+1, 1) = string(get_param(src, 'Parent'));
+        tails(end+1, 1) = string(get_param(src, 'PortNumber'));
+    end
+    for k = 1:numel(kinds)
+        if startsWith(blocks(k), cut + "/") || (kinds(k) == "loose" && blocks(k) == cut)
+            inside(end+1, 1) = kinds(k) + "|" + relative(blocks(k), cut) + "|" + tails(k); %#ok<AGROW>
+        else
+            outside(end+1, 1) = kinds(k) + "|" + relative(blocks(k), root) + "|" + tails(k); %#ok<AGROW>
+        end
     end
 end
-keys = unique(keys);
+inside = unique(inside);
+outside = unique(outside);
 end
 
 
-function out = describe_only(only, owner, harnessCut)
-% Group the Harness-only loose ends by what they look like, as kinds only.
+function out = describe_inside(keys, owner, otherCut)
+% Loose ends inside a copy of the CUT, compared with the Top Model's CUT.
 kinds = strings(0, 1);
-for key = reshape(only, 1, [])
+for key = reshape(keys, 1, [])
     parts = split(key, "|");
     switch parts(1)
         case "in"
-            [srcType, outs, links] = original_source(owner, harnessCut, parts(2), parts(3));
+            [srcType, outs, links] = original_source(owner, otherCut, parts(2), parts(3));
             kinds(end+1, 1) = sprintf("끊긴 입력 | 받는 %s | 원래 보내는 %s | 출력 포트 %s | 링크 %s", ...
-                block_type(join_path(harnessCut, parts(2))), srcType, outs, links); %#ok<AGROW>
+                block_type(join_path(otherCut, parts(2))), srcType, outs, links); %#ok<AGROW>
         case "out"
-            kinds(end+1, 1) = sprintf("받는 쪽 없음 | 보내는 %s", ...
-                block_type(join_path(harnessCut, parts(2)))); %#ok<AGROW>
+            kinds(end+1, 1) = "받는 쪽 없음 | 보내는 " + block_type(join_path(otherCut, parts(2))); %#ok<AGROW>
         otherwise
             kinds(end+1, 1) = "양 끝 모두 끊김"; %#ok<AGROW>
     end
 end
-[unique_kinds, ~, index] = unique(kinds, 'stable');
+out = count_kinds(kinds);
+end
+
+
+function out = describe_outside(keys, root, cut)
+% Loose ends outside a CUT, by the type of the block they still meet.
+kinds = strings(0, 1);
+for key = reshape(keys, 1, [])
+    parts = split(key, "|");
+    path = join_path(root, parts(2));
+    if strcmp(path, char(cut))
+        blockType = "CUT";
+    else
+        blockType = block_type(path);
+    end
+    switch parts(1)
+        case "in"
+            kinds(end+1, 1) = "끊긴 입력 | 받는 " + blockType; %#ok<AGROW>
+        case "out"
+            kinds(end+1, 1) = "받는 쪽 없음 | 보내는 " + blockType; %#ok<AGROW>
+        otherwise
+            kinds(end+1, 1) = "양 끝 모두 끊김"; %#ok<AGROW>
+    end
+end
+out = count_kinds(kinds);
+end
+
+
+function out = count_kinds(kinds)
+[uniqueKinds, ~, index] = unique(kinds, 'stable');
 counts = accumarray(index(:), 1);
-out = cell(1, numel(unique_kinds));
-for k = 1:numel(unique_kinds)
-    out{k} = sprintf('%d개 | %s', counts(k), unique_kinds(k));
+out = cell(1, numel(uniqueKinds));
+for k = 1:numel(uniqueKinds)
+    out{k} = char(sprintf('%d개 | %s', counts(k), uniqueKinds(k)));
 end
 end
 
 
-function [srcType, outs, links] = original_source(owner, harnessCut, rel, port)
+function out = labelled(label, groups)
+out = cellfun(@(g) [label ' | ' char(g)], groups, 'UniformOutput', false);
+end
+
+
+function [srcType, outs, links] = original_source(owner, otherCut, rel, port)
 % The block feeding this input in the Top Model, and how it differs in the
-% Harness: "원래→Harness" for the output port count and the link status.
+% copy: "원래→복사본" for the output port count and the link status.
 srcType = "?";
 outs = "?";
 links = "?";
@@ -194,15 +322,15 @@ try
     srcType = string(get_param(sourceBlock, 'BlockType'));
     sourcePorts = get_param(sourceBlock, 'PortHandles');
     originalLink = string(get_param(sourceBlock, 'LinkStatus'));
-    harnessBlock = join_path(harnessCut, relative(getfullname(sourceBlock), owner));
-    if getSimulinkBlockHandle(harnessBlock) == -1
-        outs = numel(sourcePorts.Outport) + "→Harness에 없음";
-        links = originalLink + "→Harness에 없음";
+    copyBlock = join_path(otherCut, relative(getfullname(sourceBlock), owner));
+    if getSimulinkBlockHandle(copyBlock) == -1
+        outs = numel(sourcePorts.Outport) + "→없음";
+        links = originalLink + "→없음";
         return;
     end
-    harnessPorts = get_param(harnessBlock, 'PortHandles');
-    outs = numel(sourcePorts.Outport) + "→" + numel(harnessPorts.Outport);
-    links = originalLink + "→" + string(get_param(harnessBlock, 'LinkStatus'));
+    copyPorts = get_param(copyBlock, 'PortHandles');
+    outs = numel(sourcePorts.Outport) + "→" + numel(copyPorts.Outport);
+    links = originalLink + "→" + string(get_param(copyBlock, 'LinkStatus'));
 catch
 end
 end
@@ -230,13 +358,21 @@ end
 end
 
 
-function rel = relative(block, cut)
-% Path below cut; "." for cut itself.
+function value = field_of(item, name)
+value = '';
+if isstruct(item) && isfield(item, name) && ~isempty(item.(name))
+    value = char(string(item.(name)));
+end
+end
+
+
+function rel = relative(block, base)
+% Path below base; "." for base itself.
 block = string(block);
-if block == string(cut)
+if block == string(base)
     rel = ".";
 else
-    rel = extractAfter(block, strlength(string(cut)) + 1);
+    rel = extractAfter(block, strlength(string(base)) + 1);
 end
 end
 
