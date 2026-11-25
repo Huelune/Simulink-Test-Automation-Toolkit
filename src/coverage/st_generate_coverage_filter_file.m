@@ -229,8 +229,18 @@ end
 if ~bdIsLoaded(cfg.TopModel), load_system(cfg.TopModel); end
 sourceCut = st_normalize_cut_path(row.CUTPath, cfg.TopModel);
 harness = char(row.HarnessName);
+% Close only a Harness this call loaded. Closing one the caller loaded frees
+% its name, and a later lookup by name then loads whatever model of that
+% name is first on the path, such as a packaged standalone model.
+loadedHere = ~bdIsLoaded(harness);
 sltest.harness.load(sourceCut, harness);
-cleanup = onCleanup(@() close_harness_quiet(sourceCut, harness));
+if loadedHere
+    cleanup = onCleanup(@() close_harness_quiet(sourceCut, harness));
+else
+    st_log(cfg, 'DEBUG', ...
+        'Coverage filter Harness left loaded | the caller loaded it | %s', ...
+        harness);
+end
 root = harness;
 cut = identify_context_cut(sourceCut, root);
 end

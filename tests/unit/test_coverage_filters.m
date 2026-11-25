@@ -350,3 +350,14 @@ runner = fileread(fullfile(root, 'src', 'execution', 'st_run_tests_per_cut.m'));
 verifyNotEmpty(testCase, regexp(runner, "'CoverageObjects', initialCoverageObjects\)", 'once'));
 verifyNotEmpty(testCase, regexp(runner, "'CoverageObjects', finalCoverageObjects\)", 'once'));
 end
+
+function testFilterGeneratorKeepsAHarnessTheCallerLoaded(testCase)
+% A PER_CUT collect loads the Harness so coverage resolves against it. The
+% CVF generator used to close it, and coverage then loaded the packaged
+% standalone model that carries the same name.
+source = fileread(fullfile(st_project_root(), 'src', 'coverage', ...
+    'st_generate_coverage_filter_file.m'));
+verifyNotEmpty(testCase, regexp(source, ['loadedHere = ~bdIsLoaded\(harness\);\s*' ...
+    'sltest\.harness\.load\(sourceCut, harness\);\s*if loadedHere\s*' ...
+    'cleanup = onCleanup\(@\(\) close_harness_quiet\(sourceCut, harness\)\);'], 'once'));
+end
