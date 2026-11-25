@@ -8,177 +8,53 @@
 
 ## 6. 1단계 결과 정리의 Coverage에 CVF가 걸리는지 확인하고, 결함 TC 남은 눈 확인 마치기
 
-왜: 1단계(PER_CUT) 결과 정리의 CUT 결정 커버리지가 27/30이었고, 같은 CUT의 standalone 저장 Coverage는 20/22였다. 결과 정리는
-저장한 ResultSet에서 coverage 객체를 꺼내 CVF를 붙인 뒤 보고서를 쓴다. 그런데 보고서는 Coverage 표, CVT·HTML, CVF 복사,
-결정 목록을 만들 때마다 coverage를 다시 꺼냈다. Test Manager는 꺼낼 때마다 새 객체를 줄 수 있어서, CVF가 빠진 객체로
-계산됐다. 지난번 이 절의 `전` 로그에서 CVF 복사가 6번 모두 0개였던 것이 그 증거다. 첫 수정은 결과 정리를 다시 할 때
-`ResultCoverageDecisionReadbackFailed`로 멈춰서, CVF를 붙인 객체를 보고서에 직접 넘기는 방식으로 다시 고쳤다. 그 뒤 결과
-정리는 `CollectHarnessNameInUse`로 두 번 멈췄다. standalone 모델은 Harness와 이름이 같은데, 결과 정리가 Harness를 쓰려 할 때
-그 이름으로 Harness가 아닌 모델이 열려 있다고 판정한 것이다. 이를 막으려고 고친 것은 둘이다. 이 블록은 시작할 때 열린 모델을
-모두 닫는다. CVF 생성은 이제 결과 정리가 열어 둔 Harness를 닫지 않는다. 닫으면 coverage를 읽을 때 그 이름이 경로에 있는
-standalone 모델로 풀릴 수 있다. 그래도 지난번 실행은 첫 대상에서 멈춘 것으로 보인다. 그 실행의 로그에 CVF 복사가 한 번도 없다.
-무엇이 그 모델을 열었는지는 아직 모른다. 판정이 틀렸을 수도 있어서, 이제 결과 정리는 Top Model의 열린 Harness 목록에 있는 모델도
-Harness로 인정한다. 그래도 멈추면, 멈춘 순간의 상태를 로그에 남긴다. 이 블록은 그 상태를 결과 정리 전후의 상태와 함께 종류로만
-찍는다. 이 블록은 시뮬레이션 없이 결과 정리만 다시 하고, 전후 숫자를 비교한다. 결정 목록(`DecisionPoints`)은 CVF가 빼는 블록을
+왜: 1단계(PER_CUT) 결과 정리의 CUT 결정 커버리지가 27/30이었고, 같은 CUT의 standalone 저장 Coverage는 20/22였다. 보고서가
+coverage를 꺼낼 때마다 CVF가 빠진 새 객체를 받아 계산한 것이 원인이어서, CVF를 붙인 객체를 보고서에 직접 넘기게 고쳤다. 그 확인이
+세 번 `CollectHarnessNameInUse`로 멈췄다. 세 화면의 단위 테스트 수(22, 23, 23)는 이 절의 첫 블록이 돌리던 테스트 파일 하나의
+수와 같다. 세 번 모두 그 첫 블록이 돌았다는 뜻이다. 첫 블록은 열린 모델을 닫지 않는다. 그래서 눈 확인 때 연 standalone
+모델(Harness와 이름이 같다)이 그대로 남아 결과 정리를 막았다. 이제 결과 정리는 그런 모델에 저장 안 한 변경이 없으면 닫고 Harness를
+연다. 변경이 있으면 지금처럼 멈춘다. 점검은 저장소의 진단 함수로 옮겼다. 붙여 넣을 것은 두 줄이고, 점검 내용은 pull한 코드를
+따른다. 이 점검은 시뮬레이션 없이 결과 정리만 다시 하고 전후 숫자를 비교한다. 결정 목록(`DecisionPoints`)은 CVF가 빼는 블록을
 빼고 고르므로, 그 수도 바뀔 수 있다.
 
 5절(standalone과 최종 문서)은 숫자가 모두 기대대로였다. 남은 것은 눈으로 볼 세 가지뿐이라 이 절에 옮겼다.
 
 순서:
 
-1. 블록을 붙여 넣기 전에, 5절 실행 뒤 열려 있는 화면에서 두 가지를 본다(블록이 열린 모델을 닫으므로 먼저 본다). 이 화면들은
+1. 블록을 붙여 넣기 전에, 5절 실행 뒤 열려 있는 화면에서 두 가지를 본다. 블록이 열린 모델을 닫으므로 먼저 본다. 이 화면들은
    블록 이름이 보이므로 캡처하지 않는다.
    - standalone 결과: Test Manager의 Results and Artifacts에서 가져온 결과 → 한 대상의 Test Case → 번호가 가장 큰
      Iteration(결함 Iteration) → Custom Criteria Results. `실행 횟수`가 든 검증이 실패로 나오면 `verify 실패`, 오류 메시지가
      나오면 `오류`. 결과가 이미 닫혀 있으면 `못 봄`.
    - 5절이 연 저장 Coverage 보고서(브라우저)의 Filter 항목에 뺀 것이 나오는지, standalone 모델에 Coverage 색이 칠해지고 하위
      Subsystem이 빠졌는지. 이미 닫았으면 `못 봄`.
-2. 모델 프로젝트(.prj)를 연다. 클론에서 main을 pull한다. 아래 블록은 pull한 이 파일에서 새로 복사한다. 지난번 화면은 이전
-   블록이었다(`후` 로그 이름이 `-`). 열려 있는 모델 중 저장 안 한 것이 없을 때 붙여 넣는다. 툴킷 폴더를 고르는 창이 뜬다.
+2. 모델 프로젝트(.prj)를 연다. 클론에서 main을 pull한다. 아래 두 줄을 이 파일에서 복사해 붙여 넣는다. 명령 기록(위 화살표)으로
+   전에 붙인 블록을 다시 부르지 않는다. 열려 있는 모델 중 저장 안 한 것이 없을 때 붙여 넣는다. 툴킷 폴더를 고르는 창이 뜬다.
    결과 정리만 다시 하므로 평소 결과 정리만큼 걸린다.
 3. 블록이 끝나면 결과 정리가 다시 가져온 1단계 결과가 Test Manager에 들어와 있다. 1번과 같은 순서로 1단계 결함 Iteration의
    Custom Criteria Results를 본다. 결과가 없으면 `못 봄`.
 
 ```matlab
-clearvars; clc; warnState = warning('off', 'all');
-toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
-if isequal(toolkitDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다\n'); warning(warnState); return; end
-oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir);
-loadedNames = find_system('type', 'block_diagram');
-if any(strcmp(get_param(loadedNames, 'Dirty'), 'on')), fprintf('저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요\n'); warning(warnState); return; end
-bdclose('all');
-idOf = @(ex) char(strjoin([string(ex.identifier) repmat("(식별자 없음)", 1, double(isempty(ex.identifier)))], ''));
-dashText = @(value) strrep(value, 'NaN', '-');
-diagFile = 'st_cvf_collect_check.txt';
-fid = fopen(fullfile(tempdir, diagFile), 'w');
-if fid < 0, fid = fopen('nul', 'w'); end
-cfg = st_config();
-screenLines = {sprintf('MATLAB %s', version('-release'))};
-% 가. 단위 테스트
-try
-    evalc(['testResults = runtests({fullfile(st_project_root(), ''tests'', ''unit'', ''test_coverage_filters.m''), ' ...
-        'fullfile(st_project_root(), ''tests'', ''unit'', ''test_per_cut_execution.m'')});']);
-    screenLines{end+1} = sprintf('단위 테스트 | %d | 통과 %d | 실패 %d | 미완료 %d', numel(testResults), sum([testResults.Passed]), ...
-        sum([testResults.Failed]), sum([testResults.Incomplete]));
-    failedTests = testResults([testResults.Failed] | [testResults.Incomplete]);
-    for k = 1:numel(failedTests), screenLines{end+1} = sprintf('  실패 | %s', failedTests(k).Name); end %#ok<SAGROW>
-catch testError
-    screenLines{end+1} = sprintf('단위 테스트 | 실행 오류 | %s', idOf(testError));
-end
-T = table();
-try
-    evalc('T = st_load_targets(cfg.OnlyEnabled);');
-catch loadError
-    screenLines{end+1} = sprintf('대상 목록 읽기 실패 | %s', idOf(loadError));
-end
-% 나. Harness 이름의 모델: 경로가 가리키는 파일 종류, 열려 있으면 Harness인지와 파일 종류(이름·경로는 찍지 않는다)
-fileKinds = ["없음", "모델 파일", "standalone 폴더", "모델 폴더", "결과 폴더", "기타"];
-inFolder = @(file, folder) strlength(string(folder)) > 0 && startsWith(lower(string(file)), lower(string(folder)));
-fileKind = @(file) char(fileKinds(find([strlength(string(file)) == 0, strcmpi(string(file), string(cfg.ModelFile)), ...
-    inFolder(file, cfg.StandaloneCoverageRootDir), inFolder(file, fileparts(char(cfg.ModelFile))), inFolder(file, cfg.ResultDir), true], 1)));
-harnessNames = strings(1, 0);
-if ismember('HarnessName', T.Properties.VariableNames), harnessNames = reshape(unique(string(T.HarnessName(strlength(string(T.HarnessName)) > 0))), 1, []); end
-pathKinds = strings(1, 0);
-for harnessName = harnessNames, pathKinds(end+1) = string(fileKind(which(char(harnessName)))); end %#ok<SAGROW>
-pathText = char(strjoin(unique(pathKinds), ", ")); if isempty(pathText), pathText = '-'; end
-probeCode = ['probeText = "없음"; for harnessName = harnessNames, if bdIsLoaded(char(harnessName)), ' ...
-    'isHarnessText = "?"; try, isHarnessText = string(get_param(char(harnessName), ''IsHarness'')); catch, end, ' ...
-    'openText = "?"; if bdIsLoaded(cfg.TopModel), try, openHarnesses = sltest.harness.find(cfg.TopModel, ''OpenOnly'', ''on''); ' ...
-    'openText = "아님"; if any(strcmp({openHarnesses.name}, char(harnessName))), openText = "맞음"; end, catch, end, end, ' ...
-    'probeText = sprintf("열림(IsHarness %s, 열린 Harness %s, 파일 %s)", isHarnessText, openText, ' ...
-    'fileKind(get_param(char(harnessName), ''FileName''))); end, end'];
-try, evalc('st_require_runtime_target();'); catch, end
-eval(probeCode); stateBefore = probeText; stateAfter = "-";
-% 다. 결과 정리 전(1)과 후(2): 결과 정리 로그의 CVF 복사 횟수, 대상별 CUT 결정·실행 커버리지와 결정 목록 수
-numbers = nan(height(T), 5, 2); copyCounts = nan(2, 2); logNames = {'-', '-'}; collectText = '건너뜀';
-startCounts = nan(1, 2); stopText = '-';
-for phase = 1:2
-    if phase == 2
-        try
-            evalc('st_collect_per_cut_results();');
-            collectText = 'OK';
-        catch collectError
-            collectText = ['실패 ' idOf(collectError)];
-            fprintf(fid, '[결과 정리]\n%s\n\n', getReport(collectError, 'extended', 'hyperlinks', 'off'));
-        end
-        eval(probeCode); stateAfter = probeText;
-    end
-    logFiles = dir(fullfile(char(cfg.ResultDir), 'logs', '*_st_collect_per_cut_results*.log'));
-    if ~isempty(logFiles), logFiles = logFiles(~endsWith({logFiles.name}, '.console.log')); end
-    if ~isempty(logFiles)
-        [~, newest] = max([logFiles.datenum]);
-        logNames{phase} = logFiles(newest).name;
-        logLines = splitlines(string(fileread(fullfile(logFiles(newest).folder, logFiles(newest).name))));
-        copyLines = logLines(contains(logLines, "Portable coverage filter copy complete"));
-        copyCounts(phase, :) = [sum(contains(copyLines, "files=0")), sum(~contains(copyLines, "files=0"))];
-        startCounts(phase) = sum(contains(logLines, "] START"));
-        inUseLines = logLines(contains(logLines, "Harness name in use by another model"));
-        stopTokens = {};
-        if phase == 2 && ~isempty(inUseLines)
-            stopTokens = regexp(char(inUseLines(end)), 'IsHarness=(\S+) \| OpenHarness=(\d) \| File=(.*)$', 'tokens', 'once');
-        end
-        if ~isempty(stopTokens)
-            stopText = sprintf('IsHarness %s | 열린 Harness %s | 파일 %s', stopTokens{1}, ...
-                char(replace(string(stopTokens{2}), ["1", "0"], ["맞음", "아님"])), fileKind(strtrim(stopTokens{3})));
-        end
-    end
-    if phase == 2 && ~strcmp(collectText, 'OK'), break; end
-    try
-        evalc('runSource = st_final_document_run_source(cfg, ''PER_CUT'');');
-    catch sourceError
-        screenLines{end+1} = sprintf('결과 정리 파일 찾기 실패 %d | %s', phase, idOf(sourceError));
-        fprintf(fid, '[결과 정리 파일 %d]\n%s\n\n', phase, getReport(sourceError, 'extended', 'hyperlinks', 'off'));
-        continue
-    end
-    for rowIndex = 1:height(T)
-        workbookFiles = runSource.Workbooks.File(runSource.Workbooks.No == double(T.No(rowIndex)));
-        if isempty(workbookFiles), continue; end
-        try
-            coverageRows = readtable(workbookFiles(end), 'Sheet', 'Coverage', 'TextType', 'string', 'VariableNamingRule', 'preserve');
-            cutRows = coverageRows(coverageRows.Level == "CUT", :);
-            decisionRows = cutRows(cutRows.Metric == "Decision", :); executionRows = cutRows(cutRows.Metric == "Execution", :);
-            if height(decisionRows) > 0, numbers(rowIndex, 1:2, phase) = [decisionRows.Covered(1), decisionRows.Total(1)]; end
-            if height(executionRows) > 0, numbers(rowIndex, 3:4, phase) = [executionRows.Covered(1), executionRows.Total(1)]; end
-            pointRows = readtable(workbookFiles(end), 'Sheet', 'DecisionPoints', 'TextType', 'string', 'VariableNamingRule', 'preserve');
-            numbers(rowIndex, 5, phase) = height(pointRows);
-        catch readError
-            fprintf(fid, '[대상 %d 읽기 %d]\n%s\n\n', double(T.No(rowIndex)), phase, getReport(readError, 'extended', 'hyperlinks', 'off'));
-        end
-    end
-end
-screenLines{end+1} = sprintf('결과 정리 다시 하기 %s', collectText);
-screenLines{end+1} = dashText(sprintf('결과 정리 로그 | 전 %s | 후 %s | 대상 시작 전 %g개 후 %g개', logNames{1}, logNames{2}, startCounts));
-screenLines{end+1} = sprintf('Harness 이름 %d개 | 경로가 가리키는 파일 %s', numel(harnessNames), pathText);
-screenLines{end+1} = sprintf('Harness 이름 모델 | 결과 정리 전 %s', stateBefore);
-screenLines{end+1} = sprintf('Harness 이름 모델 | 결과 정리 뒤 %s', stateAfter);
-screenLines{end+1} = sprintf('결과 정리가 멈춘 곳 | %s', stopText);
-screenLines{end+1} = dashText(sprintf('CVF 복사 0개/1개 이상 | 전 %g/%g | 후 %g/%g', copyCounts(1, :), copyCounts(2, :)));
-for rowIndex = 1:height(T)
-    before = numbers(rowIndex, :, 1); after = numbers(rowIndex, :, 2);
-    screenLines{end+1} = dashText(sprintf('대상 %d | CUT 결정 전 %g/%g 후 %g/%g | CUT 실행 전 %g/%g 후 %g/%g | 결정 목록 전 %g 후 %g', ...
-        double(T.No(rowIndex)), before(1:2), after(1:2), before(3:4), after(3:4), before(5), after(5))); %#ok<SAGROW>
-end
-fprintf(fid, '[화면 전체]\n'); fprintf(fid, '%s\n', screenLines{:}); fclose(fid);
-clc;
-for k = 1:min(38, numel(screenLines)), fprintf('%s\n', screenLines{k}); end
-if numel(screenLines) > 38, fprintf('%d줄 더 있음. 진단 파일 끝에 모두 있습니다\n', numel(screenLines) - 38); end
-fprintf('진단 전문 파일: %s (임시 폴더)\n', diagFile);
-warning(warnState);
+clearvars; toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
+if ~isequal(toolkitDir, 0), oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir); st_check_per_cut_collect_cvf; end
 ```
 
-화면: `단위 테스트` 한 줄, `결과 정리 다시 하기` 한 줄, 결과 정리 로그 한 줄, Harness 이름 모델 네 줄, `CVF 복사` 한 줄, 대상 행마다
-한 줄. 대상은 Excel 행 번호(`No`)로만 적는다. `전`은 지난 결과 정리가 남긴 것, `후`는 이번에 다시 한 결과 정리다. `대상 시작`은
-그 로그에서 결과 정리가 시작한 대상 수다. `CVF 복사 0개/1개 이상`은 결과 정리 로그에서 보고서가 coverage에 붙은 CVF를 찾지 못한
-횟수와 찾아 복사한 횟수다. Harness 이름 모델 줄은 이름 대신 종류만 찍는다. `경로가 가리키는 파일`은 그 이름으로 모델을 열면 경로에서
-잡히는 파일이 어느 폴더에 있는지다. `결과 정리 전`은 Top Model을 연 뒤, `결과 정리 뒤`는 결과 정리가 끝나거나 멈춘 뒤다.
-`결과 정리가 멈춘 곳`은 결과 정리가 Harness 이름의 모델을 Harness가 아니라고 판정한 순간의 상태다.
+화면: 단위 테스트 한 줄, 결과 정리 다시 하기 한 줄, 결과 정리 로그 한 줄, Harness 이름 줄 여섯, CVF 복사 한 줄, 대상 행마다 한 줄.
+대상은 Excel 행 번호(`No`)로만 적는다. `전`은 지난 결과 정리가 남긴 것, `후`는 이번에 다시 한 결과 정리다.
+
+- 결과 정리 로그: 로그 시각과, 그 로그에서 결과 정리가 시작한 대상 수.
+- `경로가 가리키는 파일`: 그 이름으로 모델을 열면 경로에서 잡히는 파일이 어느 폴더에 있는지. 이름 대신 종류만 찍는다.
+- `Harness 이름 모델`: 결과 정리 전(Top Model을 연 뒤)과 뒤에 그 이름의 모델이 열려 있는지와 그 종류.
+- `이름을 차지한 다른 모델`: 결과 정리가 그 이름의 모델을 Harness가 아니라고 본 횟수, 닫고 계속했는지 멈췄는지, 마지막 모델의
+  상태.
+- `결과 정리가 연 Harness 판정`: 결과 정리가 직접 연 Harness에 같은 판정을 한 결과.
+- `CVF 복사 0개/1개 이상`: 보고서가 coverage에 붙은 CVF를 찾지 못한 횟수와 찾아 복사한 횟수.
 
 확인할 것:
 
-- `단위 테스트`의 실패·미완료가 0이고 `결과 정리 다시 하기 OK`인가. 아니면 식별자를 보고, 진단 파일에서 그 절의 첫 줄을
-  경로·이름 없이 말로 옮겨 달라.
-- `결과 정리 전`이 `없음`인가. `열림(...)`이면 결과 정리 전에 이미 그 이름의 모델이 열려 있었던 것이다.
-- `CollectHarnessNameInUse`로 다시 멈췄다면 `대상 시작 후`와 `결과 정리가 멈춘 곳`을 본다. 화면에 다 나오므로 따로 옮길 것은 없다.
+- `단위 테스트 | 39`이고 실패·미완료가 0인가. 함수가 없다는 오류가 나오면 pull이 안 된 것이다.
+- `결과 정리 다시 하기 OK`인가. 아니면 식별자를 보고, 진단 파일에서 그 절의 첫 줄을 경로·이름 없이 말로 옮겨 달라.
+- `결과 정리가 연 Harness 판정`에 `IsHarness on`이나 `열린 Harness 맞음`이 있는가. 둘 다 아니면 판정이 틀린 것이다.
 - `CVF 복사`의 `후`가 1개 이상 쪽만 있는가(0개가 0). `전`은 지난번 중간에 멈춘 결과 정리라 참고만 한다.
 - 대상마다 `CUT 결정 후 20/22`, `CUT 실행 후 45/45`인가(standalone 저장 Coverage와 같은 값). `전`은 지난 결과 정리가 남긴
   파일 값이다. 지난번 화면에서는 27/30, 66/66이었다.
