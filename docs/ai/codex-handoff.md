@@ -79,9 +79,12 @@
   `9efbb45`는 붙인 객체를 결과별로 기억하게 했다(같은 결과인지 isequal로 판정). 결과 정리가
   `ResultCoverageDecisionReadbackFailed`로 멈춰 isequal 오판으로 보고, `b2f2aab`에서 붙인 객체를
   `st_export_result_set_report`의 `CoverageObjects`로 직접 넘기게 바꿨다(1단계 결과 정리와 즉시 보고 경로). 그런데 같은
-  오류가 또 났고, 실제 원인은 따로였다(두 번 다 첫 대상의 첫 CVF 붙이기에서 멈춤). standalone 모델이 Harness와 이름이
-  같아, 열려 있던 standalone 모델을 결과 정리가 Harness로 썼다. `c48fe75`에서 그런 모델이 열려 있으면
-  `simtest:CollectHarnessNameInUse`로 멈추게 했다. 실기 확인은 `todo.md` 6절: 결과 정리
+  오류가 또 났고, 실제 원인은 따로였다. standalone 모델은 Harness와 이름이 같다. 첫 실행은 5절이 열어 둔 standalone
+  모델을 결과 정리가 Harness로 써서 첫 대상에서 멈췄다. `c48fe75`에서 그런 모델이 열려 있으면
+  `simtest:CollectHarnessNameInUse`로 멈추게 했고, 모델을 모두 닫고 돌린 실행에서 이 확인이 둘째 대상에서 걸렸다(첫 대상은
+  CVF 복사 2번 모두 성공). `st_generate_coverage_filter_file`이 결과 정리가 열어 둔 Harness를 닫았고, 그 뒤 coverage를
+  읽을 때 그 이름이 경로(standalone 파이프라인이 `addpath`한 bundle 폴더)의 standalone 모델로 풀렸다. 4절 때는 standalone
+  모델이 없어 드러나지 않았다. CVF 생성기가 자기가 연 Harness만 닫게 고쳤다. 실기 확인은 `todo.md` 6절: 결과 정리
   뒤 CUT 결정 20/22, 결정 목록(`DecisionPoints`) 수와 그에 따른 최종 문서 D 줄 수 변화.
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
