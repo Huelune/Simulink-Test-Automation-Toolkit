@@ -98,8 +98,16 @@
   같은 번호의 Top Model 기준)를 찍는다. 고칠 후보도 함께 시험한다. CUT 안 규칙을 Top Model의 CUT에서 같은 경로의 블록 SID로
   다시 만든 CVF가 standalone과 같은 20/22, 45/45를 내는지 본다. 첫 실행에서 진단은 CVF를 걸기 전에 멈췄다. 저장 결과에서 새로
   가져온 coverage 객체(1개)가 Top Model CUT 경로에 답하지 않았다. 0/0이 CVF 때문이 아닐 수 있다. 진단은 이제 Top CUT, Harness
-  CUT, 객체가 적어 둔 경로(ownerBlock, rootPath), 모델 전체로 물어보고, 저장 결과에 걸려 있던 CVF도 센다. 실기 확인은
-  `todo.md` 6절이다(블록은 `st_todo_check`를 부른다). `st_apply_result_coverage_filters`의 읽기 확인은
+  CUT, 객체가 적어 둔 경로(ownerBlock, rootPath), 모델 전체로 물어보고, 저장 결과에 걸려 있던 CVF도 센다. 두 번째 실행에서 원인이
+  드러났다. coverage 객체는 1개였다. analyzedModel은 Harness CUT, ownerBlock은 Top CUT이었고, 이미 걸린 CVF는 0개였다. Harness가
+  열린 채로 물으면 Top CUT은 빈 결과, Harness CUT은 27/30이었다. Harness SID로 적은 CVF 규칙 16개(CUT 안 4, 밖 12)는 하나도
+  숫자를 바꾸지 못했다. CUT 안 규칙 4개를 Top Model CUT의 같은 경로 블록 SID로 다시 만들면 20/22, 45/45로, standalone과 같았다.
+  27/30이 나오던 예전 결과 정리는 CVF 생성기가 Harness를 닫은 뒤(`e1cd062` 전) Top CUT 경로로 물었던 것으로 보인다. 고친 것:
+  CVF 생성은 Harness 문맥에서 CUT 안 규칙을 Top Model CUT의 블록으로 만든다(`ruleCut`). 결과 정리는 Harness를 연 뒤
+  `HarnessCUTPath`를 행에 넣고, `st_coverage_object_path`가 그것을 먼저 쓴다(보고서 Coverage, 결정 목록, 분기 결과, CVF 읽기
+  확인). CVF 읽기 확인은 CUT 경로의 결정이 비면 WARN을 남긴다. Harness 문맥의 CUT_ONLY 경계 규칙은 여전히 Harness SID라 효과가
+  없다. coverage의 analyzedModel이 CUT이라 뺄 바깥도 없다(손대지 않음). PER_CUT 즉시 보고 경로(`st_run_tests_per_cut`의
+  `CoveragePath`)는 Harness CUT 경로를 쓰지 않는다(미확인). 실기 확인은 `todo.md` 6절이다. `st_apply_result_coverage_filters`의 읽기 확인은
   `decisioninfo`가 오류 없이 도는지만 봐서, CVF가 CUT을 통째로 빼도 통과한다. 원인을 고칠 때 빈 결과도 실패로 볼지 정한다.
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
