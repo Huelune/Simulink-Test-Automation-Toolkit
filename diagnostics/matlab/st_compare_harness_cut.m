@@ -106,6 +106,9 @@ original = strings(0, 1);
 counts = nan(1, 5);   % original CUT, Harness CUT, Harness outside, standalone CUT, outside
 settings = '-';
 groups = {};
+harnessInfo = struct('Sources', containers.Map('KeyType', 'char', 'ValueType', 'any'), ...
+    'EditorPorts', NaN);
+standaloneLines = {};
 loadedHere = false;
 failures = {};
 try
@@ -121,6 +124,7 @@ try
     end
     [inside, outside] = dangling_ends(harness, harnessCut);
     counts(2:3) = [numel(inside), numel(outside)];
+    harnessInfo = source_side(harness, harnessCut);
     groups = [groups, labelled('Harness CUT 안', describe_inside(setdiff(inside, original), owner, harnessCut)), ...
         labelled('Harness CUT 밖', describe_outside(outside, harness, harnessCut))];
 catch ME
@@ -134,7 +138,8 @@ if loadedHere && ~isempty(owner)
     end
 end
 try
-    [groupsHere, standaloneCounts] = scan_standalone(row, standaloneTargets, original, owner);
+    [groupsHere, standaloneCounts, standaloneLines] = scan_standalone( ...
+        row, standaloneTargets, original, owner, harnessInfo);
     counts(4:5) = standaloneCounts;
     groups = [groups, groupsHere];
 catch ME
@@ -145,15 +150,19 @@ out = {strrep(sprintf(['대상 %d | 끊긴 선 끝 | 원래 CUT %g | Harness CUT
     'standalone CUT 안 %g 밖 %g'], no, counts), 'NaN', '-')};
 out{end+1} = sprintf('대상 %d Harness 설정 | %s', no, settings);
 for k = 1:numel(failures), out{end+1} = sprintf('대상 %d 실패 | %s', no, failures{k}); end %#ok<AGROW>
+for k = 1:numel(standaloneLines), out{end+1} = sprintf('대상 %d %s', no, standaloneLines{k}); end %#ok<AGROW>
 for k = 1:min(8, numel(groups)), out{end+1} = ['  ' groups{k}]; end %#ok<AGROW>
 if numel(groups) > 8, out{end+1} = sprintf('  그 밖 %d가지', numel(groups) - 8); end
 end
 
 
-function [groups, counts] = scan_standalone(row, standaloneTargets, original, owner)
-% The packaged standalone model of this target, loaded from its own file.
+function [groups, counts, notes] = scan_standalone(row, standaloneTargets, original, owner, harnessInfo)
+% The packaged standalone model of this target, loaded from its own file:
+% first from the current folder, as Test Manager would, then from the
+% model's own folder, where its relative Signal Editor file name resolves.
 groups = {};
 counts = [NaN NaN];
+notes = {};
 if isempty(standaloneTargets), return; end
 % jsondecode gives a cell array when the target records differ in fields.
 items = standaloneTargets;
@@ -178,16 +187,31 @@ if bdIsLoaded(modelName)
     error('simtest:CompareNameTaken', '같은 이름의 모델이 열려 있어 standalone 모델을 열지 못했습니다');
 end
 load_system(modelFile);
-closeModel = onCleanup(@() close_system(modelName, 0)); %#ok<NASGU>
+closeModel = onCleanup(@() close_if_loaded(modelName)); %#ok<NASGU>
 [inside, outside] = dangling_ends(modelName, standaloneCut);
 counts = [numel(inside), numel(outside)];
+notes{end+1} = char(editor_text(modelName, modelFile, harnessInfo.EditorPorts));
 if isempty(owner)
     insideGroups = describe_outside(inside, standaloneCut, '');
 else
     insideGroups = describe_inside(setdiff(inside, original), owner, standaloneCut);
 end
 groups = [labelled('standalone CUT 안', insideGroups), ...
-    labelled('standalone CUT 밖', describe_outside(outside, modelName, standaloneCut))];
+    labelled('standalone CUT 밖', describe_outside(outside, modelName, standaloneCut, harnessInfo))];
+% The same model opened from its own folder.
+close_system(modelName, 0);
+previousFolder = cd(fileparts(modelFile));
+restoreFolder = onCleanup(@() cd(previousFolder)); %#ok<NASGU>
+load_system(modelFile);
+[insideAgain, outsideAgain] = dangling_ends(modelName, standaloneCut);
+editorPorts = "?";
+try
+    ports = get_param(st_find_signal_editor_block(modelName), 'PortHandles');
+    editorPorts = string(numel(ports.Outport));
+catch
+end
+notes{end+1} = char(sprintf('standalone 모델 폴더에서 열면 | 끊긴 선 끝 CUT 안 %d 밖 %d | Signal Editor 출력 포트 %s', ...
+    numel(insideAgain), numel(outsideAgain), editorPorts));
 end
 
 
@@ -259,8 +283,11 @@ out = count_kinds(kinds);
 end
 
 
-function out = describe_outside(keys, root, cut)
-% Loose ends outside a CUT, by the type of the block they still meet.
+function out = describe_outside(keys, root, cut, harnessInfo)
+% Loose ends outside a CUT, by the type of the block they still meet. For a
+% standalone model, an input the Harness feeds also names the Harness's
+% source block and its output port count in both models.
+if nargin < 4, harnessInfo = []; end
 kinds = strings(0, 1);
 for key = reshape(keys, 1, [])
     parts = split(key, "|");
@@ -272,7 +299,7 @@ for key = reshape(keys, 1, [])
     end
     switch parts(1)
         case "in"
-            kinds(end+1, 1) = "끊긴 입력 | 받는 " + blockType; %#ok<AGROW>
+            kinds(end+1, 1) = "끊긴 입력 | 받는 " + blockType + harness_source(key, root, harnessInfo); %#ok<AGROW>
         case "out"
             kinds(end+1, 1) = "받는 쪽 없음 | 보내는 " + blockType; %#ok<AGROW>
         otherwise
@@ -280,6 +307,84 @@ for key = reshape(keys, 1, [])
     end
 end
 out = count_kinds(kinds);
+end
+
+
+function text = harness_source(key, root, harnessInfo)
+text = "";
+if isempty(harnessInfo) || ~isKey(harnessInfo.Sources, char(key)), return; end
+source = harnessInfo.Sources(char(key));
+copyCount = "없음";
+try
+    copyPorts = get_param(join_path(root, source.Rel), 'PortHandles');
+    copyCount = string(numel(copyPorts.Outport));
+catch
+end
+text = " | Harness에서 보내는 " + source.Type + " | 출력 포트 Harness " + source.Outports + "→" + copyCount;
+end
+
+
+function info = source_side(root, cut)
+% While the Harness is loaded: what feeds each input outside its CUT, keyed
+% like dangling_ends, and the output port count of its Signal Editor. The
+% standalone model has the same name, so the two are never loaded together.
+info = struct('Sources', containers.Map('KeyType', 'char', 'ValueType', 'any'), ...
+    'EditorPorts', NaN);
+cutText = string(cut);
+handles = find_system(root, 'FindAll', 'on', 'LookUnderMasks', 'all', ...
+    'FollowLinks', 'on', 'Type', 'line');
+for h = reshape(handles, 1, [])
+    src = get_param(h, 'SrcPortHandle');
+    if any(src == -1), continue; end
+    sourceBlock = get_param(src, 'Parent');
+    for d = reshape(get_param(h, 'DstPortHandle'), 1, [])
+        if d == -1, continue; end
+        target = string(get_param(d, 'Parent'));
+        if startsWith(target, cutText + "/"), continue; end
+        key = char("in|" + relative(target, root) + "|" + ...
+            string(get_param(d, 'PortType')) + string(get_param(d, 'PortNumber')));
+        ports = get_param(sourceBlock, 'PortHandles');
+        info.Sources(key) = struct('Type', string(get_param(sourceBlock, 'BlockType')), ...
+            'Rel', relative(sourceBlock, root), 'Outports', numel(ports.Outport));
+    end
+end
+try
+    ports = get_param(st_find_signal_editor_block(root), 'PortHandles');
+    info.EditorPorts = numel(ports.Outport);
+catch
+end
+end
+
+
+function text = editor_text(modelName, modelFile, harnessPorts)
+% The standalone Signal Editor: its output ports against the Harness's, and
+% whether its file name resolves as written, on the path, or beside the model.
+text = "standalone Signal Editor 없음";
+try
+    editor = st_find_signal_editor_block(modelName);
+    ports = get_param(editor, 'PortHandles');
+    filename = char(string(get_param(editor, 'Filename')));
+    absolute = ~isempty(regexp(filename, '^([A-Za-z]:[\\/]|[\\/])', 'once'));
+    kind = "상대";
+    if absolute, kind = "절대"; end
+    text = sprintf(['standalone Signal Editor | 출력 포트 Harness %g→standalone %d | 파일 이름 %s | ' ...
+        '그대로 %s 경로 %s 모델 폴더 %s'], harnessPorts, numel(ports.Outport), kind, ...
+        mark(isfile(filename)), mark(~isempty(which(filename))), ...
+        mark(isfile(fullfile(fileparts(modelFile), filename))));
+catch ME
+    text = "standalone Signal Editor 읽기 실패 | " + string(id_of(ME));
+end
+end
+
+
+function text = mark(flag)
+text = "X";
+if flag, text = "O"; end
+end
+
+
+function close_if_loaded(modelName)
+if bdIsLoaded(modelName), close_system(modelName, 0); end
 end
 
 
