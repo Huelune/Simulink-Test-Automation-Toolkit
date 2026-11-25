@@ -50,21 +50,31 @@ warning(warnState);
 돌려줄 것: 화면 캡처 한 장과 "보고서에 필터 항목 나옴/안 나옴, 모델 색 표시 됨/안 됨" 한 줄. 보고서와 모델 화면은 블록
 이름이 보이므로 캡처하지 마세요.
 
-## 3. 결함 TC 작업의 단위 테스트와 회귀 테스트 다시 돌리기
+## 3. 결함 TC 작업의 단위 테스트 다시 돌리기와 4절 실패의 원인 자료 읽기 (모델 실행 없음)
 
-왜: 지난번 이 절에서 결함 TC 작업 때문에 깨진 세 파일(`test_build_defect_iterations` 실행 오류, `test_project_layout`,
-`test_signal_editor_no_inport` 실패)을 고쳤다. 같은 묶음에 SLDV 도달 불가 목표 읽기(`test_unreachable_objectives`)와 결함
-판정 콜백(`test_defect_criteria`) 테스트를 더해 다시 돌린다. 모델이나 시뮬레이션이 필요한 테스트는 뺐다. 파일이 23개라
-화면 한 장에 맞추려고, 모두 통과한 파일은 이름 없이 개수로만 찍는다.
+왜: 지난번 이 절에서 이미 알던 실패 다섯 건은 고쳐서 모두 통과했고, 목록 밖의 실패 하나
+(`test_project_layout/testUnitTestHelpersAreNotMistakenForTests`)가 나왔다. 저장소의 테스트 파일에는 이 검사에 걸리는 함수가
+없어서, 클론에만 있는 파일을 의심한다. 4절은 준비·실행이 `WorkflowStageFailed`로 멈췄고, 대상마다 도달 불가 결과 3개가 모두
+Stateflow로 빠져 결함 TC가 0이었다. 이 모델에는 Stateflow가 없으므로, SLDV가 보통 블록에도 `sfObjType`에 값을 넣는 것으로
+보인다. 이 블록은 같은 23개 파일의 단위 테스트를 다시 돌린 뒤, 파일과 실행 로그, SLDV 데이터를 읽기만 한다. 모델이나
+시뮬레이션이 필요한 테스트는 뺐다.
 
-순서: 모델 프로젝트(.prj)를 연다. 클론에서 main을 pull한다. 아래 블록을 붙여 넣는다. 툴킷 폴더(`st_setup.m`이 있는
-폴더)를 고르는 창이 뜬다. 몇 분 걸릴 수 있다.
+순서: 4절을 돌린 클론에서 main을 pull한다. 4절을 다시 돌리기 전에 아래 블록을 붙여 넣는다(가장 최근 준비·실행 로그를 읽는다).
+툴킷 폴더(`st_setup.m`이 있는 폴더)를 고르는 창이 뜬다. 몇 분 걸릴 수 있다.
 
 ```matlab
 clearvars; clc; warnState = warning('off', 'all');
 toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
 if isequal(toolkitDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다\n'); warning(warnState); return; end
 oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir);
+idOf = @(ex) char(strjoin([string(ex.identifier) repmat("(식별자 없음)", 1, double(isempty(ex.identifier)))], ''));
+idPattern = '(?:simtest|MATLAB|Simulink|sltest|stm|sldv|Stateflow|SimulinkTest|SL_SERVICES|slvnv)(?::\w+)+';
+diagFile = 'st_defect_unit_and_probe.txt';
+fid = fopen(fullfile(tempdir, diagFile), 'w');
+if fid < 0, fprintf('진단 파일을 만들지 못해 화면 정보만 보입니다\n'); fid = fopen('nul', 'w'); end
+rootDir = st_project_root(); cfg = st_config();
+fprintf('MATLAB %s\n', version('-release'));
+% 가. 단위 테스트: 모두 통과한 파일은 개수로만, 실패·미완료만 한 줄씩
 testNames = {'test_defect_settings', 'test_build_defect_iterations', 'test_expected_iteration_bindings', ...
     'test_find_iteration_result', 'test_final_document_defects', 'test_export_final_document', ...
     'test_expected_update_modes', 'test_probe_sldv_objectives', 'test_decision_outcomes', ...
@@ -73,25 +83,19 @@ testNames = {'test_defect_settings', 'test_build_defect_iterations', 'test_expec
     'test_mat_file_mode', 'test_signal_editor_no_inport', 'test_incremental_workflow', ...
     'test_library_link_harness_protection', 'test_sldv_config', 'test_project_layout', ...
     'test_unreachable_objectives', 'test_defect_criteria'};
-diagFile = 'st_defect_unit_tests.txt';
-fid = fopen(fullfile(tempdir, diagFile), 'w');
-if fid < 0, fprintf('진단 파일을 만들지 못해 화면 정보만 보입니다\n'); fid = fopen('nul', 'w'); end
 failLines = {}; totalPassed = 0; totalFailed = 0; totalIncomplete = 0; errorCount = 0; cleanFiles = 0;
-fprintf('MATLAB %s\n', version('-release'));
 for k = 1:numel(testNames)
     try
         evalc('fileResults = runtests(fullfile(st_project_root(), ''tests'', ''unit'', [testNames{k} ''.m'']));');
     catch runError
         errorCount = errorCount + 1;
-        errorId = runError.identifier; if isempty(errorId), errorId = '(식별자 없음)'; end
-        fprintf('%s | 실행 오류 | %s\n', testNames{k}, errorId);
+        failLines{end+1} = sprintf('%s | 실행 오류 | %s', testNames{k}, idOf(runError)); %#ok<SAGROW>
         fprintf(fid, '[%s] 실행 오류: %s\n\n', testNames{k}, runError.message);
         continue
     end
-    passedCount = sum([fileResults.Passed]); failedCount = sum([fileResults.Failed]); incompleteCount = sum([fileResults.Incomplete]);
-    totalPassed = totalPassed + passedCount; totalFailed = totalFailed + failedCount; totalIncomplete = totalIncomplete + incompleteCount;
-    if failedCount + incompleteCount == 0, cleanFiles = cleanFiles + 1; continue; end
-    fprintf('%s | 통과 %d | 실패 %d | 미완료 %d\n', testNames{k}, passedCount, failedCount, incompleteCount);
+    totalPassed = totalPassed + sum([fileResults.Passed]); totalFailed = totalFailed + sum([fileResults.Failed]);
+    totalIncomplete = totalIncomplete + sum([fileResults.Incomplete]);
+    if ~any([fileResults.Failed] | [fileResults.Incomplete]), cleanFiles = cleanFiles + 1; continue; end
     for j = find([fileResults.Failed] | [fileResults.Incomplete])
         label = '실패'; if fileResults(j).Incomplete && ~fileResults(j).Failed, label = '미완료'; end
         kindText = '종류 확인 못 함';
@@ -115,26 +119,177 @@ for k = 1:numel(testNames)
         fprintf(fid, '\n');
     end
 end
+fprintf('단위 테스트 | 파일 %d | 모두 통과한 파일 %d | 통과 %d | 실패 %d | 미완료 %d | 실행 오류 %d\n', numel(testNames), ...
+    cleanFiles, totalPassed, totalFailed, totalIncomplete, errorCount);
+for k = 1:min(8, numel(failLines)), fprintf('  %s\n', failLines{k}); end
+if numel(failLines) > 8, fprintf('  실패 %d개 더 있음. 이름은 진단 파일에서 봅니다\n', numel(failLines) - 8); end
+% 나. layout 검사에 걸리는 함수: 저장소가 추적하는 파일이면 이름을, 아니면 개수만 찍는다
+[gitState, ~] = system(sprintf('git -C "%s" rev-parse --is-inside-work-tree', rootDir));
+unitFiles = dir(fullfile(rootDir, 'tests', 'unit', '*.m'));
+trackedHits = strings(0, 1); untrackedHits = 0; untrackedFiles = 0;
+for k = 1:numel(unitFiles)
+    isTracked = false;
+    if gitState == 0
+        [trackState, ~] = system(sprintf('git -C "%s" ls-files --error-unmatch "tests/unit/%s"', rootDir, unitFiles(k).name));
+        isTracked = trackState == 0; untrackedFiles = untrackedFiles + double(~isTracked);
+    end
+    source = fileread(fullfile(unitFiles(k).folder, unitFiles(k).name));
+    tokens = regexp(source, '^\s*function\s+(?:\[[^\]]*\]\s*=\s*|\w+\s*=\s*)?(\w+)\s*(?:\(([^)]*)\))?', 'tokens', 'lineanchors');
+    for t = 2:numel(tokens)
+        if isempty(regexpi(tokens{t}{1}, '^test|test$', 'once')), continue; end
+        args = ''; if numel(tokens{t}) >= 2, args = strtrim(tokens{t}{2}); end
+        if ~isempty(args) && numel(strsplit(args, ',')) == 1, continue; end
+        fprintf(fid, '[layout] %s:%s (%s)\n', unitFiles(k).name, tokens{t}{1}, args);
+        if isTracked
+            trackedHits(end+1, 1) = sprintf('%s:%s | 인자 %d개', unitFiles(k).name, tokens{t}{1}, ...
+                numel(strsplit(args, ',')) * double(~isempty(args))); %#ok<SAGROW>
+        else
+            untrackedHits = untrackedHits + 1;
+        end
+    end
+end
+gitText = 'OK'; if gitState ~= 0, gitText = '확인 못 함'; end
+fprintf('layout | 파일 %d | git %s | 저장소에 없는 파일 %d | 걸린 함수: 저장소 파일 %d, 저장소에 없는 파일 %d\n', ...
+    numel(unitFiles), gitText, untrackedFiles, numel(trackedHits), untrackedHits);
+for k = 1:numel(trackedHits), fprintf('  저장소 파일 | %s\n', trackedHits(k)); end
+% 다. 가장 최근 준비·실행 로그에서 FAIL이 난 단계와 행의 오류 식별자
+logFiles = dir(fullfile(char(cfg.ResultDir), 'logs', '*_st_run_from_harness*.log'));
+if ~isempty(logFiles), logFiles = logFiles(~endsWith({logFiles.name}, '.console.log')); end
+if isempty(logFiles)
+    fprintf('실행 로그 | 없음\n');
+else
+    [~, newest] = max([logFiles.datenum]);
+    fprintf('실행 로그 | %s\n', logFiles(newest).name);
+    logLines = splitlines(string(fileread(fullfile(logFiles(newest).folder, logFiles(newest).name))));
+    stageNames = ["Protect Library-Linked CUT Harnesses", "Disable Library Links For SLDV Targets", ...
+        "Pre-Validate CUT Paths", "Create Harnesses", "Validate CUT / Harness Mapping", "Prepare SLDV Data", ...
+        "Configure Harnesses", "Configure Signal Editor", "Configure Test Assessment", "Create Test Manager", ...
+        "Validate Scenario Alignment"];
+    inFailedStage = false; rowLines = 0;
+    for k = 1:numel(logLines)
+        lineText = char(logLines(k));
+        stageTok = regexp(lineText, '<-- (?:\[\d+\] )?(.+?) \| (.*)$', 'tokens', 'once');
+        if ~isempty(stageTok)
+            inFailedStage = contains(stageTok{2}, 'FAIL');
+            if ~inFailedStage, continue; end
+            label = '다른 단계'; if ismember(string(stageTok{1}), stageNames), label = stageTok{1}; end
+            countText = regexp(stageTok{2}, '^[A-Z_]+=\d+(?:, [A-Z_]+=\d+)*', 'match', 'once');
+            if isempty(countText), countText = 'FAILED'; end
+            ids = unique(string(regexp(stageTok{2}, idPattern, 'match')));
+            idText = '없음'; if ~isempty(ids), idText = char(strjoin(ids, ', ')); end
+            fprintf('로그 단계 | %s | %s | 식별자 %s\n', label, countText, idText);
+            fprintf(fid, '[log] %s\n', lineText);
+        elseif inFailedStage && contains(lineText, '[ERROR]') && contains(lineText, 'No=')
+            rowNo = regexp(lineText, '\<No=(\d+)', 'tokens', 'once');
+            ids = unique(string(regexp(lineText, idPattern, 'match')));
+            idText = '식별자 없음'; if ~isempty(ids), idText = char(strjoin(ids, ', ')); end
+            rowLines = rowLines + 1;
+            if rowLines <= 6 && ~isempty(rowNo), fprintf('  행 No=%s | %s\n', rowNo{1}, idText); end
+            fprintf(fid, '[log] %s\n', lineText);
+        else
+            inFailedStage = false;
+        end
+    end
+end
+% 라. SLDV 데이터의 sfObjType 값과 도달 불가 결정 결과
+T = table();
+try
+    evalc('T = st_load_targets(cfg.OnlyEnabled);');
+catch loadError
+    fprintf('대상 목록 읽기 실패 | %s\n', idOf(loadError));
+end
+knownTypes = ["subsystem"; "min"; "max"; "minmax"; "state"; "transition"; "chart"; "junction"];
+try
+    evalc('typeCatalog = st_specification_decision_catalog(''ALL'');');
+    knownTypes = [knownTypes; lower(string(typeCatalog.BlockType(:))); lower(string(typeCatalog.DisplayType(:)))];
+catch
+end
+for rowIndex = 1:height(T)
+    rowNo = double(T.No(rowIndex));
+    try
+        evalc('sldvProfile = st_get_sldv_profile(T(rowIndex,:), cfg);');
+        loaded = load(sldvProfile.EffectiveDataFile, 'sldvData');
+        objects = loaded.sldvData.ModelObjects; objectives = loaded.sldvData.Objectives;
+    catch readError
+        fprintf('대상 %d | SLDV 데이터 읽기 실패 | %s\n', rowNo, idOf(readError));
+        continue
+    end
+    if isempty(objects), fprintf('대상 %d | ModelObjects 0\n', rowNo); continue; end
+    shapes = repmat("필드 없음", numel(objects), 1);
+    for m = 1:numel(objects)
+        if ~isfield(objects, 'sfObjType'), break; end
+        value = objects(m).sfObjType;
+        if ischar(value) || isstring(value)
+            typeWord = strtrim(string(reshape(char(value), 1, [])));
+            if typeWord == ""
+                shapes(m) = "빈 글자";
+            elseif ~isempty(regexp(typeWord, '^[A-Za-z][A-Za-z/ _-]{0,19}$', 'once'))
+                shapes(m) = "'" + typeWord + "'";
+            else
+                shapes(m) = "다른 글자";
+            end
+        elseif isnumeric(value) || islogical(value)
+            if isempty(value), shapes(m) = "빈 숫자";
+            elseif isscalar(value), shapes(m) = "숫자 " + string(double(value));
+            else, shapes(m) = "숫자 배열";
+            end
+        else
+            shapes(m) = "형식 " + string(class(value));
+        end
+    end
+    [shapeNames, ~, shapeIndex] = unique(shapes);
+    shapeCounts = accumarray(shapeIndex(:), 1);
+    fprintf('대상 %d | ModelObjects %d | sfObjType %s\n', rowNo, numel(objects), ...
+        char(strjoin(shapeNames(:).' + " " + string(shapeCounts(:).'), ', ')));
+    for q = 1:numel(objectives)
+        objective = objectives(q);
+        if ~strcmpi(strtrim(char(objective.type)), 'Decision'), continue; end
+        if ~startsWith(strtrim(string(objective.status)), "Unsatisfiable", 'IgnoreCase', true), continue; end
+        objectIndex = objective.modelObjectIdx; modelObject = objects(objectIndex);
+        typeText = '기타 블록';
+        if ismember(lower(strtrim(string(modelObject.typeDesc))), knownTypes), typeText = char(modelObject.typeDesc); end
+        pathParts = numel(regexp(char(modelObject.slPath), '(?<!/)/(?!/)', 'split'));
+        numText = '필드 없음';
+        if isfield(modelObject, 'sfObjNum')
+            sfNum = modelObject.sfObjNum;
+            if isnumeric(sfNum) && isscalar(sfNum), numText = num2str(double(sfNum));
+            elseif isempty(sfNum), numText = '빈 값';
+            else, numText = ['형식 ' class(sfNum)];
+            end
+        end
+        fprintf('  대상 %d | %s | slPath 요소 %d | sfObjType %s | sfObjNum %s\n', rowNo, typeText, pathParts, ...
+            char(shapes(objectIndex)), numText);
+        fprintf(fid, '[대상 %d 결과] typeDesc=%s\n', rowNo, char(string(modelObject.typeDesc)));
+    end
+end
 fclose(fid);
-fprintf('파일 %d | 모두 통과한 파일 %d | 합계 통과 %d | 실패 %d | 미완료 %d | 실행 오류 %d\n', numel(testNames), cleanFiles, ...
-    totalPassed, totalFailed, totalIncomplete, errorCount);
-for k = 1:min(15, numel(failLines)), fprintf('%s\n', failLines{k}); end
-if numel(failLines) > 15, fprintf('실패 %d개 더 있음. 이름은 진단 파일에서 봅니다\n', numel(failLines) - 15); end
 fprintf('진단 전문 파일: %s (임시 폴더)\n', diagFile);
 warning(warnState);
 ```
 
-확인할 것: 실행 오류가 0인가. `실패`/`미완료 | 테스트 이름 | 종류` 줄이 아래의 이미 알던 실패뿐인가. 이 결함 TC 작업 전부터
-있던 실패이고 이번 작업과 상관없다. 이 목록 밖의 줄이 있으면 새 실패다.
+화면: 위에서부터 네 덩어리가 나온다.
 
-- `test_partial_iteration_update/testPartialNeverCollapsesIntoOk`
-- `test_per_cut_execution/testPreparationNeverGeneratesSharedFilters`
-- `test_mat_file_mode`의 두 건(R2025b 데이터 형식)
-- `test_incremental_workflow/testConfigDefaults`
-- `test_library_link_harness_protection/testAfterHarnessProtectsExistingLinkedHarnessesFirst`
+- `단위 테스트` 한 줄과, 실패·미완료·실행 오류마다 `실패 | 테스트 이름 | 종류` 한 줄(최대 8줄).
+- `layout` 한 줄. 저장소가 추적하는 파일에서 걸린 함수가 있으면 그 이름이 아래에 붙는다.
+- `실행 로그` 이름 한 줄, FAIL이 난 단계마다 `로그 단계` 한 줄, FAIL 행마다 `행 No=` 한 줄.
+- 대상마다 `sfObjType` 값 분포 한 줄과, 도달 불가 결정 결과마다 한 줄. `sfObjType`은 영어 낱말이면 그대로(`'State'` 같은)
+  찍고, 다른 글자면 `다른 글자`로만 찍는다. 블록 종류는 툴킷이 아는 Simulink 블록 종류만 찍고, 모르는 종류는 `기타 블록`이다.
 
-돌려줄 것: 화면 캡처 한 장. 진단 파일은 사용자 PC에서만 보고 밖으로 보내지 않는다. 위 목록 밖의 실패가 있으면, 파일에서
-찾은 진단의 첫 줄을 경로와 이름을 뺀 말로 바꿔 적어 달라.
+확인할 것:
+
+- `단위 테스트`의 실행 오류가 0인가. 실패가 `test_project_layout/testUnitTestHelpersAreNotMistakenForTests` 한 건뿐인가. 다른
+  실패가 있으면 새 실패다.
+- `layout`의 `걸린 함수: 저장소에 없는 파일`이 1 이상인가. 그러면 클론의 `tests/unit`에 git이 추적하지 않는 파일이 있다(진단
+  파일 `[layout]` 줄에 이름이 있다). 직접 만든 파일인지, 지워도 되는지 말로 알려 달라. 저장소 파일에서 걸린 함수가 찍혔으면
+  화면 그대로 보내 달라(툴킷 테스트 이름이다).
+- `실행 로그` 이름의 날짜·시각이 4절을 돌린 때인가.
+- `로그 단계`가 어느 단계인가. `행 No=` 줄이 `식별자 없음`이면, 진단 파일의 `[log]` 줄에서 그 행 메시지를 CUT·블록 이름과
+  경로를 뺀 말로 옮겨 달라.
+- 대상마다 `sfObjType` 값 분포가 어떤가. 도달 불가 결과 줄(대상마다 3줄)의 `sfObjType`과 `sfObjNum`이 다른 ModelObjects와
+  같은 값인가.
+
+돌려줄 것: 화면 캡처 한 장과, 위에서 말로 옮겨 달라고 한 것이 있으면 그 한두 줄. 진단 파일은 사용자 PC에서만 보고 밖으로
+보내지 않는다. 다른 실패가 있으면 진단 파일에서 그 테스트의 첫 진단 줄을 경로와 이름을 뺀 말로 바꿔 적어 달라.
 
 ## 4. 실제 모델에서 결함 TC 확인하기 (TEST_MANAGER부터 다시 준비하고 PER_CUT 실행)
 
@@ -142,7 +297,7 @@ warning(warnState);
 FAIL인지 본다. 기대값 갱신은 기본값(APPLY) 그대로 둔다. 갱신과 재실행 뒤에도 결함 TC가 FAIL로 남는지, 보통 TC의 판정과
 결정 커버리지가 그대로인지도 같이 본다.
 
-순서: 3절이 위 목록 밖의 실패 없이 끝난 뒤에 돌린다. 모델 프로젝트(.prj)를 연다. 클론에서 main을 pull한다. 열려 있는
+순서: 3절의 원인 자료로 결함 TC 0건과 준비·실행 실패를 고친 뒤에 돌린다. 모델 프로젝트(.prj)를 연다. 클론에서 main을 pull한다. 열려 있는
 모델 중 저장 안 한 것이 없을 때 아래 블록을 붙여 넣는다. 툴킷 폴더를 고르는 창이 뜬다. 블록은 사용 설명서의 재실행
 명령 `st_run_from_harness('PreparationMode','FORCE','FromStage','TEST_MANAGER')`로 Test Case를 다시 만들고(결함
 Iteration이 Test File에 붙는다) PER_CUT으로 실행한 뒤, `st_collect_per_cut_results`로 결과를 정리한다. 평소 1단계
@@ -476,186 +631,3 @@ warning(warnState);
 
 돌려줄 것: 화면 캡처 한 장과 standalone Custom Criteria 결과 한 단어(`verify 실패` 또는 `오류`). 진단 파일, 최종 문서, Test Manager
 결과 화면은 사용자 PC에서만 보고 밖으로 보내지 않는다.
-
-## 6. 3절 layout 실패와 4절 실패의 원인 자료 읽기 (모델 실행 없음)
-
-왜: 3절에서 이미 알던 목록 밖의 실패가 하나(`test_project_layout/testUnitTestHelpersAreNotMistakenForTests`) 나왔다. 저장소의
-테스트 파일에는 이 검사에 걸리는 함수가 없어서, 클론에만 있는 파일을 의심한다. 4절은 준비·실행이 `WorkflowStageFailed`로
-멈췄고, 대상마다 도달 불가 결과 3개가 모두 Stateflow로 빠져 결함 TC가 0이었다. 이 모델에는 Stateflow가 없으므로, SLDV가
-보통 블록에도 `sfObjType`에 값을 넣는 것으로 보인다. 아래 블록은 파일과 로그, SLDV 데이터를 읽기만 한다.
-
-순서: 4절을 돌린 클론에서 그대로 붙여 넣는다(pull은 필요 없다). 툴킷 폴더를 고르는 창이 뜬다.
-
-```matlab
-clearvars; clc; warnState = warning('off', 'all');
-toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
-if isequal(toolkitDir, 0), fprintf('폴더를 고르지 않아 멈췄습니다\n'); warning(warnState); return; end
-oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir);
-idOf = @(ex) char(strjoin([string(ex.identifier) repmat("(식별자 없음)", 1, double(isempty(ex.identifier)))], ''));
-idPattern = '(?:simtest|MATLAB|Simulink|sltest|stm|sldv|Stateflow|SimulinkTest|SL_SERVICES|slvnv)(?::\w+)+';
-diagFile = 'st_defect_probe.txt';
-fid = fopen(fullfile(tempdir, diagFile), 'w');
-if fid < 0, fid = fopen('nul', 'w'); end
-rootDir = st_project_root(); cfg = st_config();
-fprintf('MATLAB %s\n', version('-release'));
-% 가. layout 검사에 걸리는 함수: 저장소가 추적하는 파일이면 이름을, 아니면 개수만 찍는다
-[gitState, ~] = system(sprintf('git -C "%s" rev-parse --is-inside-work-tree', rootDir));
-unitFiles = dir(fullfile(rootDir, 'tests', 'unit', '*.m'));
-trackedHits = strings(0, 1); untrackedHits = 0; untrackedFiles = 0;
-for k = 1:numel(unitFiles)
-    isTracked = false;
-    if gitState == 0
-        [trackState, ~] = system(sprintf('git -C "%s" ls-files --error-unmatch "tests/unit/%s"', rootDir, unitFiles(k).name));
-        isTracked = trackState == 0; untrackedFiles = untrackedFiles + double(~isTracked);
-    end
-    source = fileread(fullfile(unitFiles(k).folder, unitFiles(k).name));
-    tokens = regexp(source, '^\s*function\s+(?:\[[^\]]*\]\s*=\s*|\w+\s*=\s*)?(\w+)\s*(?:\(([^)]*)\))?', 'tokens', 'lineanchors');
-    for t = 2:numel(tokens)
-        if isempty(regexpi(tokens{t}{1}, '^test|test$', 'once')), continue; end
-        args = ''; if numel(tokens{t}) >= 2, args = strtrim(tokens{t}{2}); end
-        if ~isempty(args) && numel(strsplit(args, ',')) == 1, continue; end
-        fprintf(fid, '[layout] %s:%s (%s)\n', unitFiles(k).name, tokens{t}{1}, args);
-        if isTracked
-            trackedHits(end+1, 1) = sprintf('%s:%s | 인자 %d개', unitFiles(k).name, tokens{t}{1}, ...
-                numel(strsplit(args, ',')) * double(~isempty(args))); %#ok<SAGROW>
-        else
-            untrackedHits = untrackedHits + 1;
-        end
-    end
-end
-gitText = 'OK'; if gitState ~= 0, gitText = '확인 못 함'; end
-fprintf('layout | 파일 %d | git %s | 저장소에 없는 파일 %d | 걸린 함수: 저장소 파일 %d, 저장소에 없는 파일 %d\n', ...
-    numel(unitFiles), gitText, untrackedFiles, numel(trackedHits), untrackedHits);
-for k = 1:numel(trackedHits), fprintf('  저장소 파일 | %s\n', trackedHits(k)); end
-% 나. 가장 최근 준비·실행 로그에서 FAIL이 난 단계와 행의 오류 식별자
-logFiles = dir(fullfile(char(cfg.ResultDir), 'logs', '*_st_run_from_harness*.log'));
-if ~isempty(logFiles), logFiles = logFiles(~endsWith({logFiles.name}, '.console.log')); end
-if isempty(logFiles)
-    fprintf('실행 로그 | 없음\n');
-else
-    [~, newest] = max([logFiles.datenum]);
-    fprintf('실행 로그 | %s\n', logFiles(newest).name);
-    logLines = splitlines(string(fileread(fullfile(logFiles(newest).folder, logFiles(newest).name))));
-    stageNames = ["Protect Library-Linked CUT Harnesses", "Disable Library Links For SLDV Targets", ...
-        "Pre-Validate CUT Paths", "Create Harnesses", "Validate CUT / Harness Mapping", "Prepare SLDV Data", ...
-        "Configure Harnesses", "Configure Signal Editor", "Configure Test Assessment", "Create Test Manager", ...
-        "Validate Scenario Alignment"];
-    inFailedStage = false; rowLines = 0;
-    for k = 1:numel(logLines)
-        lineText = char(logLines(k));
-        stageTok = regexp(lineText, '<-- (?:\[\d+\] )?(.+?) \| (.*)$', 'tokens', 'once');
-        if ~isempty(stageTok)
-            inFailedStage = contains(stageTok{2}, 'FAIL');
-            if ~inFailedStage, continue; end
-            label = '다른 단계'; if ismember(string(stageTok{1}), stageNames), label = stageTok{1}; end
-            countText = regexp(stageTok{2}, '^[A-Z_]+=\d+(?:, [A-Z_]+=\d+)*', 'match', 'once');
-            if isempty(countText), countText = 'FAILED'; end
-            ids = unique(string(regexp(stageTok{2}, idPattern, 'match')));
-            idText = '없음'; if ~isempty(ids), idText = char(strjoin(ids, ', ')); end
-            fprintf('로그 단계 | %s | %s | 식별자 %s\n', label, countText, idText);
-            fprintf(fid, '[log] %s\n', lineText);
-        elseif inFailedStage && contains(lineText, '[ERROR]') && contains(lineText, 'No=')
-            rowNo = regexp(lineText, '\<No=(\d+)', 'tokens', 'once');
-            ids = unique(string(regexp(lineText, idPattern, 'match')));
-            idText = '식별자 없음'; if ~isempty(ids), idText = char(strjoin(ids, ', ')); end
-            rowLines = rowLines + 1;
-            if rowLines <= 10 && ~isempty(rowNo), fprintf('  행 No=%s | %s\n', rowNo{1}, idText); end
-            fprintf(fid, '[log] %s\n', lineText);
-        else
-            inFailedStage = false;
-        end
-    end
-end
-% 다. SLDV 데이터의 sfObjType 값과 도달 불가 결정 결과
-T = table();
-try
-    evalc('T = st_load_targets(cfg.OnlyEnabled);');
-catch loadError
-    fprintf('대상 목록 읽기 실패 | %s\n', idOf(loadError));
-end
-knownTypes = ["subsystem"; "min"; "max"; "minmax"; "state"; "transition"; "chart"; "junction"];
-try
-    evalc('typeCatalog = st_specification_decision_catalog(''ALL'');');
-    knownTypes = [knownTypes; lower(string(typeCatalog.BlockType(:))); lower(string(typeCatalog.DisplayType(:)))];
-catch
-end
-for rowIndex = 1:height(T)
-    rowNo = double(T.No(rowIndex));
-    try
-        evalc('sldvProfile = st_get_sldv_profile(T(rowIndex,:), cfg);');
-        loaded = load(sldvProfile.EffectiveDataFile, 'sldvData');
-        objects = loaded.sldvData.ModelObjects; objectives = loaded.sldvData.Objectives;
-    catch readError
-        fprintf('대상 %d | SLDV 데이터 읽기 실패 | %s\n', rowNo, idOf(readError));
-        continue
-    end
-    if isempty(objects), fprintf('대상 %d | ModelObjects 0\n', rowNo); continue; end
-    shapes = repmat("필드 없음", numel(objects), 1);
-    for m = 1:numel(objects)
-        if ~isfield(objects, 'sfObjType'), break; end
-        value = objects(m).sfObjType;
-        if ischar(value) || isstring(value)
-            typeWord = strtrim(string(reshape(char(value), 1, [])));
-            if typeWord == ""
-                shapes(m) = "빈 글자";
-            elseif ~isempty(regexp(typeWord, '^[A-Za-z][A-Za-z/ _-]{0,19}$', 'once'))
-                shapes(m) = "'" + typeWord + "'";
-            else
-                shapes(m) = "다른 글자";
-            end
-        elseif isnumeric(value) || islogical(value)
-            if isempty(value), shapes(m) = "빈 숫자";
-            elseif isscalar(value), shapes(m) = "숫자 " + string(double(value));
-            else, shapes(m) = "숫자 배열";
-            end
-        else
-            shapes(m) = "형식 " + string(class(value));
-        end
-    end
-    [shapeNames, ~, shapeIndex] = unique(shapes);
-    shapeCounts = accumarray(shapeIndex(:), 1);
-    fprintf('대상 %d | ModelObjects %d | sfObjType %s\n', rowNo, numel(objects), ...
-        char(strjoin(shapeNames(:).' + " " + string(shapeCounts(:).'), ', ')));
-    for q = 1:numel(objectives)
-        objective = objectives(q);
-        if ~strcmpi(strtrim(char(objective.type)), 'Decision'), continue; end
-        if ~startsWith(strtrim(string(objective.status)), "Unsatisfiable", 'IgnoreCase', true), continue; end
-        objectIndex = objective.modelObjectIdx; modelObject = objects(objectIndex);
-        typeText = '기타 블록';
-        if ismember(lower(strtrim(string(modelObject.typeDesc))), knownTypes), typeText = char(modelObject.typeDesc); end
-        pathParts = numel(regexp(char(modelObject.slPath), '(?<!/)/(?!/)', 'split'));
-        numText = '필드 없음';
-        if isfield(modelObject, 'sfObjNum')
-            sfNum = modelObject.sfObjNum;
-            if isnumeric(sfNum) && isscalar(sfNum), numText = num2str(double(sfNum));
-            elseif isempty(sfNum), numText = '빈 값';
-            else, numText = ['형식 ' class(sfNum)];
-            end
-        end
-        fprintf('  대상 %d | %s | slPath 요소 %d | sfObjType %s | sfObjNum %s\n', rowNo, typeText, pathParts, ...
-            char(shapes(objectIndex)), numText);
-        fprintf(fid, '[대상 %d 결과] typeDesc=%s\n', rowNo, char(string(modelObject.typeDesc)));
-    end
-end
-fclose(fid);
-fprintf('진단 전문 파일: %s (임시 폴더)\n', diagFile);
-warning(warnState);
-```
-
-화면: `layout` 한 줄이 나온다. 저장소가 추적하는 파일에서 걸린 함수가 있으면 그 이름이 아래에 붙는다. 이어서 `실행 로그` 이름 한
-줄, FAIL이 난 단계마다 `로그 단계` 한 줄과 FAIL 행마다 `행 No=` 한 줄이 나온다. 끝으로 대상마다 `sfObjType` 값 분포 한 줄과
-도달 불가 결정 결과마다 한 줄이 나온다. `sfObjType`은 영어 낱말이면 그대로(`'State'` 같은) 찍고, 다른 글자면 `다른 글자`로만 찍는다.
-
-확인할 것:
-
-- `layout`의 `걸린 함수: 저장소에 없는 파일`이 1 이상인가. 그러면 클론의 `tests/unit`에 git이 추적하지 않는 파일이 있다(진단
-  파일 `[layout]` 줄에 이름이 있다). 직접 만든 파일인지, 지워도 되는지 말로 알려 달라. 저장소 파일에서 걸린 함수가 찍혔으면
-  화면 그대로 보내 달라(툴킷 테스트 이름이다).
-- `실행 로그` 이름의 날짜·시각이 4절을 돌린 때인가.
-- `로그 단계`가 어느 단계인가. `행 No=` 줄이 `식별자 없음`이면, 진단 파일의 `[log]` 줄에서 그 행 메시지를 CUT·블록 이름과
-  경로를 뺀 말로 옮겨 달라.
-- 대상마다 `sfObjType` 값 분포가 어떤가. 도달 불가 결과 줄(대상마다 3줄)의 `sfObjType`과 `sfObjNum`이 다른 ModelObjects와
-  같은 값인가.
-
-돌려줄 것: 화면 캡처 한 장과, 위에서 말로 옮겨 달라고 한 것이 있으면 그 한두 줄. 진단 파일은 사용자 PC에서만 보고 밖으로
-보내지 않는다.
