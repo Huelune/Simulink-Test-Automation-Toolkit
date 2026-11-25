@@ -80,7 +80,11 @@
   냈다. `getCustomCriteriaResult(iteration)`는 결함·보통 Iteration 모두 결과 1개를 돌려줬다(결함 Failed, 보통 Passed).
   Test Case 결과에는 빈 값이다. 앞의 `unassignedOutputs`는 이 호출이 아니라 실패한 결과의 진단 기록 속성을 읽을 때 난
   것으로 보인다(`st_defect_criteria_kind`가 Passed일 때만 통과). 어느 속성인지는 미확인이다. 분류기는 속성을 하나씩 읽고
-  못 읽으면 빈 값으로 보도록 고쳤다. probe는 못 읽는 속성 이름을 찍는다(6절 다음 실행).
+  못 읽으면 빈 값으로 보도록 고쳤다. probe는 못 읽는 속성 이름을 찍는다.
+  같은 날 다시 돌린 probe: 세 대상의 결함 Iteration 6개 모두 `verify 실패`(결함 판정대로)였다. 못 읽는 속성은 진단 기록의
+  `Exception`이었다. 오류가 아닌 기록에서 이 속성을 읽으면 `MATLAB:unassignedOutputs`가 난다(R2025b, import한 결과). 다음은
+  standalone 파이프라인과 최종 문서를 다시 만들어 standalone 쪽 결함 판정을 보는 것이다(`todo.md` 7절,
+  `st_rebuild_standalone_and_document`).
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
