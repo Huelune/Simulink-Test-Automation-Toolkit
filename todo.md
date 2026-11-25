@@ -12,14 +12,15 @@
 저장한 ResultSet에서 coverage 객체를 꺼내 CVF를 붙인 뒤 보고서를 쓴다. 그런데 보고서는 Coverage 표, CVT·HTML, CVF 복사,
 결정 목록을 만들 때마다 coverage를 다시 꺼냈다. Test Manager는 꺼낼 때마다 새 객체를 줄 수 있어서, CVF가 빠진 객체로
 계산됐다. 지난번 이 절의 `전` 로그에서 CVF 복사가 6번 모두 0개였던 것이 그 증거다. 첫 수정은 결과 정리를 다시 할 때
-`ResultCoverageDecisionReadbackFailed`로 멈춰서, CVF를 붙인 객체를 보고서에 직접 넘기는 방식으로 다시 고쳤다. 그래도 같은
-오류가 났는데, 원인은 따로 있었다. standalone 모델은 Harness와 이름이 같다. 결과 정리는 Harness를 열어 두고 coverage를
-읽는데, CVF를 만드는 코드가 그 Harness를 닫았다. 그러면 coverage를 읽을 때 Simulink가 그 이름의 모델을 경로에서 찾아, 5절이
-경로에 넣은 standalone 모델을 연다. 그래서 첫 대상은 끝나고 다음 대상에서 멈췄다(지난번 `전` 로그의 CVF 복사 2번이 첫 대상의
-것이다). 지난번 `CollectHarnessNameInUse`는 Harness 이름으로 Harness가 아닌 모델이 열린 것을 결과 정리가 잡은 것이다. 이제
-CVF 생성은 자기가 연 Harness만 닫는다. 이 블록은 시작할 때 열린 모델도 모두 닫는다. 이 블록은 시뮬레이션 없이 결과 정리만
-다시 하고, 전후 숫자를 비교한다. 결과 정리가 중간에 멈춰도 `후` 로그의 CVF 복사 횟수로 어디까지 갔는지 보인다. 결정 목록(`DecisionPoints`)은 CVF가
-빼는 블록을 빼고 고르므로, 그 수도 바뀔 수 있다.
+`ResultCoverageDecisionReadbackFailed`로 멈춰서, CVF를 붙인 객체를 보고서에 직접 넘기는 방식으로 다시 고쳤다. 그 뒤 결과
+정리는 `CollectHarnessNameInUse`로 두 번 멈췄다. standalone 모델은 Harness와 이름이 같은데, 결과 정리가 Harness를 쓰려 할 때
+그 이름으로 Harness가 아닌 모델이 열려 있다고 판정한 것이다. 이를 막으려고 고친 것은 둘이다. 이 블록은 시작할 때 열린 모델을
+모두 닫는다. CVF 생성은 이제 결과 정리가 열어 둔 Harness를 닫지 않는다. 닫으면 coverage를 읽을 때 그 이름이 경로에 있는
+standalone 모델로 풀릴 수 있다. 그래도 지난번 실행은 첫 대상에서 멈춘 것으로 보인다. 그 실행의 로그에 CVF 복사가 한 번도 없다.
+무엇이 그 모델을 열었는지는 아직 모른다. 판정이 틀렸을 수도 있어서, 이제 결과 정리는 Top Model의 열린 Harness 목록에 있는 모델도
+Harness로 인정한다. 그래도 멈추면, 멈춘 순간의 상태를 로그에 남긴다. 이 블록은 그 상태를 결과 정리 전후의 상태와 함께 종류로만
+찍는다. 이 블록은 시뮬레이션 없이 결과 정리만 다시 하고, 전후 숫자를 비교한다. 결정 목록(`DecisionPoints`)은 CVF가 빼는 블록을
+빼고 고르므로, 그 수도 바뀔 수 있다.
 
 5절(standalone과 최종 문서)은 숫자가 모두 기대대로였다. 남은 것은 눈으로 볼 세 가지뿐이라 이 절에 옮겼다.
 
@@ -32,8 +33,9 @@ CVF 생성은 자기가 연 Harness만 닫는다. 이 블록은 시작할 때 �
      나오면 `오류`. 결과가 이미 닫혀 있으면 `못 봄`.
    - 5절이 연 저장 Coverage 보고서(브라우저)의 Filter 항목에 뺀 것이 나오는지, standalone 모델에 Coverage 색이 칠해지고 하위
      Subsystem이 빠졌는지. 이미 닫았으면 `못 봄`.
-2. 모델 프로젝트(.prj)를 연다. 클론에서 main을 pull한다. 열려 있는 모델 중 저장 안 한 것이 없을 때 아래 블록을 붙여 넣는다.
-   툴킷 폴더를 고르는 창이 뜬다. 결과 정리만 다시 하므로 평소 결과 정리만큼 걸린다.
+2. 모델 프로젝트(.prj)를 연다. 클론에서 main을 pull한다. 아래 블록은 pull한 이 파일에서 새로 복사한다. 지난번 화면은 이전
+   블록이었다(`후` 로그 이름이 `-`). 열려 있는 모델 중 저장 안 한 것이 없을 때 붙여 넣는다. 툴킷 폴더를 고르는 창이 뜬다.
+   결과 정리만 다시 하므로 평소 결과 정리만큼 걸린다.
 3. 블록이 끝나면 결과 정리가 다시 가져온 1단계 결과가 Test Manager에 들어와 있다. 1번과 같은 순서로 1단계 결함 Iteration의
    Custom Criteria Results를 본다. 결과가 없으면 `못 봄`.
 
@@ -69,8 +71,27 @@ try
 catch loadError
     screenLines{end+1} = sprintf('대상 목록 읽기 실패 | %s', idOf(loadError));
 end
-% 나. 결과 정리 전(1)과 후(2): 결과 정리 로그의 CVF 복사 횟수, 대상별 CUT 결정·실행 커버리지와 결정 목록 수
+% 나. Harness 이름의 모델: 경로가 가리키는 파일 종류, 열려 있으면 Harness인지와 파일 종류(이름·경로는 찍지 않는다)
+fileKinds = ["없음", "모델 파일", "standalone 폴더", "모델 폴더", "결과 폴더", "기타"];
+inFolder = @(file, folder) strlength(string(folder)) > 0 && startsWith(lower(string(file)), lower(string(folder)));
+fileKind = @(file) char(fileKinds(find([strlength(string(file)) == 0, strcmpi(string(file), string(cfg.ModelFile)), ...
+    inFolder(file, cfg.StandaloneCoverageRootDir), inFolder(file, fileparts(char(cfg.ModelFile))), inFolder(file, cfg.ResultDir), true], 1)));
+harnessNames = strings(1, 0);
+if ismember('HarnessName', T.Properties.VariableNames), harnessNames = reshape(unique(string(T.HarnessName(strlength(string(T.HarnessName)) > 0))), 1, []); end
+pathKinds = strings(1, 0);
+for harnessName = harnessNames, pathKinds(end+1) = string(fileKind(which(char(harnessName)))); end %#ok<SAGROW>
+pathText = char(strjoin(unique(pathKinds), ", ")); if isempty(pathText), pathText = '-'; end
+probeCode = ['probeText = "없음"; for harnessName = harnessNames, if bdIsLoaded(char(harnessName)), ' ...
+    'isHarnessText = "?"; try, isHarnessText = string(get_param(char(harnessName), ''IsHarness'')); catch, end, ' ...
+    'openText = "?"; if bdIsLoaded(cfg.TopModel), try, openHarnesses = sltest.harness.find(cfg.TopModel, ''OpenOnly'', ''on''); ' ...
+    'openText = "아님"; if any(strcmp({openHarnesses.name}, char(harnessName))), openText = "맞음"; end, catch, end, end, ' ...
+    'probeText = sprintf("열림(IsHarness %s, 열린 Harness %s, 파일 %s)", isHarnessText, openText, ' ...
+    'fileKind(get_param(char(harnessName), ''FileName''))); end, end'];
+try, evalc('st_require_runtime_target();'); catch, end
+eval(probeCode); stateBefore = probeText; stateAfter = "-";
+% 다. 결과 정리 전(1)과 후(2): 결과 정리 로그의 CVF 복사 횟수, 대상별 CUT 결정·실행 커버리지와 결정 목록 수
 numbers = nan(height(T), 5, 2); copyCounts = nan(2, 2); logNames = {'-', '-'}; collectText = '건너뜀';
+startCounts = nan(1, 2); stopText = '-';
 for phase = 1:2
     if phase == 2
         try
@@ -80,6 +101,7 @@ for phase = 1:2
             collectText = ['실패 ' idOf(collectError)];
             fprintf(fid, '[결과 정리]\n%s\n\n', getReport(collectError, 'extended', 'hyperlinks', 'off'));
         end
+        eval(probeCode); stateAfter = probeText;
     end
     logFiles = dir(fullfile(char(cfg.ResultDir), 'logs', '*_st_collect_per_cut_results*.log'));
     if ~isempty(logFiles), logFiles = logFiles(~endsWith({logFiles.name}, '.console.log')); end
@@ -89,6 +111,16 @@ for phase = 1:2
         logLines = splitlines(string(fileread(fullfile(logFiles(newest).folder, logFiles(newest).name))));
         copyLines = logLines(contains(logLines, "Portable coverage filter copy complete"));
         copyCounts(phase, :) = [sum(contains(copyLines, "files=0")), sum(~contains(copyLines, "files=0"))];
+        startCounts(phase) = sum(contains(logLines, "] START"));
+        inUseLines = logLines(contains(logLines, "Harness name in use by another model"));
+        stopTokens = {};
+        if phase == 2 && ~isempty(inUseLines)
+            stopTokens = regexp(char(inUseLines(end)), 'IsHarness=(\S+) \| OpenHarness=(\d) \| File=(.*)$', 'tokens', 'once');
+        end
+        if ~isempty(stopTokens)
+            stopText = sprintf('IsHarness %s | 열린 Harness %s | 파일 %s', stopTokens{1}, ...
+                char(replace(string(stopTokens{2}), ["1", "0"], ["맞음", "아님"])), fileKind(strtrim(stopTokens{3})));
+        end
     end
     if phase == 2 && ~strcmp(collectText, 'OK'), break; end
     try
@@ -115,7 +147,11 @@ for phase = 1:2
     end
 end
 screenLines{end+1} = sprintf('결과 정리 다시 하기 %s', collectText);
-screenLines{end+1} = sprintf('결과 정리 로그 | 전 %s | 후 %s', logNames{1}, logNames{2});
+screenLines{end+1} = dashText(sprintf('결과 정리 로그 | 전 %s | 후 %s | 대상 시작 전 %g개 후 %g개', logNames{1}, logNames{2}, startCounts));
+screenLines{end+1} = sprintf('Harness 이름 %d개 | 경로가 가리키는 파일 %s', numel(harnessNames), pathText);
+screenLines{end+1} = sprintf('Harness 이름 모델 | 결과 정리 전 %s', stateBefore);
+screenLines{end+1} = sprintf('Harness 이름 모델 | 결과 정리 뒤 %s', stateAfter);
+screenLines{end+1} = sprintf('결과 정리가 멈춘 곳 | %s', stopText);
 screenLines{end+1} = dashText(sprintf('CVF 복사 0개/1개 이상 | 전 %g/%g | 후 %g/%g', copyCounts(1, :), copyCounts(2, :)));
 for rowIndex = 1:height(T)
     before = numbers(rowIndex, :, 1); after = numbers(rowIndex, :, 2);
@@ -130,14 +166,19 @@ fprintf('진단 전문 파일: %s (임시 폴더)\n', diagFile);
 warning(warnState);
 ```
 
-화면: `단위 테스트` 한 줄, `결과 정리 다시 하기` 한 줄, 결과 정리 로그 이름 한 줄, `CVF 복사` 한 줄, 대상 행마다 한 줄. 대상은 Excel 행 번호
-(`No`)로만 적는다. `전`은 지난 결과 정리가 남긴 것, `후`는 이번에 다시 한 결과 정리다. `CVF 복사 0개/1개 이상`은
-결과 정리 로그에서 보고서가 coverage에 붙은 CVF를 찾지 못한 횟수와 찾아 복사한 횟수다.
+화면: `단위 테스트` 한 줄, `결과 정리 다시 하기` 한 줄, 결과 정리 로그 한 줄, Harness 이름 모델 네 줄, `CVF 복사` 한 줄, 대상 행마다
+한 줄. 대상은 Excel 행 번호(`No`)로만 적는다. `전`은 지난 결과 정리가 남긴 것, `후`는 이번에 다시 한 결과 정리다. `대상 시작`은
+그 로그에서 결과 정리가 시작한 대상 수다. `CVF 복사 0개/1개 이상`은 결과 정리 로그에서 보고서가 coverage에 붙은 CVF를 찾지 못한
+횟수와 찾아 복사한 횟수다. Harness 이름 모델 줄은 이름 대신 종류만 찍는다. `경로가 가리키는 파일`은 그 이름으로 모델을 열면 경로에서
+잡히는 파일이 어느 폴더에 있는지다. `결과 정리 전`은 Top Model을 연 뒤, `결과 정리 뒤`는 결과 정리가 끝나거나 멈춘 뒤다.
+`결과 정리가 멈춘 곳`은 결과 정리가 Harness 이름의 모델을 Harness가 아니라고 판정한 순간의 상태다.
 
 확인할 것:
 
 - `단위 테스트`의 실패·미완료가 0이고 `결과 정리 다시 하기 OK`인가. 아니면 식별자를 보고, 진단 파일에서 그 절의 첫 줄을
   경로·이름 없이 말로 옮겨 달라.
+- `결과 정리 전`이 `없음`인가. `열림(...)`이면 결과 정리 전에 이미 그 이름의 모델이 열려 있었던 것이다.
+- `CollectHarnessNameInUse`로 다시 멈췄다면 `대상 시작 후`와 `결과 정리가 멈춘 곳`을 본다. 화면에 다 나오므로 따로 옮길 것은 없다.
 - `CVF 복사`의 `후`가 1개 이상 쪽만 있는가(0개가 0). `전`은 지난번 중간에 멈춘 결과 정리라 참고만 한다.
 - 대상마다 `CUT 결정 후 20/22`, `CUT 실행 후 45/45`인가(standalone 저장 Coverage와 같은 값). `전`은 지난 결과 정리가 남긴
   파일 값이다. 지난번 화면에서는 27/30, 66/66이었다.
