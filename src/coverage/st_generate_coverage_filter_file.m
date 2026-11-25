@@ -23,7 +23,7 @@ try
             'Cannot generate a CVF when both coverage modes are OFF.');
     end
 
-    [executionRoot, cutPath, contextCleanup] = ...
+    [executionRoot, cutPath, contextCleanup, ruleCut] = ...
         resolve_execution_context(targetRow, cfg); %#ok<NASGU>
     cutHandle = getSimulinkBlockHandle(cutPath);
     if cutHandle == -1 || ...
@@ -40,7 +40,10 @@ try
     categories = strings(0,1);
 
     if targetRow.CoverageFilterMode ~= "OFF"
-        children = direct_blocks(cutPath, 'SubSystem');
+        % Coverage of a Harness run is keyed by the Top Model's SIDs: a rule
+        % on a Harness block SID matched nothing, the same rule on the Top
+        % Model block below the CUT did (2026-11-25 collect probe).
+        children = direct_blocks(ruleCut, 'SubSystem');
         if targetRow.CoverageFilterMode == "SUBSYSTEM"
             childSelector = slcoverage.BlockSelectorType.BlockInstance;
         else
@@ -206,7 +209,10 @@ catch ME
 end
 end
 
-function [root, cut, cleanup] = resolve_execution_context(row, cfg)
+function [root, cut, cleanup, ruleCut] = resolve_execution_context(row, cfg)
+% root and cut are where the test runs; ruleCut is the CUT whose blocks the
+% CUT-child rules name. A standalone model runs and is covered as itself; a
+% Harness runs its CUT but is covered against the Top Model's CUT.
 cleanup = [];
 if ismember('ExecutionModel', row.Properties.VariableNames) && ...
         strlength(strtrim(string(row.ExecutionModel))) > 0
@@ -223,6 +229,7 @@ if ismember('ExecutionModel', row.Properties.VariableNames) && ...
     cleanup = onCleanup(@() close_model_if_loaded_here(model, loadedHere));
     root = model;
     cut = char(row.StandaloneCUTPath);
+    ruleCut = cut;
     return;
 end
 
@@ -243,6 +250,7 @@ else
 end
 root = harness;
 cut = identify_context_cut(sourceCut, root);
+ruleCut = sourceCut;
 end
 
 function cut = identify_context_cut(sourceCut, root)

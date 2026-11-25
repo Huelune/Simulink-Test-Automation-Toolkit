@@ -263,6 +263,18 @@ verifyEqual(testCase, st_coverage_object_path(row), ...
     'standalone_Controller/Controller ');
 end
 
+function testFilterRulesNameTheTopModelCutInAHarness(testCase)
+% A rule on a Harness block SID matched nothing in Harness coverage; the
+% same rule on the Top Model block below the CUT gave the standalone numbers.
+source = fileread(fullfile(st_project_root(), 'src', 'coverage', ...
+    'st_generate_coverage_filter_file.m'));
+verifyNotEmpty(testCase, regexp(source, "children = direct_blocks\(ruleCut, 'SubSystem'\);", 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'cut = identify_context_cut\(sourceCut, root\);\s*ruleCut = sourceCut;', 'once'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'cut = char\(row\.StandaloneCUTPath\);\s*ruleCut = cut;', 'once'));
+end
+
 function testCoverageObjectPathFallsBackToTheCutPath(testCase)
 row = table("TOP/Controller", "", ...
     'VariableNames', {'CUTPath','StandaloneCUTPath'});
