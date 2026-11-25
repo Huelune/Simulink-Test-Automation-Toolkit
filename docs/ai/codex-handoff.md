@@ -128,7 +128,11 @@
   다시 열어도 끊김 5가 남았다. 끊긴 입력을 Harness에서 보내는 블록(SubSystem 종류, 출력 포트 6)은 standalone에도 출력 포트 6으로
   있고, 선만 떨어져 있다. 어느 단계에서 포트가 잠시 줄어 선이 떨어진 뒤 끊긴 채 저장된 것으로 본다. 진단은 이제 단계별 저장본을
   센다. 단계는 내보낸 원본(번들 template), 실행용 복사본(Workspace), 패키징본이다. Harness Signal Editor 파일 이름의 풀림도 찍는다.
-  `st_export_standalone_harnesses`는 `cd(outputFolder)` 뒤에 내보낸다. 실기 확인은 `todo.md` 7절이다.
+  `st_export_standalone_harnesses`는 `cd(outputFolder)` 뒤에 내보낸다. 네 번째 실행: 세 대상 모두 내보낸 원본 0, 실행용 복사본 5,
+  패키징본 5였다. Harness Signal Editor 파일 이름은 절대 경로이고 정상이었다. 그러니 선은 실행 단계에서 떨어진다. 후보는 둘이다.
+  하나는 `st_prepare_standalone_bundle_execution`이 `set_param(signalEditor, 'Filename', expectedInput)` 뒤에 `save_system`하는 것이다.
+  다른 하나는 `run_exported_tests.m`이 실행 뒤 Dirty 모델을 `save_system`하는 것으로, Iteration마다 바뀌는 ActiveScenario가 남을 수
+  있다. 진단은 내보낸 원본을 열어 두 동작을 따로 해 보고(저장 안 함) 끊긴 선 끝을 센다. 실기 확인은 `todo.md` 7절이다.
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
