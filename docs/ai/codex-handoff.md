@@ -107,7 +107,9 @@
   `HarnessCUTPath`를 행에 넣고, `st_coverage_object_path`가 그것을 먼저 쓴다(보고서 Coverage, 결정 목록, 분기 결과, CVF 읽기
   확인). CVF 읽기 확인은 CUT 경로의 결정이 비면 WARN을 남긴다. Harness 문맥의 CUT_ONLY 경계 규칙은 여전히 Harness SID라 효과가
   없다. coverage의 analyzedModel이 CUT이라 뺄 바깥도 없다(손대지 않음). PER_CUT 즉시 보고 경로(`st_run_tests_per_cut`의
-  `CoveragePath`)는 Harness CUT 경로를 쓰지 않는다(미확인). 실기 확인은 `todo.md` 6절이다. `st_apply_result_coverage_filters`의 읽기 확인은
+  `CoveragePath`)는 Harness CUT 경로를 쓰지 않는다(미확인). 2026-11-25 16시 50분 실행에서 세 대상 모두 CUT 결정 20/22, 실행
+  45/45(standalone과 같음), CVF 복사 6번 모두 파일 있음을 확인했다(해결). 결정 목록은 11개 그대로다. CVF가 빼는 것은 CUT의 하위
+  Subsystem이고, 결정 목록은 원래 CUT 직속 블록 중 일반 Subsystem을 넣지 않는다. `st_apply_result_coverage_filters`의 읽기 확인은
   `decisioninfo`가 오류 없이 도는지만 봐서, CVF가 CUT을 통째로 빼도 통과한다. 원인을 고칠 때 빈 결과도 실패로 볼지 정한다.
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
