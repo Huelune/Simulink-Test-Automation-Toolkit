@@ -132,7 +132,12 @@
   패키징본 5였다. Harness Signal Editor 파일 이름은 절대 경로이고 정상이었다. 그러니 선은 실행 단계에서 떨어진다. 후보는 둘이다.
   하나는 `st_prepare_standalone_bundle_execution`이 `set_param(signalEditor, 'Filename', expectedInput)` 뒤에 `save_system`하는 것이다.
   다른 하나는 `run_exported_tests.m`이 실행 뒤 Dirty 모델을 `save_system`하는 것으로, Iteration마다 바뀌는 ActiveScenario가 남을 수
-  있다. 진단은 내보낸 원본을 열어 두 동작을 따로 해 보고(저장 안 함) 끊긴 선 끝을 센다. 실기 확인은 `todo.md` 7절이다.
+  있다. 진단은 내보낸 원본을 열어 두 동작을 따로 해 보고(저장 안 함) 끊긴 선 끝을 센다. 다섯 번째 실행: 둘 다 0이었다(시나리오 3개,
+  파일 이름 바꿈, 포트 6 유지). 현재 짐작(미확인): 실행 준비는 Filename을 짧은 작업 폴더(`run_exported_tests.m`의 `workRoot`, 실행 뒤
+  `remove_short_workspace`로 지움)의 절대 경로로 저장한다. 그래서 실행용 복사본을 나중에 열면 파일을 못 찾아 포트가 줄고 선이
+  떨어진다. 패키징(`rewire_packaged_input`)은 그 상태에서 Filename을 상대 경로로 바꿔 저장하므로, 패키징본에 끊긴 선이 남는다. 실행
+  결과는 파일이 있을 때 돌아 영향이 없다. 진단은 단계별 저장본의 Signal Editor 포트 수와 파일 존재를 찍고, 임시 폴더에서 파일을
+  지운 저장본을 다시 열어 재현한다. 실기 확인은 `todo.md` 7절이다.
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
