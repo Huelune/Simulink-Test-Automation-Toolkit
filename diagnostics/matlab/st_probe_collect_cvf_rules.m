@@ -21,7 +21,7 @@ clc;
 warnState = warning('off', 'all');
 restoreWarnings = onCleanup(@() warning(warnState)); %#ok<NASGU>
 diagFile = 'st_cvf_rule_probe.txt';
-lines = {sprintf('MATLAB %s', version('-release'))};
+lines = {sprintf('MATLAB %s | CVF 규칙 찾기', version('-release'))};
 cfg = [];
 stage = '모델 확인';
 try
@@ -60,7 +60,7 @@ try
 
     stage = '모델 열기';
     load_system(cfg.ModelFile);
-    owner = st_normalize_cut_path(row.CUTPath, cfg.TopModel);
+    owner = char(st_normalize_cut_path(row.CUTPath, cfg.TopModel));
     harness = char(string(row.HarnessName));
     sltest.harness.load(owner, harness);
     harnessCut = [harness '/' strrep(get_param(owner, 'Name'), '/', '//')];
@@ -99,6 +99,7 @@ try
     sidKinds = strings(n, 1);
     harnessPlaces = strings(n, 1);
     topPlaces = strings(n, 1);
+    rulePaths = strings(n, 1);
     for i = 1:n
         single = slcoverage.Filter;
         addRule(single, allRules(i));
@@ -110,7 +111,7 @@ try
         sid = char(string(allRules(i).Selector.Id));
         [sidModel, sidRest] = strtok(sid, ':');
         sidKinds(i) = model_kind(sidModel, harness, cfg.TopModel);
-        [blockType, harnessPlaces(i)] = place_sid(sid, harnessCut);
+        [blockType, harnessPlaces(i), rulePaths(i)] = place_sid(sid, harnessCut);
         [~, topPlaces(i)] = place_sid([char(cfg.TopModel) sidRest], owner);
         if values(2) == 0 && values(4) == 0 && (base(2) > 0 || base(4) > 0)
             outcome(i) = "비움";
@@ -127,6 +128,33 @@ try
     lines{end+1} = ['규칙 SID의 모델 | ' count_text(sidKinds)];
     lines{end+1} = ['규칙 위치(Harness) | ' count_text(harnessPlaces)];
     lines{end+1} = ['같은 번호의 Top Model 블록 위치 | ' count_text(topPlaces)];
+    % Candidate fix: the rules inside the CUT rebuilt on the Top Model's CUT,
+    % found by the same path below the CUT.
+    inside = reshape(find(harnessPlaces == "CUT 안"), 1, []);
+    try
+        topFilter = slcoverage.Filter;
+        mapped = 0;
+        for i = inside
+            relative = char(extractAfter(rulePaths(i), [harnessCut '/']));
+            try
+                topSid = Simulink.ID.getSID([char(owner) '/' relative]);
+            catch
+                continue;
+            end
+            rule = slcoverage.FilterRule(slcoverage.BlockSelector( ...
+                allRules(i).Selector.Type, topSid), ...
+                allRules(i).Rationale, allRules(i).Mode);
+            if addRule(topFilter, rule), mapped = mapped + 1; end
+        end
+        topBase = fullfile(scratch, 'top_model');
+        save(topFilter, topBase);
+        topFile = [topBase '.cvf'];
+        if ~isfile(topFile) && isfile(topBase), topFile = topBase; end
+        lines{end+1} = sprintf(['Top Model SID로 다시 만든 CVF(CUT 안 규칙 %d개 중 %d개) | ' ...
+            '결정 %d/%d | 실행 %d/%d'], numel(inside), mapped, measure(cvd, cutPath, topFile));
+    catch topError
+        lines{end+1} = sprintf('Top Model SID로 다시 만든 CVF 실패 | %s', id_of(topError));
+    end
     shown = detail(outcome == "비움");
     if isempty(shown), shown = detail(outcome == "줄임"); end
     for k = 1:min(20, numel(shown)), lines{end+1} = char(shown(k)); end %#ok<AGROW>
@@ -172,22 +200,24 @@ end
 end
 
 
-function [blockType, place] = place_sid(sid, cutPath)
-% Where the block a SID names sits relative to the CUT: kinds only.
+function [blockType, place, blockPath] = place_sid(sid, cutPath)
+% Where the block a SID names sits relative to the CUT: kinds for the screen,
+% and the path for rebuilding the rule, never printed.
 blockType = '-';
 place = "없음";
+blockPath = "";
 try
     handle = Simulink.ID.getHandle(sid);
-    path = getfullname(handle);
+    blockPath = getfullname(handle);
     blockType = get_param(handle, 'BlockType');
 catch
     return;
 end
-if strcmp(path, cutPath)
+if strcmp(blockPath, cutPath)
     place = "CUT 자신";
-elseif startsWith(path, [cutPath '/'])
+elseif startsWith(blockPath, [cutPath '/'])
     place = "CUT 안";
-elseif startsWith(cutPath, [path '/'])
+elseif startsWith(cutPath, [blockPath '/'])
     place = "CUT 위";
 else
     place = "CUT 밖";
