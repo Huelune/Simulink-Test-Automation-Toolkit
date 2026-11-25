@@ -13,9 +13,12 @@
 결정 목록을 만들 때마다 coverage를 다시 꺼냈다. Test Manager는 꺼낼 때마다 새 객체를 줄 수 있어서, CVF가 빠진 객체로
 계산됐다. 지난번 이 절의 `전` 로그에서 CVF 복사가 6번 모두 0개였던 것이 그 증거다. 첫 수정은 결과 정리를 다시 할 때
 `ResultCoverageDecisionReadbackFailed`로 멈춰서, CVF를 붙인 객체를 보고서에 직접 넘기는 방식으로 다시 고쳤다. 그래도 같은
-오류가 났는데, 원인은 따로 있었다. standalone 모델은 Harness와 이름이 같아서, 5절이 열어 둔 standalone 모델을 결과 정리가
-Harness로 여기고 coverage를 읽었다. 이제 결과 정리는 그런 모델이 열려 있으면 닫으라는 오류로 멈추고, 이 블록은 시작할 때 열린
-모델을 모두 닫는다. 이 블록은 시뮬레이션 없이 결과 정리만 다시 하고, 전후 숫자를 비교한다. 결정 목록(`DecisionPoints`)은 CVF가
+오류가 났는데, 원인은 따로 있었다. standalone 모델은 Harness와 이름이 같다. 결과 정리는 Harness를 열어 두고 coverage를
+읽는데, CVF를 만드는 코드가 그 Harness를 닫았다. 그러면 coverage를 읽을 때 Simulink가 그 이름의 모델을 경로에서 찾아, 5절이
+경로에 넣은 standalone 모델을 연다. 그래서 첫 대상은 끝나고 다음 대상에서 멈췄다(지난번 `전` 로그의 CVF 복사 2번이 첫 대상의
+것이다). 지난번 `CollectHarnessNameInUse`는 Harness 이름으로 Harness가 아닌 모델이 열린 것을 결과 정리가 잡은 것이다. 이제
+CVF 생성은 자기가 연 Harness만 닫는다. 이 블록은 시작할 때 열린 모델도 모두 닫는다. 이 블록은 시뮬레이션 없이 결과 정리만
+다시 하고, 전후 숫자를 비교한다. 결과 정리가 중간에 멈춰도 `후` 로그의 CVF 복사 횟수로 어디까지 갔는지 보인다. 결정 목록(`DecisionPoints`)은 CVF가
 빼는 블록을 빼고 고르므로, 그 수도 바뀔 수 있다.
 
 5절(standalone과 최종 문서)은 숫자가 모두 기대대로였다. 남은 것은 눈으로 볼 세 가지뿐이라 이 절에 옮겼다.
@@ -76,7 +79,6 @@ for phase = 1:2
         catch collectError
             collectText = ['실패 ' idOf(collectError)];
             fprintf(fid, '[결과 정리]\n%s\n\n', getReport(collectError, 'extended', 'hyperlinks', 'off'));
-            break
         end
     end
     logFiles = dir(fullfile(char(cfg.ResultDir), 'logs', '*_st_collect_per_cut_results*.log'));
@@ -88,6 +90,7 @@ for phase = 1:2
         copyLines = logLines(contains(logLines, "Portable coverage filter copy complete"));
         copyCounts(phase, :) = [sum(contains(copyLines, "files=0")), sum(~contains(copyLines, "files=0"))];
     end
+    if phase == 2 && ~strcmp(collectText, 'OK'), break; end
     try
         evalc('runSource = st_final_document_run_source(cfg, ''PER_CUT'');');
     catch sourceError
