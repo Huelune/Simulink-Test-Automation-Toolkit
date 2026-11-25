@@ -27,7 +27,7 @@ diagFile = 'st_cvf_collect_check.txt';
 fid = fopen(fullfile(tempdir, diagFile), 'w');
 if fid < 0, fid = fopen('nul', 'w'); end
 closeDiag = onCleanup(@() fclose(fid)); %#ok<NASGU>
-lines = {sprintf('MATLAB %s', version('-release'))};
+lines = {sprintf('MATLAB %s | 결과 정리 다시 하기', version('-release'))};
 
 % Variables that evalc assigns are named first, or MATLAB may take them for functions.
 testResults = [];

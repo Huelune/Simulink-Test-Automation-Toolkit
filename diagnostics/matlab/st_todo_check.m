@@ -5,5 +5,5 @@ function st_todo_check()
 % then still runs the check of the code just pulled, not the one the block
 % was first written for. Point it at the current section's check whenever
 % todo.md changes.
-st_probe_collect_cvf_rules;
+st_check_per_cut_collect_cvf;
 end
