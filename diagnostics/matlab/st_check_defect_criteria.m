@@ -129,9 +129,9 @@ for i = 1:height(targets)
     end
     if includeStandalone
         lines{end+1} = sprintf('대상 %d | 결함 TC %d | %s', no, numel(names), coverageText); %#ok<AGROW>
-        [kinds, details] = read_defects(standaloneSets, caseName, names);
+        [kinds, details, caseText] = read_defects(standaloneSets, caseName, names);
         totals(1) = totals(1) + sum(kinds == "verify 실패");
-        lines{end+1} = sprintf('대상 %d | standalone | %s', no, kind_summary(kinds, details, ...
+        lines{end+1} = sprintf('대상 %d | standalone | %s | %s', no, caseText, kind_summary(kinds, details, ...
             ~isempty(standaloneSets))); %#ok<AGROW>
     end
     [kinds, details, caseText] = read_defects(perCutSets{i}, caseName, names);
