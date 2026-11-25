@@ -4,6 +4,8 @@ function st_probe_defect_criteria_results()
 % getCustomCriteriaResult(iterationResult) raised MATLAB:unassignedOutputs
 % for every defect iteration of the saved PER_CUT results. This tries every
 % way in one run, per target, without running anything:
+%   - first, whether the Simulink, Simulink Test and Simulink Coverage
+%     licenses check out (stm:general:LicenseCheck stopped a run before)
 %   - the Test Case in the Test File: Custom Criteria enabled, and whether
 %     its callback is the toolkit's defect criteria (marker line)
 %   - the defect iterations of the saved PER_CUT result (FINAL, else
@@ -25,15 +27,34 @@ targets = table();
 sldvProfile = [];
 runSource = [];
 imported = [];
-try
-    evalc('targets = st_load_targets(cfg.OnlyEnabled);');
-    evalc('runSource = st_final_document_run_source(cfg, ''PER_CUT'');');
-    testFile = sltest.testmanager.TestFile(cfg.TestFile);
-    suite = getTestSuiteByName(testFile, cfg.TestSuiteName);
-catch ME
-    lines{end+1} = sprintf('준비 실패 | %s', id_of(ME));
+% stm:general:LicenseCheck stopped an earlier run here; show what checks out.
+[licenseText, licensed] = license_checkout({'SIMULINK', 'Simulink_Test', 'Simulink_Coverage'});
+lines{end+1} = ['라이선스 받기 | ' licenseText];
+if ~licensed
+    lines{end+1} = '라이선스를 받지 못했습니다. 다른 사람이 쓰는 중이면 기다렸다가, 아니면 MATLAB을 다시 연 뒤 돌려 주세요';
+    st_log(cfg, 'WARN', 'Defect criteria result probe stopped | license checkout failed');
     show(lines);
     return;
+end
+step = '대상 목록';
+try
+    evalc('targets = st_load_targets(cfg.OnlyEnabled);');
+    step = '1단계 결과 찾기';
+    evalc('runSource = st_final_document_run_source(cfg, ''PER_CUT'');');
+catch ME
+    lines{end+1} = sprintf('준비 실패 | %s | %s', step, id_of(ME));
+    st_log(cfg, 'ERROR', 'Defect criteria result probe stopped | %s | %s', step, id_of(ME));
+    show(lines);
+    return;
+end
+% The Test File only feeds the criteria-setting column; the saved results are read without it.
+suite = [];
+suiteFailure = '';
+try
+    suite = getTestSuiteByName(sltest.testmanager.TestFile(cfg.TestFile), cfg.TestSuiteName);
+catch ME
+    suiteFailure = id_of(ME);
+    st_log(cfg, 'WARN', 'Defect criteria result probe | Test File not opened | %s', suiteFailure);
 end
 rows = runSource.ResultSets;
 for i = 1:height(targets)
@@ -47,13 +68,15 @@ for i = 1:height(targets)
         lines{end+1} = sprintf('대상 %d | 프로필 실패 %s', no, id_of(ME)); %#ok<AGROW>
         continue;
     end
-    criteriaText = '기준 읽기 실패';
-    try
-        criteria = getCustomCriteria(getTestCaseByName(suite, char(caseName)));
-        criteriaText = sprintf('기준 켜짐 %s | 표지 %s', yes_no(logical(criteria.Enabled)), ...
-            yes_no(startsWith(strtrim(char(criteria.Callback)), marker)));
-    catch ME
-        criteriaText = sprintf('기준 읽기 실패 %s', id_of(ME));
+    criteriaText = ['Test File 열기 실패 ' suiteFailure];
+    if ~isempty(suite)
+        try
+            criteria = getCustomCriteria(getTestCaseByName(suite, char(caseName)));
+            criteriaText = sprintf('기준 켜짐 %s | 표지 %s', yes_no(logical(criteria.Enabled)), ...
+                yes_no(startsWith(strtrim(char(criteria.Callback)), marker)));
+        catch ME
+            criteriaText = sprintf('기준 읽기 실패 %s', id_of(ME));
+        end
     end
 
     hit = find(rows.TestCaseName == caseName, 1);
@@ -159,6 +182,21 @@ names = [reshape(string(properties(iteration)), 1, []), reshape(string(methods(i
 names = unique(names(contains(lower(names), 'criteria')));
 text = '없음';
 if ~isempty(names), text = char(strjoin(names, ',')); end
+end
+
+
+function [text, ok] = license_checkout(features)
+%LICENSE_CHECKOUT "feature 예/아니오" per license feature; ok when all check out.
+% Only the status is shown: the checkout message can name the license server.
+parts = strings(1, numel(features));
+ok = true;
+for k = 1:numel(features)
+    status = false;
+    try, [status, ~] = license('checkout', features{k}); status = logical(status); catch, end
+    ok = ok && status;
+    parts(k) = string(features{k}) + " " + yes_no(status);
+end
+text = char(strjoin(parts, ', '));
 end
 
 
