@@ -75,6 +75,12 @@
   통과 3, 실패 2였다(시나리오 복사는 확인). 그러나 저장된 FINAL 결과를 import해 결함 Iteration에 `getCustomCriteriaResult`를
   부르면 모두 `MATLAB:unassignedOutputs`였다. 실패가 Custom Criteria 때문인지는 미확인이다. `st_probe_defect_criteria_results`가
   기준 설정, 결함 Iteration의 verify 결과 수, Iteration·Test Case 단위 호출 결과를 한 번에 찍는다(6절 다음 실행).
+  2026-11-26 probe 결과(첫 실행은 `stm:general:LicenseCheck`로 준비에서 멈춰 라이선스 확인 줄을 더했다): 세 대상 모두 Custom
+  Criteria 켜짐·표지 있음, 결함 Iteration 2개 모두 Failed인데 그 verify는 실패 0 통과 2였다. 즉 실패는 Custom Criteria가
+  냈다. `getCustomCriteriaResult(iteration)`는 결함·보통 Iteration 모두 결과 1개를 돌려줬다(결함 Failed, 보통 Passed).
+  Test Case 결과에는 빈 값이다. 앞의 `unassignedOutputs`는 이 호출이 아니라 실패한 결과의 진단 기록 속성을 읽을 때 난
+  것으로 보인다(`st_defect_criteria_kind`가 Passed일 때만 통과). 어느 속성인지는 미확인이다. 분류기는 속성을 하나씩 읽고
+  못 읽으면 빈 값으로 보도록 고쳤다. probe는 못 읽는 속성 이름을 찍는다(6절 다음 실행).
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
