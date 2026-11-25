@@ -24,18 +24,23 @@
 돌려줄 것: 다음 세 줄. standalone Custom Criteria 결과 한 단어(`verify 실패`, `오류`, `못 봄`), 1단계 Custom Criteria 결과 한
 단어, "보고서에 필터 항목 나옴/안 나옴/못 봄, 모델 색 표시 됨/안 됨/못 봄". 화면은 사용자 PC에서만 보고 밖으로 보내지 않는다.
 
-## 7. standalone 모델의 입력선이 끊기는 이유 확인
+## 7. standalone 모델의 입력선이 어느 단계에서 끊기는지 찾기
 
-왜: 지난 화면에서 끊긴 선은 standalone 모델에만 있었다. 세 대상 모두 standalone 모델의 CUT 바깥에서 SubSystem으로 들어가는 입력 5개가
-끊겼다. 원래 CUT과 Harness에는 하나도 없었다. standalone 모델의 입력은 Signal Editor 블록이 준다. Signal Editor는 입력 파일 안의
-신호 수만큼 출력 포트를 만든다. 패키징은 그 파일 이름을 폴더 없이 파일 이름만 적어 저장한다. 그래서 모델을 연 폴더나 MATLAB 경로에
-따라 파일을 못 찾으면, 포트가 줄고 선이 떨어질 수 있다. 짐작이라서, 이 블록은 대상마다 다음을 함께 본다.
+왜: 끊긴 선은 standalone 모델에만 있다. 세 대상 모두 CUT 바깥에서 입력 5개가 끊겼다. 지난 화면으로 두 가지가 확인됐다.
 
-- Harness와 standalone의 Signal Editor 출력 포트 수
-- standalone의 파일 이름이 그대로, MATLAB 경로에서, 모델 폴더에서 찾아지는지
-- 모델 폴더에서 다시 열면 끊긴 선이 사라지는지
+- Signal Editor 파일을 못 찾아서가 아니다. 출력 포트는 Harness와 standalone 모두 6개였다. 파일도 세 곳 모두에서 찾아졌다. 모델
+  폴더에서 다시 열어도 끊김은 그대로였다.
+- 그 입력들을 Harness에서 보내는 블록(출력 포트 6개)은 standalone에도 출력 포트 6개로 남아 있다. 선만 2~6번 포트에서 떨어져 있다.
 
-모델은 저장하지 않는다.
+어떤 단계에서 포트가 잠시 줄어 선이 떨어졌고, 포트가 6개로 돌아온 뒤 끊긴 채 저장된 것으로 보인다. standalone 모델은 다음 순서로
+만들어지고 그때마다 저장된다.
+
+1. Harness에서 내보내기
+2. 실행용 복사본에서 입력 파일 이름을 절대 경로로 바꾸기
+3. 패키징에서 입력 파일 이름을 상대 경로로 바꾸기
+
+이 블록은 세 단계의 저장본마다 끊긴 선 수를 센다. Harness의 Signal Editor 파일 이름이 어떻게 풀리는지도 찍는다. 내보내기 때는 다른
+폴더로 옮겨 가서 내보내므로, 그때 파일을 못 찾았을 수 있다. 모델은 저장하지 않는다.
 
 순서: 클론에서 main을 pull한다. 지난번 두 줄(`st_todo_check`를 부르는 것)을 명령 기록에서 다시 불러도 되고, 아래에서 복사해도
 된다. 열어 둔 모델과 Harness 화면은 닫힌다. 저장 안 한 모델이 있으면 멈춘다. 화면 첫 줄 끝에 `Harness CUT 비교`가 있어야 이 절의
@@ -46,21 +51,17 @@ clearvars; toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더
 if ~isequal(toolkitDir, 0), oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir); st_todo_check; end
 ```
 
-화면: 대상(Excel 행 번호 `No`)마다 아래 줄들. 이름 대신 수, Simulink 블록 종류, 설정 값만 찍는다.
+화면: 대상(Excel 행 번호 `No`)마다 지난번 줄들에 두 줄이 더해진다. 이름 대신 수, 블록 종류, 설정 값만 찍는다.
 
-- `대상 n | 끊긴 선 끝 | 원래 CUT a | Harness CUT 안 b 밖 c | standalone CUT 안 d 밖 e`: 포트에 닿지 않은 선 끝의 수. 지금 폴더에서
-  standalone 모델을 연 결과다.
-- `대상 n Harness 설정 | ...`: Harness의 동기화 설정(값 그대로).
-- `대상 n standalone Signal Editor | 출력 포트 Harness x→standalone y | 파일 이름 상대/절대 | 그대로 O/X 경로 O/X 모델 폴더 O/X`
-- `대상 n standalone 모델 폴더에서 열면 | 끊긴 선 끝 CUT 안 f 밖 g | Signal Editor 출력 포트 z`
-- 들여 쓴 줄: 끊긴 것을 어디서 무엇이 끊겼는지로 묶은 수. standalone CUT 밖의 끊긴 입력은 Harness에서 그 입력을 보내는 블록 종류와,
-  그 블록의 출력 포트 수(Harness→standalone)도 찍는다.
+- `대상 n Harness Signal Editor | 파일 이름 상대/절대 | 그대로 O/X 경로 O/X 모델 폴더 O/X`: Harness의 입력 파일 이름이 지금 폴더,
+  MATLAB 경로, 원래 모델 폴더에서 찾아지는지.
+- `대상 n 단계별 CUT 밖 끊긴 선 끝 | 내보낸 원본 a | 실행용 복사본 b | 패키징본 c`: 단계마다 저장된 standalone 모델의 끊긴 선 끝 수.
+  파일이 지워져 없으면 `없음`.
 
 확인할 것:
 
-- `출력 포트 Harness x→standalone y`에서 y가 x보다 작고, `모델 폴더에서 열면`의 `밖`이 0이고 출력 포트가 x로 돌아오면 짐작이 맞다.
-  파일을 못 찾아 Signal Editor 포트가 준 것이다.
-- `그대로`와 `경로`가 모두 X이면, 지금 폴더와 MATLAB 경로로는 그 파일을 찾을 수 없는 것이다.
+- 단계별 줄에서 처음으로 5가 나오는 단계가 선이 떨어진 단계다. `내보낸 원본`부터 5이면 내보내기 단계다.
+- `내보낸 원본`이 5이고 Harness Signal Editor의 `그대로`와 `경로`가 X이면, 내보낼 때 입력 파일을 못 찾아 포트가 준 것으로 본다.
 - `실패` 줄이 나오면 식별자를 본다. 진단 파일은 사용자 PC에서만 본다.
 
 돌려줄 것: 화면 캡처 한 장.
