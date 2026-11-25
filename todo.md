@@ -20,6 +20,9 @@ Custom Criteria 결과를 `getCustomCriteriaResult`로 읽으면 세 대상 모�
 - `getCustomCriteriaResult`를 결함 Iteration, 보통 Iteration, Test Case 결과에 각각 부른 결과
 - Iteration 결과 객체에서 criteria가 들어간 속성·메서드 이름
 
+지난번에는 준비 단계에서 `stm:general:LicenseCheck`(Simulink Test 라이선스 확인 실패)로 멈췄다. 이번에는 둘째 줄에 라이선스를
+받았는지가 먼저 나온다. 준비 단계가 실패하면 어느 단계인지도 함께 나온다. Test File을 열지 못해도 저장된 결과는 계속 읽는다.
+
 순서: 클론에서 main을 pull한 뒤, 지난번 두 줄(`st_todo_check`를 부르는 것)을 명령 기록에서 다시 부르거나 아래에서 복사해 붙여
 넣는다. 이번 블록은 Harness를 지우지 않는다. 화면 첫 줄 끝에 `결함 Custom Criteria 결과 읽는 길 찾기`가 있어야 이 절의 점검이다.
 
@@ -28,7 +31,8 @@ clearvars; toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더
 if ~isequal(toolkitDir, 0), oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir); st_todo_check; end
 ```
 
-화면: 대상마다 세 줄이 나온다. 첫 줄에는 기준 켜짐·표지, 결함 Iteration 수와 Failed 수, 그 verify 결과 수가 있다. 둘째 줄에는
+화면: 둘째 줄에 `라이선스 받기 | SIMULINK 예, Simulink_Test 예, Simulink_Coverage 예`처럼 나온다. 하나라도 `아니오`면 거기서
+멈춘다. 다른 사람이 그 라이선스를 쓰는 중이면 기다렸다가, 아니면 MATLAB을 다시 연 뒤 돌린다. 그다음 대상마다 세 줄이 나온다. 첫 줄에는 기준 켜짐·표지, 결함 Iteration 수와 Failed 수, 그 verify 결과 수가 있다. 둘째 줄에는
 Iteration에서 읽은 기준 결과가, 셋째 줄에는 Test Case 결과에서 읽은 기준 결과와 criteria 이름이 있다.
 
 확인할 것: 특별히 맞춰 볼 값은 없다. 화면 그대로 돌려주면 된다.
