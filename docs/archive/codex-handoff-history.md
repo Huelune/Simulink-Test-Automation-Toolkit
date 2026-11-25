@@ -938,3 +938,23 @@ Signal Editor의 `import(reader)` 파서 오류는 Import 이전 기준 `7f0825e
   테스트도 이 실행에 들어 있었다.
 - 실물 미검증 목록에서 단위 테스트로 확인된 세 항목(`evalc`의 경고 수집, `diary`,
   한국어 `경고` 접두)을 지웠다.
+
+## 2026-11-25 결함 TC 1단계 실기 확인과 기존 단위 테스트 실패 정리
+
+- 결함 TC 작업 뒤 사용자 MATLAB R2025b에서 이 기능과 무관한 기존 단위 테스트 실패 여섯 건을 고쳤다. 실행 상태 합치기가
+  char 상태를 글자 단위로 쪼개 BATCH 실행 판정이 늘 NOT_RUN이던 코드 버그(`18d3c64`), 바뀐 소스 문구를 찾던 소스 텍스트
+  검사 두 건(`1113401`), R2025b가 Signal.Values로 받지 않는 형식으로 만들던 MAT 테스트 두 건(`fc134e3`), 로컬
+  `runtime_target.mat`에 standalone 결과 폴더를 바꿔 둔 PC의 기본값 확인(`771d84b`)이다.
+- layout 검사(`test_project_layout`)는 함수 이름 뒤 인자 목록을 선택 그룹 안의 토큰으로 읽었는데, R2025b에서 이 토큰이
+  비어 `(testCase)`를 받는 테스트 함수 726개가 모두 인자 없는 것으로 잡혔다. `4307e41`은 이를 인자 없는 도우미 탓으로 보고
+  badsubscript만 피했다. 인자 목록을 이름 뒤에서 따로 읽게 고쳤다(`7112ac6`).
+- 첫 실기 실행에서 결함 TC가 대상마다 0건이었다. 실제 SLDV 데이터는 Stateflow가 없는 모델의 ModelObjects 33개 모두
+  `sfObjType`에 값이 있고 `sfObjNum`이 -1이어서, "`sfObjType`이 있으면 Stateflow" 판정이 도달 불가 3개를 모두 뺐다.
+  `sfObjNum > 0`으로 바꿨다(`7a101bc`). 같은 실행의 준비 실패(`WorkflowStageFailed`)는 library link Harness 보호 단계의
+  `simtest:HarnessLinkProtectionRequiresClosedHarness`였다(대상 1의 Harness가 열려 있었다). 이 식별자는 결과 행이 아니라
+  앞선 로그 줄에만 남는다. todo 블록이 실행 전에 열린 모델을 닫게 했다.
+- 다시 돌린 결과: 단위 테스트 23개 파일 276건 통과. 대상 3개 모두 SLDV 결정 목표 30, Unsatisfiable 3 중 결함 TC 2건(MinMax,
+  Switch, 둘 다 CUT 바로 아래), 셋째는 `FilteredByCvf`(CVF ALL_CONTENT가 빼는 하위 블록 안의 Switch), Stateflow 0. FINAL
+  판정에서 결함 FAIL 2·PASS 0, 보통 Iteration PASS 3·FAIL 0이고 이전 판정과 다름 0.
+- 1단계 결과 정리의 CUT 결정 커버리지는 27/30이었다. SLDV 목표 30에서 도달 불가 3만 뺀 값이라 CVF가 빼는 하위 블록의 결정이
+  들어 있는 것으로 보인다. standalone `CoverageSummary.xlsx`는 20/22였다. todo 5절에서 저장 Coverage와 나란히 본다.
