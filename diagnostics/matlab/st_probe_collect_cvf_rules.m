@@ -6,7 +6,10 @@ function st_probe_collect_cvf_rules(varargin)
 %
 % After st_collect_per_cut_results attached the CVF it generated, CUT
 % decision and execution coverage read 0/0. This loads the target's saved
-% INITIAL ResultSet and that CVF, and reads CUT coverage without the CVF,
+% INITIAL ResultSet and first asks which path its coverage answers to: the
+% Top Model's CUT path the collect uses, the Harness CUT, the paths the
+% coverage object records, and the whole models. With a path that answers,
+% it reads CUT coverage without the CVF,
 % with it, and with each rule alone. Each rule's block is placed relative to
 % the CUT twice: by its SID in the Harness, and by the same SID number in the
 % Top Model, in case the filter is resolved against the model the coverage
@@ -69,21 +72,57 @@ try
     stage = '결과 읽기';
     imported = sltest.testmanager.importResults(savedFile);
     objects = st_collect_result_coverage_objects(imported(1));
-    answering = find(cellfun(@(c) answers(c, cutPath), objects));
-    lines{end+1} = sprintf('대상 %d | coverage 객체 %d개 | CUT에 답하는 것 %d개', ...
-        no, numel(objects), numel(answering));
-    if isempty(answering)
-        error('simtest:ProbeNoAnswer', 'CUT 경로에 답하는 coverage 객체가 없습니다');
+    lines{end+1} = sprintf('대상 %d | coverage 객체 %d개', no, numel(objects));
+    if isempty(objects)
+        error('simtest:ProbeNoAnswer', '저장 결과에 coverage 객체가 없습니다');
     end
-    cvd = objects{answering(1)};
-    lines{end+1} = sprintf('coverage 객체 | analyzedModel %s | ownerModel %s | 이미 걸린 CVF %d개', ...
-        model_kind(info_field(cvd, 'analyzedModel'), harness, cfg.TopModel), ...
-        model_kind(info_field(cvd, 'ownerModel'), harness, cfg.TopModel), filter_count(cvd));
-    base = measure(cvd, cutPath, '');
+    kindOf = @(value) path_kind(value, {cutPath, owner}, harnessCut, harness, char(cfg.TopModel));
+    first = objects{1};
+    lines{end+1} = sprintf('객체 1 | analyzedModel %s | ownerModel %s | harnessModel %s | 이미 걸린 CVF %d개', ...
+        kindOf(info_field(first, 'analyzedModel')), kindOf(info_field(first, 'ownerModel')), ...
+        kindOf(info_field(first, 'harnessModel')), filter_count(first));
+    lines{end+1} = sprintf('객체 1 | ownerBlock %s | rootPath %s', ...
+        kindOf(info_field(first, 'ownerBlock')), kindOf(root_path(first)));
+    % Which path the saved coverage answers to. The collect asks with the Top
+    % Model's CUT path; the whole models show whether there is data at all.
+    candidates = {cutPath, owner, harnessCut, char(info_field(first, 'ownerBlock')), ...
+        char(root_path(first)), harness, char(cfg.TopModel)};
+    candidates = unique(candidates(~cellfun('isempty', candidates)), 'stable');
+    queryPath = '';
+    cvd = [];
+    for k = 1:numel(candidates)
+        [answerText, index] = query_text(objects, candidates{k});
+        lines{end+1} = sprintf('경로 %s | 결정 %s', kindOf(candidates{k}), answerText); %#ok<AGROW>
+        isCut = ~any(strcmp(candidates{k}, {harness, char(cfg.TopModel)}));
+        if index > 0 && isCut && isempty(queryPath)
+            queryPath = candidates{k};
+            cvd = objects{index};
+        end
+    end
+    % A filter saved with the result would already empty the CUT.
+    if filter_count(first) > 0
+        try
+            first.filter = '';
+            [answerText, index] = query_text({first}, cutPath);
+        catch clearError
+            answerText = "지우기 오류 " + string(id_of(clearError));
+            index = 0;
+        end
+        lines{end+1} = sprintf('이미 걸린 CVF를 지우고 | 경로 Top CUT | 결정 %s', answerText);
+        if index > 0 && isempty(queryPath)
+            queryPath = cutPath;
+            cvd = first;
+        end
+    end
+    if isempty(queryPath)
+        error('simtest:ProbeNoAnswer', 'CUT을 가리키는 어느 경로에도 coverage가 답하지 않습니다');
+    end
+    lines{end+1} = sprintf('규칙 분석에 쓴 경로 | %s', kindOf(queryPath));
+    base = measure(cvd, queryPath, '');
 
     stage = 'CVF 읽기';
     allRules = rules(slcoverage.Filter(cvfFile));
-    withAll = measure(cvd, cutPath, cvfFile);
+    withAll = measure(cvd, queryPath, cvfFile);
     lines{end+1} = sprintf('CVF 없이 | 결정 %d/%d | 실행 %d/%d', base);
     lines{end+1} = sprintf('CVF 전체(규칙 %d개) | 결정 %d/%d | 실행 %d/%d', numel(allRules), withAll);
 
@@ -107,7 +146,7 @@ try
         save(single, ruleBase);
         ruleFile = [ruleBase '.cvf'];
         if ~isfile(ruleFile) && isfile(ruleBase), ruleFile = ruleBase; end
-        values = measure(cvd, cutPath, ruleFile);
+        values = measure(cvd, queryPath, ruleFile);
         sid = char(string(allRules(i).Selector.Id));
         [sidModel, sidRest] = strtok(sid, ':');
         sidKinds(i) = model_kind(sidModel, harness, cfg.TopModel);
@@ -151,20 +190,20 @@ try
         topFile = [topBase '.cvf'];
         if ~isfile(topFile) && isfile(topBase), topFile = topBase; end
         lines{end+1} = sprintf(['Top Model SID로 다시 만든 CVF(CUT 안 규칙 %d개 중 %d개) | ' ...
-            '결정 %d/%d | 실행 %d/%d'], numel(inside), mapped, measure(cvd, cutPath, topFile));
+            '결정 %d/%d | 실행 %d/%d'], numel(inside), mapped, measure(cvd, queryPath, topFile));
     catch topError
         lines{end+1} = sprintf('Top Model SID로 다시 만든 CVF 실패 | %s', id_of(topError));
     end
     shown = detail(outcome == "비움");
     if isempty(shown), shown = detail(outcome == "줄임"); end
-    for k = 1:min(20, numel(shown)), lines{end+1} = char(shown(k)); end %#ok<AGROW>
-    if numel(shown) > 20, lines{end+1} = sprintf('%d줄 더 있음. 진단 파일에 모두 있습니다', numel(shown) - 20); end
+    for k = 1:min(15, numel(shown)), lines{end+1} = char(shown(k)); end %#ok<AGROW>
+    if numel(shown) > 15, lines{end+1} = sprintf('%d줄 더 있음', numel(shown) - 15); end
     st_log(cfg, 'INFO', 'Collect CVF rule probe complete | rules=%d | emptied=%d', ...
         n, sum(outcome == "비움"));
 catch ME
-    text = '';
-    if startsWith(ME.identifier, 'simtest:Probe'), text = [' | ' ME.message]; end
-    lines{end+1} = sprintf('%s 실패 | %s%s', stage, id_of(ME), text);
+    reason = '';
+    if startsWith(ME.identifier, 'simtest:Probe'), reason = [' | ' ME.message]; end
+    lines{end+1} = sprintf('%s 실패 | %s%s', stage, id_of(ME), reason);
     write_diag(diagFile, sprintf('[%s]\n%s\n', stage, getReport(ME, 'extended', 'hyperlinks', 'off')));
     if ~isempty(cfg)
         st_log(cfg, 'ERROR', 'Collect CVF rule probe failed | stage=%s | %s', stage, ME.identifier);
@@ -191,10 +230,53 @@ values = [pair(@decisioninfo), pair(@executioninfo)];
 end
 
 
-function tf = answers(cvd, cutPath)
-tf = false;
+function [text, index] = query_text(objects, objectPath)
+% "covered/total" from the first object that answers, otherwise why none did.
+index = 0;
+text = "빈 결과";
+for i = 1:numel(objects)
+    try
+        found = decisioninfo(objects{i}, objectPath);
+    catch ME
+        text = "오류 " + string(id_of(ME));
+        continue;
+    end
+    if ~isempty(found)
+        text = sprintf("%d/%d", found(1), found(2));
+        index = i;
+        return;
+    end
+end
+end
+
+
+function kind = path_kind(value, topCuts, harnessCut, harness, topModel)
+% A model or block path as a kind, never the path itself.
+value = char(string(value));
+if isempty(value)
+    kind = "없음";
+elseif any(strcmp(value, topCuts))
+    kind = "Top CUT";
+elseif strcmp(value, harnessCut)
+    kind = "Harness CUT";
+elseif strcmp(value, harness)
+    kind = "Harness";
+elseif strcmp(value, topModel)
+    kind = "Top Model";
+elseif startsWith(value, [harness '/'])
+    kind = "Harness 안 다른 블록";
+elseif startsWith(value, [topModel '/'])
+    kind = "Top Model 안 다른 블록";
+else
+    kind = "기타";
+end
+end
+
+
+function value = root_path(cvd)
+value = "";
 try
-    tf = ~isempty(decisioninfo(cvd, cutPath));
+    value = string(cvd.test.rootPath);
 catch
 end
 end
