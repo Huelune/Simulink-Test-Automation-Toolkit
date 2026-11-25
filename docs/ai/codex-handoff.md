@@ -95,7 +95,8 @@
   0이 됐다. CVF 없이는 27/30, 66/66이다. 결과 정리의 CVF는 Harness에서 만들어 Harness 블록 SID로 규칙을 적지만, coverage는
   Top Model의 CUT 경로로 읽는다. 짐작: 규칙이 Top Model의 같은 SID 번호 블록으로 풀려, 그 블록이 CUT을 품으면 CUT 전체가 빠진다
   (미확인). `diagnostics/matlab/st_probe_collect_cvf_rules`가 규칙을 하나씩 걸어 CUT을 비우는 규칙과 그 블록의 위치(Harness 기준,
-  같은 번호의 Top Model 기준)를 찍는다. 실기 확인은 `todo.md` 6절이다. `st_apply_result_coverage_filters`의 읽기 확인은
+  같은 번호의 Top Model 기준)를 찍는다. 고칠 후보도 함께 시험한다. CUT 안 규칙을 Top Model의 CUT에서 같은 경로의 블록 SID로
+  다시 만든 CVF가 standalone과 같은 20/22, 45/45를 내는지 본다. 실기 확인은 `todo.md` 6절이다(블록은 `st_todo_check`를 부른다). `st_apply_result_coverage_filters`의 읽기 확인은
   `decisioninfo`가 오류 없이 도는지만 봐서, CVF가 CUT을 통째로 빼도 통과한다. 원인을 고칠 때 빈 결과도 실패로 볼지 정한다.
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
