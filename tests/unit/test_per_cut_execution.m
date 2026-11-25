@@ -378,3 +378,38 @@ verifyNotEmpty(testCase, regexp(source, "get_param\(model, 'IsHarness'\)", 'once
 verifyNotEmpty(testCase, regexp(source, ...
     "sltest\.harness\.find\(topModel, 'OpenOnly', 'on'\)", 'once'));
 end
+
+
+function testCollectLogSummaryPrintsNoNames(testCase)
+% The 6절 screen leaves the company, so the log summary carries kinds only.
+folder = tempname;
+mkdir(folder);
+cleanup = onCleanup(@() rmdir(folder, 's')); %#ok<NASGU>
+cfg = struct('ModelFile', fullfile(folder, 'secret_model.slx'), ...
+    'ResultDir', fullfile(folder, 'result'), ...
+    'StandaloneCoverageRootDir', fullfile(folder, 'result', 'standalone_coverage'));
+standalone = fullfile(cfg.StandaloneCoverageRootDir, 'secret_bundle', 'secret_harness.slx');
+logFile = fullfile(folder, 'collect.log');
+logLines = [ ...
+    "[t][STEP] [1/3] START  secret_case | secret_cut"
+    "[t][DEBUG] Harness loaded for coverage | IsHarness=on | OpenHarness=1"
+    "[t][INFO] Portable coverage filter copy complete | files=2 | secret_dir"
+    "[t][INFO] Portable coverage filter copy complete | files=0"
+    "[t][STEP] [2/3] START  secret_case | secret_cut"
+    "[t][WARN] Harness name in use by another model; closing it | IsHarness=off | OpenHarness=0 | File=" + standalone];
+fid = fopen(logFile, 'w');
+fprintf(fid, '%s\n', logLines);
+fclose(fid);
+
+info = st_summarize_collect_log(logFile, cfg);
+verifyEqual(testCase, info.Starts, 2);
+verifyEqual(testCase, info.Copies, [1 1]);
+verifyEqual(testCase, string(info.Held), ...
+    "1번(닫고 계속), 마지막 IsHarness off, 열린 Harness 아님, 파일 standalone 폴더");
+verifyEqual(testCase, string(info.Loaded), "1번, 마지막 IsHarness on, 열린 Harness 맞음");
+verifyFalse(testCase, contains(lower(info.Held + " " + info.Loaded), "secret"));
+verifyEqual(testCase, st_model_file_kind("", cfg), "없음");
+verifyEqual(testCase, st_model_file_kind(cfg.ModelFile, cfg), "모델 파일");
+verifyEqual(testCase, st_model_file_kind(fullfile(cfg.ResultDir, 'secret.slx'), cfg), "결과 폴더");
+verifyEqual(testCase, st_model_file_kind(fullfile(folder, 'secret.slx'), cfg), "모델 폴더");
+end
