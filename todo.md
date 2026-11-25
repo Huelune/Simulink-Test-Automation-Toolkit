@@ -24,13 +24,18 @@
 돌려줄 것: 다음 세 줄. standalone Custom Criteria 결과 한 단어(`verify 실패`, `오류`, `못 봄`), 1단계 Custom Criteria 결과 한
 단어, "보고서에 필터 항목 나옴/안 나옴/못 봄, 모델 색 표시 됨/안 됨/못 봄". 화면은 사용자 PC에서만 보고 밖으로 보내지 않는다.
 
-## 7. 입력선이 끊겨 보인 모델 찾기
+## 7. standalone 모델의 입력선이 끊기는 이유 확인
 
-왜: Test Manager에서 들어간 모델의 CUT 안에서 한 블록으로 들어가는 입력선 여러 개가 끊어져(빨간 점선) 보였다. 원래 모델의 같은
-CUT에서는 이어져 있다. 지난 화면에서는 세 대상 모두 원래 CUT과 Harness CUT에 끊긴 선이 하나도 없었다. 그러니 그 화면은 Harness의 CUT
-안이 아니었을 수 있다. 후보는 Harness의 CUT 바깥(입력을 CUT으로 넘기는 부분), 그리고 standalone 모델이다. standalone 모델은
-Harness와 이름이 같아서, standalone 결과에서 들어가면 Harness처럼 보인다. 이 블록은 대상마다 원래 CUT, Harness 전체, standalone 모델
-전체를 보고, 끊긴 선 끝을 CUT 안과 밖으로 나눠 센다. 모델은 저장하지 않는다.
+왜: 지난 화면에서 끊긴 선은 standalone 모델에만 있었다. 세 대상 모두 standalone 모델의 CUT 바깥에서 SubSystem으로 들어가는 입력 5개가
+끊겼다. 원래 CUT과 Harness에는 하나도 없었다. standalone 모델의 입력은 Signal Editor 블록이 준다. Signal Editor는 입력 파일 안의
+신호 수만큼 출력 포트를 만든다. 패키징은 그 파일 이름을 폴더 없이 파일 이름만 적어 저장한다. 그래서 모델을 연 폴더나 MATLAB 경로에
+따라 파일을 못 찾으면, 포트가 줄고 선이 떨어질 수 있다. 짐작이라서, 이 블록은 대상마다 다음을 함께 본다.
+
+- Harness와 standalone의 Signal Editor 출력 포트 수
+- standalone의 파일 이름이 그대로, MATLAB 경로에서, 모델 폴더에서 찾아지는지
+- 모델 폴더에서 다시 열면 끊긴 선이 사라지는지
+
+모델은 저장하지 않는다.
 
 순서: 클론에서 main을 pull한다. 지난번 두 줄(`st_todo_check`를 부르는 것)을 명령 기록에서 다시 불러도 되고, 아래에서 복사해도
 된다. 열어 둔 모델과 Harness 화면은 닫힌다. 저장 안 한 모델이 있으면 멈춘다. 화면 첫 줄 끝에 `Harness CUT 비교`가 있어야 이 절의
@@ -43,19 +48,19 @@ if ~isequal(toolkitDir, 0), oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDi
 
 화면: 대상(Excel 행 번호 `No`)마다 아래 줄들. 이름 대신 수, Simulink 블록 종류, 설정 값만 찍는다.
 
-- `대상 n | 끊긴 선 끝 | 원래 CUT a | Harness CUT 안 b 밖 c | standalone CUT 안 d 밖 e`: 포트에 닿지 않은 선 끝의 수.
+- `대상 n | 끊긴 선 끝 | 원래 CUT a | Harness CUT 안 b 밖 c | standalone CUT 안 d 밖 e`: 포트에 닿지 않은 선 끝의 수. 지금 폴더에서
+  standalone 모델을 연 결과다.
 - `대상 n Harness 설정 | ...`: Harness의 동기화 설정(값 그대로).
-- 들여 쓴 줄: 끊긴 것을 어디서(`Harness CUT 안/밖`, `standalone CUT 안/밖`) 무엇이 끊겼는지로 묶은 수.
-  - `끊긴 입력 | 받는 <블록 종류> | 원래 보내는 <블록 종류> | 출력 포트 원래→복사본 | 링크 원래→복사본`: CUT 안에서 원래 모델과 다르게
-    끊긴 입력.
-  - `끊긴 입력 | 받는 <블록 종류>`: CUT 밖에서 끊긴 입력. 받는 쪽이 `CUT`이면 CUT의 입력 포트 자체가 비어 있는 것이다.
-  - `받는 쪽 없음 | 보내는 <블록 종류>`: 보내는 쪽만 이어진 선.
+- `대상 n standalone Signal Editor | 출력 포트 Harness x→standalone y | 파일 이름 상대/절대 | 그대로 O/X 경로 O/X 모델 폴더 O/X`
+- `대상 n standalone 모델 폴더에서 열면 | 끊긴 선 끝 CUT 안 f 밖 g | Signal Editor 출력 포트 z`
+- 들여 쓴 줄: 끊긴 것을 어디서 무엇이 끊겼는지로 묶은 수. standalone CUT 밖의 끊긴 입력은 Harness에서 그 입력을 보내는 블록 종류와,
+  그 블록의 출력 포트 수(Harness→standalone)도 찍는다.
 
 확인할 것:
 
-- 어느 칸이 0보다 큰가. 그곳이 끊긴 선을 본 모델이다.
-- CUT 안에서 `출력 포트` 수가 원래와 다르면, 모델을 만들 때 보내는 블록의 포트 수가 바뀌어 선이 떨어진 것이다.
-- 모두 0이면, 화면에서 본 모델이 어느 것이었는지(Test Manager의 어느 결과에서 어떻게 들어갔는지) 알려 달라.
+- `출력 포트 Harness x→standalone y`에서 y가 x보다 작고, `모델 폴더에서 열면`의 `밖`이 0이고 출력 포트가 x로 돌아오면 짐작이 맞다.
+  파일을 못 찾아 Signal Editor 포트가 준 것이다.
+- `그대로`와 `경로`가 모두 X이면, 지금 폴더와 MATLAB 경로로는 그 파일을 찾을 수 없는 것이다.
 - `실패` 줄이 나오면 식별자를 본다. 진단 파일은 사용자 PC에서만 본다.
 
 돌려줄 것: 화면 캡처 한 장.
