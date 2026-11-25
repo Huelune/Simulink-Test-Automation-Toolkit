@@ -226,6 +226,52 @@ end
 notes{end+1} = sprintf('단계별 CUT 밖 끊긴 선 끝 | 내보낸 원본 %s | 실행용 복사본 %s | 패키징본 %d', ...
     stage_count(templateFile, modelName, standaloneCut), ...
     stage_count(workFile, modelName, standaloneCut), numel(outsideAgain));
+inputFile = field_of(item, 'SignalEditorInput');
+if isempty(inputFile) || ~isfile(inputFile), inputFile = field_of(item, 'PackagedInput'); end
+notes{end+1} = trial_text(templateFile, modelName, standaloneCut, inputFile);
+end
+
+
+function text = trial_text(templateFile, modelName, cut, inputFile)
+% On the exported copy, which has no loose ends, repeat what the execution
+% step does to it and count loose ends outside the CUT after each: set the
+% Signal Editor file name as the execution step does, and select every
+% scenario in turn as the iterations do. Nothing is saved.
+text = '내보낸 원본에서 시험 | 원본 없음';
+if isempty(templateFile) || ~isfile(templateFile), return; end
+scenarioText = '-';
+try
+    load_system(templateFile);
+    closeModel = onCleanup(@() close_if_loaded(modelName));
+    editor = st_find_signal_editor_block(modelName);
+    options = st_normalize_options(get_param(editor, 'options@ActiveScenario'));
+    worst = 0;
+    for k = 1:numel(options)
+        set_param(editor, 'ActiveScenario', options{k});
+        [~, outside] = dangling_ends(modelName, cut);
+        worst = max(worst, numel(outside));
+    end
+    scenarioText = sprintf('%d개를 차례로 고르면 최대 %d', numel(options), worst);
+    clear closeModel
+catch ME
+    scenarioText = ['오류 ' id_of(ME)];
+end
+fileText = '입력 파일 없음';
+if ~isempty(inputFile) && isfile(inputFile)
+    try
+        close_if_loaded(modelName);   % start again from the saved copy
+        load_system(templateFile);
+        closeModel = onCleanup(@() close_if_loaded(modelName)); %#ok<NASGU>
+        editor = st_find_signal_editor_block(modelName);
+        set_param(editor, 'Filename', inputFile);
+        [~, outside] = dangling_ends(modelName, cut);
+        ports = get_param(editor, 'PortHandles');
+        fileText = sprintf('%d(출력 포트 %d)', numel(outside), numel(ports.Outport));
+    catch ME
+        fileText = ['오류 ' id_of(ME)];
+    end
+end
+text = sprintf('내보낸 원본에서 시험 | 시나리오 %s | 파일 이름 바꾸면 CUT 밖 %s', scenarioText, fileText);
 end
 
 
