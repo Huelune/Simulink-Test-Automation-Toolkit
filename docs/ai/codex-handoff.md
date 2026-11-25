@@ -70,7 +70,11 @@
   고친다(Failed Iteration이므로). 확인은 `todo.md` 6절(Harness와 Test File을 지우고 1단계를 처음부터 다시 돌려 대상마다
   SLDV+결함, Signal Editor, Test Assessment, Iteration이 모두 5인지 센다)이다. `st_check_defect_criteria`가 결함
   Iteration의 Custom Criteria 결과(`getCustomCriteriaResult`)를 읽어 verify 실패와 오류로 센다. 콜백 오류 때 결과 모양은
-  문서에 없어 `DiagnosticRecord.Exception`으로 짐작한다.
+  문서에 없어 `DiagnosticRecord.Exception`으로 짐작한다. 같은 날 6절 첫 실행: Harness 3개와 Test File을 지우고 1단계를
+  FORCE·PER_CUT·결과 정리로 다시 돌리자 세 대상 모두 SLDV+결함, Signal Editor, Test Assessment, Iteration이 5였고 Iteration은
+  통과 3, 실패 2였다(시나리오 복사는 확인). 그러나 저장된 FINAL 결과를 import해 결함 Iteration에 `getCustomCriteriaResult`를
+  부르면 모두 `MATLAB:unassignedOutputs`였다. 실패가 Custom Criteria 때문인지는 미확인이다. `st_probe_defect_criteria_results`가
+  기준 설정, 결함 Iteration의 verify 결과 수, Iteration·Test Case 단위 호출 결과를 한 번에 찍는다(6절 다음 실행).
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
