@@ -84,7 +84,11 @@
   `simtest:CollectHarnessNameInUse`로 멈추게 했고, 모델을 모두 닫고 돌린 실행에서 이 확인이 둘째 대상에서 걸렸다(첫 대상은
   CVF 복사 2번 모두 성공). `st_generate_coverage_filter_file`이 결과 정리가 열어 둔 Harness를 닫았고, 그 뒤 coverage를
   읽을 때 그 이름이 경로(standalone 파이프라인이 `addpath`한 bundle 폴더)의 standalone 모델로 풀렸다. 4절 때는 standalone
-  모델이 없어 드러나지 않았다. CVF 생성기가 자기가 연 Harness만 닫게 고쳤다. 실기 확인은 `todo.md` 6절: 결과 정리
+  모델이 없어 드러나지 않았다. CVF 생성기가 자기가 연 Harness만 닫게 고쳤다. 그 뒤에도(이전 블록으로 돌림)
+  `CollectHarnessNameInUse`가 났고, 직전 실행 로그에 CVF 복사가 0번이라 첫 대상에서 걸린 것으로 보인다. 모델을 모두 닫은 뒤
+  첫 대상까지 그 이름의 모델을 여는 코드는 찾지 못했다(미해결). 판정이 틀렸을 가능성에 대비해 `IsHarness`가 on이 아니어도 Top
+  Model의 열린 Harness 목록(`sltest.harness.find ... 'OpenOnly'`)에 있으면 Harness로 인정하고, 판정 근거(IsHarness,
+  OpenHarness, File)를 ERROR 로그에 남긴다. 6절 블록은 이 줄과 결과 정리 전후 상태를 종류로만 찍는다. 실기 확인은 `todo.md` 6절: 결과 정리
   뒤 CUT 결정 20/22, 결정 목록(`DecisionPoints`) 수와 그에 따른 최종 문서 D 줄 수 변화.
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
