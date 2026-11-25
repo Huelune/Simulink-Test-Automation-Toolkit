@@ -223,7 +223,11 @@ if bdIsLoaded(harness)
     % A packaged standalone model carries the Harness's name. Coverage read
     % against it cannot resolve the CUT path, which surfaced only as a
     % decisioninfo readback failure after the CVF was attached.
-    if ~loaded_as_harness(harness)
+    [isHarness, detail] = loaded_as_harness(harness, cfg.TopModel);
+    if ~isHarness
+        st_log(cfg, 'ERROR', ...
+            'Harness name in use by another model | %s | File=%s', ...
+            detail, get_param(harness, 'FileName'));
         error('simtest:CollectHarnessNameInUse', ...
             ['A model that is not the Harness is loaded under its name, ' ...
              'such as an opened standalone model: %s. Close it and collect again.'], ...
@@ -238,13 +242,22 @@ opened(end+1,1) = string(harness);
 end
 
 
-function tf = loaded_as_harness(model)
-% A release without the IsHarness parameter keeps the old behaviour.
+function [tf, detail] = loaded_as_harness(model, topModel)
+% Either sign is enough: IsHarness on, or the Top Model lists it as an open
+% Harness. A release without the IsHarness parameter keeps the old behaviour.
+isHarness = '?';
 try
-    tf = strcmp(get_param(model, 'IsHarness'), 'on');
+    isHarness = char(string(get_param(model, 'IsHarness')));
 catch
-    tf = true;
 end
+openHarness = false;
+try
+    found = sltest.harness.find(topModel, 'OpenOnly', 'on');
+    openHarness = any(strcmp({found.name}, model));
+catch
+end
+tf = strcmp(isHarness, 'on') || openHarness || strcmp(isHarness, '?');
+detail = sprintf('IsHarness=%s | OpenHarness=%d', isHarness, openHarness);
 end
 
 
