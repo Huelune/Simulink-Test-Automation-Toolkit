@@ -155,17 +155,20 @@ files = dir(fullfile(st_project_root(), 'tests', 'unit', '*.m'));
 offenders = strings(0, 1);
 for k = 1:numel(files)
     source = fileread(fullfile(files(k).folder, files(k).name));
-    tokens = regexp(source, ...
-        '^\s*function\s+(?:\[[^\]]*\]\s*=\s*|\w+\s*=\s*)?(\w+)\s*(?:\(([^)]*)\))?', ...
-        'tokens', 'lineanchors');
+    [tokens, nameEnds] = regexp(source, ...
+        '^\s*function\s+(?:\[[^\]]*\]\s*=\s*|\w+\s*=\s*)?(\w+)', ...
+        'tokens', 'end', 'lineanchors');
     for t = 2:numel(tokens)
         name = tokens{t}{1};
         if isempty(regexpi(name, '^test|test$', 'once'))
             continue;
         end
+        % R2025b returned no input-list token from an optional group after the
+        % name, so every test looked input-less. Read the list on its own.
+        inputs = regexp(source(nameEnds(t)+1:end), '^\s*\((.*?)\)', 'tokens', 'once');
         args = '';
-        if numel(tokens{t}) >= 2
-            args = strtrim(tokens{t}{2});
+        if ~isempty(inputs)
+            args = strtrim(inputs{1});
         end
         if isempty(args) || numel(strsplit(args, ',')) ~= 1
             offenders(end+1, 1) = string(files(k).name) + ":" + name; %#ok<AGROW>
