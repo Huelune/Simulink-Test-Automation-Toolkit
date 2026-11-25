@@ -25,6 +25,9 @@ try
         'MetricReadbackCount', 0, ...
         'Status', 'OK', ...
         'Message', 'Coverage filters attached to result data');
+    % Test Manager can hand out a new cvdata instance on every query, and a
+    % CVF set on one is not on the next. Callers pass these instances on.
+    result.CoverageObjects = coverageObjects;
 
     if isempty(filterFiles)
         result.Message = 'No coverage filters to attach';
@@ -77,8 +80,7 @@ try
             cvd, char(string(p.Results.CoveragePath)));
         coverageObjects{i} = cvd;
     end
-    % Reports query the result again later; hand them these bound instances.
-    st_collect_result_coverage_objects(resultObj, coverageObjects);
+    result.CoverageObjects = coverageObjects;
     result.MetricReadbackCount = metricCount;
     st_log(cfg, 'INFO', ...
         'Result coverage filter attach complete | elapsed=%.3f sec', ...

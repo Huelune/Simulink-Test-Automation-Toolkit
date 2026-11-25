@@ -330,26 +330,23 @@ verifyNotEmpty(testCase, regexp(source, "'FollowLinks', 'on'", 'once'));
 end
 
 
-function testCvfBoundCoverageObjectsComeBackForTheSameResult(testCase)
+function testReportsReadTheCvfBoundCoverageObjects(testCase)
 % Test Manager can hand out a new cvdata instance per query, and a CVF set
-% on one is not on the next, so reports must get the instances the CVF was
-% bound to. A PER_CUT collect wrote unfiltered CUT coverage without this.
-testCase.addTeardown(@() clear('st_collect_result_coverage_objects'));
-resultA = struct('Secret', 'result A');
-resultB = struct('Secret', 'result B');
-boundA = {'Secret bound A1'; 'Secret bound A2'};
-st_collect_result_coverage_objects(resultA, boundA);
-st_collect_result_coverage_objects(resultB, {'Secret bound B'});
-verifyEqual(testCase, st_collect_result_coverage_objects(resultA), boundA);
-verifyEqual(testCase, st_collect_result_coverage_objects(resultB), {'Secret bound B'});
-st_collect_result_coverage_objects(resultA, {'Secret rebound A'});
-verifyEqual(testCase, st_collect_result_coverage_objects(resultA), {'Secret rebound A'});
-
-source = fileread(fullfile(st_project_root(), 'src', 'coverage', ...
-    'st_apply_result_coverage_filters.m'));
-verifyNotEmpty(testCase, regexp(source, ...
-    'st_collect_result_coverage_objects\(resultObj, coverageObjects\)', 'once'));
-batch = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
-    'st_generate_test_report.m'));
-verifyEmpty(testCase, regexp(batch, 'getCoverageResults\(resultObj\)', 'once'));
+% on one is not on the next. A PER_CUT collect wrote CUT decisions 27/30
+% unfiltered where the CVF gave 20/22, so the instances the CVF was bound to
+% must reach every coverage read of the report.
+root = st_project_root();
+attach = fileread(fullfile(root, 'src', 'coverage', 'st_apply_result_coverage_filters.m'));
+verifyNotEmpty(testCase, regexp(attach, 'result\.CoverageObjects = coverageObjects;', 'once'));
+report = fileread(fullfile(root, 'src', 'reporting', 'st_export_result_set_report.m'));
+verifyNotEmpty(testCase, regexp(report, "addParameter\(p, 'CoverageObjects'", 'once'));
+verifyNotEmpty(testCase, regexp(report, "'CoverageObjects', p\.Results\.CoverageObjects", 'once'));
+% Only the fallback for a caller without bound objects queries the result.
+verifyNumElements(testCase, regexp(report, 'st_collect_result_coverage_objects\('), 1);
+collect = fileread(fullfile(root, 'src', 'execution', 'st_collect_per_cut_results.m'));
+verifyNotEmpty(testCase, regexp(collect, 'coverageObjects = attachInfo\.CoverageObjects;', 'once'));
+verifyNotEmpty(testCase, regexp(collect, "'CoverageObjects', coverageObjects\)", 'once'));
+runner = fileread(fullfile(root, 'src', 'execution', 'st_run_tests_per_cut.m'));
+verifyNotEmpty(testCase, regexp(runner, "'CoverageObjects', initialCoverageObjects\)", 'once'));
+verifyNotEmpty(testCase, regexp(runner, "'CoverageObjects', finalCoverageObjects\)", 'once'));
 end

@@ -16,7 +16,13 @@ addParameter(p, 'ResultLabel', 'SELECTED', ...
 % and the decision points. The coverage review artifacts are skipped.
 addParameter(p, 'Scope', 'FULL', ...
     @(x) ismember(upper(string(x)), ["FULL","VERDICT"]));
+% The cvdata instances a CVF was bound to (st_apply_result_coverage_filters
+% returns them). Test Manager can hand out a new instance on every query and
+% a CVF set on one is not on the next, so without them this report would
+% read unfiltered coverage. Empty: query the result as before.
+addParameter(p, 'CoverageObjects', {}, @(x) iscell(x));
 parse(p, varargin{:});
+coverageOf = @() report_coverage_objects(resultObj, p.Results.CoverageObjects);
 verdictOnly = strcmpi(char(string(p.Results.Scope)), 'VERDICT');
 coverageReportMode = upper(char(string(p.Results.CoverageReportMode)));
 includeOfficialReport = logical(p.Results.IncludeOfficialReport);
@@ -50,7 +56,7 @@ if ~verdictOnly
         'Result coverage integrity check start | stage=BEFORE_EXPORT | label=%s', ...
         resultLabel);
     try
-        integrityBaseline = coverage_integrity_snapshot(resultObj);
+        integrityBaseline = coverage_integrity_snapshot(coverageOf);
         integrityBaselineAvailable = true;
         st_log(cfg, 'DEBUG', ...
             ['Result coverage integrity check complete | ' ...
@@ -116,6 +122,7 @@ else
         coverage = st_collect_coverage_summary(resultObj, targetConfig, ...
             resultLabel, 'IncludeTestDetails', false, ...
             'MatchCoverageObjects', true, ...
+            'CoverageObjects', p.Results.CoverageObjects, ...
             'ProgressFcn', progressFcn);
         if isempty(coverage)
             artifacts = record_artifact(artifacts, 'COVERAGE_DATA', '', ...
@@ -168,16 +175,16 @@ else
 
     stepTimer = report_step_start(cfg, 5, 6, 'Create Portable Coverage Artifacts');
     artifacts = export_coverage_data( ...
-        artifacts, resultObj, coverageDirectory, cfg);
+        artifacts, coverageOf, coverageDirectory, cfg);
     artifacts = copy_coverage_filters( ...
-        artifacts, resultObj, coverageDirectory, cfg);
+        artifacts, coverageOf, coverageDirectory, cfg);
     artifacts = export_coverage_summary_html( ...
         artifacts, coverage, coverageDirectory);
     if strcmp(coverageReportMode, 'FULL') || includePortableCoverageDetail
         detailDirectory = fullfile(coverageDirectory, 'detail');
         mkdir(detailDirectory);
         artifacts = export_coverage_html( ...
-            artifacts, resultObj, detailDirectory, cfg, 5, 6);
+            artifacts, coverageOf, detailDirectory, cfg, 5, 6);
     end
     coverageArtifactTypes = ismember(artifacts.Type, ...
         ["HTML","CVT","CVF_COPY"]);
@@ -191,7 +198,7 @@ else
         'Result coverage integrity check start | stage=AFTER_EXPORT | label=%s', ...
         resultLabel);
     try
-        integrityAfter = coverage_integrity_snapshot(resultObj);
+        integrityAfter = coverage_integrity_snapshot(coverageOf);
         if ~integrityBaselineAvailable
             error('simtest:ResultCoverageIntegrityBaselineMissing', ...
                 'The pre-export coverage snapshot was unavailable.');
@@ -216,7 +223,7 @@ else
     end
 end
 
-decisionPoints = collect_decision_points(resultObj, targetConfig, cfg);
+decisionPoints = collect_decision_points(coverageOf, targetConfig, cfg);
 decisionOutcomes = st_collect_decision_outcomes(resultObj, targetConfig, resultLabel, cfg);
 
 summaryPath = fullfile(outputDirectory, 'TestSummary.xlsx');
@@ -255,14 +262,14 @@ info = struct( ...
 end
 
 function artifacts = export_coverage_data( ...
-        artifacts, resultObj, folder, cfg)
+        artifacts, coverageOf, folder, cfg)
 dataDirectory = fullfile(folder, 'data');
 mkdir(dataDirectory);
 timer = tic;
 st_log(cfg, 'DEBUG', ...
     'Portable coverage CVT save start | directory=%s', dataDirectory);
 try
-    coverageObjects = st_collect_result_coverage_objects(resultObj);
+    coverageObjects = coverageOf();
 catch ME
     st_log(cfg, 'ERROR', ...
         'Portable coverage CVT lookup failed | %s: %s', ...
@@ -312,13 +319,13 @@ st_log(cfg, 'DEBUG', ...
 end
 
 function artifacts = copy_coverage_filters( ...
-        artifacts, resultObj, folder, cfg)
+        artifacts, coverageOf, folder, cfg)
 filterDirectory = fullfile(folder, 'filters');
 timer = tic;
 st_log(cfg, 'DEBUG', ...
     'Portable coverage filter copy start | directory=%s', filterDirectory);
 try
-    coverageObjects = st_collect_result_coverage_objects(resultObj);
+    coverageObjects = coverageOf();
     sources = strings(0,1);
     for i = 1:numel(coverageObjects)
         values = string(coverageObjects{i}.filter);
@@ -376,9 +383,9 @@ end
 end
 
 function artifacts = export_coverage_html( ...
-        artifacts, resultObj, folder, cfg, step, stepCount)
+        artifacts, coverageOf, folder, cfg, step, stepCount)
 try
-    coverageObjects = st_collect_result_coverage_objects(resultObj);
+    coverageObjects = coverageOf();
 catch ME
     artifacts = record_artifact(artifacts, 'HTML', folder, ...
         'FAIL', ME.message);
@@ -559,8 +566,8 @@ function text = timestamp_text()
 text = char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss.SSS'));
 end
 
-function snapshot = coverage_integrity_snapshot(resultObj)
-coverageObjects = st_collect_result_coverage_objects(resultObj);
+function snapshot = coverage_integrity_snapshot(coverageOf)
+coverageObjects = coverageOf();
 n = numel(coverageObjects);
 RootPath = strings(n,1);
 Checksum = strings(n,1);
@@ -630,7 +637,7 @@ T = table(strings(0,1), strings(0,1), zeros(0,1), strings(0,1), ...
 end
 
 
-function points = collect_decision_points(resultObj, targetConfig, logConfig)
+function points = collect_decision_points(coverageOf, targetConfig, logConfig)
 %COLLECT_DECISION_POINTS Ask coverage which blocks are decision points.
 % The static scan in the specification export infers this from saved block
 % parameters. This records what Simulink Coverage actually recognised in
@@ -645,7 +652,7 @@ root = st_coverage_object_path(targetConfig);
 if isempty(root)
     return;
 end
-objects = st_collect_result_coverage_objects(resultObj);
+objects = coverageOf();
 for i = 1:numel(objects)
     cvd = objects{i};
     if ~answers_for_path(cvd, root)
@@ -679,5 +686,14 @@ try
     tf = ~isempty(decisioninfo(cvd, root));
 catch
     % A coverage object for a different model simply does not answer.
+end
+end
+
+
+function objects = report_coverage_objects(resultObj, boundObjects)
+if isempty(boundObjects)
+    objects = st_collect_result_coverage_objects(resultObj);
+else
+    objects = boundObjects(:);
 end
 end
