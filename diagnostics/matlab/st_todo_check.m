@@ -6,7 +6,6 @@ function st_todo_check()
 % was first written for. Point it at the current section's check whenever
 % todo.md changes.
 %
-% Now: no section needs a MATLAB check.
-clc;
-fprintf('지금 todo.md에 MATLAB으로 돌릴 점검이 없습니다\n');
+% Now: section 7, the Harness CUT compared with the Top Model's CUT.
+st_compare_harness_cut;
 end
