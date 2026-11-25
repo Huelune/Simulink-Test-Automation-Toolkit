@@ -1,0 +1,124 @@
+function st_rebuild_harnesses_and_tests(lines)
+%ST_REBUILD_HARNESSES_AND_TESTS Delete the targets' Harnesses and the Test File, then run step 1 again.
+%
+% st_rebuild_harnesses_and_tests(lines)
+%
+% For todo.md: rebuild every target from nothing and count what came out.
+%   1. Stops when a model has unsaved changes.
+%   2. Deletes the Harness each Excel target names (no other), saves the Top
+%      Model, then closes and deletes the Test File.
+%   3. Runs st_run_from_harness('PreparationMode','FORCE','ExecutionMode',
+%      'PER_CUT','AutoCollect',true) with its progress on screen. PER_CUT,
+%      because step 5 reads the saved PER_CUT results.
+%   4. Reads st_validate_scenario_alignment: per target the SLDV scenarios
+%      (defect copies included), the Signal Editor and Test Assessment
+%      scenarios and the Test Manager iterations.
+%   5. Hands the lines to st_check_defect_criteria, which adds each target's
+%      iteration outcomes and defect Custom Criteria kinds, and prints.
+% lines go under the title. No names reach the screen; long error reports
+% go to tempdir/st_todo_check.txt.
+if nargin < 1, lines = {}; end
+title = 'Harness·Test 처음부터 다시 만들기';
+cfg = st_config();
+st_log(cfg, 'INFO', 'Rebuild from scratch start');
+loaded = find_system('type', 'block_diagram');
+if ~isempty(loaded) && any(strcmp(get_param(loaded, 'Dirty'), 'on'))
+    stop(lines, title, '저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요', []);
+    return;
+end
+
+% A standalone model left open holds a Harness name; close everything first.
+if ~isempty(loaded), bdclose('all'); end
+try
+    cfg = st_require_runtime_target();
+    targets = st_load_targets(cfg.OnlyEnabled);
+    deleted = 0;
+    for i = 1:height(targets)
+        owner = st_normalize_cut_path(targets.CUTPath(i), cfg.TopModel);
+        name = char(targets.HarnessName(i));
+        if isempty(sltest.harness.find(owner, 'SearchDepth', 0, 'Name', name)), continue; end
+        try, sltest.harness.close(owner, name); catch, end
+        sltest.harness.delete(owner, name);
+        deleted = deleted + 1;
+    end
+    save_system(cfg.TopModel);
+    st_log(cfg, 'INFO', 'Rebuild from scratch | Harnesses deleted %d of %d', deleted, height(targets));
+    lines{end+1} = sprintf('Harness 지움 %d / 대상 %d | Test File 지움 %s', ...
+        deleted, height(targets), yes_no(delete_test_file(cfg.TestFile)));
+catch ME
+    stop(lines, title, sprintf('지우기 실패 | %s | 모델을 저장하지 말고 닫은 뒤 다시 돌려 주세요', id_of(ME)), ME);
+    return;
+end
+
+try
+    st_run_from_harness('PreparationMode', 'FORCE', 'ExecutionMode', 'PER_CUT', ...
+        'AutoCollect', true);
+    lines{end+1} = '1단계(FORCE, 결과 정리 포함) OK';
+catch ME
+    lines{end+1} = sprintf('1단계 실패 | %s | 실행 로그(result/logs)를 보세요', id_of(ME));
+    lines{end+1} = write_report(ME, '1단계');
+end
+
+alignment = table();
+try
+    evalc('alignment = st_validate_scenario_alignment();');
+catch ME
+    lines{end+1} = sprintf('시나리오 맞춤 확인 실패 | %s', id_of(ME));
+    lines{end+1} = write_report(ME, '시나리오 맞춤');
+end
+for i = 1:height(alignment)
+    lines{end+1} = sprintf(['대상 %d | 시나리오 SLDV+결함 %d | Signal Editor %d | ' ...
+        'Test Assessment %d | Iteration %d | %s'], double(alignment.No(i)), ...
+        alignment.ExpectedScenarioCount(i), alignment.SignalEditorScenarioCount(i), ...
+        alignment.AssessmentScenarioCount(i), alignment.TestManagerIterationCount(i), ...
+        alignment.Status(i)); %#ok<AGROW>
+end
+st_log(cfg, 'INFO', 'Rebuild from scratch complete | targets %d', height(alignment));
+st_check_defect_criteria(lines, title, false);
+end
+
+
+function removed = delete_test_file(testFile)
+removed = false;
+[~, name, extension] = fileparts(testFile);
+openFiles = sltest.testmanager.getTestFiles;
+for k = 1:numel(openFiles)
+    % By name: FilePath can spell a tempdir 8.3 short path in full.
+    [~, openName, openExtension] = fileparts(openFiles(k).FilePath);
+    if strcmpi([openName openExtension], [name extension]), close(openFiles(k)); end
+end
+if isfile(testFile)
+    delete(testFile);
+    removed = true;
+end
+end
+
+
+function stop(lines, title, message, ME)
+clc;
+lines = [{sprintf('MATLAB %s | %s', version('-release'), title)}, reshape(lines, 1, []), {message}];
+if ~isempty(ME), lines{end+1} = write_report(ME, '지우기'); end
+fprintf('%s\n', lines{:});
+end
+
+
+function line = write_report(ME, stage)
+%WRITE_REPORT Append the full report; return the screen line that points at it.
+line = sprintf('  %s 오류 전문: st_todo_check.txt (임시 폴더)', stage);
+fid = fopen(fullfile(tempdir, 'st_todo_check.txt'), 'a');
+if fid < 0, line = sprintf('  %s 오류 전문을 쓰지 못함', stage); return; end
+fprintf(fid, '[%s]\n%s\n\n', stage, getReport(ME, 'extended', 'hyperlinks', 'off'));
+fclose(fid);
+end
+
+
+function text = yes_no(flag)
+text = '아니오';
+if flag, text = '예'; end
+end
+
+
+function text = id_of(ME)
+text = ME.identifier;
+if isempty(text), text = '(식별자 없음)'; end
+end
