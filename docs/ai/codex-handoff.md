@@ -59,8 +59,8 @@
   model with the filter off finished quickly, so
   `cfg.SldvCoverageFilter` now defaults to false; why the filter stalls sldvrun is still open.
 - 실기 미확인: 결함 TC(2026-11-24, `9cd7b00..4307e41`, 설계
-  `docs/superpowers/specs/2026-11-24-unreachable-outcome-defect-tc-design.md`). 단위 테스트는 `todo.md` 3절, 실제
-  모델 확인은 4절이다. 볼 것: 계기 모델에서 대상마다 결함 TC 2건(Switch, Max)이 생기고 APPLY 재실행 뒤에도 FAIL인지,
+  `docs/superpowers/specs/2026-11-24-unreachable-outcome-defect-tc-design.md`). 단위 테스트와 실제
+  모델 확인은 `todo.md` 4절 하나로 돌린다. 볼 것: 계기 모델에서 대상마다 결함 TC 2건(Switch, Max)이 생기고 APPLY 재실행 뒤에도 FAIL인지,
   보통 Iteration 판정과 결정 커버리지(20/22)가 그대로인지, SLDV 도달 불가 3개 중 셋째가 CVF 거름·CUT 자신·Stateflow·같은
   블록의 두 번째 결과 중 무엇으로 빠지는지, Stateflow 거름(`sfObjNum > 0`이면 Stateflow)이 Stateflow 없는 모델에서 0인지,
   standalone 파이프라인으로 옮긴 Test File에서도 Custom Criteria가 도는지(실험은 저장·다시 열기까지만 봤다).
