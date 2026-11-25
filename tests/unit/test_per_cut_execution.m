@@ -414,3 +414,15 @@ verifyEqual(testCase, st_model_file_kind(cfg.ModelFile, cfg), "모델 파일");
 verifyEqual(testCase, st_model_file_kind(fullfile(cfg.ResultDir, 'secret.slx'), cfg), "결과 폴더");
 verifyEqual(testCase, st_model_file_kind(fullfile(folder, 'secret.slx'), cfg), "모델 폴더");
 end
+
+
+function testCollectAsksTheHarnessCutForCoverage(testCase)
+% With its Harness loaded the coverage answers only to the Harness CUT; asked
+% with the Top Model's CUT path every CUT read 0/0 (2026-11-25).
+source = fileread(fullfile(st_project_root(), 'src', 'execution', ...
+    'st_collect_per_cut_results.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    ['load_models_for_coverage\(row, cfg, openedModels\);[\s\S]*?' ...
+     'row = with_harness_cut_path\(row, cfg\);[\s\S]*?collect_one\(initialSaved, row'], 'once'));
+verifyNotEmpty(testCase, regexp(source, 'row\.HarnessCUTPath = string\(harnessCut\);', 'once'));
+end

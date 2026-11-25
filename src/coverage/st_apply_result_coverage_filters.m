@@ -77,7 +77,7 @@ try
                 join_filter_values(returned));
         end
         metricCount = metricCount + verify_metric_readback( ...
-            cvd, char(string(p.Results.CoveragePath)));
+            cvd, char(string(p.Results.CoveragePath)), cfg);
         coverageObjects{i} = cvd;
     end
     result.CoverageObjects = coverageObjects;
@@ -93,13 +93,13 @@ catch ME
 end
 end
 
-function count = verify_metric_readback(cvd, coveragePath)
+function count = verify_metric_readback(cvd, coveragePath, cfg)
 count = 0;
 if isempty(coveragePath)
     return;
 end
 try
-    decisioninfo(cvd, coveragePath);
+    found = decisioninfo(cvd, coveragePath);
     count = count + 1;
 catch ME
     error('simtest:ResultCoverageDecisionReadbackFailed', ...
@@ -113,6 +113,13 @@ catch ME
     error('simtest:ResultCoverageExecutionReadbackFailed', ...
         'executioninfo failed after CVF registration for %s: %s', ...
         coveragePath, ME.message);
+end
+% An empty answer is not an error to the API, and it made every CUT read 0/0
+% when the path was not the one the coverage answers to.
+if isempty(found)
+    st_log(cfg, 'WARN', ...
+        ['CVF readback found no decision objectives at the CUT path | ' ...
+         'the coverage may answer to another path | %s'], coveragePath);
 end
 end
 

@@ -105,12 +105,7 @@ end
 end
 
 function path = coverage_target_path(target)
-if ismember('StandaloneCUTPath', target.Properties.VariableNames) && ...
-        strlength(strtrim(string(target.StandaloneCUTPath))) > 0
-    path = char(target.StandaloneCUTPath);
-else
-    path = char(target.CUTPath);
-end
+path = st_coverage_object_path(target);
 end
 
 function indices = select_coverage_objects( ...

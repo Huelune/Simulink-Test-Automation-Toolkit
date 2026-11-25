@@ -115,6 +115,7 @@ for i = 1:height(targets)
         [filterPath, ruleCount] = generate_filter(row, ...
             fullfile(targetDirectory, 'filter'), cfg);
     end
+    row = with_harness_cut_path(row, cfg);
 
     finalSaved = fullfile(targetDirectory, 'final', 'Results.mldatx');
     % The final document reads FINAL whenever the run reran, so LEAN leaves
@@ -259,6 +260,30 @@ opened(end+1,1) = string(harness);
 % the judgement is wrong, not the model.
 [~, detail] = loaded_as_harness(harness, cfg.TopModel);
 st_log(cfg, 'DEBUG', 'Harness loaded for coverage | %s', detail);
+end
+
+
+function row = with_harness_cut_path(row, cfg)
+%WITH_HARNESS_CUT_PATH Point the coverage queries at the loaded Harness's CUT.
+% Read back with its Harness loaded, the coverage object answers to the
+% Harness CUT and returns nothing for the Top Model's CUT path, which the
+% report wrote as 0/0 (2026-11-25 collect probe). st_coverage_object_path
+% prefers HarnessCUTPath.
+harness = char(string(row.HarnessName));
+if isempty(harness)
+    return;
+end
+owner = st_normalize_cut_path(row.CUTPath, cfg.TopModel);
+harnessCut = [harness '/' strrep(get_param(owner, 'Name'), '/', '//')];
+if getSimulinkBlockHandle(harnessCut) == -1
+    st_log(cfg, 'ERROR', ...
+        'Harness CUT not found for coverage | Harness=%s | CUT=%s', harness, owner);
+    error('simtest:CollectHarnessCutMissing', ...
+        ['The Harness has no block named like its CUT: %s. ' ...
+         'Rebuild the Harness and collect again.'], harnessCut);
+end
+row.HarnessCUTPath = string(harnessCut);
+st_log(cfg, 'DEBUG', 'Coverage path set to the Harness CUT | %s', harnessCut);
 end
 
 

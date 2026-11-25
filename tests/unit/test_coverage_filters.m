@@ -263,6 +263,18 @@ verifyEqual(testCase, st_coverage_object_path(row), ...
     'standalone_Controller/Controller ');
 end
 
+function testCoverageObjectPathFollowsTheLoadedHarness(testCase)
+% Coverage read back with its Harness loaded answers only to the Harness CUT
+% (2026-11-25: Top CUT empty, Harness CUT 27/30).
+row = table("TOP/Controller", "H1/Controller", "", ...
+    'VariableNames', {'CUTPath','HarnessCUTPath','StandaloneCUTPath'});
+verifyEqual(testCase, st_coverage_object_path(row), 'H1/Controller');
+source = fileread(fullfile(st_project_root(), 'src', 'reporting', ...
+    'st_collect_coverage_summary.m'));
+verifyNotEmpty(testCase, regexp(source, ...
+    'function path = coverage_target_path\(target\)\s*path = st_coverage_object_path\(target\);', 'once'));
+end
+
 function testFilterRulesNameTheTopModelCutInAHarness(testCase)
 % A rule on a Harness block SID matched nothing in Harness coverage; the
 % same rule on the Top Model block below the CUT gave the standalone numbers.
