@@ -7,29 +7,27 @@
 화면에는 개수, Simulink 블록 종류 이름, 정해 둔 안내 문구만 찍는다. 테스트 케이스·모델·블록
 이름, 경로, 계정은 찍지 않는다(회사 내부 정보).
 
-## 6. 결함 Iteration의 Custom Criteria 판정 종류 읽기
+## 7. standalone 파이프라인과 최종 문서를 결함 시나리오까지 다시 만들기
 
-왜: 지난 점검에서 세 대상 모두 결함 Iteration 2개가 Failed였고, 그 verify는 실패 0 통과 2였다. 따라서 실패는 Custom Criteria가
-낸 것이다. Custom Criteria 결과는 읽혔지만(결함 Failed, 보통 Passed) 실패의 종류를 가르는 단계에서 실패했다. 종류는 결함 판정대로
-실패한 것(`verify 실패`), 판정 스크립트 오류(`오류`), 다른 실패 셋 중 하나다. 실패한 결과의 진단 기록 속성 가운데 읽으면 오류가 나는
-것이 있는 것으로 보고, 그런 속성은 빈 값으로 보도록 고쳤다. 이번에는 종류가 나와야 한다. 어느 속성을 못 읽는지도 함께 찍는다.
-이 블록은 아무것도 실행하거나 지우지 않는다.
+왜: 1단계는 결함 시나리오까지 다시 만들었고, 대상마다 시나리오·verify·Iteration이 5개다. 결함 Iteration 6개는 모두 Custom
+Criteria가 결함 판정대로 실패시켰다(`verify 실패`). 그러나 standalone 파이프라인과 최종 문서는 시나리오가 3개이던 때 만든
+것이다. 이 블록은 결함 판정 단위 테스트를 돌린 뒤 standalone 파이프라인(결과 저장)과 최종 문서를 다시 만든다. 이어서 standalone
+결과를 Test Manager에 열고 저장된 Coverage 보고서를 브라우저에 띄운다. 그다음 두 실행의 결함 Iteration 판정을 센다. 시간이 걸린다.
 
-순서: 클론에서 main을 pull한 뒤, 지난번 두 줄(`st_todo_check`를 부르는 것)을 명령 기록에서 다시 부르거나 아래에서 복사해 붙여
-넣는다. 화면 첫 줄 끝에 `결함 Custom Criteria 결과 읽는 길 찾기`가 있어야 이 절의 점검이다.
+순서: 저장 안 한 모델이 없게 한 뒤, 클론에서 main을 pull한다. 지난번 두 줄(`st_todo_check`를 부르는 것)을 명령 기록에서 다시
+부르거나 아래에서 복사해 붙여 넣는다. 화면 첫 줄 끝에 `standalone·최종 문서 다시 만들기`가 있어야 이 절의 점검이다.
 
 ```matlab
 clearvars; toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
 if ~isequal(toolkitDir, 0), oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir); st_todo_check; end
 ```
 
-화면: 둘째 줄은 라이선스다. 하나라도 `아니오`면 거기서 멈춘다. 그때는 다른 사람이 쓰는 중이면 기다렸다가, 아니면 MATLAB을 다시
-연 뒤 돌린다. 그다음 대상마다 세 줄이 나온다.
+확인할 것:
 
-- 첫 줄: 지난번과 같다.
-- 둘째 줄: `기준 결과 결함 1) Failed <종류> 2) Failed <종류> | 보통 Passed 통과`
-- 셋째 줄: 첫 결함 Iteration의 진단 기록 수, 못 읽은 속성과 그 오류 식별자, verify 메시지가 든 두 속성의 형식
+- 단위 테스트가 모두 통과하고, `standalone 파이프라인 OK`, `최종 문서 OK`가 나온다.
+- 대상마다 `standalone | Iteration 5 통과 3 실패 2 | verify 실패 2`가 나온다. `1단계` 줄도 같다.
+- 마지막 줄 `합계 | 결함 TC 6 | verify 실패 standalone 6, 1단계 6`
+- 열린 Test Manager에서 standalone 결과의 결함 Iteration을 열어 Custom Criteria Results에 실행 횟수 verify가 실패로 나오는지,
+  Coverage 보고서의 Filter 항목과 standalone 모델 색 표시를 눈으로 본다.
 
-확인할 것: 결함의 종류가 `종류 읽기 실패`가 아니라 `verify 실패`, `오류(식별자)`, `다른 실패(이벤트)` 가운데 하나로 나오는지 본다.
-
-돌려줄 것: 화면 캡처 한 장.
+돌려줄 것: 화면 캡처 한 장. 눈으로 본 것이 이상하면 어디가 이상했는지 말로 적어 준다(이름 없이).
