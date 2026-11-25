@@ -372,18 +372,20 @@ SLDV 형식의 `FILE`)에서 SLDV가 어떤 입력으로도 실행할 수 없다
 판정한 결과(`Unsatisfiable under approximation`)도 결함 TC가 되고, 최종 문서에 `확인 필요`로 표시됩니다.
 CVF가 커버리지에서 빼는 곳(`CoverageFilterMode`), CUT 자신, Stateflow 내부(MATLAB Function 포함)의 결과는 결함 TC가 되지
 않습니다. 이름은 그 CUT의
-마지막 시나리오 다음 번호(`UT_REQ_{CUT}_{N+1}`, …)입니다. 결함 Iteration은 기존 시나리오 하나의 입력을
-그대로 다시 돌리고, 그 결과가 한 번도 실행되지 않았다는 것을 커버리지로 확인해 `Failed`가 됩니다.
-설계 결함을 덮지 않고 드러내려는 것이라, 이 CUT은 상태가 `WARN`이고 Iteration 수가 Scenario 수보다
-결함 수만큼 많습니다. 기대값 갱신은 결함 Iteration을 고치지 않습니다. 최종 문서에는 결함 행으로
+마지막 시나리오 다음 번호(`UT_REQ_{CUT}_{N+1}`, …)입니다. 결함마다 기존 시나리오 하나를 복사한 같은
+이름의 Signal Editor 시나리오와 Test Assessment 시나리오(verify)가 생기고, 결함 Iteration은 그 시나리오로
+원래 입력을 그대로 다시 돌립니다. 그 결과가 한 번도 실행되지 않았다는 것을 Custom Criteria가 커버리지로
+확인해 `Failed`가 됩니다. 설계 결함을 덮지 않고 드러내려는 것이라 이 CUT은 상태가 `WARN`입니다. Signal Editor
+시나리오, Test Assessment 시나리오, Iteration은 모두 SLDV 시나리오 수에 결함 수를 더한 만큼 있습니다. 기대값
+갱신은 결함 시나리오의 verify도 다른 시나리오처럼 고치지만, Custom Criteria 판정은 그대로 `Failed`입니다. 최종 문서에는 결함 행으로
 적힙니다([최종 문서 추출](reference/final-document.md)의 "결함 행" 절). 입력으로 쓸 시나리오는 Targets 시트의
 [`DefectInputScenario`](reference/workbook-reference.md#defectinputscenario) 열(번호나 이름, 비우면 마지막
 시나리오)로 고르고, 사람이 분석한 사유는 관리 Excel의 `DefectReasons` 또는 `도달불가사유` 시트(`TestName`/`결함TC`,
 `Reason`/`사유` 열)에 적습니다. 결함 이름은 시나리오나 결함 목록이 바뀌면 다른 블록으로 옮겨 가므로, 선택 열
 `Block`/`블록`에 그 블록의 CUT 기준 경로나 블록 종류를 적어 두면 이름이 다른 블록을 가리킬 때 그 사유 대신 기본 문장을
 씁니다(WARN 로그). 사유는 최종 문서만 읽으므로 고친 뒤 최종 문서만 다시 만들면 됩니다. 결함 TC를 만들지 않으려면
-`src/config/st_config.m`의 `cfg.UnreachableDefectTests`를 `false`로 바꿉니다. 다음 실행에서 Test Manager
-단계가 다시 준비되고 결함 Iteration이 빠집니다.
+`src/config/st_config.m`의 `cfg.UnreachableDefectTests`를 `false`로 바꿉니다. 다음 실행에서 Signal Editor
+단계부터 다시 준비되고 결함 시나리오와 결함 Iteration이 빠집니다.
 
 ### 3.4 다시 돌려야 할 때
 
@@ -394,7 +396,7 @@ CVF가 커버리지에서 빼는 곳(`CoverageFilterMode`), CUT 자신, Stateflo
 | Harness StopTime 등 설정 | `... 'FromStage','HARNESS_CONFIG' ...` |
 | verify 대상, Assessment | `... 'FromStage','ASSESSMENT' ...` |
 | Test Case 이름, Iteration | `... 'FromStage','TEST_MANAGER' ...` |
-| `Coverage*` 네 열만 | **다시 돌리지 않습니다.** `st_collect_per_cut_results`만 다시 합니다. 단, `cfg.UnreachableDefectTests`가 켜져 있으면 `CoverageFilterMode`가 결함 TC 목록을 정하므로, 이 열을 바꾼 뒤의 `st_run_from_harness`는 `TEST_MANAGER` 단계부터 다시 준비하고 실행합니다 |
+| `Coverage*` 네 열만 | **다시 돌리지 않습니다.** `st_collect_per_cut_results`만 다시 합니다. 단, `cfg.UnreachableDefectTests`가 켜져 있으면 `CoverageFilterMode`가 결함 TC 목록을 정하므로, 이 열을 바꾼 뒤의 `st_run_from_harness`는 `SIGNAL_EDITOR` 단계부터 다시 준비하고 실행합니다 |
 | 전부 처음부터 | `st_run_from_harness('PreparationMode','FORCE')` |
 
 **어느 경우든 실행이 다시 돌았으면 `st_collect_per_cut_results`를 다시 부릅니다.**

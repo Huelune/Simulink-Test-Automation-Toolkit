@@ -230,12 +230,23 @@ verifyEqual(testCase, numel(profile.DefectIterations), 1);
 verifyEqual(testCase, profile.DefectIterations.RelativePath, 'Secret_Switch');
 verifyEqual(testCase, profile.DefectIterations.Name, st_scenario_name('Secret_CUT', 4));
 verifyEqual(testCase, profile.DefectIterations.SourceIndex, 2);
+% The defect gets a scenario of its own, a copy of scenario 2.
+verifyEqual(testCase, profile.ScenarioNames{4}, st_scenario_name('Secret_CUT', 4));
+verifyEqual(testCase, profile.SourceIndices(:).', [1 2 3 2]);
+verifyEqual(testCase, profile.OriginalNames(:).', ...
+    {'Secret A', 'Secret B', 'Secret C', 'Secret B'});
+verifyEqual(testCase, profile.EndTimes(:).', [1 2 3 2]);
+verifyEqual(testCase, profile.ParameterCounts(:).', [0 4 0 4]);
+[names, bound] = st_expected_iteration_bindings(profile);
+verifyEqual(testCase, numel(names), 4);
+verifyEqual(testCase, bound, names);
 
 % The toggle turns it off.
 cfg.UnreachableDefectTests = false;
 profile = st_get_sldv_profile(target, cfg);
 verifyEqual(testCase, profile.DefectStatus, 'DISABLED');
 verifyEmpty(testCase, profile.DefectIterations);
+verifyEqual(testCase, numel(profile.ScenarioNames), 3);
 cfg.UnreachableDefectTests = true;
 
 % A DefectInputScenario naming no scenario keeps the text of what to fix
@@ -246,6 +257,7 @@ verifyEqual(testCase, profile.DefectStatus, 'INVALID_INPUT_SCENARIO');
 verifySubstring(testCase, profile.DefectMessage, 'DefectInputScenario');
 verifySubstring(testCase, profile.DefectMessage, '1~3');
 verifyEmpty(testCase, profile.DefectIterations);
+verifyEqual(testCase, numel(profile.ScenarioNames), 3);
 verifyEqual(testCase, profile.DefectCounts.Unsatisfiable, 1);
 verifyEmpty(testCase, output);
 target.DefectInputScenario = "";
@@ -343,7 +355,10 @@ profile = struct('No', 1, 'CUTName', 'Secret_CUT', ...
     'CUTPath', 'Secret_Model/Secret_CUT', 'HarnessName', 'Secret_Harness', ...
     'TestCaseName', 'Secret_Case', 'Mode', 'FILE', ...
     'RequestedDataFile', dataFile, 'EffectiveDataFile', dataFile, ...
-    'ScenarioNames', {names}, 'Status', 'OK', 'Message', '');
+    'ScenarioNames', {names}, 'SourceIndices', [1; 2; 3], ...
+    'OriginalNames', {{'Secret A'; 'Secret B'; 'Secret C'}}, ...
+    'EndTimes', [1; 2; 3], 'ParameterCounts', [0; 4; 0], ...
+    'Status', 'OK', 'Message', '');
 manifest = struct('TopModel', 'Secret_Model', 'Profiles', profile); %#ok<NASGU>
 manifestFile = fullfile(folder, 'sldv_manifest.mat');
 save(manifestFile, 'manifest');

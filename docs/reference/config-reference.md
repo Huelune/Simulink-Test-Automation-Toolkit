@@ -166,10 +166,10 @@ Excel의 `ExpectedUpdateMode` 열이 행마다 이 값을 덮어씁니다.
 
 ### `UnreachableDefectTests` — 기본 `true`
 
-SLDV가 "어떤 입력으로도 실행할 수 없다"고 증명한 결정 결과마다 결함 Iteration을
-Test Manager에 추가합니다. `false`면 SLDV 시나리오만 만듭니다. 값이 바뀌면 Test Manager
-단계가 다시 준비됩니다. 켜져 있으면 행의 `CoverageFilterMode`가 결함 목록을 정하므로, 그 열을
-바꿔도 Test Manager 단계가 다시 준비됩니다.
+SLDV가 "어떤 입력으로도 실행할 수 없다"고 증명한 결정 결과마다(블록 단위) 원본 시나리오를 복사한
+Signal Editor·Test Assessment 시나리오와 결함 Iteration을 추가합니다. `false`면 SLDV 시나리오만 만듭니다.
+값이 바뀌면 Signal Editor 단계부터 다시 준비됩니다. 켜져 있으면 행의 `CoverageFilterMode`가 결함 목록을
+정하므로, 그 열을 바꿔도 Signal Editor 단계부터 다시 준비됩니다.
 
 ### `DefectReasonSheet` — 기본 `'DefectReasons'`
 

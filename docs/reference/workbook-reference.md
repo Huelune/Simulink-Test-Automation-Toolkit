@@ -277,7 +277,8 @@ SLDV 결과(`sldvData.TestCases`) 가운데 **어느 TestCase만** Scenario로 �
 ### `DefectInputScenario`
 
 도달 불가 결과용 결함 Iteration이 입력으로 쓸 시나리오를 정합니다. 값은 비움, 시나리오
-번호, 시나리오 이름 중 하나입니다. 비우면 마지막 시나리오를 씁니다. 값의 검증은 결함
+번호, 시나리오 이름 중 하나입니다. 비우면 마지막 시나리오를 씁니다. 결함마다 이 시나리오를
+복사한 Signal Editor·Test Assessment 시나리오가 결함 이름으로 생깁니다. 값의 검증은 결함
 Iteration을 만들 때 합니다.
 
 사유 문장은 `DefectReasons` 시트에 적습니다(시트 이름은 `cfg.DefectReasonSheet`). 열은

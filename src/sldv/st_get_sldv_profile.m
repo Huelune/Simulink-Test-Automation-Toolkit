@@ -3,7 +3,11 @@ function profile = st_get_sldv_profile(targetRow, cfg)
 % DefectIterations, DefectStatus, DefectMessage and DefectCounts are worked
 % out here from the SLDV data file on every call (st_unreachable_objectives,
 % st_build_defect_iterations). That never throws: the Test Manager stage
-% reports an invalid DefectInputScenario from DefectStatus.
+% reports an invalid DefectInputScenario from DefectStatus. Each defect
+% iteration is also appended to the per-scenario lists (ScenarioNames,
+% SourceIndices, ...) as a copy of its source scenario, so every stage gives
+% it a Signal Editor scenario, a Test Sequence scenario and an iteration of
+% its own.
 
 if nargin < 2
     cfg = st_config();
@@ -163,8 +167,11 @@ try
     profile.DefectIterations = st_build_defect_iterations(objectives, ...
         profile.ScenarioNames, profile.CUTName, ...
         target_text(targetRow, 'DefectInputScenario', ''));
+    profile = add_defect_scenarios(profile);
     profile.DefectStatus = 'OK';
 catch ME
+    % No defect iteration without its scenario: the lists stay as prepared.
+    profile.DefectIterations = st_build_defect_iterations();
     profile.DefectStatus = 'READ_FAILED';
     if strcmp(ME.identifier, 'simtest:DefectInputScenarioInvalid')
         profile.DefectStatus = 'INVALID_INPUT_SCENARIO';
@@ -176,9 +183,32 @@ catch ME
 end
 counts = profile.DefectCounts;
 st_log(cfg, 'DEBUG', ['[UnreachableDefect] profile | CUT=%s | Unsatisfiable=%d | ' ...
-    'Approximate=%d | Undecided=%d | Defects=%d'], profile.CUTName, ...
+    'Approximate=%d | Undecided=%d | Defects=%d | Scenarios=%d'], profile.CUTName, ...
     counts.Unsatisfiable, counts.Approximate, counts.Undecided, ...
-    numel(profile.DefectIterations));
+    numel(profile.DefectIterations), numel(profile.ScenarioNames));
+end
+
+
+function profile = add_defect_scenarios(profile)
+%ADD_DEFECT_SCENARIOS Give every defect iteration a scenario of its own.
+% It replays its source scenario, so its input, verify and parameter
+% overrides are copies of the source's under the defect's name. A list not
+% aligned with ScenarioNames (a hand-built profile) is left as it is.
+names = cellstr(profile.ScenarioNames);
+base = numel(names);
+copied = {'SourceIndices', 'OriginalNames', 'EndTimes', 'ParameterCounts'};
+for k = 1:numel(profile.DefectIterations)
+    source = profile.DefectIterations(k).SourceIndex;
+    for f = 1:numel(copied)
+        values = profile.(copied{f});
+        if numel(values) == base + k - 1
+            values(end + 1) = values(source);
+            profile.(copied{f}) = values;
+        end
+    end
+    names{end + 1} = profile.DefectIterations(k).Name; %#ok<AGROW>
+end
+profile.ScenarioNames = names;
 end
 
 

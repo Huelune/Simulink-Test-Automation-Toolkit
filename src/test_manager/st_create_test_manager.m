@@ -34,9 +34,9 @@ function R = st_create_test_manager(stageSelection, varargin)
 %   Signal Editor block, regardless of direct CUT Inports.
 %   FILE/GENERATE always assign SignalEditorScenario from the prepared
 %   Harness scenario, even when the CUT has no direct Inport.
-%   profile.DefectIterations append one iteration each, named after the
-%   last scenario and replaying its source scenario. IterationCount counts
-%   them; ParameterOverrideCount does not.
+%   profile.DefectIterations come as scenarios of their own, appended to
+%   ScenarioNames by st_get_sldv_profile as copies of their source scenario,
+%   so they get one iteration each like any other scenario.
 %
 % Custom Criteria:
 %   With defect iterations the Test Case gets st_defect_criteria_script,
@@ -513,14 +513,9 @@ for i = 1:n
             preparedIterationNames{scenarioIndex} = iterationName;
         end
 
-        % A defect iteration replays its source scenario under its own name
-        % and fails only through the Custom Criteria. Its parameter
-        % overrides copy the source's, so ParameterOverrideCount skips them.
-        for d = 1:numel(defects)
-            preparedIterations{end + 1, 1} = prepare_iteration(profile, ...
-                defects(d).SourceIndex, applySignalEditorScenario); %#ok<AGROW>
-            preparedIterationNames{end + 1, 1} = defects(d).Name; %#ok<AGROW>
-        end
+        % Defect iterations are already among scenarioNames: their scenarios
+        % copy the source's (st_get_sldv_profile), and only the Custom
+        % Criteria fails them.
 
         if ExistingTestCase(i)
             replace_test_iterations(tc, preparedIterations, ...
@@ -752,8 +747,8 @@ end
 function [iter, parameterCount] = prepare_iteration(profile, ...
     scenarioIndex, applySignalEditor)
 %PREPARE_ITERATION Table iteration replaying scenario SCENARIOINDEX.
-% A defect iteration is built from its source scenario here too, so it
-% carries the same Signal Editor, Test Sequence and SLDV parameters.
+% A defect scenario repeats its source's SourceIndices entry, so its
+% iteration carries the same SLDV parameters under its own scenario names.
 
 currentScenario = profile.ScenarioNames{scenarioIndex};
 iter = sltest.testmanager.TestIteration;

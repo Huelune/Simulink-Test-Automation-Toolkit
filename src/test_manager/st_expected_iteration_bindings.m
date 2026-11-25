@@ -1,8 +1,10 @@
 function [names, bound] = st_expected_iteration_bindings(profile)
 %ST_EXPECTED_ITERATION_BINDINGS Expected Iteration names and bound scenarios.
 %   names{k} is the Test Manager Iteration name; bound{k} is the scenario
-%   that Iteration must bind (Signal Editor and Test Sequence). Defect
-%   Iterations have their own name but bind to their source scenario.
+%   that Iteration must bind (Signal Editor and Test Sequence). Every
+%   Iteration binds the scenario of its own name. Defect Iterations too:
+%   st_get_sldv_profile appends their scenarios, copies of their source,
+%   to ScenarioNames.
 
 scenarios = cellstr(string(profile.ScenarioNames(:)));
 
@@ -14,11 +16,4 @@ end
 
 names = scenarios;
 bound = scenarios;
-if isfield(profile, 'DefectIterations') && ~isempty(profile.DefectIterations)
-    defects = profile.DefectIterations(:);
-    for k = 1:numel(defects)
-        names{end + 1, 1} = char(string(defects(k).Name)); %#ok<AGROW>
-        bound{end + 1, 1} = char(string(defects(k).SourceScenario)); %#ok<AGROW>
-    end
-end
 end

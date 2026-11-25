@@ -11,12 +11,14 @@ verifyEqual(testCase, bound, {'S1'; 'S2'});
 end
 
 
-function testDefectsBindToTheirSource(testCase)
+function testDefectsBindTheirOwnScenario(testCase)
+% st_get_sldv_profile has already appended the defect scenarios, copies of
+% their source, so a defect iteration is listed once and binds itself.
 defects = struct('Name', {'D3'; 'D4'}, 'SourceScenario', {'S2'; 'S1'});
-profile = make_profile('ON', {'S1'; 'S2'}, defects);
+profile = make_profile('ON', {'S1'; 'S2'; 'D3'; 'D4'}, defects);
 [names, bound] = st_expected_iteration_bindings(profile);
 verifyEqual(testCase, names, {'S1'; 'S2'; 'D3'; 'D4'});
-verifyEqual(testCase, bound, {'S1'; 'S2'; 'S2'; 'S1'});
+verifyEqual(testCase, bound, {'S1'; 'S2'; 'D3'; 'D4'});
 end
 
 

@@ -18,9 +18,13 @@ if scenarioCount == 0
     return;
 end
 
+% A defect scenario repeats its source's index and original name, so the
+% names must match the indices one to one rather than be unique.
+pairs = string(originalNames) + "|" + string(sourceIndices);
 if numel(originalNames) == scenarioCount && ...
         all(ismember(originalNames, validNames)) && ...
-        numel(unique(originalNames)) == scenarioCount
+        numel(unique(originalNames)) == numel(unique(sourceIndices)) && ...
+        numel(unique(pairs)) == numel(unique(sourceIndices))
     scenarioNames = originalNames;
     return;
 end

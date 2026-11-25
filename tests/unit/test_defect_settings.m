@@ -20,6 +20,9 @@ row.DefectInputScenario = "2";
 changed = st_stage_inputs(row, cfg);
 
 verifyNotEqual(testCase, changed.TEST_MANAGER, base.TEST_MANAGER);
+% The defect's own scenarios live in the Signal Editor and the Test Assessment.
+verifyNotEqual(testCase, changed.SIGNAL_EDITOR, base.SIGNAL_EDITOR);
+verifyNotEqual(testCase, changed.ASSESSMENT, base.ASSESSMENT);
 verifyEqual(testCase, changed.SLDV, base.SLDV);
 end
 
@@ -47,6 +50,8 @@ cfg.UnreachableDefectTests = false;
 off = st_stage_inputs(row, cfg);
 
 verifyNotEqual(testCase, off.TEST_MANAGER, on.TEST_MANAGER);
+verifyNotEqual(testCase, off.SIGNAL_EDITOR, on.SIGNAL_EDITOR);
+verifyNotEqual(testCase, off.ASSESSMENT, on.ASSESSMENT);
 verifyEqual(testCase, off.SLDV, on.SLDV);
 end
 
@@ -62,6 +67,7 @@ row.CoverageFilterMode = "ALL_CONTENT";
 allContent = st_stage_inputs(row, cfg);
 
 verifyNotEqual(testCase, allContent.TEST_MANAGER, off.TEST_MANAGER);
+verifyNotEqual(testCase, allContent.SIGNAL_EDITOR, off.SIGNAL_EDITOR);
 verifyEqual(testCase, allContent.SLDV, off.SLDV);
 % A missing column is OFF.
 verifyEqual(testCase, st_stage_inputs(local_row(), cfg).TEST_MANAGER, off.TEST_MANAGER);
@@ -71,6 +77,7 @@ row.CoverageFilterMode = "OFF";
 disabledOff = st_stage_inputs(row, cfg);
 row.CoverageFilterMode = "ALL_CONTENT";
 verifyEqual(testCase, st_stage_inputs(row, cfg).TEST_MANAGER, disabledOff.TEST_MANAGER);
+verifyEqual(testCase, st_stage_inputs(row, cfg).SIGNAL_EDITOR, disabledOff.SIGNAL_EDITOR);
 end
 
 

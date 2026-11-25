@@ -1,7 +1,7 @@
 function specification = st_final_document_defect_rows(specification, details, defects, reasons, cfg)
 %ST_FINAL_DOCUMENT_DEFECT_ROWS Rewrite the rows of the defect iterations.
-% A defect iteration binds its source scenario, so the specification
-% collector already gives it a row that repeats the source row. That row is
+% A defect iteration binds a copy of its source scenario, so the
+% specification collector already gives it a row that repeats the source row. That row is
 % found by test case name and iteration name, the key the verdict lookup
 % uses, and rewritten: Description keeps only the block the defect is
 % about, showing the outcome SLDV found unreachable, and the expected result
