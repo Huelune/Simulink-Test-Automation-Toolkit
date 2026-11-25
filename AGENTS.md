@@ -35,6 +35,11 @@ must fit on one screen, because the user answers with a single screenshot.
   block to paste as is, what to check, and what to send back. In chat, point to
   the section instead of pasting the code. Delete a section once its result is
   handled.
+- The user recalls blocks from the MATLAB command history, so an edited block
+  in `todo.md` often does not reach MATLAB. Put the check in a function under
+  `diagnostics/matlab`, point `st_todo_check` at it, and keep the block a call
+  to `st_todo_check` after `st_setup`. A recalled block then runs the check of
+  the code just pulled.
 - Design the output for one screen: `clc` first, warnings off and restored,
   one line per item, passing items as a count, detail only for failures, at most
   about 40 lines of 120 columns. Write long text (full error reports) to a file
