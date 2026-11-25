@@ -365,6 +365,20 @@ cd(folder);
 load_system(modelFile);
 block = st_find_signal_editor_block(modelName);
 set_param(block, 'Filename', relativeInput);
+% A Signal Editor that could not find its file when the model loaded dropped
+% its outports, and the lines on them stay loose after the file is found.
+% Saving that would ship a model with unconnected inputs (2026-11-25).
+loose = loose_top_level_lines(modelName);
+if loose > 0
+    st_log(cfg, 'ERROR', ...
+        'PACKAGE standalone model has loose lines after the input rewire | CUT=%s | Lines=%d', ...
+        item.CUTName, loose);
+    error('simtest:StandalonePackageLinesDetached', ...
+        ['The packaged standalone model for %s has %d line(s) with no source ' ...
+         'after its input was rewired. Its execution copy names an input that ' ...
+         'no longer exists. Run the EXECUTE action again, then PACKAGE.'], ...
+        item.CUTName, loose);
+end
 save_system(modelName);
 actual = char(string(get_param(block, 'Filename')));
 if ~strcmp(actual, relativeInput)
@@ -376,6 +390,19 @@ item.PackagedInputReadbackStatus = 'OK';
 st_log(cfg, 'DEBUG', ...
     'PACKAGE relative Input readback complete | CUT=%s | Input=%s', ...
     item.CUTName, relativeInput);
+end
+
+function count = loose_top_level_lines(modelName)
+% Top-level lines that reach a block but start at no port.
+count = 0;
+lines = find_system(modelName, 'SearchDepth', 1, 'FindAll', 'on', 'Type', 'line');
+for i = 1:numel(lines)
+    source = get_param(lines(i), 'SrcPortHandle');
+    targets = get_param(lines(i), 'DstPortHandle');
+    if any(source == -1) && any(targets ~= -1)
+        count = count + 1;
+    end
+end
 end
 
 function restore_model_context(modelName, directory)

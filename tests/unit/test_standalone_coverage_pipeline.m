@@ -506,3 +506,14 @@ body = extractBetween(text, 'function value = source_snapshot(cfg)', ...
 verifyNumElements(testCase, body, 1);
 verifyNumElements(testCase, strfind(body{1}, 'load_system(cfg.ModelFile)'), 1);
 end
+
+
+function testPackagingRefusesAModelWithLooseInputLines(testCase)
+% A Signal Editor that could not find its file at load dropped outports, and
+% packaging saved the loose lines (2026-11-25). It now stops before saving.
+text = source('pipeline', 'st_package_standalone_coverage_artifacts.m');
+verifyNotEmpty(testCase, regexp(text, ...
+    ['set_param\(block, ''Filename'', relativeInput\);[\s\S]*?' ...
+     'loose = loose_top_level_lines\(modelName\);[\s\S]*?' ...
+     'simtest:StandalonePackageLinesDetached[\s\S]*?save_system\(modelName\);'], 'once'));
+end
