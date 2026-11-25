@@ -7,39 +7,30 @@
 화면에는 개수, Simulink 블록 종류 이름, 정해 둔 안내 문구만 찍는다. 테스트 케이스·모델·블록
 이름, 경로, 계정은 찍지 않는다(회사 내부 정보).
 
-## 6. Harness와 Test File을 지우고 결함 시나리오까지 처음부터 다시 만들기
+## 6. 결함 Iteration의 Custom Criteria 결과를 읽는 길 찾기
 
-왜: 결함 Iteration(004, 005)이 지금까지는 마지막 시나리오를 그대로 다시 써서, Signal Editor 시나리오와 Test Assessment
-verify는 3개뿐이었다. 이제 결함마다 원본 시나리오를 복사한 같은 이름의 Signal Editor 시나리오와 Test Assessment 시나리오(verify)를
-만든다. Iteration도 그 시나리오에 묶인다. 그래서 대상마다 시나리오와 verify가 5개씩 생겨야 한다. 확인을 위해 지금 있는 Harness와
-Test File을 지우고 1단계를 처음부터 다시 돌린다.
+왜: Harness와 Test File을 지우고 1단계를 처음부터 다시 돌린 결과, 세 대상 모두 SLDV+결함, Signal Editor, Test Assessment,
+Iteration이 5개씩이었다. 판정은 Iteration 5개 중 통과 3, 실패 2였다. 결함 시나리오 004, 005는 만들어졌다. 그러나 결함 Iteration의
+Custom Criteria 결과를 `getCustomCriteriaResult`로 읽으면 세 대상 모두 `MATLAB:unassignedOutputs`(결과를 돌려주지 않음)로
+실패했다. 그래서 실패 2가 Custom Criteria 판정 때문인지 아직 모른다. 이 블록은 아무것도 실행하거나 지우지 않는다. 다음을 한 번에
+읽는다.
 
-이 블록이 하는 일:
+- Test File의 Test Case에 Custom Criteria가 켜져 있고 툴킷의 결함 판정 스크립트인지
+- 저장된 1단계 결과의 결함 Iteration 판정과 그 verify 결과(실패·통과·미판정 수)
+- `getCustomCriteriaResult`를 결함 Iteration, 보통 Iteration, Test Case 결과에 각각 부른 결과
+- Iteration 결과 객체에서 criteria가 들어간 속성·메서드 이름
 
-1. 결함 시나리오 변경의 단위 테스트를 돌린다. 하나라도 실패하면 아무것도 지우지 않고 멈춘다.
-2. Excel 대상 행이 가리키는 Harness만 지우고 모델을 저장한 뒤, Test File(.mldatx)을 닫고 지운다.
-3. `st_run_from_harness('PreparationMode','FORCE','ExecutionMode','PER_CUT','AutoCollect',true)`로 1단계를 처음부터 돌린다
-   (SLDV 분석, 실행, 결과 정리 포함). 평소 1단계를 처음부터 돌린 만큼 걸리고, 진행 줄이 보인다.
-4. 끝나면 화면을 지우고 대상마다 시나리오 수와 판정을 숫자로 찍는다.
-
-순서: 모델 프로젝트(.prj)를 연다. 클론에서 main을 pull한다. 열려 있는 모델 중 저장 안 한 것이 없을 때, 지난번 두 줄
-(`st_todo_check`를 부르는 것)을 명령 기록에서 다시 부르거나 아래에서 복사해 붙여 넣는다. 화면 첫 줄 끝에
-`Harness·Test 처음부터 다시 만들기`가 있어야 이 절의 점검이다.
+순서: 클론에서 main을 pull한 뒤, 지난번 두 줄(`st_todo_check`를 부르는 것)을 명령 기록에서 다시 부르거나 아래에서 복사해 붙여
+넣는다. 이번 블록은 Harness를 지우지 않는다. 화면 첫 줄 끝에 `결함 Custom Criteria 결과 읽는 길 찾기`가 있어야 이 절의 점검이다.
 
 ```matlab
 clearvars; toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
 if ~isequal(toolkitDir, 0), oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDir); st_todo_check; end
 ```
 
-확인할 것:
+화면: 대상마다 세 줄이 나온다. 첫 줄에는 기준 켜짐·표지, 결함 Iteration 수와 Failed 수, 그 verify 결과 수가 있다. 둘째 줄에는
+Iteration에서 읽은 기준 결과가, 셋째 줄에는 Test Case 결과에서 읽은 기준 결과와 criteria 이름이 있다.
 
-- `단위 테스트 | 51`이고 실패·미완료가 0인가.
-- `Harness 지움 3 / 대상 3 | Test File 지움 예`, `1단계(FORCE, 결과 정리 포함) OK`인가.
-- 대상마다 `시나리오 SLDV+결함 5 | Signal Editor 5 | Test Assessment 5 | Iteration 5 | OK`인가.
-- `1단계 결과 가져옴 3 / 대상 3`이고, 대상마다 `1단계 FINAL`(또는 `INITIAL`) 줄이 `결함 2: verify 실패 2 | 오류 0`인가.
-  같은 줄의 `Iteration 5 통과 3 실패 2`는 보통 시나리오 3개가 통과하고 결함 2개가 실패한 것이다.
-- 눈으로: Harness를 열어 Signal Editor의 시나리오 목록과 Test Assessment의 시나리오 목록에 004, 005가 있는지 본다. 이 화면은
-  블록 이름이 보이므로 캡처하지 않는다.
+확인할 것: 특별히 맞춰 볼 값은 없다. 화면 그대로 돌려주면 된다.
 
-돌려줄 것: 화면 캡처 한 장과 한 줄("Signal Editor·Test Assessment에 004, 005 있음/없음"). 오류 전문 파일은 사용자 PC에서만
-보고 밖으로 보내지 않는다. standalone 제출물(3단계)과 저장 Coverage 보고서 확인은 이 결과를 본 뒤 다음 절로 한다.
+돌려줄 것: 화면 캡처 한 장.
