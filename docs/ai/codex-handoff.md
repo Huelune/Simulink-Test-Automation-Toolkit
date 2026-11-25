@@ -137,7 +137,12 @@
   `remove_short_workspace`로 지움)의 절대 경로로 저장한다. 그래서 실행용 복사본을 나중에 열면 파일을 못 찾아 포트가 줄고 선이
   떨어진다. 패키징(`rewire_packaged_input`)은 그 상태에서 Filename을 상대 경로로 바꿔 저장하므로, 패키징본에 끊긴 선이 남는다. 실행
   결과는 파일이 있을 때 돌아 영향이 없다. 진단은 단계별 저장본의 Signal Editor 포트 수와 파일 존재를 찍고, 임시 폴더에서 파일을
-  지운 저장본을 다시 열어 재현한다. 실기 확인은 `todo.md` 7절이다.
+  지운 저장본을 다시 열어 재현한다. 여섯 번째 실행에서 확정됐다. 실행용 복사본은 열면 포트 1, 파일 없음이었다. 재현 시험도
+  포트 1, 끊김 5였다. 고친 것은 둘이다. `run_exported_tests.m`은 `copy_workspace_back` 뒤, `remove_short_workspace` 전에
+  `rebase_signal_editor_inputs`로 standalone 모델의 Filename을 기록 위치로 바꿔 저장한다(포트 수가 바뀌면 오류). 패키징
+  `rewire_packaged_input`은 Filename을 바꾼 뒤 최상위에 출발점 없는 선이 있으면 `simtest:StandalonePackageLinesDetached`로 멈춘다.
+  기존 패키징본은 끊긴 채라 파이프라인을 다시 돌려야 한다. 실기 확인은 `todo.md` 7절(파이프라인과 최종 문서를 다시 만들고 끊긴
+  선을 다시 센다)이다.
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
