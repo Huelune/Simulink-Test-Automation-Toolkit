@@ -111,7 +111,7 @@ catch err
     verifyFalse(testCase, contains(err.message, "Secret"));
 end
 % Only kept objectives are checked: a dropped one is never resolved.
-data.ModelObjects(2).sfObjType = 'State';
+data.ModelObjects(2).sfObjNum = 17;
 kept = st_unreachable_objectives(data, "OFF", "Secret_CUT");
 verifyEqual(testCase, kept.RelativePath, "Secret_Switch");
 end
@@ -162,8 +162,8 @@ function testStateflowObjectivesAreCountedNotKept(testCase)
 objects = model_objects(["Secret_Root/Secret_CUT/Secret_Switch", ...
     "Secret_Root/Secret_CUT/Secret_Sub/Secret_Chart", "Secret_Root/Secret_CUT"], ...
     ["Switch" "Stateflow" "Stateflow"]);
-objects(2).sfObjType = 'State';
-objects(3).sfObjType = 'Chart';
+objects(2).sfObjNum = 17;
+objects(3).sfObjNum = 3;
 data = fake_data(objects, decision_objectives(1:3, repmat("Unsatisfiable", 1, 3), ...
     ones(1, 3), repmat("Secret false", 1, 3)));
 
@@ -306,10 +306,12 @@ end
 
 function objects = model_objects(slPaths, typeDescs)
 count = numel(slPaths);
+% Real R2025b data fills sfObjType for every object and sets sfObjNum to -1
+% outside Stateflow, so only sfObjNum may mark a Stateflow object.
 objects = struct('descr', 'Secret block', 'typeDesc', cellstr(typeDescs), ...
     'slPath', cellstr(slPaths), ...
     'sid', cellstr(compose("Secret_Root:%d", 1:count)), 'designSid', '', ...
-    'sfObjType', '');
+    'sfObjType', 'Secret filled', 'sfObjNum', -1);
 end
 
 

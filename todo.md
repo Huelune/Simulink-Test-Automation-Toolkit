@@ -466,7 +466,7 @@ CUT 바로 아래 블록이 1이다.
   `CutItself` + `Stateflow`여야 한다. 셋째 결과가 CVF가 빼는 곳(`FilteredByCvf 1`), CUT 자신(`CutItself 1`), Stateflow,
   같은 블록의 두 번째 결과(어느 결함 줄이 `결과 2`) 중 무엇으로 설명되는가.
 - `Stateflow 0`인가. 이 모델에는 Stateflow가 없다. 0이 아니고 Unsatisfiable과 비슷하게 크면 Stateflow를 가려내는
-  판단(`sfObjType`이 있으면 Stateflow로 봄)이 틀린 것이다.
+  판단(`sfObjNum`이 0보다 크면 Stateflow로 봄)이 틀린 것이다.
 - `결함 FAIL`이 결함 TC 수와 같고 `PASS 0 기타 0`인가. 결함 줄의 판정이 모두 `FAIL`인가. `판정 FINAL`이면 기대값 갱신 뒤
   재실행한 결과이고, `INITIAL`이면 재실행이 없었던 것이다.
 - 그 FAIL이 진짜 FAIL인가. 판정 콜백은 커버리지나 블록을 읽지 못하면 검증 대신 오류를 던지는데, Test Manager가 이것도

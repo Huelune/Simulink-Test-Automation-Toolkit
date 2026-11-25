@@ -62,7 +62,7 @@
   `docs/superpowers/specs/2026-11-24-unreachable-outcome-defect-tc-design.md`). 단위 테스트는 `todo.md` 3절, 실제
   모델 확인은 4절이다. 볼 것: 계기 모델에서 대상마다 결함 TC 2건(Switch, Max)이 생기고 APPLY 재실행 뒤에도 FAIL인지,
   보통 Iteration 판정과 결정 커버리지(20/22)가 그대로인지, SLDV 도달 불가 3개 중 셋째가 CVF 거름·CUT 자신·Stateflow·같은
-  블록의 두 번째 결과 중 무엇으로 빠지는지, Stateflow 거름(`sfObjType`이 있으면 Stateflow)이 Stateflow 없는 모델에서 0인지,
+  블록의 두 번째 결과 중 무엇으로 빠지는지, Stateflow 거름(`sfObjNum > 0`이면 Stateflow)이 Stateflow 없는 모델에서 0인지,
   standalone 파이프라인으로 옮긴 Test File에서도 Custom Criteria가 도는지(실험은 저장·다시 열기까지만 봤다).
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
@@ -72,6 +72,10 @@
   3. 실제 SLDV 데이터는 대상마다 결정 목표 30개 중 Unsatisfiable 3, 근사 0, Undecided 0이었다. `slPath`는
      `<분석 루트>/<CUT>/...`이고 `designSid`가 있다. 커버리지 결정 수(22)보다 많은 것은 CVF가 뺀 하위 Subsystem까지
      분석했기 때문으로 보고 CVF 거름을 넣었다.
+  4. 2026-11-25 실제 SLDV 데이터: ModelObjects 33개 모두 `sfObjType`이 비어 있지 않았고(영어 낱말이 아닌 값),
+     `sfObjNum`은 모두 -1이었다. 처음의 "`sfObjType`이 있으면 Stateflow" 판정이 도달 불가 3개를 모두 Stateflow로 빼
+     결함 TC가 0이 됐으므로 `sfObjNum > 0`으로 바꿨다. 도달 불가 3개는 Switch(CUT 바로 아래 하위 블록 안),
+     Switch와 MinMax(CUT 바로 아래)였다.
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
   (관측 1건), `Simulink.io.SLDVMatFile` import 결과도 같은 이름인지.
 - 데모 모델 생성기 `st_create_demo_model`(2026-10-12): 2026-10-15 사용자 MATLAB의 새 세션에서

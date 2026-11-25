@@ -22,8 +22,10 @@ function [objectives, counts] = st_unreachable_objectives(sldvData, coverageFilt
 %   Approximate   true for Unsatisfiable under approximation
 %
 % Unsatisfiable outcomes are dropped, each counted once, in this order:
-%   Stateflow      the model object has an sfObjType (Stateflow, MATLAB
-%                  Function): the criteria callback finds blocks by path
+%   Stateflow      the model object has a Stateflow object number
+%                  (sfObjNum > 0; Stateflow, MATLAB Function): the criteria
+%                  callback finds blocks by path. sfObjType cannot tell:
+%                  R2025b fills it for every object, sfObjNum is -1 outside
 %   CutItself      the CUT's own objectives (an slPath of two elements)
 %   FilteredByCvf  what the row's coverage filter removes, which that test
 %                  case is not responsible for (COVERAGEFILTERMODE):
@@ -84,7 +86,7 @@ else
         object = objects(objective.modelObjectIdx);
         % Each drop below ends with continue, so an outcome is counted once.
         % shortcut: Stateflow 내부 결과는 결함으로 만들지 않는다, Stateflow 분기 목록을 설계할 때 넣는다
-        if field_text(object, 'sfObjType') ~= ""
+        if stateflow_number(object) > 0
             counts.Stateflow = counts.Stateflow + 1;
             continue;
         end
@@ -131,6 +133,14 @@ function key = folded_name(name)
 % A '/' in a block name is '//' in slPath but '/' in the CUTName column; a
 % newline or doubled space in a name is compared as one space.
 key = strtrim(regexprep(replace(string(name), "//", "/"), '\s+', ' '));
+end
+
+
+function number = stateflow_number(s)
+number = -1;
+if isfield(s, 'sfObjNum') && isnumeric(s.sfObjNum) && isscalar(s.sfObjNum)
+    number = double(s.sfObjNum);
+end
 end
 
 
