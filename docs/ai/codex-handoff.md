@@ -64,8 +64,12 @@
   Criteria의 verify 실패인지(콜백 오류로 Failed가 아닌지)를 1단계와 standalone 결과에서 사람이 본 기록.
 - 1단계(PER_CUT) 결과 정리의 Coverage 시트(CUT·Decision)가 CVF를 반영하지 않았다(2026-11-25, 27/30, 같은 대상의
   standalone 저장 Coverage는 20/22). 원인: 보고서가 coverage를 다시 꺼낼 때 Test Manager가 CVF 없는 새 cvdata를 줬다.
-  `9efbb45`에서 CVF를 붙인 객체를 다시 쓰게 고쳤다(BATCH 보고서 포함). 실기 확인은 `todo.md` 6절: 결과 정리 전후 숫자,
-  결정 목록(`DecisionPoints`) 수와 그에 따른 최종 문서 D 줄 수 변화.
+  `9efbb45`는 붙인 객체를 결과별로 기억했는데 결과 동일성(isequal) 판정이 틀려 결과 정리가
+  `ResultCoverageDecisionReadbackFailed`로 멈췄다. `b2f2aab`에서 붙인 객체를 `st_export_result_set_report`의
+  `CoverageObjects`로 직접 넘기게 다시 고쳤다(1단계 결과 정리와 즉시 보고 경로). 실기 확인은 `todo.md` 6절: 결과 정리
+  뒤 CUT 결정 20/22, 결정 목록(`DecisionPoints`) 수와 그에 따른 최종 문서 D 줄 수 변화.
+- BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
+  꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
