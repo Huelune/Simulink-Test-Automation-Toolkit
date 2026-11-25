@@ -90,8 +90,13 @@
   열린 Harness 목록에 있으면 Harness로 인정하게 한 것이다(`3917c9d`). 이제 결과 정리는 Harness 이름의 다른 모델에 저장 안 한
   변경이 없으면 WARN을 남기고 닫은 뒤 Harness를 연다. 변경이 있으면 멈춘다. 연 Harness에 같은 판정을 한 결과는 DEBUG로
   남긴다. 6절 점검은 `diagnostics/matlab/st_check_per_cut_collect_cvf`로 옮겼다. 붙여 넣는 블록은 두 줄이라, 예전 블록을
-  다시 부를 일이 줄어든다. 실기 확인은 `todo.md` 6절이다. 결과 정리 뒤 CUT 결정이 20/22인지, 결정 목록(`DecisionPoints`) 수와
-  그에 따른 최종 문서 D 줄 수가 바뀌는지 본다.
+  다시 부를 일이 줄어든다. 2026-11-25 16시 실행에서 결과 정리는 끝까지 돌았다. 결과 정리가 연 Harness도 Harness로
+  판정됐고(IsHarness on, 열린 Harness 맞음), CVF 복사는 6번 모두 파일을 찾았다. 그런데 CUT 결정·실행이 모두 0/0, 결정 목록이
+  0이 됐다. CVF 없이는 27/30, 66/66이다. 결과 정리의 CVF는 Harness에서 만들어 Harness 블록 SID로 규칙을 적지만, coverage는
+  Top Model의 CUT 경로로 읽는다. 짐작: 규칙이 Top Model의 같은 SID 번호 블록으로 풀려, 그 블록이 CUT을 품으면 CUT 전체가 빠진다
+  (미확인). `diagnostics/matlab/st_probe_collect_cvf_rules`가 규칙을 하나씩 걸어 CUT을 비우는 규칙과 그 블록의 위치(Harness 기준,
+  같은 번호의 Top Model 기준)를 찍는다. 실기 확인은 `todo.md` 6절이다. `st_apply_result_coverage_filters`의 읽기 확인은
+  `decisioninfo`가 오류 없이 도는지만 봐서, CVF가 CUT을 통째로 빼도 통과한다. 원인을 고칠 때 빈 결과도 실패로 볼지 정한다.
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
