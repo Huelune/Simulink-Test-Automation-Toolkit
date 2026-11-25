@@ -225,6 +225,11 @@ if ~strcmp(workRoot, recordedWorkRoot)
         runtimeContext.Targets.ExecutionModelFile = rebase_path( ...
             runtimeContext.Targets.ExecutionModelFile, workRoot, recordedWorkRoot);
     end
+    if istable(preparation) && ...
+            ismember('ModelFile', preparation.Properties.VariableNames)
+        rebase_signal_editor_inputs(preparation.ModelFile, ...
+            workRoot, recordedWorkRoot, cfg);
+    end
     % Windows refuses to remove the current folder, and the environment
     % restore on exit would return here anyway.
     cd(previousDirectory);
@@ -580,6 +585,61 @@ end
 st_log(cfg, 'INFO', ...
     'Execution workspace copy-back complete | Entries=%d | elapsed=%.3f sec', ...
     copied, toc(timerValue));
+end
+
+function rebase_signal_editor_inputs(modelFiles, fromRoot, toRoot, cfg)
+%REBASE_SIGNAL_EDITOR_INPUTS Point copied-back models at the recorded inputs.
+% The preparation saved each standalone model naming its input in the short
+% workspace, which is removed next. A Signal Editor that cannot find its file
+% drops its outports when the model is loaded, and the lines on them stay
+% loose when the file is found again: packaging saved models with five of
+% six inputs unconnected (2026-11-25). Rename while both copies exist.
+modelFiles = unique(string(modelFiles), 'stable');
+st_log(cfg, 'INFO', 'Standalone input rebase start | Models=%d', numel(modelFiles));
+rebased = 0;
+for i = 1:numel(modelFiles)
+    file = char(modelFiles(i));
+    if isempty(file) || ~isfile(file), continue; end
+    [~, model] = fileparts(file);
+    if bdIsLoaded(model), close_system(model, 0); end
+    load_system(file);
+    try
+        try
+            editor = st_find_signal_editor_block(model);
+        catch findError
+            if ~strcmp(findError.identifier, 'simtest:SignalEditorBlockMissing')
+                rethrow(findError);
+            end
+            close_system(model, 0);
+            continue;
+        end
+        current = char(string(get_param(editor, 'Filename')));
+        target = rebase_path(current, fromRoot, toRoot);
+        if ~strcmp(target, current)
+            if ~isfile(target)
+                error('simtest:BundleInputRebaseMissing', ...
+                    'The recorded copy of the standalone input is missing: %s', target);
+            end
+            before = get_param(editor, 'PortHandles');
+            set_param(editor, 'Filename', target);
+            after = get_param(editor, 'PortHandles');
+            if numel(after.Outport) ~= numel(before.Outport)
+                error('simtest:BundleInputRebasePortsChanged', ...
+                    'Signal Editor outports changed from %d to %d in %s.', ...
+                    numel(before.Outport), numel(after.Outport), model);
+            end
+            save_system(model);
+            rebased = rebased + 1;
+        end
+    catch ME
+        close_system(model, 0);
+        st_log(cfg, 'ERROR', 'Standalone input rebase failed | Model=%s | %s: %s', ...
+            model, ME.identifier, ME.message);
+        rethrow(ME);
+    end
+    close_system(model, 0);
+end
+st_log(cfg, 'INFO', 'Standalone input rebase complete | Rebased=%d', rebased);
 end
 
 function remove_short_workspace(folder, cfg)

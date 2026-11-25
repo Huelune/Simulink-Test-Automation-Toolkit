@@ -343,6 +343,22 @@ verifyTrue(testCase, closePosition < copyPosition);
 verifyTrue(testCase, copyPosition < recordPosition);
 end
 
+function testStandaloneRunnerRebasesInputsBeforeRemovingTheShortWorkspace(testCase)
+% Models saved naming an input in the short workspace lost five Signal
+% Editor lines when loaded after it was removed (2026-11-25).
+text = fileread(fullfile(st_project_root(), 'resources', 'export_bundle', ...
+    'run_exported_tests.m'));
+copyPosition = regexp(text, ...
+    '\n    copy_workspace_back\(workRoot, recordedWorkRoot, cfg\);', 'once');
+rebasePosition = regexp(text, ...
+    'rebase_signal_editor_inputs\(preparation\.ModelFile, \.\.\.', 'once');
+removePosition = regexp(text, '\n    remove_short_workspace\(workRoot, cfg\);', 'once');
+verifyNotEmpty(testCase, rebasePosition);
+verifyTrue(testCase, copyPosition < rebasePosition && rebasePosition < removePosition);
+verifyTrue(testCase, contains(text, 'target = rebase_path(current, fromRoot, toRoot);'));
+verifyTrue(testCase, contains(text, 'simtest:BundleInputRebasePortsChanged'));
+end
+
 function testVerificationSnapshotCanOmitReferenceReport(testCase)
 root = st_project_root();
 exportText = fileread(fullfile(root, 'src', 'exporting', ...
