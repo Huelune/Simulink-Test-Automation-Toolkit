@@ -111,6 +111,13 @@
   45/45(standalone과 같음), CVF 복사 6번 모두 파일 있음을 확인했다(해결). 결정 목록은 11개 그대로다. CVF가 빼는 것은 CUT의 하위
   Subsystem이고, 결정 목록은 원래 CUT 직속 블록 중 일반 Subsystem을 넣지 않는다. `st_apply_result_coverage_filters`의 읽기 확인은
   `decisioninfo`가 오류 없이 도는지만 봐서, CVF가 CUT을 통째로 빼도 통과한다. 원인을 고칠 때 빈 결과도 실패로 볼지 정한다.
+- Harness 안 CUT의 입력선이 끊겨 있다(2026-11-25, 사용자가 GUI로 확인). 1단계 결과를 Test Manager에서 열어 들어간 Harness의
+  CUT 안에서, 한 블록으로 들어가는 입력선 여러 개가 빨간 점선이었다. 원래 모델의 같은 CUT에서는 이어져 있다. DV는 원래 모델의
+  CUT에서 돌아(`st_prepare_sldv_targets`의 `sldvrun(ownerPath, ...)`) 영향이 없다. 그러나 Harness에서 돈 verify, coverage(20/22,
+  45/45), 결함 Iteration의 Custom Criteria 판정은 그 입력이 0인 채로 나왔을 수 있다. 원인은 미확인이다. 후보는 원래 모델보다 오래된
+  Harness, 또는 Harness를 만들 때 보내는 블록의 포트 수가 바뀐 것이다. `diagnostics/matlab/st_compare_harness_cut`이 대상마다 끊긴 선
+  끝 수, Harness에만 끊긴 것의 블록 종류·출력 포트 수·링크 상태, 동기화 설정을 찍는다. 실기 확인은 `todo.md` 7절이다. standalone
+  모델이 이 Harness에서 내보내졌는지, 같은 끊김이 있는지는 확인하지 않았다.
 - BATCH 보고서(`st_generate_test_report`)도 ResultSet에 CVF를 붙인 뒤 Coverage 표와 HTML을 만들 때 coverage를 다시
   꺼낸다. 같은 이유로 CVF가 빠진 숫자일 수 있다(실기 미확인, 고치지 않음).
 - 함수 호출 CUT의 SLDV 입력 `FcnTriggerPort` 자동 제외: SLDV가 항상 이 이름을 쓰는지
