@@ -85,6 +85,10 @@
   `Exception`이었다. 오류가 아닌 기록에서 이 속성을 읽으면 `MATLAB:unassignedOutputs`가 난다(R2025b, import한 결과). 다음은
   standalone 파이프라인과 최종 문서를 다시 만들어 standalone 쪽 결함 판정을 보는 것이다(`todo.md` 7절,
   `st_rebuild_standalone_and_document`).
+  7절 결과(2026-11-26): 결함 판정 단위 테스트 16/16, standalone 파이프라인과 최종 문서 OK, 저장 Coverage 보고서 3/3. 대상마다
+  standalone과 1단계 FINAL 모두 Iteration 5(통과 3, 실패 2)였고, 결함 Iteration은 모두 `verify 실패`였다(합계 standalone 6,
+  1단계 6). standalone 모델에서도 결함 판정 스크립트가 블록을 찾았다. 저장 Coverage의 CUT 결정은 대상마다 20/22, 실행은 45/45였다.
+  보고서 Filter 항목과 모델 색 표시는 사용자가 눈으로 보는 몫이며, 따로 받은 이상 보고는 없다.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
