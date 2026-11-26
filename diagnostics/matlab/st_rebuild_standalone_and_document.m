@@ -4,17 +4,16 @@ function st_rebuild_standalone_and_document(lines, title)
 % st_rebuild_standalone_and_document()
 % st_rebuild_standalone_and_document(lines, title)
 %
-% Steps 2 to 5 of the manual from the current step 1 results.
+% Steps 3 to 5 of the manual from the current step 1 results.
 %   1. Called alone: runs the defect criteria unit tests and stops when a
 %      model has unsaved changes. Called with lines (st_rebuild_all, right
 %      after step 1) it does neither: the caller tested and checked before
 %      deleting anything, and step 1 leaves its own models for the pipeline,
 %      which saves and closes them.
-%   2. Exports the step 2 specification, then runs
-%      st_run_standalone_coverage_pipeline('SaveTestResult', true) with its
-%      progress on screen, then from that run st_check_standalone_coverage
-%      (its code), st_classify_standalone_results with the specification
-%      (file counts) and st_export_final_document.
+%   2. Runs st_run_standalone_coverage_pipeline('SaveTestResult', true) with
+%      its progress on screen, then from that run st_check_standalone_coverage
+%      (its code), st_export_final_document, and st_classify_standalone_results
+%      with the final document as the team's specification (file counts).
 %   3. Closes the models the run left open, unsaved changes discarded; the
 %      count of such models is shown.
 %   4. Hands the lines to st_check_defect_criteria with the standalone part:
@@ -28,7 +27,7 @@ cfg = st_config();
 st_log(cfg, 'INFO', 'Standalone and final document rebuild start | alone %d', alone);
 % Variables that evalc assigns are named first, or MATLAB may take them for functions.
 results = [];
-specFile = '';
+finalFile = '';
 checkCode = '';
 classified = [];
 if alone
@@ -51,15 +50,6 @@ if alone
     end
 end
 
-% Step 2 reads the Harnesses, so it goes before the pipeline closes the source model.
-try
-    evalc('[~, specFile] = st_export_test_specification();');
-    lines{end+1} = '2단계 사양서 OK';
-catch ME
-    lines{end+1} = sprintf('2단계 사양서 실패 | %s', id_of(ME));
-    lines{end+1} = write_report(ME, '2단계 사양서');
-end
-
 pipelineInfo = [];
 try
     pipelineInfo = st_run_standalone_coverage_pipeline('SaveTestResult', true);
@@ -76,23 +66,24 @@ if ~isempty(pipelineInfo)
         lines{end+1} = sprintf('standalone 점검 실패 | %s', id_of(ME));
         lines{end+1} = write_report(ME, 'standalone 점검');
     end
+    % The final document is the team's specification, so it is made before the tree.
+    try
+        evalc('[~, finalFile] = st_export_final_document(''CoveragePipelineId'', pipelineInfo.PipelineId);');
+        lines{end+1} = '5단계 최종 문서 OK';
+    catch ME
+        lines{end+1} = sprintf('5단계 최종 문서 실패 | %s', id_of(ME));
+        lines{end+1} = write_report(ME, '최종 문서');
+    end
     try
         evalc(['classified = st_classify_standalone_results(''PipelineId'', pipelineInfo.PipelineId, ' ...
-            '''SpecificationFile'', specFile);']);
+            '''SpecificationFile'', finalFile);']);
         lines{end+1} = sprintf(['4단계 분류 OK | CUT %d | 테스트 케이스 %d | 보고서 %d | 프로젝트 %d | ' ...
-            '건너뜀 %d | 사양서 넣음 %s'], numel(classified.CutFolders), classified.TestCaseFiles, ...
+            '건너뜀 %d | 최종 문서 넣음 %s'], numel(classified.CutFolders), classified.TestCaseFiles, ...
             classified.ReportFiles, classified.ProjectFiles, numel(classified.Skipped), ...
             yes_no(~isempty(classified.SpecificationFile)));
     catch ME
         lines{end+1} = sprintf('4단계 분류 실패 | %s', id_of(ME));
         lines{end+1} = write_report(ME, '4단계 분류');
-    end
-    try
-        evalc('st_export_final_document(''CoveragePipelineId'', pipelineInfo.PipelineId);');
-        lines{end+1} = '최종 문서 OK';
-    catch ME
-        lines{end+1} = sprintf('최종 문서 실패 | %s', id_of(ME));
-        lines{end+1} = write_report(ME, '최종 문서');
     end
 end
 

@@ -1,8 +1,9 @@
 function st_rebuild_all()
 %ST_REBUILD_ALL Delete the Harnesses and Test File, then run the manual from Harness creation to the team tree.
 %
-% For todo.md: everything again from nothing, steps 1 to 5 of the manual.
-% The step 2 specification goes into the team tree's report folder.
+% For todo.md: everything again from nothing, steps 1, 3, 4 and 5 of the
+% manual (step 2 is optional and left out). The final document is the
+% team's specification and goes into the team tree's report folder.
 %   1. Runs the unit tests of the code this run goes through. Any failure
 %      stops it before anything is deleted.
 %   2. Stops on unsaved models; otherwise closes every model and clears
@@ -12,10 +13,10 @@ function st_rebuild_all()
 %      names and the Test File, runs step 1 with FORCE, PER_CUT and the
 %      result collection, and counts the scenarios.
 %   4. When step 1 finished, st_rebuild_standalone_and_document: the
-%      specification (step 2), the standalone pipeline with its saved
-%      Result, its check code, the team tree with the specification (step
-%      4) and the final document (step 5), then each target's
-%      iteration outcomes, defect kinds and CVF-applied coverage on screen.
+%      standalone pipeline with its saved Result, its check code, the final
+%      document (step 5), the team tree with the final document (step 4),
+%      then each target's iteration outcomes, defect kinds and CVF-applied
+%      coverage on screen.
 % No names reach the screen; long error reports go to tempdir/st_todo_check.txt.
 title = '처음부터 분류까지 다시 만들기';
 cfg = st_config();
