@@ -89,6 +89,15 @@
   standalone과 1단계 FINAL 모두 Iteration 5(통과 3, 실패 2)였고, 결함 Iteration은 모두 `verify 실패`였다(합계 standalone 6,
   1단계 6). standalone 모델에서도 결함 판정 스크립트가 블록을 찾았다. 저장 Coverage의 CUT 결정은 대상마다 20/22, 실행은 45/45였다.
   보고서 Filter 항목과 모델 색 표시는 사용자가 눈으로 보는 몫이며, 따로 받은 이상 보고는 없다.
+  8절 결과(2026-11-26, `st_probe_standalone_cvf_effect`): 사용자가 가져온 standalone 결과의 Results에서 Coverage Filters에
+  CVF를 손으로 Add했는데 Aggregated Coverage Results가 그대로였다. 대상마다 CVF 규칙 16개(Exclude 16; BlockInstance 8,
+  SubsystemAllContent 8)가 모두 standalone 모델에서 블록을 찾았다. 저장 CVT(저장 때 걸린 필터 1)에 CVF를 걸면 모델 결정
+  55/63→20/22, 실행 67/67→46/46, CUT 결정 27/30→20/22, 실행 66/66→45/45로 바뀐다. Test Manager에는 결과 6개가 열려 있었고,
+  모델마다 커버리지 객체가 2개였다. 첫 객체만 봤는데, 걸린 필터가 0개였고 값은 CVF 없는 값과 같았다. 같은 객체에 CVF를 걸면
+  위와 같은 숫자로 바뀌었다. 결론: CVF는 맞고, Test Manager가 내준 값에는 CVF가 걸려 있지 않았다. 백분율로 보면 모델 결정만
+  87%→91%로 바뀌고, CUT 결정은 90%→91%, 실행은 100% 그대로다. UI에서 넣은 필터가 API로 받는 cvdata에 실리는지는 문서에 없어
+  확인하지 못했다. 모델마다 객체가 2개인 이유도 확인하지 않았다. 사용자 결정으로 툴킷은 바꾸지 않는다. CVF가 걸린 값은 저장
+  Coverage 보고서(`ShowSavedCoverage`)에서 볼 수 있다.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
