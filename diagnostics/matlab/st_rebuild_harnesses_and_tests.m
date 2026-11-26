@@ -1,7 +1,11 @@
-function st_rebuild_harnesses_and_tests(lines)
+function [lines, ok] = st_rebuild_harnesses_and_tests(lines)
 %ST_REBUILD_HARNESSES_AND_TESTS Delete the targets' Harnesses and the Test File, then run step 1 again.
 %
 % st_rebuild_harnesses_and_tests(lines)
+% [lines, ok] = st_rebuild_harnesses_and_tests(lines)
+%
+% With outputs it prints nothing and skips step 5: it returns its lines and
+% whether step 1 finished, for a caller that goes on (st_rebuild_all).
 %
 % For todo.md: rebuild every target from nothing and count what came out.
 %   1. Stops when a model has unsaved changes.
@@ -18,12 +22,14 @@ function st_rebuild_harnesses_and_tests(lines)
 % lines go under the title. No names reach the screen; long error reports
 % go to tempdir/st_todo_check.txt.
 if nargin < 1, lines = {}; end
+ok = false;
+quiet = nargout > 0;
 title = 'Harness·Test 처음부터 다시 만들기';
 cfg = st_config();
 st_log(cfg, 'INFO', 'Rebuild from scratch start');
 loaded = find_system('type', 'block_diagram');
 if ~isempty(loaded) && any(strcmp(get_param(loaded, 'Dirty'), 'on'))
-    stop(lines, title, '저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요', []);
+    lines = stop(lines, title, '저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요', [], quiet);
     return;
 end
 
@@ -46,7 +52,8 @@ try
     lines{end+1} = sprintf('Harness 지움 %d / 대상 %d | Test File 지움 %s', ...
         deleted, height(targets), yes_no(delete_test_file(cfg.TestFile)));
 catch ME
-    stop(lines, title, sprintf('지우기 실패 | %s | 모델을 저장하지 말고 닫은 뒤 다시 돌려 주세요', id_of(ME)), ME);
+    lines = stop(lines, title, sprintf('지우기 실패 | %s | 모델을 저장하지 말고 닫은 뒤 다시 돌려 주세요', ...
+        id_of(ME)), ME, quiet);
     return;
 end
 
@@ -54,6 +61,7 @@ try
     st_run_from_harness('PreparationMode', 'FORCE', 'ExecutionMode', 'PER_CUT', ...
         'AutoCollect', true);
     lines{end+1} = '1단계(FORCE, 결과 정리 포함) OK';
+    ok = true;
 catch ME
     lines{end+1} = sprintf('1단계 실패 | %s | 실행 로그(result/logs)를 보세요', id_of(ME));
     lines{end+1} = write_report(ME, '1단계');
@@ -74,7 +82,7 @@ for i = 1:height(alignment)
         alignment.Status(i)); %#ok<AGROW>
 end
 st_log(cfg, 'INFO', 'Rebuild from scratch complete | targets %d', height(alignment));
-st_check_defect_criteria(lines, title, false);
+if ~quiet, st_check_defect_criteria(lines, title, false); end
 end
 
 
@@ -94,11 +102,13 @@ end
 end
 
 
-function stop(lines, title, message, ME)
-clc;
-lines = [{sprintf('MATLAB %s | %s', version('-release'), title)}, reshape(lines, 1, []), {message}];
+function lines = stop(lines, title, message, ME, quiet)
+%STOP Add the reason; print the screen unless the caller prints it.
+lines = [reshape(lines, 1, []), {message}];
 if ~isempty(ME), lines{end+1} = write_report(ME, '지우기'); end
-fprintf('%s\n', lines{:});
+if quiet, return; end
+clc;
+fprintf('%s\n', sprintf('MATLAB %s | %s', version('-release'), title), lines{:});
 end
 
 
