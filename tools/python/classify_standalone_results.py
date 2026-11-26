@@ -8,6 +8,7 @@
     {TopModel}/                         TestManager/{TopModel}.mldatx 의 stem
     ├── 테스트 케이스/{CUT 폴더}/       *.mat
     ├── 테스트 보고서/{TopModel}.mldatx
+    ├── 테스트 보고서/{사양서}.xlsx      --spec 을 줄 때만
     ├── 테스트 보고서/{CUT 폴더}/       *.cvf *.cvt *.html + asset 하위 폴더
     └── 프로젝트/{CUT 폴더}/            *.slx
 
@@ -15,8 +16,11 @@
 launcher .m, .work, .provenance 등)과 CUT 폴더 안의 `scv_images` 폴더는 복사하지 않고
 건너뛴 목록으로만 출력한다.
 
+사양서(2단계 명세서 Excel)는 파이프라인 폴더 밖에 있으므로 --spec 으로 줄 때만 테스트 보고서
+갈래에 이름 그대로 복사한다.
+
 사용법:
-    python tools/python/classify_standalone_results.py <pipeline_root> [--out DIR] [--dry-run] [--overwrite]
+    python tools/python/classify_standalone_results.py <pipeline_root> [--out DIR] [--spec XLSX] [--dry-run] [--overwrite]
 
 종료 코드: 0 성공, 1 복사 중 예외, 2 입력/출력 검증 실패.
 
@@ -76,6 +80,8 @@ class Plan:
     skipped: list[str] = field(default_factory=list)
     # (CUT 폴더, 갈래) — 복사할 파일이 하나도 없는 갈래
     empty: list[tuple[str, str]] = field(default_factory=list)
+    # 사양서 복사본 위치. --spec 을 주지 않으면 None
+    specification: Path | None = None
 
     def count(self, category: str) -> int:
         marker = self.output_root / category
@@ -125,10 +131,13 @@ def _validate_output(output_root: Path, pipeline_root: Path, overwrite: bool) ->
             '같은 이름의 파일을 덮어쓰려면 --overwrite 를 주세요.')
 
 
-def build_plan(pipeline_root: Path, output_root: Path | None, overwrite: bool) -> Plan:
+def build_plan(pipeline_root: Path, output_root: Path | None, overwrite: bool,
+               spec: Path | None = None) -> Plan:
     pipeline_root = Path(pipeline_root)
     if not pipeline_root.is_dir():
         raise ClassifyError(f'입력 폴더가 아닙니다: {pipeline_root}')
+    if spec is not None and not Path(spec).is_file():
+        raise ClassifyError(f'사양서 파일이 없습니다: {spec}')
 
     test_file = _find_test_file(pipeline_root)
     model_name = test_file.stem
@@ -142,6 +151,10 @@ def build_plan(pipeline_root: Path, output_root: Path | None, overwrite: bool) -
     for category in CATEGORIES:
         plan.directories.append(output_root / category)
     plan.files.append((test_file, output_root / REPORT_DIR / test_file.name))
+    if spec is not None:
+        spec = Path(spec)
+        plan.specification = output_root / REPORT_DIR / spec.name
+        plan.files.append((spec, plan.specification))
 
     cut_folders, others = _discover_cut_folders(pipeline_root)
     for other in others:
@@ -199,6 +212,7 @@ def print_summary(plan: Plan, dry_run: bool) -> None:
         f'{TEST_CASE_DIR} : {plan.count(TEST_CASE_DIR)}개 파일',
         f'{REPORT_DIR} : {plan.count(REPORT_DIR)}개 파일 (asset 폴더 {len(plan.trees)}개 포함 안 함)',
         f'{PROJECT_DIR}      : {plan.count(PROJECT_DIR)}개 파일',
+        f'사양서        : {plan.specification.name if plan.specification else "넣지 않음"}',
     ]
     if plan.empty:
         lines.append(f'WARN 비어 있는 갈래 {len(plan.empty)}개:')
@@ -220,6 +234,8 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
                         help='standalone 파이프라인 결과 폴더 (result/standalone_coverage/{PipelineId})')
     parser.add_argument('--out', type=Path, default=None,
                         help='출력 폴더. 기본값은 입력 폴더 옆 {TopModel}/')
+    parser.add_argument('--spec', type=Path, default=None,
+                        help='사양서(2단계 명세서 Excel). 주면 테스트 보고서 갈래에 이름 그대로 복사한다')
     parser.add_argument('--dry-run', action='store_true',
                         help='계획만 출력하고 파일을 만들지 않는다')
     parser.add_argument('--overwrite', action='store_true',
@@ -239,7 +255,7 @@ def main(argv: list[str] | None = None) -> int:
     _use_utf8_when_piped()
     args = _parse_args(argv)
     try:
-        plan = build_plan(args.pipeline_root, args.out, args.overwrite)
+        plan = build_plan(args.pipeline_root, args.out, args.overwrite, args.spec)
     except ClassifyError as exc:
         print(f'오류: {exc}', file=sys.stderr)
         return EXIT_INVALID

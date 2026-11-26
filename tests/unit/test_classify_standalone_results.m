@@ -73,6 +73,35 @@ verifyTrue(testCase, isfile(fullfile(other, 'notes.txt')));
 end
 
 
+function testSpecificationGoesIntoTheReportFolder(testCase)
+pipeline = testCase.TestData.Pipeline;
+spec = fullfile(testCase.TestData.Root, 'result', 'test_specification_20261126_101530.xlsx');
+write_file(spec);
+
+info = st_classify_standalone_results('PipelineRoot', pipeline, 'SpecificationFile', spec);
+
+copied = fullfile(testCase.TestData.Root, 'TOP', '테스트 보고서', ...
+    'test_specification_20261126_101530.xlsx');
+verifyEqual(testCase, info.SpecificationFile, copied);
+verifyTrue(testCase, isfile(copied));
+verifyTrue(testCase, isfile(spec));
+plain = st_classify_standalone_results('PipelineRoot', pipeline);
+verifyEqual(testCase, plain.ReportFiles, info.ReportFiles - 1);
+verifyEqual(testCase, plain.SpecificationFile, '');
+% Replace still deletes the tree: the workbook sits inside a category.
+verifyFalse(testCase, isfile(copied));
+end
+
+
+function testMissingSpecificationStopsBeforeCopying(testCase)
+pipeline = testCase.TestData.Pipeline;
+verifyError(testCase, @() st_classify_standalone_results('PipelineRoot', pipeline, ...
+    'SpecificationFile', fullfile(testCase.TestData.Root, 'missing.xlsx')), ...
+    'simtest:StandaloneClassifySpecificationMissing');
+verifyFalse(testCase, isfolder(fullfile(testCase.TestData.Root, 'TOP')));
+end
+
+
 function testDryRunCopiesNothing(testCase)
 info = st_classify_standalone_results( ...
     'PipelineRoot', testCase.TestData.Pipeline, 'DryRun', true);

@@ -141,6 +141,28 @@ class ClassifyStandaloneResultsTest(unittest.TestCase):
         code, _, err = _run([str(pipeline), '--overwrite'])
         self.assertEqual(code, csr.EXIT_OK, err)
 
+    def test_spec_goes_into_report_folder_with_its_name(self) -> None:
+        pipeline = _build_pipeline(self.root)
+        spec = self.root / 'result' / 'test_specification_20261126_101530.xlsx'
+        _touch(spec)
+        code, out, err = _run([str(pipeline), '--spec', str(spec)])
+        self.assertEqual(code, csr.EXIT_OK, err)
+        copied = pipeline.parent / 'TOP' / csr.REPORT_DIR / spec.name
+        self.assertTrue(copied.is_file())
+        self.assertTrue(spec.is_file())
+        self.assertIn(f'사양서        : {spec.name}', out)
+        plan = csr.build_plan(pipeline, self.root / 'other', overwrite=False, spec=spec)
+        self.assertEqual(plan.count(csr.REPORT_DIR), 5)  # cvf, cvt, html, mldatx, 사양서
+
+    def test_missing_spec_is_rejected_before_copying(self) -> None:
+        pipeline = _build_pipeline(self.root)
+        code, _, err = _run([str(pipeline), '--spec', str(self.root / 'missing.xlsx')])
+        self.assertEqual(code, csr.EXIT_INVALID)
+        self.assertIn('사양서', err)
+        self.assertFalse((pipeline.parent / 'TOP').exists())
+        code, out, err = _run([str(pipeline), '--dry-run'])
+        self.assertIn('사양서        : 넣지 않음', out)
+
     def test_dry_run_writes_nothing(self) -> None:
         pipeline = _build_pipeline(self.root)
         code, out, _ = _run([str(pipeline), '--dry-run'])

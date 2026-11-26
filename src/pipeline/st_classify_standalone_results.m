@@ -7,6 +7,7 @@ function varargout = st_classify_standalone_results(varargin)
 %   info = st_classify_standalone_results(..., 'OutputDir', folder)
 %   info = st_classify_standalone_results(..., 'Replace', false)
 %   info = st_classify_standalone_results(..., 'DryRun', true)
+%   info = st_classify_standalone_results(..., 'SpecificationFile', specFile)
 %
 % The pipeline keeps each CUT's files together in {NUM}_UT_REQ_{TestCase}.
 % Team submission sorts them by kind instead, copying without renaming:
@@ -14,8 +15,13 @@ function varargout = st_classify_standalone_results(varargin)
 %   {TopModel}/                         stem of TestManager/{TopModel}.mldatx
 %   ├── 테스트 케이스/{CUT 폴더}/       *.mat
 %   ├── 테스트 보고서/{TopModel}.mldatx
+%   ├── 테스트 보고서/{사양서}.xlsx      only with SpecificationFile
 %   ├── 테스트 보고서/{CUT 폴더}/       *.cvf *.cvt *.html + asset folders
 %   └── 프로젝트/{CUT 폴더}/            *.slx
+%
+% SpecificationFile is the step 2 specification workbook
+% (st_export_test_specification). It lives outside the pipeline folder, so
+% it is copied only when given; info.SpecificationFile is its copy, or ''.
 %
 % The tree goes next to the pipeline folder unless OutputDir is given. The
 % pipeline folder is left as it is. Files outside the three kinds and each
@@ -47,6 +53,7 @@ addParameter(p, 'PipelineRoot', '', @(x) ischar(x) || isstring(x));
 addParameter(p, 'OutputDir', '', @(x) ischar(x) || isstring(x));
 addParameter(p, 'Replace', true, @(x) islogical(x) && isscalar(x));
 addParameter(p, 'DryRun', false, @(x) islogical(x) && isscalar(x));
+addParameter(p, 'SpecificationFile', '', @(x) ischar(x) || isstring(x));
 parse(p, varargin{:});
 
 cfg = st_config();
@@ -62,7 +69,8 @@ st_log(cfg, 'INFO', ...
     pipelineRoot, p.Results.DryRun);
 try
     plan = build_plan(pipelineRoot, ...
-        strtrim(char(string(p.Results.OutputDir))), p.Results.Replace);
+        strtrim(char(string(p.Results.OutputDir))), p.Results.Replace, ...
+        strtrim(char(string(p.Results.SpecificationFile))));
     if ~p.Results.DryRun
         execute_plan(plan, cfg);
     end
@@ -84,6 +92,7 @@ info = struct( ...
     'AssetFolders', size(plan.Trees, 1), ...
     'Empty', {plan.Empty}, ...
     'Skipped', {plan.Skipped}, ...
+    'SpecificationFile', plan.SpecificationFile, ...
     'DryRun', p.Results.DryRun);
 log_summary(info, cfg);
 for i = 1:size(plan.Empty, 1)
@@ -99,10 +108,14 @@ st_log(cfg, 'INFO', ...
 end
 
 
-function plan = build_plan(pipelineRoot, outputRoot, replace)
+function plan = build_plan(pipelineRoot, outputRoot, replace, specFile)
 if ~isfolder(pipelineRoot)
     error('simtest:StandaloneClassifyInputMissing', ...
         'Pipeline folder does not exist: %s', pipelineRoot);
+end
+if ~isempty(specFile) && ~isfile(specFile)
+    error('simtest:StandaloneClassifySpecificationMissing', ...
+        'Specification file does not exist: %s', specFile);
 end
 testFile = find_test_file(pipelineRoot);
 [~, modelName] = fileparts(testFile);
@@ -122,6 +135,12 @@ plan.Skipped = {};
 plan.Empty = cell(0, 2);
 plan.Files(end+1, :) = {testFile, fullfile(outputRoot, reportDir, ...
     [modelName '.mldatx'])};
+plan.SpecificationFile = '';
+if ~isempty(specFile)
+    [~, specName, specExtension] = fileparts(specFile);
+    plan.SpecificationFile = fullfile(outputRoot, reportDir, [specName specExtension]);
+    plan.Files(end+1, :) = {specFile, plan.SpecificationFile};
+end
 
 entries = sorted_entries(pipelineRoot);
 testManagerDir = fullfile(pipelineRoot, 'TestManager');
@@ -310,8 +329,8 @@ function log_summary(info, cfg)
 %LOG_SUMMARY One INFO line for the source, one STEP line for the result.
 % Empty categories are reported by the caller as WARN lines.
 st_log(cfg, 'INFO', ...
-    'Standalone submission tree | Model=%s | Input=%s', ...
-    info.ModelName, info.PipelineRoot);
+    'Standalone submission tree | Model=%s | Input=%s | Specification=%d', ...
+    info.ModelName, info.PipelineRoot, ~isempty(info.SpecificationFile));
 dryRunText = '';
 if info.DryRun
     dryRunText = ' | DRY-RUN: nothing was copied';
