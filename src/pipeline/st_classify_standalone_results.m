@@ -15,13 +15,14 @@ function varargout = st_classify_standalone_results(varargin)
 %   {TopModel}/                         stem of TestManager/{TopModel}.mldatx
 %   ├── 테스트 케이스/{CUT 폴더}/       *.mat
 %   ├── 테스트 보고서/{TopModel}.mldatx
-%   ├── 테스트 보고서/{사양서}.xlsx      only with SpecificationFile
+%   ├── 테스트 보고서/{최종 문서}.xlsx   only with SpecificationFile
 %   ├── 테스트 보고서/{CUT 폴더}/       *.cvf *.cvt *.html + asset folders
 %   └── 프로젝트/{CUT 폴더}/            *.slx
 %
-% SpecificationFile is the step 2 specification workbook
-% (st_export_test_specification). It lives outside the pipeline folder, so
-% it is copied only when given; info.SpecificationFile is its copy, or ''.
+% SpecificationFile is the team's specification: the step 5 final document
+% (st_export_final_document), whose TestCase sheet is the team's form. It
+% lives outside the pipeline folder, so it is copied only when given;
+% info.SpecificationFile is its copy, or ''.
 %
 % The tree goes next to the pipeline folder unless OutputDir is given. The
 % pipeline folder is left as it is. Files outside the three kinds and each

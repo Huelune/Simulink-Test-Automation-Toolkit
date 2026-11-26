@@ -75,13 +75,13 @@ end
 
 function testSpecificationGoesIntoTheReportFolder(testCase)
 pipeline = testCase.TestData.Pipeline;
-spec = fullfile(testCase.TestData.Root, 'result', 'test_specification_20261126_101530.xlsx');
+spec = fullfile(testCase.TestData.Root, 'result', 'final_document_20261126_101530.xlsx');
 write_file(spec);
 
 info = st_classify_standalone_results('PipelineRoot', pipeline, 'SpecificationFile', spec);
 
 copied = fullfile(testCase.TestData.Root, 'TOP', '테스트 보고서', ...
-    'test_specification_20261126_101530.xlsx');
+    'final_document_20261126_101530.xlsx');
 verifyEqual(testCase, info.SpecificationFile, copied);
 verifyTrue(testCase, isfile(copied));
 verifyTrue(testCase, isfile(spec));

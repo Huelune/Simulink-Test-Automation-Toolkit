@@ -143,7 +143,7 @@ class ClassifyStandaloneResultsTest(unittest.TestCase):
 
     def test_spec_goes_into_report_folder_with_its_name(self) -> None:
         pipeline = _build_pipeline(self.root)
-        spec = self.root / 'result' / 'test_specification_20261126_101530.xlsx'
+        spec = self.root / 'result' / 'final_document_20261126_101530.xlsx'
         _touch(spec)
         code, out, err = _run([str(pipeline), '--spec', str(spec)])
         self.assertEqual(code, csr.EXIT_OK, err)

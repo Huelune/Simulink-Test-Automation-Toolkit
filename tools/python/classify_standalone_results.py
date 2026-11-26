@@ -8,7 +8,7 @@
     {TopModel}/                         TestManager/{TopModel}.mldatx 의 stem
     ├── 테스트 케이스/{CUT 폴더}/       *.mat
     ├── 테스트 보고서/{TopModel}.mldatx
-    ├── 테스트 보고서/{사양서}.xlsx      --spec 을 줄 때만
+    ├── 테스트 보고서/{최종 문서}.xlsx   --spec 을 줄 때만
     ├── 테스트 보고서/{CUT 폴더}/       *.cvf *.cvt *.html + asset 하위 폴더
     └── 프로젝트/{CUT 폴더}/            *.slx
 
@@ -16,8 +16,8 @@
 launcher .m, .work, .provenance 등)과 CUT 폴더 안의 `scv_images` 폴더는 복사하지 않고
 건너뛴 목록으로만 출력한다.
 
-사양서(2단계 명세서 Excel)는 파이프라인 폴더 밖에 있으므로 --spec 으로 줄 때만 테스트 보고서
-갈래에 이름 그대로 복사한다.
+팀 사양서(5단계 최종 문서 Excel, TestCase 시트가 팀 양식)는 파이프라인 폴더 밖에 있으므로 --spec 으로
+줄 때만 테스트 보고서 갈래에 이름 그대로 복사한다.
 
 사용법:
     python tools/python/classify_standalone_results.py <pipeline_root> [--out DIR] [--spec XLSX] [--dry-run] [--overwrite]
@@ -235,7 +235,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument('--out', type=Path, default=None,
                         help='출력 폴더. 기본값은 입력 폴더 옆 {TopModel}/')
     parser.add_argument('--spec', type=Path, default=None,
-                        help='사양서(2단계 명세서 Excel). 주면 테스트 보고서 갈래에 이름 그대로 복사한다')
+                        help='사양서로 넣을 5단계 최종 문서 Excel. 주면 테스트 보고서 갈래에 이름 그대로 복사한다')
     parser.add_argument('--dry-run', action='store_true',
                         help='계획만 출력하고 파일을 만들지 않는다')
     parser.add_argument('--overwrite', action='store_true',
