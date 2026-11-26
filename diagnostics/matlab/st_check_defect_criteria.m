@@ -194,7 +194,8 @@ others = kinds(~ismember(kinds, ["verify 실패", "오류"]));
 if ~isempty(others)
     names = unique(others).';
     counts = arrayfun(@(x) sum(others == x), names);
-    summary = summary + " | " + strjoin(compose("%s %d", names, counts), ", ");
+    % Not compose: with row vectors it fills one row's values in turn, a name into %d.
+    summary = summary + " | " + strjoin(names + " " + counts, ", ");
 end
 notes = unique(details(strlength(details) > 0)).';
 if ~isempty(notes)
