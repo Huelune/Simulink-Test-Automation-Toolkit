@@ -6,7 +6,10 @@ function st_todo_check()
 % was first written for. Point it at the current section's check whenever
 % todo.md changes.
 %
-% Now: no section needs a MATLAB check.
-clc;
-fprintf('지금 todo.md에 MATLAB으로 돌릴 점검이 없습니다\n');
+% Now: section 8. Why adding the packaged CVFs to the standalone Result in
+% Test Manager changed no value (st_probe_standalone_cvf_effect). Changes
+% nothing on disk and leaves Test Manager as it is.
+cfg = st_config();
+st_log(cfg, 'INFO', 'todo check start | standalone CVF effect probe');
+st_probe_standalone_cvf_effect();
 end
