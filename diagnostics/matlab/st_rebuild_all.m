@@ -1,16 +1,17 @@
 function st_rebuild_all()
 %ST_REBUILD_ALL Delete the Harnesses and Test File, then run the manual from Harness creation to the team tree.
 %
-% For todo.md: everything again from nothing, steps 1, 3, 4 and 5 of the
-% manual (step 2, the specification, is optional and left out).
+% For todo.md: everything again from nothing, steps 1 to 5 of the manual.
+% The step 2 specification goes into the team tree's report folder.
 %   1. Runs the unit tests of the code this run goes through. Any failure
 %      stops it before anything is deleted.
 %   2. st_rebuild_harnesses_and_tests: stops on unsaved models, deletes the
 %      Harness each Excel target names and the Test File, runs step 1 with
 %      FORCE, PER_CUT and the result collection, and counts the scenarios.
 %   3. When step 1 finished, st_rebuild_standalone_and_document: the
-%      standalone pipeline with its saved Result, its check code, the team
-%      tree (step 4) and the final document (step 5), then each target's
+%      specification (step 2), the standalone pipeline with its saved
+%      Result, its check code, the team tree with the specification (step
+%      4) and the final document (step 5), then each target's
 %      iteration outcomes, defect kinds and CVF-applied coverage on screen.
 % Old PER_CUT and standalone result folders are kept: each run makes its
 % own and moves the latest pointer. The team tree is made again.
