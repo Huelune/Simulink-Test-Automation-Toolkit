@@ -3,9 +3,10 @@ function specification = st_final_document_defect_rows(specification, details, d
 % A defect iteration binds a copy of its source scenario, so the
 % specification collector already gives it a row that repeats the source row. That row is
 % found by test case name and iteration name, the key the verdict lookup
-% uses, and rewritten: Description keeps only the block the defect is
-% about, showing the outcome SLDV found unreachable, and the expected result
-% says that outcome runs at least once.
+% uses, and rewritten as if the outcome SLDV found unreachable had run (the
+% team's form; the verdict stays the run's, FAIL): Description keeps the
+% whole D list and the defect's D line shows that outcome, and the expected
+% result says that line runs at least once.
 %
 % DETAILS is the DecisionBlockDetails table of
 % st_format_specification_decision_blocks, DEFECTS comes from
@@ -36,9 +37,9 @@ for k = 1:height(defects)
     for row = find(caseNames == defect.TestCaseName & iterations == defect.Name)'
         code(row) = defectCode;
         reason(row) = defectReason;
-        line = defect_line(specification.DecisionBlocks(row), ...
+        [description, line] = defect_line(specification.DecisionBlocks(row), ...
             specification.CUTPath(row), row, details, defect, twoWayTypes);
-        specification.DecisionBlocks(row) = line;
+        specification.DecisionBlocks(row) = description;
         specification.("verify 내용")(row) = line + "가 한 번 이상 실행된다";
     end
 end
@@ -63,12 +64,13 @@ st_log(cfg, 'INFO', 'Final document defect rows | Rows=%d | Defects=%d', ...
 end
 
 
-function line = defect_line(description, cutPath, row, details, defect, twoWayTypes)
-% A block with exactly one D line in this row keeps that line with the
-% unreachable outcome in its bracket. A block that is not in the D list
-% (inside a nested subsystem), or that has several D lines (If with elseif,
-% Saturate) where the outcome cannot be tied to one line, is written by
-% its path below the CUT.
+function [description, line] = defect_line(description, cutPath, row, details, defect, twoWayTypes)
+% The row keeps its whole D list. A block with exactly one D line in this
+% row gets the unreachable outcome in that line's bracket; the other lines
+% keep what the run took. A block that is not in the D list (inside a
+% nested subsystem), or that has several D lines (If with elseif, Saturate)
+% where the outcome cannot be tied to one line, gets a line of its own by
+% its path below the CUT, after the list. LINE is the defect's line alone.
 %
 % Blocks are compared by their path below the CUT, folded the way the
 % outcome lookup folds them (st_cut_relative_path): a default block name
@@ -82,22 +84,30 @@ for j = 1:height(rowDetails)
         st_cut_relative_path(rowDetails.Path(j), cutPath) == target;
 end
 decision = unique(rowDetails.Decision(match));
+if ismissing(description), description = ""; end
 if isscalar(decision)
     lines = split(description, newline);
-    entry = lines(startsWith(lines, decision + " ["));
-    if ~isempty(entry)
-        parts = regexp(char(entry(1)), '^([^\[]*\[)[^\]]*(\].*)$', 'tokens', 'once');
+    at = find(startsWith(lines, decision + " ["), 1);
+    if ~isempty(at)
+        parts = regexp(char(lines(at)), '^([^\[]*\[)[^\]]*(\].*)$', 'tokens', 'once');
         if ~isempty(parts)
             % SLDV's typeDesc need not be a Simulink BlockType; the D line's is.
             twoWay = any(twoWayTypes == rowDetails.BlockType(find(match, 1)));
             line = string(parts{1}) + outcome_label(texts, twoWay) + string(parts{2});
+            lines(at) = line;
+            description = strjoin(reshape(lines, 1, []), newline);
             return;
         end
     end
 end
-% The folded path keeps the cell on one line.
+% The folded path keeps the line on one line.
 line = defect.BlockType + " [" + strjoin(reshape(texts, 1, []), "/") + "] (" + ...
     target + ")";
+if strlength(description) > 0
+    description = description + newline + line;
+else
+    description = line;
+end
 end
 
 

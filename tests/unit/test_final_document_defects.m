@@ -20,25 +20,27 @@ verifyFalse(testCase, any(contains(document.Results.('확인 사유'), ...
     "DUPLICATE_TEST_CASE_ID")));
 end
 
-function testDescriptionKeepsOnlyTheTargetLineWithItsOutcome(testCase)
+function testDescriptionKeepsTheListWithTheTargetOutcome(testCase)
+% Written as if the unreachable outcome ran: the whole D list stays and
+% only the defect's D line shows that outcome; the other lines keep the run's.
 specification = st_final_document_defect_rows(defect_specification(), ...
     sample_details(), defect_list("Secret_Switch", "Switch", "false", false), ...
     no_reasons(), base_config());
-verifyEqual(testCase, specification.DecisionBlocks(2), "D1 [F]Switch (u2 >= 1)");
-% The source row keeps the whole list.
+verifyEqual(testCase, specification.DecisionBlocks(2), switch_false_description());
+% The source row is untouched.
 verifyEqual(testCase, specification.DecisionBlocks(1), rendered_description());
 verifyEqual(testCase, specification.DefectCode, ["", "EXACT"]');
 
 specification = st_final_document_defect_rows(defect_specification(), ...
     sample_details(), defect_list("Secret_Max", "MinMax", "input 1", false), ...
     no_reasons(), base_config());
-verifyEqual(testCase, specification.DecisionBlocks(2), "D2 [input 1]Max");
+verifyEqual(testCase, specification.DecisionBlocks(2), max_description("input 1"));
 
 % Several outcomes of one block share the bracket.
 specification = st_final_document_defect_rows(defect_specification(), ...
     sample_details(), defect_list("Secret_Max", "MinMax", "input 1|input 2", false), ...
     no_reasons(), base_config());
-verifyEqual(testCase, specification.DecisionBlocks(2), "D2 [input 1/input 2]Max");
+verifyEqual(testCase, specification.DecisionBlocks(2), max_description("input 1/input 2"));
 end
 
 function testBlockNameWithLineBreakStillFindsItsDLine(testCase)
@@ -51,7 +53,7 @@ details.Path(details.Path == "TOP/Secret/Secret_Switch") = ...
 specification = st_final_document_defect_rows(defect_specification(), ...
     details, defect_list("Secret  Switch", "Switch", "false", false), ...
     no_reasons(), base_config());
-verifyEqual(testCase, specification.DecisionBlocks(2), "D1 [F]Switch (u2 >= 1)");
+verifyEqual(testCase, specification.DecisionBlocks(2), switch_false_description());
 end
 
 function testTwoWayLookupUsesDetailsBlockType(testCase)
@@ -60,15 +62,16 @@ function testTwoWayLookupUsesDetailsBlockType(testCase)
 specification = st_final_document_defect_rows(defect_specification(), ...
     sample_details(), defect_list("Secret_Switch", "Secret type", "false", false), ...
     no_reasons(), base_config());
-verifyEqual(testCase, specification.DecisionBlocks(2), "D1 [F]Switch (u2 >= 1)");
+verifyEqual(testCase, specification.DecisionBlocks(2), switch_false_description());
 end
 
 function testNestedBlockWithoutDLineUsesPath(testCase)
 specification = st_final_document_defect_rows(defect_specification(), ...
     sample_details(), defect_list("Sub/Secret_Switch", "Switch", "false", false), ...
     no_reasons(), base_config());
+% Its own line goes after the whole list.
 verifyEqual(testCase, specification.DecisionBlocks(2), ...
-    "Switch [false] (Sub/Secret_Switch)");
+    rendered_description() + newline + "Switch [false] (Sub/Secret_Switch)");
 end
 
 function testExpectedAndOutputCells(testCase)
@@ -81,7 +84,8 @@ specification = st_final_document_defect_rows(defect_specification(), ...
     reasons, cfg);
 document = st_final_document_table(cfg, specification, empty_outcomes(), ...
     empty_source());
-verifyEqual(testCase, document.Sheet1.Description(2), "D1 [F]Switch (u2 >= 1)");
+verifyEqual(testCase, document.Sheet1.Description(2), switch_false_description());
+% The expected result names the defect's line alone.
 verifyEqual(testCase, document.Sheet1.ExpectedResult(2), ...
     "D1 [F]Switch (u2 >= 1)가 한 번 이상 실행된다");
 verifyEqual(testCase, document.Sheet1.OutputValue(2), ...
@@ -260,6 +264,18 @@ function text = rendered_description()
 % What st_format_specification_decision_blocks leaves in the cell.
 text = "Secret_Switch" + newline + "D1 [T/F]Switch (u2 >= 1)" + newline + ...
     "Secret_Max" + newline + "D2 [T/F]Max";
+end
+
+
+function text = switch_false_description()
+text = "Secret_Switch" + newline + "D1 [F]Switch (u2 >= 1)" + newline + ...
+    "Secret_Max" + newline + "D2 [T/F]Max";
+end
+
+
+function text = max_description(label)
+text = "Secret_Switch" + newline + "D1 [T/F]Switch (u2 >= 1)" + newline + ...
+    "Secret_Max" + newline + "D2 [" + label + "]Max";
 end
 
 

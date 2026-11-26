@@ -95,11 +95,10 @@ try
     [specification, details, outcomeReasons] = st_format_specification_decision_blocks( ...
         specification, cfg, decisionOutcomes.Lookup);
     % A defect iteration's scenario copies its source's row; that row is
-    % rewritten to name the outcome SLDV found unreachable.
+    % rewritten as if the outcome SLDV found unreachable had run. It keeps
+    % its whole D list, so its outcome codes stay.
     specification = st_final_document_defect_rows(specification, details, ...
         st_final_document_defects(cfg), st_read_defect_reasons(cfg), cfg);
-    % The outcome codes explain a Description a defect row no longer shows.
-    outcomeReasons(specification.DefectCode ~= "") = "";
     outcomes = st_final_document_outcomes(cfg, source);
     coverage = st_final_document_coverage(cfg, coverageSource, ...
         char(string(p.Results.CoveragePipelineId)), source);
