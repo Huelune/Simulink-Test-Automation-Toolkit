@@ -103,6 +103,9 @@
   경로 문제는 아니다. 여는 함수가 CUT 폴더를 모두 path에 넣고, 8절에서 같은 CVF를 붙였을 때 값이 바뀌었다. 저장된 Result에는
   처음부터 CVF가 들어 있지 않다. 사용자는 CVF를 건 값을 브라우저 보고서로 보기로 했다(2026-11-26). Test Manager 화면에서
   Add가 듣지 않는 이유는 더 찾지 않는다. 먼저 꺼내지 않는다.
+  실기 미확인(2026-11-26): 옮기거나 복사한 standalone 실행 폴더 열기(`st_rebase_standalone_manifest`,
+  `st_show_standalone_results`의 폴더 고르기). 사용자 요청으로 `todo.md` 10절 확인 전에 Harness 생성부터 분류까지 처음부터 다시
+  하기(11절, `st_rebuild_all`)를 먼저 둔다. 10절 확인은 그 다음 새 실행 폴더로 다시 둔다.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
