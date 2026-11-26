@@ -10,9 +10,9 @@
 ## 11. Harness 생성부터 분류까지 처음부터 다시 하기
 
 왜: 지금 있는 Harness와 Test File을 지우고 사용 설명서 순서대로 처음부터 다시 만든다. 1단계(Harness 생성, SLDV, 실행, 결과
-정리), 2단계(사양서 Excel), 3단계(standalone 파이프라인과 저장 Result), 4단계(팀 제출 트리 분류), 5단계(최종 문서)까지다.
-사양서는 팀 제출 트리의 `테스트 보고서` 폴더에 이름 그대로 같이 넣는다. 그 전에 예전 결과를 모두 지운다(요청에 따라,
-되돌릴 수 없음).
+정리), 3단계(standalone 파이프라인과 저장 Result), 5단계(최종 문서), 4단계(팀 제출 트리 분류)까지다. 2단계 명세서는 선택이라
+뺐다. 팀 사양서는 최종 문서(D1, D2가 적힌 `TestCase` 시트)이므로, 최종 문서를 먼저 만들어 팀 제출 트리의 `테스트 보고서`
+폴더에 이름 그대로 같이 넣는다. 그 전에 예전 결과를 모두 지운다(요청에 따라, 되돌릴 수 없음).
 
 - 지우는 것: `result` 아래 툴킷 생성물(1단계 실행 결과와 가리키는 표시, SLDV 결과, 상태, CVF, 보고서, exports,
   verification), `result`의 예전 최종 문서·사양서 Excel, standalone 결과 루트의 실행 폴더·`latest.json`·팀 제출 트리.
@@ -24,8 +24,8 @@
 2. 저장 안 한 모델이 있으면 멈춘다. 없으면 모델을 모두 닫고 Test Manager를 비운 뒤 위의 예전 결과를 지운다.
 3. Excel 대상 행이 가리키는 Harness만 지우고 모델을 저장한 뒤, Test File(.mldatx)을 닫고 지운다.
 4. 1단계를 처음부터 돌린다(FORCE, PER_CUT, 결과 정리 포함). 대상마다 시나리오 수를 센다.
-5. 1단계가 끝났을 때만 2단계 사양서를 만들고, 3단계 standalone 파이프라인을 돌린 뒤 점검 코드, 4단계 분류(사양서 포함),
-   5단계 최종 문서를 이어서 만든다.
+5. 1단계가 끝났을 때만 3단계 standalone 파이프라인을 돌리고, 점검 코드, 5단계 최종 문서, 4단계 분류(최종 문서 포함)를
+   이어서 만든다.
 6. Test Manager를 비우고 standalone 결과를 가져와 CVF를 건 Coverage 보고서와 모델 색 표시를 띄운다. 1단계 결과도 가져와
    대상마다 판정을 숫자로 찍는다.
 
@@ -46,9 +46,9 @@ if ~isequal(toolkitDir, 0), oldDir = cd(toolkitDir); evalc('st_setup'); cd(oldDi
 - `예전 결과 지움` 줄 아래에 `지우지 못함` 줄이 없는가. `남김` 수는 standalone 결과 루트에서 알아볼 수 없어 남긴 항목 수다.
 - `Harness 지움 3 / 대상 3 | Test File 지움 예`, `1단계(FORCE, 결과 정리 포함) OK`인가.
 - 대상마다 `시나리오 SLDV+결함 5 | Signal Editor 5 | Test Assessment 5 | Iteration 5 | OK`인가.
-- `2단계 사양서 OK`, `standalone 파이프라인 OK`인가. `standalone 점검 코드`가 모두 1인가.
-- `4단계 분류 OK`의 CUT이 3이고 `사양서 넣음 예`인가. `최종 문서 OK`인가.
-- 눈으로: 팀 제출 트리의 `테스트 보고서` 폴더에 사양서 Excel이 Test Manager 파일(.mldatx) 옆에 있는가. 이 화면은 이름이
+- `standalone 파이프라인 OK`인가. `standalone 점검 코드`가 모두 1인가. `5단계 최종 문서 OK`인가.
+- `4단계 분류 OK`의 CUT이 3이고 `최종 문서 넣음 예`인가.
+- 눈으로: 팀 제출 트리의 `테스트 보고서` 폴더에 최종 문서 Excel이 Test Manager 파일(.mldatx) 옆에 있는가. 이 화면은 이름이
   보이므로 캡처하지 않는다.
 - 대상마다 standalone과 1단계 모두 `Iteration 5 통과 3 실패 2`, `verify 실패 2 | 오류 0`이고, 저장 Coverage가 CUT 결정 20/22,
   실행 45/45인가.
