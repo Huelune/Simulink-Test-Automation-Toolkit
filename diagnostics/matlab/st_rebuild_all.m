@@ -5,16 +5,17 @@ function st_rebuild_all()
 % The step 2 specification goes into the team tree's report folder.
 %   1. Runs the unit tests of the code this run goes through. Any failure
 %      stops it before anything is deleted.
-%   2. st_rebuild_harnesses_and_tests: stops on unsaved models, deletes the
-%      Harness each Excel target names and the Test File, runs step 1 with
-%      FORCE, PER_CUT and the result collection, and counts the scenarios.
-%   3. When step 1 finished, st_rebuild_standalone_and_document: the
+%   2. Stops on unsaved models; otherwise closes every model and clears
+%      Test Manager, then st_delete_old_results deletes the earlier runs'
+%      results (the user asked for it; it cannot be undone).
+%   3. st_rebuild_harnesses_and_tests: deletes the Harness each Excel target
+%      names and the Test File, runs step 1 with FORCE, PER_CUT and the
+%      result collection, and counts the scenarios.
+%   4. When step 1 finished, st_rebuild_standalone_and_document: the
 %      specification (step 2), the standalone pipeline with its saved
 %      Result, its check code, the team tree with the specification (step
 %      4) and the final document (step 5), then each target's
 %      iteration outcomes, defect kinds and CVF-applied coverage on screen.
-% Old PER_CUT and standalone result folders are kept: each run makes its
-% own and moves the latest pointer. The team tree is made again.
 % No names reach the screen; long error reports go to tempdir/st_todo_check.txt.
 title = '처음부터 분류까지 다시 만들기';
 cfg = st_config();
@@ -27,7 +28,8 @@ passed = false;
 results = [];
 files = fullfile(st_project_root(), 'tests', 'unit', {'test_defect_criteria.m', ...
     'test_open_standalone_test_manager.m', 'test_rebase_standalone_manifest.m', ...
-    'test_standalone_run_folder.m', 'test_classify_standalone_results.m'});
+    'test_standalone_run_folder.m', 'test_classify_standalone_results.m', ...
+    'test_old_standalone_items.m'});
 try
     evalc('results = runtests(files);');
     lines{end+1} = sprintf('단위 테스트 | %d | 통과 %d | 실패 %d | 미완료 %d', numel(results), ...
@@ -43,6 +45,21 @@ if ~passed
     st_log(cfg, 'WARN', 'Rebuild all stopped | unit tests');
     return;
 end
+
+% An open model or Test File keeps its file from being deleted.
+loaded = find_system('type', 'block_diagram');
+if ~isempty(loaded) && any(strcmp(get_param(loaded, 'Dirty'), 'on'))
+    show(title, [lines, {'저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요'}]);
+    st_log(cfg, 'WARN', 'Rebuild all stopped | unsaved models');
+    return;
+end
+if ~isempty(loaded), bdclose('all'); end
+try
+    sltest.testmanager.clearResults;
+    sltest.testmanager.clear;
+catch
+end
+lines = [lines, st_delete_old_results()];
 
 [lines, ok] = st_rebuild_harnesses_and_tests(lines);
 if ~ok
