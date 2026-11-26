@@ -98,6 +98,10 @@
   87%→91%로 바뀌고, CUT 결정은 90%→91%, 실행은 100% 그대로다. UI에서 넣은 필터가 API로 받는 cvdata에 실리는지는 문서에 없어
   확인하지 못했다. 모델마다 객체가 2개인 이유도 확인하지 않았다. 사용자 결정으로 툴킷은 바꾸지 않는다. CVF가 걸린 값은 저장
   Coverage 보고서(`ShowSavedCoverage`)에서 볼 수 있다.
+  9절 결과(2026-11-26, `st_show_standalone_results`): 결과 IMPORTED, CVF를 건 보고서 3/3. 대상마다 Iteration 5(통과 3,
+  실패 2), CUT 결정 20/22, 실행 45/45로 7절과 같다. 사용자는 Test Manager에 CVF가 없는 것이 CVF 경로가 빠져서인지 물었다.
+  경로 문제는 아니다. 여는 함수가 CUT 폴더를 모두 path에 넣고, 8절에서 같은 CVF를 붙였을 때 값이 바뀌었다. 저장된 Result에는
+  처음부터 CVF가 들어 있지 않다.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
