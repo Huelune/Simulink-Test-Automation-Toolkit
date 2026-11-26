@@ -44,6 +44,10 @@ function varargout = st_open_standalone_test_manager(varargin)
 %   'PipelineId'        - pipeline to open, or 'LATEST' (default).
 %   'OutputRoot'        - pipeline root. Default cfg.StandaloneCoverageRootDir.
 %
+% A run folder moved or copied elsewhere opens from where it is now: the
+% manifest's recorded paths are rewritten in memory, never on disk
+% (st_rebase_standalone_manifest).
+%
 % Called directly it writes its own run log; called from another command
 % it appends to that command's run log.
 
@@ -83,6 +87,12 @@ st_log(cfg, 'INFO', ...
 [manifest, manifestPath] = st_load_standalone_pipeline_manifest( ...
     outputRoot, p.Results.PipelineId);
 pipelineId = char(string(manifest.PipelineId));
+% A run folder moved or copied elsewhere still records where it was made.
+[manifest, movedFrom] = st_rebase_standalone_manifest(manifest, fileparts(manifestPath));
+if ~isempty(movedFrom)
+    st_log(cfg, 'WARN', ['Run folder moved since it was made | Recorded=%s | Now=%s | ' ...
+        'Recorded paths are read from where it is now'], movedFrom, fileparts(manifestPath));
+end
 require_packaged(manifest, manifestPath);
 targets = manifest.Targets;
 
