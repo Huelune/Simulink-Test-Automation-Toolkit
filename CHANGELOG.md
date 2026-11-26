@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **옮기거나 복사한 standalone 실행 폴더도 `st_open_standalone_test_manager`로 엽니다.** manifest는 실행을 만든 곳의
+  절대 경로를 적어 두므로, 예전에는 옮긴 폴더를 열면 원래 위치의 파일을 읽거나 파일이 없다고 멈췄습니다. 이제는 manifest가
+  적은 `PipelineRoot` 아래 경로를 지금 위치로 바꿔 읽습니다. 바꾸는 것은 메모리 안의 값뿐이고 파일은 그대로입니다. 바꾼
+  때는 실행 로그에 `Run folder moved` WARN을 남깁니다. 다른 명령(결과 분류, 최종 문서)은 그대로입니다.
+
 - **SLDV가 실행할 수 없다고 증명한 결정 결과마다 결함 TC가 생깁니다.** SLDV 데이터의 결정 목표 중 `Unsatisfiable`
   (근사 판정 포함)인 결과를 블록 단위로 묶어, 그 CUT의 Test Case에 결함 Iteration `UT_REQ_{CUT}_{N+k}`를 붙입니다.
   결함 Iteration은 기존 시나리오 하나(Targets의 `DefectInputScenario`, 비우면 마지막 시나리오)의 입력을 그대로 쓰고,

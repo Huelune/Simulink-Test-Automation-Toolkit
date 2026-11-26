@@ -548,6 +548,10 @@ st_open_standalone_test_manager('PipelineId', info.PipelineId)
 
 같은 이름의 Test File이 이미 열려 있다고 멈추면 `'ClearTestManager', true`를
 붙입니다. 열린 Test File과 Result를 모두 닫으니 저장할 것이 있으면 먼저 저장하십시오.
+
+실행 폴더를 다른 곳으로 옮기거나 복사했으면 `'OutputRoot'`에 그 실행 폴더의 상위 폴더를 주고 `'PipelineId'`에 실행 폴더
+이름을 줍니다. manifest는 만든 곳의 절대 경로를 적어 두지만, 여는 명령이 그 경로를 지금 위치로 바꿔 읽습니다. 파일은
+바꾸지 않고, 실행 로그에 `Run folder moved` WARN이 남습니다.
 수동으로 여는 방법은 [Standalone Coverage 파이프라인 12절](reference/standalone-coverage-pipeline.md#12-제출물-열기)에 있습니다.
 
 ### 5.5 옵션
