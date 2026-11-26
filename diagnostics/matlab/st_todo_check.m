@@ -6,10 +6,7 @@ function st_todo_check()
 % was first written for. Point it at the current section's check whenever
 % todo.md changes.
 %
-% Now: section 9. Open the latest standalone submission's results to look
-% at (st_show_standalone_results): Test Manager cleared and the saved Result
-% imported, CVF-applied coverage reports and model highlighting.
-cfg = st_config();
-st_log(cfg, 'INFO', 'todo check start | show standalone results');
-st_show_standalone_results();
+% Now: no section needs a MATLAB check.
+clc;
+fprintf('지금 todo.md에 MATLAB으로 돌릴 점검이 없습니다\n');
 end
