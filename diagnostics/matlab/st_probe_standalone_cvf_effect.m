@@ -47,11 +47,22 @@ for k = 1:numel(targets)
         lines{end+1} = sprintf('대상 %d | standalone 모델 열기 실패 %s', k, id_of(ME)); %#ok<AGROW>
         continue;
     end
-    lines{end+1} = sprintf('대상 %d | CVF %s', k, rule_text(cvf, modelName)); %#ok<AGROW>
-    lines{end+1} = sprintf('대상 %d | 저장 CVT %s', k, ...
-        cvt_text(field_text(item, 'CoverageResult'), cvf, modelName, cutPath)); %#ok<AGROW>
-    lines{end+1} = sprintf('대상 %d | Test Manager %s', k, ...
-        manager_text(objects, cvf, modelName, cutPath)); %#ok<AGROW>
+    % One target's slip shows as a line; uncaught, MATLAB prints source lines instead.
+    try
+        lines{end+1} = sprintf('대상 %d | CVF %s', k, rule_text(cvf, modelName)); %#ok<AGROW>
+        lines{end+1} = sprintf('대상 %d | 저장 CVT %s', k, ...
+            cvt_text(field_text(item, 'CoverageResult'), cvf, modelName, cutPath)); %#ok<AGROW>
+        lines{end+1} = sprintf('대상 %d | Test Manager %s', k, ...
+            manager_text(objects, cvf, modelName, cutPath)); %#ok<AGROW>
+    catch ME
+        lines{end+1} = sprintf('대상 %d | 점검 오류 %s | 전문 st_todo_check.txt (임시 폴더)', k, id_of(ME)); %#ok<AGROW>
+        st_log(cfg, 'WARN', 'Standalone CVF effect probe | target %d | %s', k, id_of(ME));
+        fid = fopen(fullfile(tempdir, 'st_todo_check.txt'), 'a');
+        if fid >= 0
+            fprintf(fid, '[대상 %d]\n%s\n\n', k, getReport(ME, 'extended', 'hyperlinks', 'off'));
+            fclose(fid);
+        end
+    end
 end
 st_log(cfg, 'INFO', 'Standalone CVF effect probe complete | targets %d', numel(targets));
 show(lines);
@@ -219,7 +230,8 @@ if isempty(kinds)
     return;
 end
 counts = arrayfun(@(x) sum(values == x), kinds);
-text = char(strjoin(compose("%s %d", kinds, counts), ', '));
+% Not compose: with row vectors it fills one row's values in turn, a name into %d.
+text = char(strjoin(kinds + " " + counts, ', '));
 end
 
 
