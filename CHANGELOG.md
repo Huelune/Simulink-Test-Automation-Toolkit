@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **팀 제출 트리에 사양서를 같이 넣습니다.** `st_classify_standalone_results`에 `'SpecificationFile'`로 2단계 사양서
+  Excel을 주면 `테스트 보고서\`에 이름 그대로 복사합니다. 사양서는 파이프라인 폴더 밖에 있으므로 줄 때만 넣습니다. 트리를
+  다시 만들 때는 사양서도 함께 지웁니다. Python 스크립트는 `--spec`으로 같은 일을 합니다.
+
 - **옮기거나 복사한 standalone 실행 폴더도 `st_open_standalone_test_manager`로 엽니다.** manifest는 실행을 만든 곳의
   절대 경로를 적어 두므로, 예전에는 옮긴 폴더를 열면 원래 위치의 파일을 읽거나 파일이 없다고 멈췄습니다. 이제는 manifest가
   적은 `PipelineRoot` 아래 경로를 지금 위치로 바꿔 읽습니다. 바꾸는 것은 메모리 안의 값뿐이고 파일은 그대로입니다. 바꾼

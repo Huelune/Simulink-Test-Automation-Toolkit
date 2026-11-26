@@ -614,6 +614,7 @@ TestCase=... | Report=... | Project=... | Skipped=...`)이 나옵니다. 파일�
 D:\model_result\<Top Model>\{TopModel}\
 ├── 테스트 케이스/{NUM}_UT_REQ_{TestCaseName}/    Input .mat
 ├── 테스트 보고서/{TopModel}.mldatx
+├── 테스트 보고서/test_specification_<시각>.xlsx  사양서. SpecificationFile을 줄 때만
 ├── 테스트 보고서/{NUM}_UT_REQ_{TestCaseName}/    .cvf .cvt .html + 부속 asset 폴더
 └── 프로젝트/{NUM}_UT_REQ_{TestCaseName}/         standalone 모델 .slx
 ```
@@ -633,6 +634,7 @@ D:\model_result\<Top Model>\{TopModel}\
 | `OutputDir` | 파이프라인 폴더 옆 `{TopModel}` | 출력 폴더 |
 | `Replace` | `true` | 출력 폴더가 있으면 지우고 다시 만듭니다. `false`면 폴더가 있을 때 멈춥니다 |
 | `DryRun` | `false` | 복사하지 않고 결과 줄에 개수와 `DRY-RUN: nothing was copied`만 찍습니다 |
+| `SpecificationFile` | `''` | 2단계 사양서 Excel. 주면 `테스트 보고서\`에 이름 그대로 복사합니다 |
 
 MATLAB이 없는 PC에서는 같은 규칙의 Python 스크립트를 씁니다(`--dry-run`, `--out`,
 `--overwrite`).
@@ -640,6 +642,8 @@ MATLAB이 없는 PC에서는 같은 규칙의 Python 스크립트를 씁니다(`
 ```bash
 python tools/python/classify_standalone_results.py D:\model_result\<Top Model>\<PipelineId>
 ```
+
+사양서를 같이 넣으려면 `--spec <사양서 xlsx>`를 붙입니다.
 
 ## 7. 5단계 — 고객 제출용 최종 문서
 
@@ -728,7 +732,7 @@ latest = jsondecode(fileread(cfg.PerCutLatestPointer));
 disp(latest.Status)
 winopen(latest.Summary)
 
-%% 2단계 (선택) — 명세서 Excel
+%% 2단계 (선택) — 명세서 Excel. 4단계에서 팀 제출 트리에 같이 넣습니다
 [T, specFile] = st_export_test_specification();
 disp(specFile)
 
@@ -740,8 +744,8 @@ disp(info.PipelineId)
 disp(code)                       % 1111111111 이어야 합니다
 disp(summary)
 
-%% 4단계 — 팀 제출 트리 (기존 트리는 지우고 다시 만듭니다)
-tree = st_classify_standalone_results('PipelineId', info.PipelineId);
+%% 4단계 — 팀 제출 트리 (기존 트리는 지우고 다시 만듭니다). 2단계를 건너뛰었으면 SpecificationFile을 뺍니다
+tree = st_classify_standalone_results('PipelineId', info.PipelineId, 'SpecificationFile', specFile);
 disp(tree.OutputDir)
 
 %% 5단계 — 고객 제출용 최종 문서
