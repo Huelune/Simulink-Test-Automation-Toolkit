@@ -15,8 +15,8 @@ function st_show_standalone_results(folder)
 %     the window shown. Its coverage values carry no CVF.
 %   - Each CUT's saved coverage (CVT) with its CVF: a report in the browser
 %     and the standalone model highlighted.
-% A run folder moved from where it was made is not opened: its manifest
-% records absolute paths, which would show the original's files instead.
+% A run folder moved or copied from where it was made opens from where it
+% is now; the second line says so (st_rebase_standalone_manifest).
 % Stops when a model has unsaved changes; otherwise closes open models
 % first, since a model of the same name from elsewhere stops the opener.
 % One line per target: iteration outcomes and the CVF-applied CUT numbers.
@@ -55,13 +55,9 @@ end
 pipelineId = char(string(manifest.PipelineId));
 kind = '실행 폴더';
 if strcmp(chosenId, 'LATEST'), kind = '결과 루트의 최근 실행'; end
+[~, movedFrom] = st_rebase_standalone_manifest(manifest, fullfile(outputRoot, pipelineId));
+if ~isempty(movedFrom), kind = [kind ' (옮긴 폴더, 지금 위치에서 엶)']; end
 lines{end+1} = sprintf('고른 폴더 | %s | 실행 %s', kind, pipelineId);
-if moved(manifest, fullfile(outputRoot, pipelineId))
-    lines{end+1} = '이 실행 폴더는 만든 곳에서 옮겨졌습니다. 기록된 경로가 다른 곳을 가리켜 열지 않습니다';
-    show(lines);
-    st_log(cfg, 'WARN', 'Show standalone results stopped | run folder moved | PipelineId=%s', pipelineId);
-    return;
-end
 
 loaded = find_system('type', 'block_diagram');
 if ~isempty(loaded) && any(strcmp(get_param(loaded, 'Dirty'), 'on'))
@@ -115,19 +111,6 @@ lines{end+1} = 'Test Manager의 Coverage 값은 CVF가 빠진 값입니다. CVF�
 st_log(cfg, 'INFO', 'Show standalone results complete | PipelineId=%s | result %s | reports %d', ...
     pipelineId, openInfo.ResultStatus, sum(saved.Status == "OK"));
 show(lines);
-end
-
-
-function flag = moved(manifest, runFolder)
-%MOVED True when the manifest's recorded Test File lies outside runFolder.
-flag = false;
-try
-    recorded = st_absolute_path(manifest.TestManagerFile);
-    prefix = [st_absolute_path(runFolder) filesep];
-    flag = ~startsWith(lower(recorded), lower(prefix));
-catch
-    % No recorded Test File: the opener stops on it with its own reason.
-end
 end
 
 
