@@ -23,6 +23,7 @@ add_line(model, 'Secret_Delay/1', 'Secret_Switch/2');
 add_line(model, 'Secret_One/1', 'Secret_Switch/1');
 add_line(model, 'Secret_One/1', 'Secret_Switch/3');
 
+lines = {};  % declared first: evalc alone leaves 'lines' as MATLAB's colormap function
 printed = evalc('lines = st_explain_block_logic([model ''/Secret_Switch''], ''Boundary'', model);');
 text = strjoin(lines, newline);
 verifyTrue(testCase, contains(text, '(D1 >= 1) ? 1 : 1'));
@@ -52,6 +53,7 @@ add_line(model, 'Secret_One/1', 'Secret_Switch/1');
 add_line(model, 'Secret_One/1', 'Secret_Switch/3');
 add_line(model, 'Secret_Switch/1', 'Secret_End/1');
 
+lines = {};  % declared first: evalc alone leaves 'lines' as MATLAB's colormap function
 printed = evalc('lines = st_explain_block_logic([model ''/Secret_Switch''], ''Boundary'', model, ''ShowTypes'', true);');
 text = strjoin(lines, newline);
 verifyTrue(testCase, contains(text, '형식: D1=double'));
@@ -79,6 +81,7 @@ add_line(cut, 'Secret_In/1', 'Secret_Switch/2');
 add_line(cut, 'Secret_Free/1', 'Secret_Switch/3');
 add_line(cut, 'Secret_Switch/1', 'Out1/1');
 
+lines = {};  % declared first: evalc alone leaves 'lines' as MATLAB's colormap function
 printed = evalc('lines = st_explain_block_logic([cut ''/Secret_Switch''], ''Boundary'', cut, ''ShowRanges'', true);');
 text = strjoin(lines, newline);
 verifyTrue(testCase, contains(text, '(In1 >= 1) ? 1 : In2'));
