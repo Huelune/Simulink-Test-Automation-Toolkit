@@ -141,6 +141,13 @@
   `st_todo_check` 첫 줄에 두는 규칙을 AGENTS.md에 적었다. 그사이 다른 세션이 17절을 20절(범위를 넣은 모델의 전체 재실행,
   `st_rebuild_all`)로 바꿨으므로 17절은 다시 두지 않았다. 세 번째 클론 지우기는 채팅으로 안내했다(TestManagement.xlsx가 없는
   쪽이 잘못 생긴 클론).
+  20절 결과(2026-11-27, 사용자가 화면 대신 임시 폴더의 오류 전문을 보냄): 1단계는 끝났고 3단계 standalone이
+  `run_exported_tests`의 `Exported bundle execution complete` st_log에서 `MATLAB:UndefinedFunction`(st_log)으로 멈췄다. 번들
+  실행기는 짧은 작업 폴더를 지운 뒤에도 툴킷 함수를 부르는데, 예전에는 클론 경로가 뒤에 남아 있어 그쪽이 불렸다. 번들의
+  st_setup이 다른 툴킷 사본 경로를 빼며 클론까지 뺀 것이 원인. `st_other_toolkit_path_entries`는 이제 rootDir에 `.git`이
+  있을 때(클론, worktree)만 뺀다. 깨끗한 PC에서 번들을 돌리면 같은 곳에서 멈출 수 있다(작업 폴더를 지운 뒤 툴킷 함수
+  호출) — 고치지 않았다. 실패 줄에 `st_error_place`(툴킷 함수 이름과 줄, 없는 st_ 함수 이름)를 붙였다. 확인은 `todo.md`
+  21절(standalone부터 다시, `st_todo_check` 기본값 21).
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
