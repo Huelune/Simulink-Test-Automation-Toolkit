@@ -5,6 +5,7 @@ function lines = st_explain_block_logic(startBlock, varargin)
 %   st_explain_block_logic(block)
 %   st_explain_block_logic(block, 'MaxLines', 40)
 %   st_explain_block_logic(block, 'ShowTypes', true)   % + compiled data types
+%   st_explain_block_logic(block, 'ShowRanges', true)  % + CUT inputs' type and Min/Max
 %
 % Unsatisfiable SLDV objectives often sit behind feedback loops wired with
 % Goto/From across Subsystem boundaries, which are hard to follow by eye.
@@ -27,6 +28,7 @@ p.FunctionName = mfilename;
 addParameter(p, 'MaxLines', 40, @(x) isnumeric(x) && isscalar(x) && x > 0);
 addParameter(p, 'Boundary', '', @(x) ischar(x) || (isstring(x) && isscalar(x)));
 addParameter(p, 'ShowTypes', false, @(x) islogical(x) && isscalar(x));
+addParameter(p, 'ShowRanges', false, @(x) islogical(x) && isscalar(x));
 parse(p, varargin{:});
 if nargin < 1 || isempty(startBlock)
     startBlock = gcb;
@@ -103,6 +105,9 @@ end
 
 if p.Results.ShowTypes
     state.Lines = [state.Lines, symbol_types(state)];
+end
+if p.Results.ShowRanges
+    state.Lines = [state.Lines, input_ranges(state)];
 end
 for k = 1:numel(state.Lines)
     fprintf('%s\n', state.Lines{k});
@@ -289,6 +294,62 @@ try
     text = mat2str(double(resolved));
 catch
     text = 'P?';
+end
+end
+
+
+function lines = input_ranges(state)
+%INPUT_RANGES Declared type and Min/Max of every CUT input the walk reached.
+% SLDV takes a CUT input as free within these, so a range that keeps a
+% condition one way explains an unreachable outcome. Standard type names
+% only; a type named by the model prints as 기타.
+lines = {};
+keys = state.Symbols.keys;
+entries = strings(0, 1);
+order = zeros(0, 1);
+for k = 1:numel(keys)
+    symbol = state.Symbols(keys{k});
+    if isempty(regexp(symbol, '^In\d+$', 'once')), continue; end
+    blockPath = keys{k}(1:find(keys{k} == '|', 1, 'last') - 1);
+    lo = range_text(get_param(blockPath, 'OutMin'), blockPath, state);
+    hi = range_text(get_param(blockPath, 'OutMax'), blockPath, state);
+    if isempty(lo) && isempty(hi)
+        range = '범위 없음';
+    else
+        if isempty(lo), lo = '-inf'; end
+        if isempty(hi), hi = 'inf'; end
+        range = sprintf('%s~%s', lo, hi);
+    end
+    entries(end+1, 1) = sprintf('%s=%s %s', symbol, type_kind(get_param(blockPath, 'OutDataTypeStr')), range); %#ok<AGROW>
+    order(end+1, 1) = str2double(symbol(3:end)); %#ok<AGROW>
+end
+[~, idx] = sort(order);
+entries = entries(idx);
+for k = 1:4:numel(entries)
+    lines{end+1} = ['입력: ' char(strjoin(entries(k:min(k + 3, numel(entries))), ', '))]; %#ok<AGROW>
+end
+end
+
+
+function text = range_text(value, blockPath, state)
+text = strtrim(char(string(value)));
+if isempty(text) || strcmp(text, '[]'), text = ''; return; end
+text = resolve_text(text, blockPath, state);
+end
+
+
+function kind = type_kind(typeText)
+kind = char(string(typeText));
+builtin = {'double', 'single', 'half', 'boolean', 'int8', 'uint8', 'int16', 'uint16', ...
+    'int32', 'uint32', 'int64', 'uint64'};
+if startsWith(kind, 'Inherit')
+    kind = '상속';
+elseif startsWith(kind, 'fixdt')
+    kind = 'fixdt';
+elseif startsWith(kind, 'Enum')
+    kind = 'Enum';
+elseif ~any(strcmp(kind, builtin))
+    kind = '기타';
 end
 end
 

@@ -58,3 +58,30 @@ verifyTrue(testCase, contains(text, '형식: D1=double'));
 verifyFalse(testCase, contains(printed, 'Secret'));
 verifyEqual(testCase, get_param(model, 'SimulationStatus'), 'stopped');
 end
+
+function testShowRangesAddsCutInputRangesWithoutNames(testCase)
+% A CUT input whose Min is 1 keeps "u2 >= 1" true, which is why SLDV finds
+% the false outcome unreachable. ShowRanges prints that range per input.
+model = 'stt_explain_secret_ranges';
+if bdIsLoaded(model), close_system(model, 0); end
+new_system(model);
+cleanup = onCleanup(@() close_system(model, 0)); %#ok<NASGU>
+cut = [model '/Secret_CUT'];
+add_block('simulink/Ports & Subsystems/Subsystem', cut);
+delete_line(cut, 'In1/1', 'Out1/1');
+set_param([cut '/In1'], 'Name', 'Secret_In', 'OutDataTypeStr', 'uint8', 'OutMin', '1', 'OutMax', '10');
+add_block('simulink/Sources/In1', [cut '/Secret_Free']);
+add_block('simulink/Sources/Constant', [cut '/Secret_One'], 'Value', '1');
+add_block('simulink/Signal Routing/Switch', [cut '/Secret_Switch'], ...
+    'Criteria', 'u2 >= Threshold', 'Threshold', '1');
+add_line(cut, 'Secret_One/1', 'Secret_Switch/1');
+add_line(cut, 'Secret_In/1', 'Secret_Switch/2');
+add_line(cut, 'Secret_Free/1', 'Secret_Switch/3');
+add_line(cut, 'Secret_Switch/1', 'Out1/1');
+
+printed = evalc('lines = st_explain_block_logic([cut ''/Secret_Switch''], ''Boundary'', cut, ''ShowRanges'', true);');
+text = strjoin(lines, newline);
+verifyTrue(testCase, contains(text, '(In1 >= 1) ? 1 : In2'));
+verifyTrue(testCase, contains(text, '입력: In1=uint8 1~10, In2=상속 범위 없음'));
+verifyFalse(testCase, contains(printed, 'Secret'));
+end
