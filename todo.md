@@ -40,3 +40,24 @@ if ~isequal(toolkitDir, 0), cd(toolkitDir); [pullStatus, ~] = system('set GIT_TE
 
 돌려줄 것: 화면 캡처 한 장. 대상 1이 또 실패하면, 블록을 명령 기록의 것(끝이 `st_todo_check`)으로 다시 돌려 25절 화면을 보내
 준다.
+
+## 27. 최종 문서 분기 결과 표시의 단위 테스트 돌리기
+
+왜: 최종 문서가 MinMax처럼 참/거짓이 아닌 블록도 그 행이 실제로 지난 결과만 적도록 바꿨다(지난 결과 없음 → D 목록에서
+빠짐, 결함 줄은 `[u2 max]` 같은 짧은 형식). 모델은 건드리지 않고 그 단위 테스트 두 파일만 돌린다. 26절과 따로 돌려도 된다.
+
+순서:
+1. 클론에서 main을 pull한다(cmd에서 그 클론 폴더로 가서 `git pull`).
+2. 아래 블록을 붙여 넣고, 툴킷 폴더 창에서 그 클론을 고른다.
+
+```matlab
+clearvars; toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
+if ~isequal(toolkitDir, 0), cd(toolkitDir); evalc('st_setup'); st_todo_check(27); end
+```
+
+확인할 것:
+
+- 두 파일 모두 `실패 0 | 미완료 0`이고 마지막 줄이 `모두 통과`인가.
+- 실패가 있으면 실패한 테스트 이름과 오류 식별자가 한 줄씩 나온다. 전문은 임시 폴더의 `st_unit_tests.txt`에 있다.
+
+돌려줄 것: 화면 캡처 한 장.
