@@ -627,6 +627,7 @@ D:\model_result\<Top Model>\{TopModel}\
 ├── 테스트 케이스/{NUM}_UT_REQ_{TestCaseName}/    Input .mat
 ├── 테스트 보고서/{TopModel}.mldatx
 ├── 테스트 보고서/final_document_<시각>.xlsx      사양서(5단계 최종 문서). SpecificationFile을 줄 때만
+├── 테스트 보고서/StandaloneCoverageResults.mldatx  3단계가 저장한 Test Manager 결과(SaveTestResult일 때)
 ├── 테스트 보고서/{NUM}_UT_REQ_{TestCaseName}/    .cvf .cvt .html + 부속 asset 폴더
 └── 프로젝트/{NUM}_UT_REQ_{TestCaseName}/         standalone 모델 .slx
 ```
@@ -638,6 +639,9 @@ D:\model_result\<Top Model>\{TopModel}\
   `.cvf`·`.cvt`·`.html`이 보이면 CUT 폴더 이름이 `NNN_UT_REQ_` 규칙을 벗어난 것입니다.
 - **HTML은 옆의 부속 폴더 없이 렌더링되지 않으니** 전달할 때는 폴더 단위로 통째로
   복사하십시오.
+- 트리를 어디로 옮겨도 Test Manager에서 결과를 볼 수 있습니다. `st_show_team_tree_results`를
+  부르고 창에서 트리를 고르면, 트리의 Test Manager 결과를 가져와 보여 주고 CUT마다 CVF를 건
+  Coverage 보고서를 브라우저에 띄웁니다. 트리 안의 파일만 쓰고 아무것도 바꾸지 않습니다.
 
 | 옵션 | 기본 | 뜻 |
 | --- | --- | --- |
@@ -655,7 +659,8 @@ MATLAB이 없는 PC에서는 같은 규칙의 Python 스크립트를 씁니다(`
 python tools/python/classify_standalone_results.py D:\model_result\<Top Model>\<PipelineId>
 ```
 
-최종 문서를 사양서로 같이 넣으려면 `--spec <최종 문서 xlsx>`를 붙입니다.
+최종 문서를 사양서로 같이 넣으려면 `--spec <최종 문서 xlsx>`를 붙입니다. Test Manager 결과
+파일도 MATLAB 쪽과 같이 `테스트 보고서`에 넣습니다.
 
 ## 7. 5단계 — 고객 제출용 최종 문서
 
@@ -877,6 +882,7 @@ st_open_standalone_test_manager('PipelineId', info.PipelineId, ...
 | 대상 모델을 바꾼다 | `st_select_target_model(true)` 후 `st_set_standalone_coverage_root` |
 | 두 번째 모델도 돌린다 | `st_make_model_clone`(지금 클론 옆에 그 모델의 클론을 만듭니다. 2.2절) |
 | 다른 모델의 클론으로 바꾼다 | Current Folder를 그 클론으로 옮기고 `st_setup` |
+| 옮긴 팀 제출 트리의 결과를 Test Manager에서 본다 | `st_show_team_tree_results`(트리 고르기 창) |
 | CUT의 C 코드가 모델 폴더 밖 헤더를 쓴다 | `st_set_custom_code_include_dirs`(폴더 고르기 창, 클론마다 저장) 후 `'PreparationMode','FORCE'` |
 | Harness가 이미 다 있다 | `st_run_after_harness` |
 | 입력 MAT이나 SLDV 설정을 바꿨다 | `st_run_from_harness('PreparationMode','FORCE','FromStage','SLDV')` |

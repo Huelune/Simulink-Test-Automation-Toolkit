@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **팀 제출 트리에서 Test Manager 결과를 볼 수 있습니다.** 4단계 분류가 3단계에서 저장한 Test Manager 결과
+  (`StandaloneCoverageResults.mldatx`)를 `테스트 보고서\`에 넣습니다(예전에는 건너뛰었습니다). `st_show_team_tree_results`는
+  고른 트리에서 그 결과를 Test Manager로 가져와 보여 주고, CUT마다 `프로젝트\`의 standalone 모델을 열어 CVF를 건 Coverage
+  보고서를 띄웁니다. 트리 안의 파일만 쓰므로 트리를 옮겨도 그대로 열립니다. Python 스크립트도 같은 규칙입니다.
+
 - **최종 문서가 참/거짓이 아닌 블록(MinMax, MultiPortSwitch, SwitchCase 등)도 그 행이 실제로 지난 결과만 적습니다.**
   예전에는 이런 블록은 결과를 모으지 않아 D 줄에 고정 `[T/F]`가 남았고, 도달할 수 없는 결과까지 지난 것처럼 읽혔습니다.
   이제 결과 Excel의 `DecisionOutcomes` 시트에 결과마다 `OUTCOME` 줄(`OutcomeText`, `OutcomeCount`)을 남기고, 최종
