@@ -13,6 +13,8 @@ function st_todo_check(section)
 % No argument: section 25. Read-only: for each target the latest step 1 run
 % marked EXCEPT, the C build blocks of its CUT and the custom code settings
 % of the Top Model, its Harness and library (st_inspect_custom_code).
+% 27: the unit tests of the final document's decision outcomes
+% (test_decision_outcomes, test_final_document_defects), one screen.
 % 26: choose the folder of the C headers in a dialog
 % (st_set_custom_code_include_dirs), then rebuild all (st_rebuild_all), so
 % every new Harness and standalone copy gets it in Include directories.
@@ -39,6 +41,9 @@ switch section
     case 19
         st_log(cfg, 'INFO', 'todo check start | apply CUT input ranges');
         if unit_passed(cfg, 'test_apply_input_ranges.m'), st_apply_input_ranges(); end
+    case 27
+        st_log(cfg, 'INFO', 'todo check start | decision outcome unit tests');
+        st_show_unit_tests({'test_decision_outcomes.m', 'test_final_document_defects.m'});
     case 26
         st_log(cfg, 'INFO', 'todo check start | C header folder, then rebuild all');
         if unit_passed(cfg, 'test_merge_include_dirs.m')
