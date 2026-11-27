@@ -12,6 +12,8 @@ function [lines, ok] = st_delete_old_results()
 %   3. Under the standalone root, what st_old_standalone_items picks: run
 %      folders, team trees and latest.json. Path entries under deleted run
 %      folders come off the MATLAB path.
+%   4. The moved-folder check's copy next to the standalone root
+%      (st_remove_moved_check_copy), left when that check stopped halfway.
 % Keeps result/logs (this run writes there), runtime_target.mat, and any
 % entry of the standalone root it does not recognise. The caller closes
 % models and Test Manager first, since an open file cannot be deleted.
@@ -66,10 +68,17 @@ for k = 1:height(items)
     end
 end
 
-lines{end+1} = sprintf(['예전 결과 지움 | result 생성물 %d | 최종 문서·사양서 %d | standalone 실행 폴더 %d | ' ...
-    '팀 제출 트리 %d | 최근 표시 %d | 남김 %d'], generated, documents, ...
+movedCheck = false;
+try
+    movedCheck = st_remove_moved_check_copy(cfg);
+catch ME
+    failures(end+1) = "moved-folder check copy | " + string(ME.identifier);
+end
+
+lines{end+1} = sprintf(['예전 결과 지움 | result 생성물 %d | 최종 문서·사양서 %d | 실행 폴더 %d | ' ...
+    '팀 제출 트리 %d | 최근 표시 %d | 복사본 %d | 남김 %d'], generated, documents, ...
     sum(removed & items.Kind == "RUN"), sum(removed & items.Kind == "TREE"), ...
-    sum(removed & items.Kind == "LATEST"), kept);
+    sum(removed & items.Kind == "LATEST"), movedCheck, kept);
 ok = isempty(failures);
 if ~ok
     lines{end+1} = sprintf(['  지우지 못함 %d | 열린 파일이 있으면 MATLAB·탐색기·Excel에서 닫고 다시 돌려 주세요 | ' ...
