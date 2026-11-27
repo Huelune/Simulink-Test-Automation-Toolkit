@@ -10,9 +10,11 @@ function st_todo_check(section)
 % that has not pulled would run an earlier section's check. Keep that line
 % when pointing this at another section.
 %
-% No argument: section 24. Read-only: for each target the latest step 1 run
-% marked EXCEPT, when its Test Assessment runs against Tmax
-% (st_inspect_verify_timing).
+% No argument: section 25. Read-only: for each target the latest step 1 run
+% marked EXCEPT, the C build blocks of its CUT and the custom code settings
+% of the Top Model, its Harness and library (st_inspect_custom_code).
+% 24: read-only, when the Test Assessment of those targets runs against
+% Tmax (st_inspect_verify_timing).
 % 23: read-only, why targets failed: each target's step 1 record and the
 % logs' error identifiers (st_show_target_errors).
 % 22 (and 20): for the model of the clone chosen in the block, delete the
@@ -26,7 +28,7 @@ function st_todo_check(section)
 % model (st_apply_input_ranges). Saves the model.
 if ~st_todo_up_to_date(), return; end
 cfg = st_config();
-if nargin < 1, section = 24; end
+if nargin < 1, section = 25; end
 switch section
     case 18
         st_log(cfg, 'INFO', 'todo check start | CUT input ranges');
@@ -34,6 +36,9 @@ switch section
     case 19
         st_log(cfg, 'INFO', 'todo check start | apply CUT input ranges');
         if unit_passed(cfg, 'test_apply_input_ranges.m'), st_apply_input_ranges(); end
+    case 25
+        st_log(cfg, 'INFO', 'todo check start | custom code of failed targets');
+        if unit_passed(cfg, 'test_build_error_kind.m'), st_inspect_custom_code(); end
     case 24
         st_log(cfg, 'INFO', 'todo check start | verify timing of failed targets');
         if unit_passed(cfg, 'test_build_error_kind.m'), st_inspect_verify_timing(); end
