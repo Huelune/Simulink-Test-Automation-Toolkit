@@ -40,6 +40,10 @@ must fit on one screen, because the user answers with a single screenshot.
   `diagnostics/matlab`, point `st_todo_check` at it, and keep the block a call
   to `st_todo_check` after `st_setup`. A recalled block then runs the check of
   the code just pulled.
+- `st_todo_check` starts with `if ~st_todo_up_to_date(), return; end`, also
+  when it says no section is pending. The user keeps one clone per model,
+  and a clone that has not pulled runs an earlier section's check (a second
+  model's clone once made a third clone instead of running its section).
 - Design the output for one screen: `clc` first, warnings off and restored,
   one line per item, passing items as a count, detail only for failures, at most
   about 40 lines of 120 columns. Write long text (full error reports) to a file
