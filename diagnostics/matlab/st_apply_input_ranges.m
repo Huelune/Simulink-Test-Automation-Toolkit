@@ -33,14 +33,18 @@ catch ME
     st_log(cfg, 'WARN', 'Input range apply stopped | table read failed');
     return;
 end
-need = {'CUT', 'Input', 'Bus', 'Element', 'Min', 'Max'};
-if ~all(ismember(need, T.Properties.VariableNames))
-    lines = show(title, {'표에 CUT, Input, Bus, Element, Min, Max 열이 없습니다. 18절을 다시 돌려 새 표를 받아 주세요'});
-    st_log(cfg, 'WARN', 'Input range apply stopped | missing columns');
+need = ["CUT", "Input", "Min", "Max"];
+absent = need(~ismember(need, string(T.Properties.VariableNames)));
+if ~isempty(absent)
+    lines = show(title, {sprintf('표 열 %d개 읽음 | 없는 열 %s', T.Properties.UserData, strjoin(absent, ', ')), ...
+        columns_hint(T.Properties.UserData)});
+    st_log(cfg, 'WARN', 'Input range apply stopped | missing columns | read=%d', T.Properties.UserData);
     return;
 end
-T.Bus(ismissing(T.Bus)) = "";
-T.Element(ismissing(T.Element)) = "";
+% A table from before the Bus column was added has Inport rows only.
+for name = ["Bus", "Element"]
+    if ~ismember(name, string(T.Properties.VariableNames)), T.(name) = repmat("", height(T), 1); end
+end
 
 if nargin < 1 && cfg.HasRuntimeTarget, load_system(cfg.ModelFile); end
 models = unique(arrayfun(@(c) string(strtok(char(c), '/')), T.CUT));
@@ -123,6 +127,8 @@ end
 
 
 function T = read_table(file)
+% The first row is the header, read as is: no format guessing, which an
+% Excel-saved CSV (BOM, empty columns) can throw off. Every value is text.
 [~, ~, ext] = fileparts(file);
 if strcmpi(ext, '.csv')
     fid = fopen(file, 'r');
@@ -131,13 +137,43 @@ if strcmpi(ext, '.csv')
     if strcmp(head, 'SCDSA')
         error('st:apply:encrypted', 'encrypted');
     end
-end
-opts = detectImportOptions(file, 'TextType', 'string');
-opts = setvartype(opts, opts.VariableNames, 'string');
-if strcmpi(ext, '.csv')
-    T = readtable(file, opts);
+    C = readcell(file, 'FileType', 'text', 'Delimiter', ',');
 else
-    T = readtable(file, opts, 'UseExcel', true);  % Excel opens a DRM-encrypted workbook
+    C = readcell(file, 'UseExcel', true);  % Excel opens a DRM-encrypted workbook
+end
+T = table();
+T.Properties.UserData = size(C, 2);
+if isempty(C), return; end
+names = cell_texts(C(1, :));
+names = erase(names, [string(char(65279)), string(char([239 187 191]))]);  % BOM, as one char or three
+for k = 1:numel(names)
+    if ~isvarname(names(k)) || ismember(names(k), string(T.Properties.VariableNames)), continue; end
+    T.(names(k)) = reshape(cell_texts(C(2:end, k)), [], 1);
+end
+T.Properties.UserData = size(C, 2);
+end
+
+
+function texts = cell_texts(cells)
+texts = strings(size(cells));
+for k = 1:numel(cells)
+    v = cells{k};
+    if isa(v, 'missing') || isempty(v)
+        texts(k) = "";
+    elseif isnumeric(v) || islogical(v)
+        texts(k) = string(mat2str(double(v)));
+    else
+        texts(k) = strtrim(string(v));
+    end
+end
+end
+
+
+function text = columns_hint(count)
+if count <= 1
+    text = '쉼표로 나뉜 표가 아닙니다(DRM 암호화 가능). Excel에서 .xlsx로 저장해 그 파일을 고르세요';
+else
+    text = '첫 줄(열 이름)을 지우거나 고치지 않았는지 보고, 아니면 18절을 다시 돌려 새 표를 받아 주세요';
 end
 end
 
