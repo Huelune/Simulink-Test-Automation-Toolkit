@@ -26,6 +26,8 @@ writetable(targets, fixture.ManagementExcel, 'Sheet', 'Targets');
 
 testCase.TestData.Root = root;
 testCase.TestData.OldFolder = pwd;
+% The copy's st_setup takes this clone off the path; teardown puts it back.
+testCase.TestData.OldPath = path;
 testCase.TestData.TopModel = fixture.TopModel;
 cd(root);
 clear st_setup st_config st_project_root;
@@ -47,6 +49,7 @@ if bdIsLoaded(testCase.TestData.TopModel)
     close_system(testCase.TestData.TopModel, 0);
 end
 cd(testCase.TestData.OldFolder);
+path(testCase.TestData.OldPath);
 clear st_setup st_config st_project_root;
 if isfolder(testCase.TestData.Root)
     try, rmdir(testCase.TestData.Root, 's'); catch, end
