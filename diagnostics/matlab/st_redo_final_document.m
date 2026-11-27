@@ -83,8 +83,9 @@ if height(document) > 0
             sum(verdicts == "PASS"), sum(verdicts == "FAIL"), d_lines(normal), ...
             join_counts(failCounts), join_counts(nearest), join_counts(changed)); %#ok<AGROW>
     end
-    lines{end+1} = ['결함 행이 맞으면 FAIL 행 D 줄 수가 PASS 행과 같고, 가까운 PASS 행(원본 시나리오, ' ...
-        '기본은 마지막)과 다른 줄은 1입니다'];
+    % Lines a row's test never took leave that row, so rows may differ in count.
+    lines{end+1} = ['결함 행이 맞으면 가까운 PASS 행(원본 시나리오, 기본은 마지막)과 다른 줄이 1입니다. ' ...
+        '지나지 않은 줄은 빠지므로 행마다 D 줄 수는 다를 수 있습니다'];
 end
 st_log(cfg, 'INFO', 'Redo final document complete | rows %d', height(document));
 show(lines);
