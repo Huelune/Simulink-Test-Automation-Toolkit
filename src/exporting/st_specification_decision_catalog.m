@@ -56,9 +56,9 @@ function catalog = st_specification_decision_catalog(scope)
 % TwoWay             YES when every Decision the block receives has exactly
 %                    the outcomes true and false and each one has its own D
 %                    line, so the final document can print what a row's test
-%                    took ([T], [F], [T/F], [-]). NO keeps the static [T/F]
-%                    with no reason: the outcomes are not true/false (MinMax,
-%                    Sign, ...).
+%                    took ([T], [F], [T/F]; a branch taken neither way is
+%                    dropped). NO: the outcomes are not true/false (MinMax,
+%                    Sign, ...), so the D line lists the outcomes taken.
 % Branches           One D line per Simulink Coverage decision, for a block
 %                    that receives several. ';' separates the entries, each
 %                    "<coverage text>:<parameter>[:<condition>]". The coverage

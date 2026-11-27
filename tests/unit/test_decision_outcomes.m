@@ -89,7 +89,7 @@ end
 function testExecutedOnlyDecisionCountsAsTrue(testCase)
 % A function-call Triggered Subsystem has one decision whose only outcome
 % is "executed" (seen at runtime 2026-10-08). It is recorded as executed
-% versus nothing, so the final document prints [T] or [-].
+% versus nothing, so the final document prints [T] or drops the line.
 description = struct('decision', fake_decision('trigger', "executed", 38));
 verifyEqual(testCase, st_decision_outcome_counts(description), [38 0]);
 description = struct('decision', fake_decision('trigger', "Executed", 0));
@@ -111,7 +111,7 @@ formatted = st_format_specification_decision_blocks( ...
 verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T]Trigger"));
 formatted = st_format_specification_decision_blocks( ...
     one_row_specification(item), base_config(), fake_lookup(containers.Map({'.'}, {[0 0]})));
-verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [-]Trigger"));
+verifyEqual(testCase, formatted.DecisionBlocks(1), "");  % never ran: no line at all
 end
 
 function testBothReportsWriteTheDecisionOutcomesSheet(testCase)
@@ -220,8 +220,9 @@ lookup = fake_lookup(struct('If1', [1 1; 0 0], 'Sw', [0 2], 'Sw2', [5 5]));
 formatted = st_format_specification_decision_blocks( ...
     one_row_specification(items), base_config(), lookup);
 lines = split(formatted.DecisionBlocks(1), newline);
-verifyEqual(testCase, lines, ["If1"; "D1 [T/F]IF (a > 0)"; "D2 [-]IF (elseif b > 0)"; ...
-    "Sw"; "D3 [F]Switch (u > 0)"; "Sw2"; "D4 [T/F]Switch (u > 0)"]);
+% The elseif was taken neither way, so it leaves and the numbers close up.
+verifyEqual(testCase, lines, ["If1"; "D1 [T/F]IF (a > 0)"; ...
+    "Sw"; "D2 [F]Switch (u > 0)"; "Sw2"; "D3 [T/F]Switch (u > 0)"]);
 end
 
 function testCountMismatchKeepsTheStaticMarkAndSaysSo(testCase)
@@ -389,7 +390,7 @@ lookup = fake_text_lookup("Sat", [1 1; 0 0], ["u  >=  ll"; "U > UL"]);
 formatted = st_format_specification_decision_blocks( ...
     one_row_specification(saturate_items()), base_config(), lookup);
 verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T/F]Saturate (U >= LL"));
-verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D2 [-]Saturate (U > UL"));
+verifyFalse(testCase, contains(formatted.DecisionBlocks(1), "D2"));
 end
 
 function testRepeatedTextKeepsStaticMarkAndSaysMismatch(testCase)

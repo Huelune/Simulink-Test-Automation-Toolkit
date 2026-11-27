@@ -28,7 +28,8 @@ document = table();
 finalFile = '';
 classified = [];
 files = fullfile(st_project_root(), 'tests', 'unit', ...
-    {'test_final_document_defects.m', 'test_classify_standalone_results.m'});
+    {'test_final_document_defects.m', 'test_classify_standalone_results.m', ...
+    'test_decision_outcomes.m'});
 try
     evalc('results = runtests(files);');
     bad = [results.Failed] | [results.Incomplete];

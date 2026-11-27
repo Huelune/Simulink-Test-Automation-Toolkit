@@ -8,13 +8,14 @@ function [specification, details, outcomeReasons] = st_format_specification_deci
 % does not depend on parsing the display.
 %
 % The final document passes OUTCOMELOOKUP (st_final_document_decision_outcomes).
-% A two-way branch then shows what the row's test actually took: [T], [F],
-% [T/F] or [-]. Which blocks are two-way is the catalog TwoWay column, so a
+% A two-way branch then shows what the row's test actually took: [T], [F]
+% or [T/F]; a branch it took neither way leaves the row. Which blocks are two-way is the catalog TwoWay column, so a
 % block of any other type keeps [T/F] and is never looked up.
 % A block whose outcomes are not true/false (catalog TwoWay NO: MinMax,
 % MultiPortSwitch, ...) shows the outcomes the row's test took, shortened
 % by st_short_outcome_text ("u1"). A block that took none of its
-% outcomes is dropped from the row, and the D numbers close up.
+% outcomes is dropped from the row, as is a two-way branch taken neither
+% way, and the D numbers close up.
 % OUTCOMEREASONS says, per row, why a block's [T/F] was left in place.
 % The specification export passes no lookup and its output is unchanged.
 if nargin < 2, cfg = []; end
@@ -386,7 +387,7 @@ elseif tookTrue
 elseif tookFalse
     label = "F";
 else
-    label = "-";
+    label = string(missing);  % taken neither way: the line leaves the row
 end
 end
 
