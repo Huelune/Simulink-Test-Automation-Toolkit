@@ -2,15 +2,17 @@ function lines = st_explain_defect_blocks(maxLinesPerBlock)
 %ST_EXPLAIN_DEFECT_BLOCKS Explain why each defect block's outcome is unreachable, name-free.
 %
 % lines = st_explain_defect_blocks()
-% lines = st_explain_defect_blocks(maxLinesPerBlock)   % default 6
+% lines = st_explain_defect_blocks(maxLinesPerBlock)   % default 10
 %
 % For every defect iteration of every target (the final document's list,
 % st_final_document_defects), finds the block in the CUT and prints the
 % logic feeding it with st_explain_block_logic: constants as numbers,
-% delays as D1, CUT inputs as In1 with their declared type and Min/Max.
+% delays as D1, CUT inputs as In1 with their declared type and Min/Max,
+% and the compiled data type of every symbol (an unsigned D1 - 1 cannot go
+% below 0, which alone can make an outcome unreachable).
 % A condition that a constant, a delay or a range keeps one way is what
 % SLDV proved. Block types, symbols and numbers only; nothing is saved.
-if nargin < 1, maxLinesPerBlock = 6; end
+if nargin < 1, maxLinesPerBlock = 10; end
 title = '결함 블록 입력 보기';
 cfg = st_config();
 st_log(cfg, 'INFO', 'Defect block explain start');
@@ -49,6 +51,8 @@ for k = 1:height(defects)
         same = find(strcmp(seen(:, 1), joined), 1);
         if isempty(same)
             seen(end+1, :) = {joined, k}; %#ok<AGROW>
+            % Types need a compile, so only a logic not shown yet gets them.
+            evalc('explained = st_explain_block_logic(block, ''Boundary'', cut, ''MaxLines'', maxLinesPerBlock, ''ShowRanges'', true, ''ShowTypes'', true);');
             lines = [lines, {head}, strcat({'  '}, explained)]; %#ok<AGROW>
         else
             lines{end+1} = sprintf('%s | 입력 로직 [%d]와 같음', head, seen{same, 2}); %#ok<AGROW>
