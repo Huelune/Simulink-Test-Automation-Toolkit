@@ -58,10 +58,45 @@ if ~isequal(toolkitDir, 0), cd(toolkitDir); [pullStatus, ~] = system('set GIT_TE
 확인할 것:
 
 - 화면 첫 줄 끝이 `팀 제출 트리 결과 보기`이고, `4단계 분류 다시 | CUT <수> | Test Manager 결과 넣음 예`인가.
-- `고른 폴더 | 팀 제출 트리 | CUT 폴더 <수> | Test Manager 결과 파일 있음`, `Test Manager 결과 가져옴 | Test Case <수>`
-- Test Case마다 Iteration 통과·실패 수가 standalone 결과와 같은가.
+- `고른 폴더 | 팀 제출 트리 | CUT 폴더 <수> | Test Manager 결과 파일 있음`, `Test File 열림 | Test Case <수>`,
+  `Test Manager 결과 가져옴 | Test Case <수>`
+- Test Case마다 Iteration 통과·실패 수가 standalone 결과와 같은가. Test Manager의 Test Browser에 Test Case가 보이는가.
+
+첫 결과: Test Manager에 결과는 왔지만 Test Case가 보이지 않았다. 결과만 가져오고 트리의 Test File을 열지 않았기 때문이다.
+이제 CUT마다 세 갈래 폴더를 MATLAB 경로에 올리고 트리의 Test File을 연 뒤 결과를 가져온다. 같은 블록을 명령 기록에서 다시
+부르면 된다.
 - `CVF 적용 보고서 | OK <수> | 실패 0`, 그리고 Test Manager 창과 브라우저 보고서가 뜨는가.
 
 돌려줄 것: 화면 캡처 한 장.
 
 다음부터 직접 쓸 때는 `st_setup` 뒤에 `st_show_team_tree_results`만 부르면 된다. 인자 없이 부르면 트리를 고르는 창이 뜬다.
+
+## 32. 처음부터 다시 만들고 팀 제출 트리 결과를 Test Manager에서 보기
+
+왜: 31절의 트리 결과 보기를 처음부터 다시 만들기와 한 번에 한다. 고른 클론의 예전 결과·Harness·Test File을 지우고 1단계부터
+3·5·4단계까지 다시 만든 뒤(22절과 같다), 새로 만든 팀 제출 트리에서 Test Manager 결과를 가져와 보여 주고 CVF를 건 보고서를
+띄운다. 트리는 따로 고르지 않는다. 그 실행의 트리를 바로 연다. 두 번째 모델의 클론이면 저장해 둔 C 헤더 폴더도 그대로 쓴다.
+지운 결과와 Harness는 되돌릴 수 없다. 오래 걸린다.
+
+화면: 위에는 다시 만들기 화면(22절과 같음), 그 아래 `--- 팀 제출 트리 결과 보기` 줄부터 트리 결과가 붙는다. 다시 만들기 중간에
+결함 점검이 실행 폴더의 결과로 보고서를 한 번 띄우고, 트리 결과 보기가 한 번 더 띄우므로 브라우저 탭이 CUT마다 두 개씩 생긴다.
+
+순서:
+1. 저장할 모델은 저장한다.
+2. 아래 블록을 붙여 넣는다. 끝이 `st_todo_check(32)`이다. 툴킷 폴더 창에서 다시 만들 모델의 클론을 고른다. 두 모델 모두면
+   클론마다 한 번씩 돌린다.
+
+```matlab
+clearvars; toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
+if ~isequal(toolkitDir, 0), cd(toolkitDir); [pullStatus, ~] = system('set GIT_TERMINAL_PROMPT=0&& git pull --ff-only -q'); rehash; clear st_setup st_todo_check; if pullStatus, disp('git pull 실패 | cmd에서 이 클론 폴더로 가서 git pull을 해 보세요'); else, evalc('st_setup'); st_todo_check(32); end, end
+```
+
+확인할 것:
+
+- 위쪽: 단위 테스트 실패 0, `Excel 검사 ... 실패 0`, `1단계(FORCE, 결과 정리 포함) OK`, `standalone 파이프라인 OK`,
+  `5단계 최종 문서 OK`, `4단계 분류 OK`
+- 아래쪽: `고른 폴더 | 팀 제출 트리 | CUT 폴더 <수> | Test Manager 결과 파일 있음`, `Test File 열림 | Test Case <수>`,
+  `Test Manager 결과 가져옴 | Test Case <수>`,
+  Test Case마다 Iteration 수, `CVF 적용 보고서 | OK <수> | 실패 0`
+
+돌려줄 것: 화면 캡처 한 장. 화면 끝에 `<수>줄 더 있음`이 나오면 그대로 보낸다.
