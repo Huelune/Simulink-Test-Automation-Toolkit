@@ -15,7 +15,10 @@ function [lines, ok] = st_rebuild_harnesses_and_tests(lines, fresh)
 % For todo.md: rebuild every target from nothing and count what came out.
 %   1. Stops when a model has unsaved changes.
 %   2. Deletes the Harness each Excel target names (no other), saves the Top
-%      Model, then closes and deletes the Test File.
+%      Model, deletes those Harnesses' Signal Editor inputs
+%      (<Harness>_HarnessInputs*.mat in the current folder, the toolkit
+%      folder and the model's folder; st_delete_harness_inputs), then
+%      closes and deletes the Test File.
 %   3. Runs st_run_from_harness('PreparationMode','FORCE','ExecutionMode',
 %      'PER_CUT','AutoCollect',true) with its progress on screen. PER_CUT,
 %      because step 5 reads the saved PER_CUT results.
@@ -55,9 +58,18 @@ if fresh
             deleted = deleted + 1;
         end
         save_system(cfg.TopModel);
-        st_log(cfg, 'INFO', 'Rebuild from scratch | Harnesses deleted %d of %d', deleted, height(targets));
-        lines{end+1} = sprintf('Harness 지움 %d / 대상 %d | Test File 지움 %s', ...
-            deleted, height(targets), yes_no(delete_test_file(cfg.TestFile)));
+        % create wrote each input into the folder it ran in; earlier runs may have run elsewhere.
+        [inputs, inputFails] = st_delete_harness_inputs(targets.HarnessName, ...
+            {pwd, st_project_root(), fileparts(cfg.ModelFile)});
+        st_log(cfg, 'INFO', 'Rebuild from scratch | Harnesses deleted %d of %d | inputs deleted %d | failed %d', ...
+            deleted, height(targets), inputs, inputFails);
+        lines{end+1} = sprintf('Harness 지움 %d / 대상 %d | Harness 입력 지움 %d | Test File 지움 %s', ...
+            deleted, height(targets), inputs, yes_no(delete_test_file(cfg.TestFile)));
+        if inputFails > 0
+            lines = stop(lines, title, sprintf(['Harness 입력 %d개를 지우지 못함 | MATLAB 밖에서 그 파일을 연 ' ...
+                '프로그램을 닫고 다시 돌려 주세요'], inputFails), [], quiet);
+            return;
+        end
     catch ME
         lines = stop(lines, title, sprintf('지우기 실패 | %s | 모델을 저장하지 말고 닫은 뒤 다시 돌려 주세요', ...
             id_of(ME)), ME, quiet);
