@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **CUT의 C 코드가 쓰는 헤더 폴더를 툴킷이 Harness와 standalone 사본에 넣습니다.** 툴킷은 Windows 경로 길이 제한 때문에
+  짧은 임시 폴더에서 빌드하므로, 현재 폴더나 모델 폴더에 기대던 헤더를 찾지 못해 그 CUT의 빌드가 실패하고 verify 결과가
+  남지 않았습니다(`Simulink:cgxe:BuildError`). `st_set_custom_code_include_dirs`로 헤더 폴더를 고르면 클론마다
+  `runtime_target.mat`에 저장하고, 1단계 Harness 설정(HARNESS_CONFIG)과 3단계 standalone 내보내기가 그 모델의
+  Include directories(`SimUserIncludeDirs`)에 절대 경로로 덧붙입니다. Top Model은 바꾸지 않습니다. 폴더가 바뀌면
+  HARNESS_CONFIG 단계가 다시 돕니다.
+
 - **모델마다 툴킷 클론을 하나씩 둘 수 있습니다.** 클론 하나는 모델 하나만 기억합니다(`runtime_target.mat`,
   `TestManagement.xlsx`, `result\`). `st_make_model_clone`은 지금 클론 옆에 새 클론을 만듭니다. 지금 클론에서
   디스크로 복제하고 원격은 같은 곳으로 맞춘 뒤, 새 클론에서 `st_setup`, 모델 고르기, 결과 루트 정하기까지 합니다.

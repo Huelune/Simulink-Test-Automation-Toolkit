@@ -877,6 +877,7 @@ st_open_standalone_test_manager('PipelineId', info.PipelineId, ...
 | 대상 모델을 바꾼다 | `st_select_target_model(true)` 후 `st_set_standalone_coverage_root` |
 | 두 번째 모델도 돌린다 | `st_make_model_clone`(지금 클론 옆에 그 모델의 클론을 만듭니다. 2.2절) |
 | 다른 모델의 클론으로 바꾼다 | Current Folder를 그 클론으로 옮기고 `st_setup` |
+| CUT의 C 코드가 모델 폴더 밖 헤더를 쓴다 | `st_set_custom_code_include_dirs`(폴더 고르기 창, 클론마다 저장) 후 `'PreparationMode','FORCE'` |
 | Harness가 이미 다 있다 | `st_run_after_harness` |
 | 입력 MAT이나 SLDV 설정을 바꿨다 | `st_run_from_harness('PreparationMode','FORCE','FromStage','SLDV')` |
 | Assessment를 바꿨다 | `st_run_from_harness('PreparationMode','FORCE','FromStage','ASSESSMENT')` |
@@ -912,6 +913,7 @@ st_open_standalone_test_manager('PipelineId', info.PipelineId, ...
 | 창이 넘어가서 어디서 실패했는지 모르겠다 | 명령이 끝날 때 찍힌 `log:` 경로의 실행 로그를 여십시오. [1절](#콘솔에-보이는-줄과-실행-로그) |
 | 빌드 파일 이름이 260자를 넘는다는 오류 | 결과 루트를 짧게(`st_set_standalone_coverage_root`), 그래도 나면 `cfg.StandaloneBuildCacheDir`에 `'D:\stt_build'` 같은 짧은 경로 |
 | 필터 사유가 없다고 중단 | `CoverageFilterRationale`을 채우십시오 |
+| CUT 하나만 실행이 `FAILED`이고 verify 결과가 없다, 빌드 오류 `Simulink:cgxe:BuildError`(include 파일 없음) | CUT의 C 코드가 모델 폴더 밖의 헤더를 씁니다. 툴킷은 짧은 임시 폴더에서 빌드하므로 평소처럼 현재 폴더에서 찾지 못합니다. `st_set_custom_code_include_dirs`로 헤더 폴더를 고르면 툴킷이 만드는 Harness와 standalone 사본의 Include directories에 절대 경로로 넣습니다(Top Model은 그대로). 그 뒤 Harness 설정을 다시 하도록 `st_run_from_harness('PreparationMode','FORCE')` 또는 처음부터 다시 |
 | 같은 이름의 모델이 열려 있다고 멈춘다 | `CloseSourceModel`을 `false`로 줬거나 저장에 실패한 경우입니다. 저장하고 닫거나 MATLAB 재시작 |
 | 검사 코드에 `0`이 있다 | `details` 표에서 그 CUT의 원인을 보고 3단계를 다시 |
 | 명세서나 최종 문서가 `SpecificationUnsaved`로 멈춘다 | 오류 메시지에 적힌 모델·Harness를 열어 보고 저장하거나 닫습니다 |
