@@ -177,6 +177,11 @@
   시점은 맞다. 컴파일이 `Simulink:cgxe:BuildError`. 점검이 클론 폴더에서 컴파일했으므로 경로 길이일 수 있어,
   `st_enter_short_build_directory`에서 컴파일하고 `st_build_error_kind`(원인 식별자와 종류만)를 찍게 했다. 빌드가 1단계에서도
   실패한다면 그것이 verify 결과 없음의 원인이다(아직 확인 전).
+  24절 둘째 결과: 짧은 폴더에서도 `Simulink:cgxe:BuildError`, `Simulink:cgxe:SymbolicLinkErrorCause`, 종류 include 파일 없음.
+  대상 1 Harness의 시뮬레이션 빌드가 C 헤더를 못 찾아 Iteration이 verify 전에 실패한 것이 verify 결과 없음의 원인으로 본다.
+  사용자는 CUT의 C 코드 사용과 평소 여는 프로젝트·경로 설정을 모른다. `st_inspect_custom_code`(CUT의 C 빌드 블록 수,
+  Top Model·Harness·라이브러리 Custom Code 설정 수와 다른 설정 이름, #include 헤더 찾은 수, 프로젝트 열림·.prj 수, Top Model
+  짧은 폴더 컴파일)로 `todo.md` 25절.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
