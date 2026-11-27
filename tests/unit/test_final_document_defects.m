@@ -34,13 +34,13 @@ verifyEqual(testCase, specification.DefectCode, ["", "EXACT"]');
 specification = st_final_document_defect_rows(defect_specification(), ...
     sample_details(), defect_list("Secret_Max", "MinMax", "input 1", false), ...
     no_reasons(), base_config());
-verifyEqual(testCase, specification.DecisionBlocks(2), max_description("input 1"));
+verifyEqual(testCase, specification.DecisionBlocks(2), max_description("u1"));
 
 % Several outcomes of one block share the bracket.
 specification = st_final_document_defect_rows(defect_specification(), ...
     sample_details(), defect_list("Secret_Max", "MinMax", "input 1|input 2", false), ...
     no_reasons(), base_config());
-verifyEqual(testCase, specification.DecisionBlocks(2), max_description("input 1/input 2"));
+verifyEqual(testCase, specification.DecisionBlocks(2), max_description("u1/u2"));
 end
 
 function testBlockNameWithLineBreakStillFindsItsDLine(testCase)
@@ -81,8 +81,9 @@ specification = st_final_document_defect_rows(defect_specification(), ...
     sample_details(), defect_list("Secret_Max", "MinMax", ...
     "Logic to determine output input 2 is the maximum", false), ...
     no_reasons(), base_config());
-verifyEqual(testCase, specification.DecisionBlocks(2), max_description("u2 max"));
-verifyEqual(testCase, st_short_outcome_text("input 1 is the minimum"), "u1 min");
+verifyEqual(testCase, specification.DecisionBlocks(2), max_description("u2"));
+verifyEqual(testCase, st_short_outcome_text("input 1 is the minimum"), "u1");
+verifyEqual(testCase, st_short_outcome_text("input 2"), "u2");
 verifyEqual(testCase, st_short_outcome_text("Logic to determine output: case [1]"), "case [1]");
 end
 

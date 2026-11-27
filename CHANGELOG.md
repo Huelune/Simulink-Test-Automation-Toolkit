@@ -5,7 +5,7 @@
 - **최종 문서가 참/거짓이 아닌 블록(MinMax, MultiPortSwitch, SwitchCase 등)도 그 행이 실제로 지난 결과만 적습니다.**
   예전에는 이런 블록은 결과를 모으지 않아 D 줄에 고정 `[T/F]`가 남았고, 도달할 수 없는 결과까지 지난 것처럼 읽혔습니다.
   이제 결과 Excel의 `DecisionOutcomes` 시트에 결과마다 `OUTCOME` 줄(`OutcomeText`, `OutcomeCount`)을 남기고, 최종
-  문서는 지난 결과만 `[u1 max]`처럼 짧게 적습니다. 하나도 지나지 않은 블록은 그 행의 D 목록에서 빠지고 D 번호가
+  문서는 지난 결과만 `[u1]`처럼 짧게(MinMax가 넘긴 입력) 적습니다. 하나도 지나지 않은 블록은 그 행의 D 목록에서 빠지고 D 번호가
   다시 매겨집니다. 결함 행의 대괄호도 같은 형식으로 적어 SLDV 문장 앞의 `Logic to determine output`이 사라집니다.
   이 기록이 없는 예전 결과로 만든 문서는 전과 같이 `[T/F]`를 두고 `DECISION_OUTCOME_UNAVAILABLE`을 적습니다.
 

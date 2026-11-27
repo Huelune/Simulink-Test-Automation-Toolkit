@@ -113,7 +113,7 @@ end
 
 function label = outcome_label(texts, twoWay)
 % A true/false block reads like the rest of the D list ([T], [F]); any
-% other block gets the short outcome text the D list uses ("u2 max").
+% other block gets the short outcome text the D list uses ("u2").
 labels = st_short_outcome_text(texts);
 if twoWay
     lowered = lower(texts);

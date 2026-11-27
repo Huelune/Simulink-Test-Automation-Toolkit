@@ -13,7 +13,7 @@ function [specification, details, outcomeReasons] = st_format_specification_deci
 % block of any other type keeps [T/F] and is never looked up.
 % A block whose outcomes are not true/false (catalog TwoWay NO: MinMax,
 % MultiPortSwitch, ...) shows the outcomes the row's test took, shortened
-% by st_short_outcome_text ("u1 max"). A block that took none of its
+% by st_short_outcome_text ("u1"). A block that took none of its
 % outcomes is dropped from the row, and the D numbers close up.
 % OUTCOMEREASONS says, per row, why a block's [T/F] was left in place.
 % The specification export passes no lookup and its output is unchanged.
