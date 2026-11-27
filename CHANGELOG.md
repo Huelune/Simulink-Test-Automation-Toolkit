@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **모델마다 툴킷 클론을 하나씩 둘 수 있습니다.** 클론 하나는 모델 하나만 기억합니다(`runtime_target.mat`,
+  `TestManagement.xlsx`, `result\`). `st_make_model_clone`은 지금 클론 옆에 새 클론을 만듭니다. 지금 클론에서
+  디스크로 복제하고 원격은 같은 곳으로 맞춘 뒤, 새 클론에서 `st_setup`, 모델 고르기, 결과 루트 정하기까지 합니다.
+  `st_setup`은 이제 앞서 올린 다른 툴킷 클론의 경로를 MATLAB path에서 빼므로, 한 MATLAB에서 클론을 바꿔도 다른 클론의
+  함수가 대신 불리지 않습니다.
+
 - **최종 문서의 결함 행 `Description`이 D 목록 전체를 적습니다.** 예전에는 결함 블록의 줄 하나만 남았습니다. 이제는
   도달 불가 결과가 실행됐다고 보고 D 목록 전체를 남기되, 결함 블록의 D 줄 대괄호만 그 결과로 적습니다(예:
   `D3 [T]Switch (...)`). 판정은 실행 결과(`FAIL`) 그대로이고, `Test Steps.Expected result`는 결함 블록의 줄 하나만

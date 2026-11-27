@@ -179,6 +179,18 @@ git pull
 이미 고쳐진 오류가 다시 나면 MATLAB이 예전 커밋에서 돌고 있는 것입니다.
 MATLAB에서 `which -all st_setup`으로 어느 폴더가 잡혔는지 확인하십시오.
 
+모델이 둘 이상이면 **모델마다 클론을 하나씩** 둡니다. 클론 하나는 모델 하나만 기억합니다(`runtime_target.mat`,
+`TestManagement.xlsx`, `result\`). 처음부터 다시 만들 때 `result\`는 통째로 지워지므로 두 모델이 한 클론을 쓰면 서로의
+결과를 지웁니다.
+
+- 두 번째 클론은 지금 클론에서 `st_setup` 뒤에 `st_make_model_clone`을 부르면 지금 클론 옆에 만들어집니다. 지금 클론에서
+  디스크로 복제하고 원격은 같은 곳으로 맞춘 뒤, 새 클론에서 모델 고르기와 결과 루트 정하기까지 합니다.
+- `TestManagement.xlsx`는 Git에 없으므로 새 클론 폴더에 그 모델의 것을 둡니다.
+- 클론을 바꿀 때는 MATLAB **Current Folder**를 그 클론으로 옮기고 `st_setup`을 부릅니다. `st_setup`은 앞서 올린 다른 클론의
+  경로를 MATLAB path에서 뺍니다. Current Folder를 다른 클론에 둔 채 명령을 부르면 툴킷은 그 클론의 설정과 `result\`를
+  씁니다.
+- `git pull`은 클론마다 따로 합니다.
+
 ### 2.3 실행 전 주의 — 모델이 바뀝니다
 
 이 도구는 **모델과 Test File을 실제로 수정하고 저장합니다.**
@@ -863,6 +875,8 @@ st_open_standalone_test_manager('PipelineId', info.PipelineId, ...
 | --- | --- |
 | MATLAB을 새로 켰다 | `st_setup` |
 | 대상 모델을 바꾼다 | `st_select_target_model(true)` 후 `st_set_standalone_coverage_root` |
+| 두 번째 모델도 돌린다 | `st_make_model_clone`(지금 클론 옆에 그 모델의 클론을 만듭니다. 2.2절) |
+| 다른 모델의 클론으로 바꾼다 | Current Folder를 그 클론으로 옮기고 `st_setup` |
 | Harness가 이미 다 있다 | `st_run_after_harness` |
 | 입력 MAT이나 SLDV 설정을 바꿨다 | `st_run_from_harness('PreparationMode','FORCE','FromStage','SLDV')` |
 | Assessment를 바꿨다 | `st_run_from_harness('PreparationMode','FORCE','FromStage','ASSESSMENT')` |
