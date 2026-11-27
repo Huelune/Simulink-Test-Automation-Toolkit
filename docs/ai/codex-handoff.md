@@ -125,7 +125,13 @@
   `st_remove_moved_check_copy`가 복사본 모델을 닫고 경로를 빼고 지운다. 복사 점검은 끝에(Test Manager를 비운 뒤), 예전 결과
   지우기(`st_delete_old_results`)는 남은 복사본을 지운다. 보고서는 tempdir에 있어 남는다. 15절 결과(2026-11-27): 14절과
   같은 값, 기록 경로 복사본 아래 54·원래 자리 0, `복사본 지움`, 단위 테스트 17 통과. 복사본 지우기 실기 확인 끝(예전 결과
-  지우기 쪽은 다음 처음부터 다시 만들기 때 함께 돈다). 지금 `todo.md`에 돌릴 절이 없다.
+  지우기 쪽은 다음 처음부터 다시 만들기 때 함께 돈다).
+  두 모델(2026-11-27): 사용자는 이 프로젝트에서 두 모델을 각각 돌려야 한다. 클론 하나는 모델 하나만 기억하므로 모델마다
+  클론을 하나씩 둔다. `st_make_model_clone`이 지금 클론 옆에 디스크 복제로 새 클론을 만들고 원격을 맞추고 `st_setup`, 모델
+  고르기, 결과 루트(지금 클론과 같은 방식)까지 한다. `st_setup`은 다른 툴킷 클론(st_setup.m·VERSION.txt·src가 있는 폴더)의
+  경로를 뺀다(`st_other_toolkit_path_entries`). `st_project_root`는 현재 폴더의 `st_setup.m`을 먼저 보므로(통합 테스트가
+  이 동작에 기대 바꾸지 않음) todo 블록은 이제 툴킷 폴더로 옮긴 채 둔다. 확인은 `todo.md` 16절. 두 모델이 라이브러리나
+  데이터 사전을 함께 쓰는지는 모른다.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
