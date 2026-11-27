@@ -8,9 +8,11 @@ function st_redo_final_document()
 %      st_classify_standalone_results with that document as the team's
 %      specification (the tree is made again).
 %   3. Per target (in the order of the document's case IDs): its rows by
-%      verdict, the D line count of a PASS row and of each FAIL row, and how
-%      many lines of each FAIL row differ from the PASS row. A defect row
-%      written as if its outcome ran has the same count and 1 changed line.
+%      verdict, the D line count of a PASS row and of each FAIL row, and for
+%      each FAIL row the PASS row nearest to it and how many lines differ.
+%      A defect iteration copies its source scenario (the last by default),
+%      so a defect row written as if its outcome ran has the same count and
+%      1 changed line against that row.
 % Counts only; long error reports go to tempdir/st_todo_check.txt.
 title = '최종 문서·팀 제출 트리 다시 만들기';
 clc;
@@ -74,13 +76,14 @@ if height(document) > 0
         failed = descriptions(verdicts == "FAIL");
         if isempty(normal), normal = ""; end
         failCounts = arrayfun(@d_lines, failed);
-        changed = arrayfun(@(text) changed_lines(text, normal), failed);
+        [changed, nearest] = arrayfun(@(text) closest(text, descriptions(verdicts == "PASS")), failed);
         lines{end+1} = sprintf(['대상 %d | 행 %d (PASS %d, FAIL %d) | PASS 행 D 줄 %d | ' ...
-            'FAIL 행 D 줄 %s | PASS 행과 다른 줄 %s'], k, numel(verdicts), sum(verdicts == "PASS"), ...
-            sum(verdicts == "FAIL"), d_lines(normal), join_counts(failCounts), ...
-            join_counts(changed)); %#ok<AGROW>
+            'FAIL 행 D 줄 %s | 가까운 PASS 행 %s | 다른 줄 %s'], k, numel(verdicts), ...
+            sum(verdicts == "PASS"), sum(verdicts == "FAIL"), d_lines(normal), ...
+            join_counts(failCounts), join_counts(nearest), join_counts(changed)); %#ok<AGROW>
     end
-    lines{end+1} = '결함 행이 맞으면 FAIL 행 D 줄 수가 PASS 행과 같고, 다른 줄은 1입니다';
+    lines{end+1} = ['결함 행이 맞으면 FAIL 행 D 줄 수가 PASS 행과 같고, 가까운 PASS 행(원본 시나리오, ' ...
+        '기본은 마지막)과 다른 줄은 1입니다'];
 end
 st_log(cfg, 'INFO', 'Redo final document complete | rows %d', height(document));
 show(lines);
@@ -90,6 +93,17 @@ end
 function count = d_lines(text)
 parts = split(string(text), newline);
 count = sum(~cellfun(@isempty, regexp(cellstr(parts), '^D\d+ \[', 'once')));
+end
+
+
+function [count, at] = closest(text, references)
+% A defect row copies its source scenario's row (the last one unless the
+% Targets sheet picks another), so it is compared with the PASS row nearest
+% to it, not with the first. AT is that row's place among the PASS rows.
+count = NaN;
+at = NaN;
+if isempty(references), return; end
+[count, at] = min(arrayfun(@(reference) changed_lines(text, reference), references));
 end
 
 
