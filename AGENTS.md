@@ -40,6 +40,11 @@ must fit on one screen, because the user answers with a single screenshot.
   `diagnostics/matlab`, point `st_todo_check` at it, and keep the block a call
   to `st_todo_check` after `st_setup`. A recalled block then runs the check of
   the code just pulled.
+- The block itself pulls the chosen clone and refreshes MATLAB before the
+  check. Copy it from the latest `todo.md` section as is:
+  `cd(toolkitDir); [pullStatus, ~] = system('set GIT_TERMINAL_PROMPT=0&& git pull --ff-only -q'); rehash; clear st_setup st_todo_check;`
+  then `st_setup` and `st_todo_check` only when the pull succeeded. A pull
+  done by hand in cmd once did not reach the code MATLAB ran.
 - `st_todo_check` starts with `if ~st_todo_up_to_date(), return; end`, also
   when it says no section is pending. The user keeps one clone per model,
   and a clone that has not pulled runs an earlier section's check (a second
