@@ -6,12 +6,11 @@ function st_todo_check()
 % was first written for. Point it at the current section's check whenever
 % todo.md changes.
 %
-% Now: section 14. Choose a standalone folder in a dialog, a moved or
-% copied run folder included, and open that run's results
-% (st_show_standalone_results); then the folder resolution and moved-folder
-% unit tests under its screen.
+% Now: section 14. Copy the latest standalone run folder elsewhere and
+% open the copy (st_check_moved_run_folder); then the folder resolution
+% and moved-folder unit tests under its screen.
 cfg = st_config();
-st_log(cfg, 'INFO', 'todo check start | show standalone results of a chosen folder');
+st_log(cfg, 'INFO', 'todo check start | open a copied standalone run folder');
 results = [];
 unitDir = fullfile(st_project_root(), 'tests', 'unit');
 testFiles = {fullfile(unitDir, 'test_standalone_run_folder.m'), ...
@@ -26,6 +25,6 @@ try
 catch ME
     testLines{end+1} = sprintf('단위 테스트 | 실행 오류 | %s', ME.identifier);
 end
-st_show_standalone_results();
+st_check_moved_run_folder();
 fprintf('%s\n', testLines{:});
 end
