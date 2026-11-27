@@ -36,7 +36,7 @@ switch section
         if unit_passed(cfg, 'test_apply_input_ranges.m'), st_apply_input_ranges(); end
     case 24
         st_log(cfg, 'INFO', 'todo check start | verify timing of failed targets');
-        st_inspect_verify_timing();
+        if unit_passed(cfg, 'test_build_error_kind.m'), st_inspect_verify_timing(); end
     case 23
         st_log(cfg, 'INFO', 'todo check start | why targets failed');
         if unit_passed(cfg, 'test_error_log_lines.m'), st_show_target_errors(); end
