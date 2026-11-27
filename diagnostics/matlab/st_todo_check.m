@@ -10,16 +10,20 @@ function st_todo_check(section)
 % that has not pulled would run an earlier section's check. Keep that line
 % when pointing this at another section.
 %
-% No argument: section 20. Delete the Harnesses, Test File and earlier
-% results, then run the manual from step 1 to the team tree (st_rebuild_all),
-% now that the CUT inputs have Min/Max.
+% No argument: section 21. Section 20's step 1 finished, but its standalone
+% run stopped (the bundle runner lost st_log once its short workspace was
+% gone). Unit tests of that fix, then steps 3, 5 and 4 again from the
+% step 1 results (st_rebuild_standalone_and_document).
+% 20: delete the Harnesses, Test File and earlier results, then run the
+% manual from step 1 to the team tree (st_rebuild_all), now that the CUT
+% inputs have Min/Max.
 % 18: unit test, then the range and format of every CUT input
 % (st_show_input_ranges). Read-only.
 % 19: unit test, then set the Min/Max filled in the range table on the
 % model (st_apply_input_ranges). Saves the model.
 if ~st_todo_up_to_date(), return; end
 cfg = st_config();
-if nargin < 1, section = 20; end
+if nargin < 1, section = 21; end
 switch section
     case 18
         st_log(cfg, 'INFO', 'todo check start | CUT input ranges');
@@ -27,9 +31,14 @@ switch section
     case 19
         st_log(cfg, 'INFO', 'todo check start | apply CUT input ranges');
         if unit_passed(cfg, 'test_apply_input_ranges.m'), st_apply_input_ranges(); end
-    otherwise
+    case 20
         st_log(cfg, 'INFO', 'todo check start | rebuild all from step 1');
         st_rebuild_all();
+    otherwise
+        st_log(cfg, 'INFO', 'todo check start | standalone, final document and tree again');
+        if unit_passed(cfg, 'test_other_toolkit_path_entries.m') && unit_passed(cfg, 'test_error_place.m')
+            st_rebuild_standalone_and_document();
+        end
 end
 end
 
