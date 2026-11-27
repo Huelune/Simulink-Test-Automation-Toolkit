@@ -6,7 +6,10 @@ function st_todo_check()
 % was first written for. Point it at the current section's check whenever
 % todo.md changes.
 %
-% Now: no section needs a MATLAB check.
-clc;
-fprintf('지금 todo.md에 MATLAB으로 돌릴 점검이 없습니다\n');
+% Now: section 17. Run the second model's clone through the manual for the
+% first time, Excel check to team tree, keeping its Harnesses
+% (st_run_model_first).
+cfg = st_config();
+st_log(cfg, 'INFO', 'todo check start | first run of this clone''s model');
+st_run_model_first();
 end
