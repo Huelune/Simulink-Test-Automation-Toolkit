@@ -136,6 +136,11 @@
   단위 테스트 3 통과. 사용자가 두 번째 클론에 `TestManagement.xlsx`를 넣었다. 첫 실행은 `st_run_model_first`(아무것도
   지우지 않음, Excel 검사 실패 시 멈춤, 1단계 기본 준비 PER_CUT, 이어서 3·5·4단계)로 `todo.md` 17절. 대상이 많아도 한 화면에
   들도록 시나리오 맞춤은 개수와 어긋난 대상만, 결함 점검의 standalone 두 줄은 한 줄로 줄였다(약 11개 대상까지).
+  17절 첫 시도(2026-11-27): 화면 제목이 `두 번째 모델용 클론 만들기`. 두 번째 클론을 pull하지 않아 16절 점검이 돌아 세 번째
+  클론이 생겼다. `st_todo_up_to_date`(fetch 뒤 HEAD..origin/main 수가 0보다 크면 멈춤, fetch 실패면 그냥 진행)를
+  `st_todo_check` 첫 줄에 두는 규칙을 AGENTS.md에 적었다. 그사이 다른 세션이 17절을 20절(범위를 넣은 모델의 전체 재실행,
+  `st_rebuild_all`)로 바꿨으므로 17절은 다시 두지 않았다. 세 번째 클론 지우기는 채팅으로 안내했다(TestManagement.xlsx가 없는
+  쪽이 잘못 생긴 클론).
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
