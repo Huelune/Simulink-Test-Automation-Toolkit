@@ -8,22 +8,20 @@ function st_check_moved_run_folder()
 %      rebase: all must point into the copy, none at the original.
 %   3. Opens the copy with st_show_standalone_results, whose second line
 %      must say the folder moved. The count line goes under its screen.
-% The copy stays, since Test Manager and the reports show it; delete it
-% after looking. Long error reports go to tempdir/st_todo_check.txt.
+%   4. Deletes the copy (st_remove_moved_check_copy): Test Manager is
+%      cleared and the copy's models close. The browser reports stay,
+%      since they are written to tempdir.
+% Long error reports go to tempdir/st_todo_check.txt.
 cfg = st_config();
 st_log(cfg, 'INFO', 'Moved run folder check start');
 try
     root = regexprep(st_absolute_path(cfg.StandaloneCoverageRootDir), '[\\/]+$', '');
     latest = st_load_standalone_pipeline_manifest(root, 'LATEST');
     pipelineId = char(string(latest.PipelineId));
-    copyRoot = [root '_moved_check'];
+    % A copy left by a check that stopped halfway goes first.
+    clear_test_manager();
+    [~, copyRoot] = st_remove_moved_check_copy(cfg);
     copyRun = fullfile(copyRoot, pipelineId);
-    if isfolder(copyRoot)
-        % An earlier check's copy may still be open in Test Manager.
-        sltest.testmanager.clearResults;
-        sltest.testmanager.clear;
-        rmdir(copyRoot, 's');
-    end
     mkdir(copyRoot);
     [copied, message] = copyfile(fullfile(root, pipelineId), copyRun);
     if ~copied, error('simtest:MovedCheckCopyFailed', '%s', message); end
@@ -44,9 +42,25 @@ end
 rebased = st_rebase_standalone_manifest(manifest, copyRun);
 [intoCopy, intoOriginal] = count_paths(rebased, copyRun, fullfile(root, pipelineId));
 st_show_standalone_results(copyRun);
-fprintf(['복사본 | 기록 경로 중 복사본 아래 %d, 원래 자리 %d | 결과 루트 옆 _moved_check로 끝나는 폴더, ' ...
-    '다 본 뒤 지워도 됨\n'], intoCopy, intoOriginal);
+% The numbers are on the screen and the reports live in tempdir, so the
+% copy goes now; Test Manager and the copy's models close with it.
+try
+    clear_test_manager();
+    st_remove_moved_check_copy(cfg);
+    removedText = '복사본 지움(Test Manager 비우고 복사본 모델 닫음, 브라우저 보고서는 남음)';
+catch ME
+    removedText = sprintf('복사본 못 지움 %s | MATLAB을 다시 시작한 뒤 다시 돌리세요', id_of(ME));
+    st_log(cfg, 'WARN', 'Moved run folder copy not removed | %s', id_of(ME));
+end
+fprintf('복사본 | 기록 경로 중 복사본 아래 %d, 원래 자리 %d | %s\n', intoCopy, intoOriginal, removedText);
 st_log(cfg, 'INFO', 'Moved run folder check end | IntoCopy=%d | IntoOriginal=%d', intoCopy, intoOriginal);
+end
+
+
+function clear_test_manager()
+% Test Manager may keep the copy's test file open, which stops the delete.
+sltest.testmanager.clearResults;
+sltest.testmanager.clear;
 end
 
 
@@ -79,7 +93,7 @@ end
 function text = copy_hint(ME)
 if contains(ME.identifier, 'StandalonePipelineLatest')
     text = '최근 standalone 실행이 없습니다. 실행부터 하세요';
-elseif contains(ME.identifier, 'RMDIR', 'IgnoreCase', true)
+elseif strcmp(ME.identifier, 'simtest:MovedCheckCopyNotRemoved')
     text = '예전 복사본을 지우지 못했습니다. MATLAB을 다시 시작한 뒤 다시 돌리세요';
 elseif strcmp(ME.identifier, 'simtest:MovedCheckCopyFailed')
     text = '복사하지 못했습니다. 디스크 공간과 경로 길이(260자)를 확인하세요';
