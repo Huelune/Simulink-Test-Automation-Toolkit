@@ -9,32 +9,34 @@
 화면에는 개수, Simulink 블록 종류 이름, 정해 둔 안내 문구만 찍는다. 테스트 케이스·모델·블록
 이름, 경로, 계정은 찍지 않는다(회사 내부 정보).
 
-## 25. 대상 1의 C 코드(Custom Code) 설정 보기
+## 26. C 헤더 폴더를 고르고 두 번째 모델을 처음부터 다시 돌리기
 
-왜: 24절 결과, 대상 1의 Harness는 1단계와 같은 짧은 빌드 폴더에서도 컴파일이 실패했다(`Simulink:cgxe:BuildError`,
-`Simulink:cgxe:SymbolicLinkErrorCause`, 종류 `include 파일 없음`). 시뮬레이션을 빌드할 때 C 헤더(.h)를 찾지 못한다는 뜻이다.
-그래서 Iteration이 verify 전에 실패하고, verify 결과가 하나도 남지 않았다. 대상 2와 3은 같은 모델에서 빌드가 되므로 대상 1의
-CUT만 C 코드를 쓰는 것으로 보인다. Simulink는 Simulation Target의 상대 include 경로를 모델 폴더에서 찾고, 다음으로 include
-폴더와 MATLAB 경로를 찾는다. 헤더를 못 찾는 이유를 숫자로 가린다. 모델은 저장하지 않고 닫는다.
+왜: 대상 1의 CUT은 C 코드가 쓰는 헤더(.h)를 찾지 못해 시뮬레이션 빌드가 실패했다(24절, `include 파일 없음`). 헤더 파일은
+있다. 툴킷은 Windows 경로 길이 제한 때문에 짧은 임시 폴더에서 빌드하므로, 현재 폴더나 모델 폴더에 기대던 헤더를 찾지 못한다.
+이제 툴킷이 헤더 폴더를 Harness와 standalone 사본의 Simulation Target `Include directories`에 절대 경로로 넣는다. 팀의 Top
+Model은 바꾸지 않는다. 고른 폴더는 이 클론의 `runtime_target.mat`에 저장되어 다음 실행에도 쓰인다.
 
-화면에 찍는 것:
-- 대상 1 CUT 안에서 C 빌드가 필요한 블록 수: C Caller, C Function, S-Function(MEX 있음), MATLAB Function, Stateflow 차트,
-  Model 참조, 라이브러리 링크
-- Top Model, Harness, (CUT가 라이브러리 링크면) 라이브러리의 Custom Code 설정: 헤더 코드·소스 코드가 있는지, include 폴더와
-  소스와 라이브러리 수, 그중 없는 것 수
-- Top Model과 Harness 사이에 다른 설정 이름(예: `SimUserIncludeDirs`)
-- Top Model 헤더 코드가 `#include`하는 헤더 수와 찾은 수
-- MATLAB 프로젝트가 열려 있는지, 모델 폴더와 그 위 .prj 수
-- Top Model 자체가 짧은 폴더에서 컴파일되는지
+이 절의 점검은:
+1. 단위 테스트를 돌린다.
+2. 폴더 고르기 창을 띄운다. 헤더(.h)가 있는 폴더를 고른다. 헤더가 여러 폴더에 있으면 이 절을 끝낸 뒤 블록을 다시 돌려 하나씩
+   더한다(고른 폴더는 쌓인다).
+3. 22절처럼 처음부터 다시 만든다(예전 결과·Harness·Test File 지우고 1단계 → 3·5·4단계). 새 Harness는 고른 폴더를 가진다.
 
-순서: 저장할 모델은 저장한다. 같은 블록을 명령 기록에서 다시 불러 두 번째 모델의 클론을 고른다. Top Model 컴파일이 있어 몇 분
-걸릴 수 있다.
+순서:
+1. 저장할 모델은 저장한다.
+2. 아래 블록을 붙여 넣는다. 끝이 `st_todo_check(26)`이라 명령 기록의 블록과 다르다. 툴킷 폴더 창에서 두 번째 모델의 클론을
+   고르고, 다음 창에서 헤더 폴더를 고른다.
 
 ```matlab
 clearvars; toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
-if ~isequal(toolkitDir, 0), cd(toolkitDir); [pullStatus, ~] = system('set GIT_TERMINAL_PROMPT=0&& git pull --ff-only -q'); rehash; clear st_setup st_todo_check; if pullStatus, disp('git pull 실패 | cmd에서 이 클론 폴더로 가서 git pull을 해 보세요'); else, evalc('st_setup'); st_todo_check; end, end
+if ~isequal(toolkitDir, 0), cd(toolkitDir); [pullStatus, ~] = system('set GIT_TERMINAL_PROMPT=0&& git pull --ff-only -q'); rehash; clear st_setup st_todo_check; if pullStatus, disp('git pull 실패 | cmd에서 이 클론 폴더로 가서 git pull을 해 보세요'); else, evalc('st_setup'); st_todo_check(26); end, end
 ```
 
-확인할 것: 화면 첫 줄 끝이 `C 코드 설정 보기`인가. 나머지는 숫자 그대로 보내 준다.
+확인할 것:
 
-돌려줄 것: 화면 캡처 한 장. 팀에서 이 모델을 돌릴 때 따로 여는 프로젝트나 경로 설정이 있는지 알게 되면 말로 알려 준다.
+- 화면 첫 줄 끝이 `처음부터 분류까지 다시 만들기`이고, 그 아래 `C 헤더 폴더 | 1개 | 없는 폴더 0개`가 있는가.
+- `1단계(FORCE, 결과 정리 포함) OK`, `시나리오 맞춤 OK 3 / 대상 3`, `standalone 파이프라인 OK`(이번에는 `PARTIAL`이 아니어야 함)
+- `대상 1 | standalone ...`과 `대상 1 | 1단계 ...` 줄에 Iteration이 있고, 저장 Coverage가 실패하지 않는가.
+
+돌려줄 것: 화면 캡처 한 장. 대상 1이 또 실패하면, 블록을 명령 기록의 것(끝이 `st_todo_check`)으로 다시 돌려 25절 화면을 보내
+준다.
