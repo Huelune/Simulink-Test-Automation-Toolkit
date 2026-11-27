@@ -10,6 +10,16 @@ function entries = st_other_toolkit_path_entries(rootDir, pathEntries, setupFile
 % clone's, a function only the other clone has would still run. Entries at
 % or below rootDir are kept even when rootDir sits inside the other clone
 % (a git worktree does).
+%
+% Only a git checkout (rootDir holds .git, a folder or a worktree's file)
+% takes anything off. A bundle's workspace or a test copy has no .git and
+% returns nothing: the standalone bundle runner deletes its short workspace
+% and then still calls toolkit functions, which the clone behind it
+% supplies (2026-11-27, st_log undefined at the end of a standalone run).
+entries = cell(1, 0);
+if ~isfolder(fullfile(rootDir, '.git')) && ~isfile(fullfile(rootDir, '.git'))
+    return;
+end
 others = {};
 for k = 1:numel(cellstr(setupFiles))
     folder = fileparts(char(string(setupFiles(k))));
