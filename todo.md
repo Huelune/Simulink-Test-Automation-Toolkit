@@ -66,3 +66,34 @@ if ~isequal(toolkitDir, 0), cd(toolkitDir); evalc('st_setup'); st_todo_check(18)
 - 입력 이름별 값은 임시 폴더의 `st_input_ranges.csv`에 있다. 이 파일은 이 PC에서만 열어 보고 보내지 않는다.
 
 돌려줄 것: 화면 캡처 한 장.
+
+## 19. CSV에 채운 Min/Max를 모델에 한꺼번에 넣기
+
+왜: 18절에서 CUT 입력 대부분에 범위가 없다는 것을 확인했다. 범위 표에 Min/Max를 채우고 이 블록으로 모델에 한꺼번에
+넣는다. Bus가 빈 줄은 Inport 블록의 `OutMin`/`OutMax`에 넣는다. Bus가 있는 줄은 그 Bus 객체 요소의 `Min`/`Max`에 넣는다.
+Bus 객체는 모델 workspace에서 먼저 찾고, 없으면 모델의 data dictionary에서 찾는다. 다 넣으면 바뀐 모델과 dictionary를
+저장한다. 시작할 때 이 기능의 단위 테스트를 먼저 돌린다.
+
+순서:
+1. 모델이 있는 클론에서 main을 pull한다(cmd에서 그 클론 폴더로 가서 `git pull`).
+2. 18절 블록을 다시 돌린다. 범위 표가 Bus 이름 열이 더해진 새 형식으로 다시 써진다.
+3. 임시 폴더의 `st_input_ranges.csv`를 다른 폴더(예: 바탕 화면)에 복사해 연다. 다음 18절 실행이 임시 폴더의 원본을
+   덮어쓴다.
+4. `Min`과 `Max` 칸만 채운다. 숫자로 적고, 범위가 없으면 빈 칸이나 `[]`로 둔다. 다른 칸은 고치지 않는다. 범위를
+   넣지 않을 줄은 지워도 된다.
+5. 저장한다. Excel로 저장한 CSV가 DRM으로 암호화되면 화면에 `표 읽기 실패`가 나온다. 그때는 Excel 통합 문서(.xlsx)로
+   저장해 그 파일을 고른다.
+6. 저장 안 한 모델은 저장한다. 아래 블록을 붙여 넣고, 툴킷 폴더 창에서 그 클론을, 파일 창에서 채운 표를 고른다.
+
+```matlab
+clearvars; toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
+if ~isequal(toolkitDir, 0), cd(toolkitDir); evalc('st_setup'); st_todo_check(19); end
+```
+
+확인할 것:
+
+- `표 <수>줄 | Inport 바꿈 <수> | Bus 요소 바꿈 <수> | 그대로 <수> | 실패 0`이고 `저장 | 모델 <수> | dictionary <수>`가 나오는가.
+- 실패가 있으면 종류별 줄에 할 일이 적혀 있다. 표를 고쳐 다시 돌리면 된다. 이미 넣은 값은 `그대로`로 센다.
+- 그다음 18절을 다시 돌려 `범위 | ... 없음 <수>`가 줄었는가.
+
+돌려줄 것: 19절 화면과 다시 돌린 18절 화면, 캡처 두 장.
