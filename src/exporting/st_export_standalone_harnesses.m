@@ -156,6 +156,12 @@ for i = 1:height(targets)
         report_step(cfg, 'harness export', stepTimer);
         if bdIsLoaded(outputModel)
             stepTimer = tic;
+            % The copy runs from another folder, so C header folders outside
+            % the model folder go in as absolute paths
+            % (st_set_custom_code_include_dirs).
+            includeConfig = cfg;
+            if isempty(includeConfig), includeConfig = st_config(); end
+            st_apply_custom_code_include_dirs(outputModel, includeConfig);
             save_system(outputModel, outputPath);
             close_system(outputModel, 0);
             report_step(cfg, 'save standalone model', stepTimer);

@@ -22,6 +22,12 @@ inputs.SLDV = st_hash_value(struct('Mode',char(row.SldvMode), ...
     'IgnoreUnexpectedInputs',cfg.IgnoreUnexpectedSldvInputs, ...
     'AllowSubsystemPathMismatch',cfg.AllowSldvSubsystemPathMismatch));
 inputs.HARNESS_CONFIG = st_hash_value(cfg.HarnessStopTime);
+% The C header folders go on each Harness in this stage. Without any, the
+% fingerprint stays as before so no cache is invalidated.
+if isfield(cfg, 'CustomCodeIncludeDirs') && ~isempty(cfg.CustomCodeIncludeDirs)
+    inputs.HARNESS_CONFIG = st_hash_value(struct('StopTime', cfg.HarnessStopTime, ...
+        'IncludeDirs', {cellstr(string(cfg.CustomCodeIncludeDirs))}));
+end
 % Of the coverage columns preparation reads only CoverageFilterMode, and
 % only with defect tests on: it decides which unreachable outcomes become
 % defect iterations. Any other filter change must not rebuild the Test File.

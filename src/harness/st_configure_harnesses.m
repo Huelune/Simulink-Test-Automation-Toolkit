@@ -88,6 +88,9 @@ for i = 1:n
             'StopTime', ...
             targetStopTime);
 
+        % C headers outside the model folder (st_set_custom_code_include_dirs).
+        includeAdded = st_apply_custom_code_include_dirs(harnessName, cfg);
+
         st_log(cfg, 'DEBUG', ...
             '[HarnessConfig %d/%d] save_system start', ...
             i, n);
@@ -102,6 +105,9 @@ for i = 1:n
 
         Status(i) = 'OK';
         Message(i) = ['StopTime=' targetStopTime];
+        if includeAdded > 0
+            Message(i) = sprintf('%s | Include directories +%d', Message(i), includeAdded);
+        end
 
     catch ME
 

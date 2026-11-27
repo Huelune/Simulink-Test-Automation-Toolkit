@@ -540,6 +540,19 @@ if isfile(cfg.RuntimeTargetFile)
     end
 end
 
+% Folders of the C headers this model's custom code includes, kept per
+% clone in runtime_target.mat by st_set_custom_code_include_dirs. Every
+% Harness and standalone copy the toolkit configures gets them in its
+% Include directories (st_apply_custom_code_include_dirs); the Top Model is
+% not changed. Empty: nothing is added.
+cfg.CustomCodeIncludeDirs = {};
+if isfile(cfg.RuntimeTargetFile)
+    includeOverride = load(cfg.RuntimeTargetFile);
+    if isfield(includeOverride, 'CustomCodeIncludeDirs')
+        cfg.CustomCodeIncludeDirs = cellstr(string(includeOverride.CustomCodeIncludeDirs));
+    end
+end
+
 % Where the standalone pipeline's bundle runner runs and lets Simulink
 % build. The recorded execution workspace is ~150 characters deep, and
 % Stateflow simulation targets nest slprj/_sfprj/<Harness>/... below pwd, so
