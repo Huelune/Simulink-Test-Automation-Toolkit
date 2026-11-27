@@ -81,7 +81,11 @@ lines{end+1} = ['  ' sequence_text(assessment, profile.ScenarioNames{1})];
 editor = '';
 try, editor = st_find_signal_editor_block(harness); catch, end
 compiled = false;
+% Compile where step 1 builds (tempdir/stt_build): from the clone folder the
+% Stateflow build path can pass the Windows path limit (Simulink:cgxe:BuildError).
+shortBuild = [];
 try
+    shortBuild = st_enter_short_build_directory(cfg, 'INSPECT'); %#ok<NASGU>
     feval(harness, [], [], [], 'compile');
     compiled = true;
     assessTime = get_param(assessment, 'CompiledSampleTime');
@@ -92,12 +96,20 @@ try
     lines{end+1} = text;
     lines{end+1} = sprintf('  Test Assessment가 t=Tmax에 실행됨 | %s', runs_at(assessTime, profile.Tmax));
 catch ME
-    lines{end+1} = sprintf('  컴파일 실패 | %s', ME.identifier);
+    lines{end+1} = sprintf('  컴파일 실패 | %s', st_build_error_kind(ME));
+    lines{end+1} = '  전문 st_todo_check.txt (임시 폴더, 밖으로 보내지 않음)';
+    fid = fopen(fullfile(tempdir, 'st_todo_check.txt'), 'a');
+    if fid >= 0
+        fprintf(fid, '[verify 시점 보기 컴파일]\n%s\n\n', getReport(ME, 'extended', 'hyperlinks', 'off'));
+        fclose(fid);
+    end
 end
-% The compiled Harness must end before it closes (closeHarness on return).
+% The compiled Harness must end before it closes (closeHarness on return),
+% and the short build folder is left only after that.
 if compiled
     try, feval(harness, [], [], [], 'term'); catch, end
 end
+clear shortBuild
 end
 
 
