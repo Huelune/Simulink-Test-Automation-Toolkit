@@ -74,7 +74,7 @@ try
     lines{end+1} = sprintf('1단계(%s, 결과 정리 포함) OK', ternary(fresh, 'FORCE', '기본 준비'));
     ok = true;
 catch ME
-    lines{end+1} = sprintf('1단계 실패 | %s | 실행 로그(result/logs)를 보세요', id_of(ME));
+    lines{end+1} = sprintf('1단계 실패 | %s | 로그 result/logs', id_of(ME));
     lines{end+1} = write_report(ME, '1단계');
 end
 
@@ -152,6 +152,9 @@ end
 
 
 function text = id_of(ME)
+% The identifier, then where it broke in toolkit names (st_error_place).
 text = ME.identifier;
 if isempty(text), text = '(식별자 없음)'; end
+place = st_error_place(ME);
+if ~isempty(place), text = [text ' | ' place]; end
 end

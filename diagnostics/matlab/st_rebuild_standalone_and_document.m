@@ -55,7 +55,7 @@ try
     pipelineInfo = st_run_standalone_coverage_pipeline('SaveTestResult', true);
     lines{end+1} = sprintf('standalone 파이프라인 OK | 상태 %s', char(string(pipelineInfo.Status)));
 catch ME
-    lines{end+1} = sprintf('standalone 파이프라인 실패 | %s | 실행 로그(result/logs)를 보세요', id_of(ME));
+    lines{end+1} = sprintf('standalone 파이프라인 실패 | %s | 로그 result/logs', id_of(ME));
     lines{end+1} = write_report(ME, 'standalone 파이프라인');
 end
 if ~isempty(pipelineInfo)
@@ -126,6 +126,9 @@ end
 
 
 function text = id_of(ME)
+% The identifier, then where it broke in toolkit names (st_error_place).
 text = ME.identifier;
 if isempty(text), text = '(식별자 없음)'; end
+place = st_error_place(ME);
+if ~isempty(place), text = [text ' | ' place]; end
 end

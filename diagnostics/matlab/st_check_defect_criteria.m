@@ -228,6 +228,9 @@ end
 
 
 function text = id_of(ME)
+% The identifier, then where it broke in toolkit names (st_error_place).
 text = string(ME.identifier);
 if strlength(text) == 0, text = "(식별자 없음)"; end
+place = string(st_error_place(ME));
+if strlength(place) > 0, text = text + " | " + place; end
 end
