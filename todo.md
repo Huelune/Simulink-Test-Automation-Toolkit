@@ -17,6 +17,13 @@
 Tmax보다 길거나 Tmax가 주기의 배수가 아님) step2에 들어가지 못해 verify 결과가 아예 남지 않는다. 대상 1의 Tmax는 0.04초로
 짧다. 이것이 맞는지 Harness를 컴파일해 숫자로 본다. 모델과 Harness는 저장하지 않고 닫는다.
 
+첫 화면: SLDV GENERATE, 시나리오 1, Tmax 0.04, Harness StopTime 0.04, Fixed-step, FixedStep 0.01, step1→step2
+`after(0.04, sec)`, step2 verify 3개. 고정 스텝 0.01이면 t=0.04에 정확히 닿으므로 시점만으로는 verify가 빠질 이유가 없다. 그런데
+컴파일이 `Simulink:cgxe:BuildError`로 실패했다. 이 Harness의 시뮬레이션 빌드가 실패하면 verify 전에 Iteration이 실패해 같은
+증상이 난다. 다만 점검이 클론 폴더에서 컴파일해서 Windows 경로 길이 제한에 걸렸을 수도 있다. 이제 1단계와 같은 짧은 빌드
+폴더(임시 폴더의 `stt_build`)에서 컴파일하고, 실패하면 원인 식별자와 종류(경로 길이 초과, 컴파일러 없음, include 파일 없음,
+링크 실패, C 컴파일 오류, 기타)만 찍는다.
+
 순서: 저장할 모델은 저장한다. 같은 블록을 명령 기록에서 다시 불러 두 번째 모델의 클론을 고른다.
 
 ```matlab
@@ -30,5 +37,6 @@ if ~isequal(toolkitDir, 0), cd(toolkitDir); [pullStatus, ~] = system('set GIT_TE
 - `대상 1 | SLDV ... | 시나리오 <수> | Tmax 0.04`
 - `Harness | StopTime | 솔버 | FixedStep`, `step1→step2 after(...)`, `step2 verify <수>개`
 - `컴파일 샘플 시간 | Test Assessment [주기 오프셋]`과 `Test Assessment가 t=Tmax에 실행됨 | 예/아니오`
+- 또는 `컴파일 실패 | 식별자 ... | 종류 ...`. 전문은 임시 폴더 파일에 있지만 보내지 않는다.
 
 돌려줄 것: 화면 캡처 한 장.
