@@ -10,9 +10,10 @@ function st_todo_check(section)
 % that has not pulled would run an earlier section's check. Keep that line
 % when pointing this at another section.
 %
-% No argument: section 25. Read-only: for each target the latest step 1 run
-% marked EXCEPT, the C build blocks of its CUT and the custom code settings
-% of the Top Model, its Harness and library (st_inspect_custom_code).
+% No argument: no section is pending; it says so and runs nothing.
+% 25: read-only, for each target the latest step 1 run marked EXCEPT, the C
+% build blocks of its CUT and the custom code settings of the Top Model,
+% its Harness and library (st_inspect_custom_code).
 % 27: the unit tests of the final document's decision outcomes
 % (test_decision_outcomes, test_final_document_defects), one screen.
 % 26: choose the folder of the C headers in a dialog
@@ -33,7 +34,12 @@ function st_todo_check(section)
 % model (st_apply_input_ranges). Saves the model.
 if ~st_todo_up_to_date(), return; end
 cfg = st_config();
-if nargin < 1, section = 25; end
+if nargin < 1
+    clc;
+    fprintf('지금 todo.md에 MATLAB으로 돌릴 점검이 없습니다\n');
+    st_log(cfg, 'INFO', 'todo check | no section pending');
+    return;
+end
 switch section
     case 18
         st_log(cfg, 'INFO', 'todo check start | CUT input ranges');
