@@ -9,34 +9,32 @@
 화면에는 개수, Simulink 블록 종류 이름, 정해 둔 안내 문구만 찍는다. 테스트 케이스·모델·블록
 이름, 경로, 계정은 찍지 않는다(회사 내부 정보).
 
-## 24. 대상 1의 Test Assessment가 Tmax에 실행되는지 보기
+## 25. 대상 1의 C 코드(Custom Code) 설정 보기
 
-왜: 23절 결과, 대상 1은 1단계와 standalone 모두 SLDV 시나리오의 verify 결과가 하나도 없었다(`verify 결과 없음(Tmax=0.04)`).
-툴킷은 SLDV 입력을 쓸 때 Harness의 StopTime을 Tmax로 두고, Test Assessment가 step1에서 `after(Tmax, sec)`로 step2(verify)로
-넘어가게 만든다. 그래서 verify는 마지막 시각 t=Tmax에 한 번만 돈다. Test Assessment가 그 시각에 실행되지 않으면(예: 실행 주기가
-Tmax보다 길거나 Tmax가 주기의 배수가 아님) step2에 들어가지 못해 verify 결과가 아예 남지 않는다. 대상 1의 Tmax는 0.04초로
-짧다. 이것이 맞는지 Harness를 컴파일해 숫자로 본다. 모델과 Harness는 저장하지 않고 닫는다.
+왜: 24절 결과, 대상 1의 Harness는 1단계와 같은 짧은 빌드 폴더에서도 컴파일이 실패했다(`Simulink:cgxe:BuildError`,
+`Simulink:cgxe:SymbolicLinkErrorCause`, 종류 `include 파일 없음`). 시뮬레이션을 빌드할 때 C 헤더(.h)를 찾지 못한다는 뜻이다.
+그래서 Iteration이 verify 전에 실패하고, verify 결과가 하나도 남지 않았다. 대상 2와 3은 같은 모델에서 빌드가 되므로 대상 1의
+CUT만 C 코드를 쓰는 것으로 보인다. Simulink는 Simulation Target의 상대 include 경로를 모델 폴더에서 찾고, 다음으로 include
+폴더와 MATLAB 경로를 찾는다. 헤더를 못 찾는 이유를 숫자로 가린다. 모델은 저장하지 않고 닫는다.
 
-첫 화면: SLDV GENERATE, 시나리오 1, Tmax 0.04, Harness StopTime 0.04, Fixed-step, FixedStep 0.01, step1→step2
-`after(0.04, sec)`, step2 verify 3개. 고정 스텝 0.01이면 t=0.04에 정확히 닿으므로 시점만으로는 verify가 빠질 이유가 없다. 그런데
-컴파일이 `Simulink:cgxe:BuildError`로 실패했다. 이 Harness의 시뮬레이션 빌드가 실패하면 verify 전에 Iteration이 실패해 같은
-증상이 난다. 다만 점검이 클론 폴더에서 컴파일해서 Windows 경로 길이 제한에 걸렸을 수도 있다. 이제 1단계와 같은 짧은 빌드
-폴더(임시 폴더의 `stt_build`)에서 컴파일하고, 실패하면 원인 식별자와 종류(경로 길이 초과, 컴파일러 없음, include 파일 없음,
-링크 실패, C 컴파일 오류, 기타)만 찍는다.
+화면에 찍는 것:
+- 대상 1 CUT 안에서 C 빌드가 필요한 블록 수: C Caller, C Function, S-Function(MEX 있음), MATLAB Function, Stateflow 차트,
+  Model 참조, 라이브러리 링크
+- Top Model, Harness, (CUT가 라이브러리 링크면) 라이브러리의 Custom Code 설정: 헤더 코드·소스 코드가 있는지, include 폴더와
+  소스와 라이브러리 수, 그중 없는 것 수
+- Top Model과 Harness 사이에 다른 설정 이름(예: `SimUserIncludeDirs`)
+- Top Model 헤더 코드가 `#include`하는 헤더 수와 찾은 수
+- MATLAB 프로젝트가 열려 있는지, 모델 폴더와 그 위 .prj 수
+- Top Model 자체가 짧은 폴더에서 컴파일되는지
 
-순서: 저장할 모델은 저장한다. 같은 블록을 명령 기록에서 다시 불러 두 번째 모델의 클론을 고른다.
+순서: 저장할 모델은 저장한다. 같은 블록을 명령 기록에서 다시 불러 두 번째 모델의 클론을 고른다. Top Model 컴파일이 있어 몇 분
+걸릴 수 있다.
 
 ```matlab
 clearvars; toolkitDir = uigetdir(pwd, '툴킷 폴더(st_setup.m이 있는 폴더)를 고르세요');
 if ~isequal(toolkitDir, 0), cd(toolkitDir); [pullStatus, ~] = system('set GIT_TERMINAL_PROMPT=0&& git pull --ff-only -q'); rehash; clear st_setup st_todo_check; if pullStatus, disp('git pull 실패 | cmd에서 이 클론 폴더로 가서 git pull을 해 보세요'); else, evalc('st_setup'); st_todo_check; end, end
 ```
 
-확인할 것:
+확인할 것: 화면 첫 줄 끝이 `C 코드 설정 보기`인가. 나머지는 숫자 그대로 보내 준다.
 
-- 화면 첫 줄 끝이 `verify 시점 보기`인가.
-- `대상 1 | SLDV ... | 시나리오 <수> | Tmax 0.04`
-- `Harness | StopTime | 솔버 | FixedStep`, `step1→step2 after(...)`, `step2 verify <수>개`
-- `컴파일 샘플 시간 | Test Assessment [주기 오프셋]`과 `Test Assessment가 t=Tmax에 실행됨 | 예/아니오`
-- 또는 `컴파일 실패 | 식별자 ... | 종류 ...`. 전문은 임시 폴더 파일에 있지만 보내지 않는다.
-
-돌려줄 것: 화면 캡처 한 장.
+돌려줄 것: 화면 캡처 한 장. 팀에서 이 모델을 돌릴 때 따로 여는 프로젝트나 경로 설정이 있는지 알게 되면 말로 알려 준다.
