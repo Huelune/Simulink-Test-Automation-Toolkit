@@ -1,4 +1,4 @@
-function st_rebuild_all()
+function finished = st_rebuild_all()
 %ST_REBUILD_ALL Delete the Harnesses and Test File, then run the manual from Harness creation to the team tree.
 %
 % For todo.md: everything again from nothing, steps 1, 3, 4 and 5 of the
@@ -19,6 +19,9 @@ function st_rebuild_all()
 %      then each target's iteration outcomes, defect kinds and CVF-applied
 %      coverage on screen.
 % No names reach the screen; long error reports go to tempdir/st_todo_check.txt.
+% finished is true when it got through step 3 to the team tree (each step's
+% own failures are on the screen), false when it stopped before.
+finished = false;
 title = '처음부터 분류까지 다시 만들기';
 cfg = st_config();
 st_log(cfg, 'INFO', 'Rebuild all start');
@@ -86,6 +89,7 @@ if ~ok
 end
 st_log(cfg, 'INFO', 'Rebuild all | step 1 done, standalone next');
 st_rebuild_standalone_and_document(lines, title);
+finished = true;
 st_log(cfg, 'INFO', 'Rebuild all complete');
 end
 

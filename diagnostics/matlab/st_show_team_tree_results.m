@@ -1,8 +1,11 @@
-function st_show_team_tree_results(folder, extraLines)
+function st_show_team_tree_results(folder, extraLines, underScreen)
 %ST_SHOW_TEAM_TREE_RESULTS Open a team submission tree's results in Test Manager, wherever the tree is.
 %
 % st_show_team_tree_results            % choose the tree in a dialog
 % st_show_team_tree_results(folder)
+% st_show_team_tree_results('LATEST')  % the tree of the latest standalone run
+% st_show_team_tree_results(folder, extraLines, true)
+%                                      % lines go under the screen as it is
 %
 % The tree (st_classify_standalone_results) holds 테스트 케이스, 테스트 보고서
 % and 프로젝트. Everything below is read from the tree itself, so a tree
@@ -20,25 +23,30 @@ function st_show_team_tree_results(folder, extraLines)
 % outcome. Counts and fixed messages only.
 if nargin < 1, folder = ''; end
 if nargin < 2, extraLines = {}; end
+if nargin < 3, underScreen = false; end
 title = '팀 제출 트리 결과 보기';
-clc;
+if ~underScreen, clc; end
 warnState = warning('off', 'all');
 restoreWarnings = onCleanup(@() warning(warnState)); %#ok<NASGU>
 cfg = st_config();
 st_log(cfg, 'INFO', 'Team tree results view start');
 lines = [{sprintf('MATLAB %s | %s', version('-release'), title)}, reshape(extraLines, 1, [])];
+if underScreen, lines{1} = ['--- ' title]; end
 report = 'st_team_tree_results.txt';
 
+if strcmpi(char(string(folder)), 'LATEST')
+    folder = latest_tree(cfg);
+end
 if strlength(string(folder)) == 0
     folder = uigetdir(pwd, '팀 제출 트리 폴더(테스트 보고서가 든 폴더)를 고르세요');
     if isequal(folder, 0)
-        show([lines, {'폴더를 고르지 않아 멈췄습니다'}]);
+        show([lines, {'폴더를 고르지 않아 멈췄습니다'}], underScreen);
         return;
     end
 end
 root = tree_root(char(folder));
 if isempty(root)
-    show([lines, {'팀 제출 트리가 아닙니다 | 테스트 보고서 폴더가 든 트리(또는 그 안의 폴더)를 고르세요'}]);
+    show([lines, {'팀 제출 트리가 아닙니다 | 테스트 보고서 폴더가 든 트리(또는 그 안의 폴더)를 고르세요'}], underScreen);
     return;
 end
 reportDir = fullfile(root, '테스트 보고서');
@@ -50,13 +58,13 @@ lines{end+1} = sprintf('고른 폴더 | 팀 제출 트리 | CUT 폴더 %d | Test
 if ~isfile(resultFile)
     lines{end+1} = ['Test Manager 결과가 트리에 없습니다 | 결과를 저장한 실행으로 4단계 분류를 다시 하고 ' ...
         '트리를 다시 옮기세요'];
-    show(lines);
+    show(lines, underScreen);
     return;
 end
 
 loaded = find_system('type', 'block_diagram');
 if ~isempty(loaded) && any(strcmp(get_param(loaded, 'Dirty'), 'on'))
-    show([lines, {'저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요'}]);
+    show([lines, {'저장 안 한 모델이 있습니다. 저장하거나 닫은 뒤 다시 돌려 주세요'}], underScreen);
     return;
 end
 if ~isempty(loaded), bdclose('all'); end
@@ -101,7 +109,7 @@ if ~isempty(failed)
 end
 lines{end+1} = 'Test Manager의 Coverage 값은 CVF가 빠진 값입니다. CVF를 건 값은 브라우저 보고서와 모델 색 표시로 보세요';
 st_log(cfg, 'INFO', 'Team tree results view end | CUT %d | reports %d', numel(cuts), ok);
-show(lines);
+show(lines, underScreen);
 end
 
 
@@ -170,8 +178,23 @@ if ~isempty(place), text = [text ' | ' place]; end
 end
 
 
-function show(lines)
-clc;
+function show(lines, underScreen)
+if nargin < 2 || ~underScreen, clc; end
 for k = 1:min(38, numel(lines)), fprintf('%s\n', lines{k}); end
 if numel(lines) > 38, fprintf('%d줄 더 있음\n', numel(lines) - 38); end
+end
+
+
+function folder = latest_tree(cfg)
+% Step 4 puts the tree next to the run, named after the Test File.
+folder = '';
+try
+    manifest = st_load_standalone_pipeline_manifest(cfg.StandaloneCoverageRootDir, 'LATEST');
+    runFolder = fullfile(cfg.StandaloneCoverageRootDir, char(string(manifest.PipelineId)));
+    testFiles = dir(fullfile(runFolder, 'TestManager', '*.mldatx'));
+    if isempty(testFiles), return; end
+    [~, name] = fileparts(testFiles(1).name);
+    folder = fullfile(cfg.StandaloneCoverageRootDir, name);
+catch
+end
 end
