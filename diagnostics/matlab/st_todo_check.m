@@ -11,29 +11,42 @@ function st_todo_check(section)
 % (st_run_model_first).
 % 18: unit test, then the range and format of every CUT input
 % (st_show_input_ranges). Read-only.
+% 19: unit test, then set the Min/Max filled in the range table on the
+% model (st_apply_input_ranges). Saves the model.
 cfg = st_config();
 if nargin < 1, section = 17; end
 switch section
     case 18
         st_log(cfg, 'INFO', 'todo check start | CUT input ranges');
-        results = [];
-        file = fullfile(st_project_root(), 'tests', 'unit', 'test_show_input_ranges.m');
-        try
-            evalc('results = runtests(file);');
-        catch ME
-            clc;
-            fprintf('단위 테스트 실행 오류 | %s | 이 화면을 보내 주세요\n', ME.identifier);
-            return;
-        end
-        if isempty(results) || any([results.Failed] | [results.Incomplete])
-            clc;
-            fprintf('단위 테스트 실패 | 모델을 읽지 않았습니다. 이 화면을 보내 주세요\n');
-            st_log(cfg, 'WARN', 'todo check stopped | input range unit test failed');
-            return;
-        end
-        st_show_input_ranges();
+        if unit_passed(cfg, 'test_show_input_ranges.m'), st_show_input_ranges(); end
+    case 19
+        st_log(cfg, 'INFO', 'todo check start | apply CUT input ranges');
+        if unit_passed(cfg, 'test_apply_input_ranges.m'), st_apply_input_ranges(); end
     otherwise
         st_log(cfg, 'INFO', 'todo check start | first run of this clone''s model');
         st_run_model_first();
 end
+end
+
+
+function ok = unit_passed(cfg, name)
+% The check's own unit test first; a failure leaves the model untouched.
+ok = false;
+results = [];
+file = fullfile(st_project_root(), 'tests', 'unit', name);
+try
+    evalc('results = runtests(file);');
+catch ME
+    clc;
+    fprintf('단위 테스트 실행 오류 | %s | 이 화면을 보내 주세요\n', ME.identifier);
+    st_log(cfg, 'WARN', 'todo check stopped | unit test error');
+    return;
+end
+if isempty(results) || any([results.Failed] | [results.Incomplete])
+    clc;
+    fprintf('단위 테스트 실패 | 모델을 건드리지 않았습니다. 이 화면을 보내 주세요\n');
+    st_log(cfg, 'WARN', 'todo check stopped | unit test failed');
+    return;
+end
+ok = true;
 end
