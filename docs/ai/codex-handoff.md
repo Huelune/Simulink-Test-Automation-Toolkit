@@ -196,6 +196,11 @@
   `테스트 보고서`에 넣게 했다(MATLAB·Python, info.ResultFile/plan.result). `st_show_team_tree_results`(트리만 읽음: 결과 가져오기,
   CUT별 프로젝트 모델 load 후 CVT+CVF 보고서와 색 표시), `st_redo_team_tree`(최근 실행 트리를 최근 최종 문서와 다시 분류).
   확인은 `todo.md` 31절(`st_todo_check(31)`). 다른 세션의 30절과 함께 있다.
+  사용자 요청: 처음부터 다시 만들기와 트리 결과 보기를 한 번에. `st_rebuild_all`이 끝까지 갔는지(finished)를 돌려주고,
+  `st_show_team_tree_results('LATEST', {}, true)`가 최근 실행의 트리를 바로 열어 다시 만들기 화면 아래에 줄을 붙인다.
+  `todo.md` 32절(`st_todo_check(32)`). 결함 점검이 실행 폴더 보고서를 이미 띄우므로 브라우저 탭이 CUT마다 둘이다.
+  31절 첫 결과(말로): Test Manager에 Test Case가 보이지 않았다. 결과만 가져오고 Test File을 열지 않았다. 트리 보기가 CUT마다
+  세 갈래 폴더를 경로에 올리고 `테스트 보고서/<TopModel>.mldatx`를 연 뒤 결과를 가져오게 고쳤다(31절 다시).
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
