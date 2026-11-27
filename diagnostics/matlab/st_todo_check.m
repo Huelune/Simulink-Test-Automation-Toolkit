@@ -102,22 +102,10 @@ end
 
 function ok = unit_passed(cfg, name)
 % The check's own unit test first; a failure leaves the model untouched.
-ok = false;
-results = [];
-file = fullfile(st_project_root(), 'tests', 'unit', name);
-try
-    evalc('results = runtests(file);');
-catch ME
-    clc;
-    fprintf('단위 테스트 실행 오류 | %s | 이 화면을 보내 주세요\n', ME.identifier);
-    st_log(cfg, 'WARN', 'todo check stopped | unit test error');
-    return;
-end
-if isempty(results) || any([results.Failed] | [results.Incomplete])
-    clc;
-    fprintf('단위 테스트 실패 | 모델을 건드리지 않았습니다. 이 화면을 보내 주세요\n');
+% On a failure the screen names each failed test, its error and the line.
+ok = st_show_unit_tests({name});
+if ~ok
+    fprintf('모델을 건드리지 않았습니다\n');
     st_log(cfg, 'WARN', 'todo check stopped | unit test failed');
-    return;
 end
-ok = true;
 end
