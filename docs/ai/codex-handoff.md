@@ -188,6 +188,10 @@
   (`st_configure_harnesses`)와 standalone 내보내기(`st_export_standalone_harnesses`)에서 부른다. Top Model은 바꾸지 않는다.
   HARNESS_CONFIG 지문에 폴더 목록을 넣었다(비어 있으면 예전 지문). 확인은 `todo.md` 26절(`st_todo_check(26)`: 폴더 고르기 후
   `st_rebuild_all`). 기본값은 25(읽기만) 그대로.
+  26절 결과(2026-11-27): 사용자가 Top Model Include directories에 헤더 폴더를 직접 넣었더니 Top Model은 됐지만 기존 Harness는
+  같은 오류(Harness는 만들 때 Top Model 설정을 복사). 26절(헤더 폴더 고르기 → 처음부터 다시)을 돌려 "잘 된다"고 말로 알렸다
+  (화면 캡처는 받지 않음). 두 번째 모델 3개 대상 모두 끝까지 된 것으로 본다. `todo.md`에 돌릴 절이 없고 `st_todo_check`는 인자
+  없이 부르면 돌릴 점검이 없다고만 찍는다(번호를 주면 그 절의 점검).
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
