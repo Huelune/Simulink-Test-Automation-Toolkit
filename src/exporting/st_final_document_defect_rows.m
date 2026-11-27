@@ -93,7 +93,11 @@ if isscalar(decision)
         if ~isempty(parts)
             % SLDV's typeDesc need not be a Simulink BlockType; the D line's is.
             twoWay = any(twoWayTypes == rowDetails.BlockType(find(match, 1)));
-            line = string(parts{1}) + outcome_label(texts, twoWay) + string(parts{2});
+            % A two-input MinMax reads as T/F; its D line says how many inputs.
+            inputs = regexp(char(lines(at)), 'Inputs=(\d+)\)', 'tokens', 'once');
+            inputCount = 0;
+            if ~isempty(inputs), inputCount = str2double(inputs{1}); end
+            line = string(parts{1}) + outcome_label(texts, twoWay, inputCount) + string(parts{2});
             lines(at) = line;
             description = strjoin(reshape(lines, 1, []), newline);
             return;
@@ -111,10 +115,11 @@ end
 end
 
 
-function label = outcome_label(texts, twoWay)
+function label = outcome_label(texts, twoWay, inputCount)
 % A true/false block reads like the rest of the D list ([T], [F]); any
 % other block gets the short outcome text the D list uses ("u2").
-labels = st_short_outcome_text(texts);
+if nargin < 3, inputCount = 0; end
+labels = st_short_outcome_text(texts, inputCount);
 if twoWay
     lowered = lower(texts);
     labels(contains(lowered, "true")) = "T";

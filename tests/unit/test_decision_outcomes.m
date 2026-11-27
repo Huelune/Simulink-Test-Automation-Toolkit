@@ -264,6 +264,24 @@ verifyEqual(testCase, formatted.DecisionBlocks(1), ...
 verifyEqual(testCase, reasons(1), "");
 end
 
+function testTwoInputBlockReadsAsTrueFalse(testCase)
+% A two-input MinMax chooses between two inputs: input 1 reads as T, input 2 as F.
+names = ["input 1 is the maximum"; "input 2 is the maximum"];
+item = minmax_item();
+item.Expression = 'max; Inputs=2';
+formatted = st_format_specification_decision_blocks(one_row_specification(item), ...
+    base_config(), fake_taken_lookup("Mx", [1; 1], names, [3; 0]));
+verifyEqual(testCase, formatted.DecisionBlocks(1), "Mx" + newline + "D1 [T]MinMax (max; Inputs=2)");
+formatted = st_format_specification_decision_blocks(one_row_specification(item), ...
+    base_config(), fake_taken_lookup("Mx", [1; 1], names, [0; 2]));
+verifyEqual(testCase, formatted.DecisionBlocks(1), "Mx" + newline + "D1 [F]MinMax (max; Inputs=2)");
+formatted = st_format_specification_decision_blocks(one_row_specification(item), ...
+    base_config(), fake_taken_lookup("Mx", [1; 1], flipud(names), [1; 1]));
+verifyEqual(testCase, formatted.DecisionBlocks(1), "Mx" + newline + "D1 [T/F]MinMax (max; Inputs=2)");
+verifyEqual(testCase, st_short_outcome_text(["input 1"; "input 2"], 2), ["T"; "F"]);
+verifyEqual(testCase, st_short_outcome_text("Logic to determine output input 2 is the maximum", 2), "F");
+end
+
 function testOtherBlockThatTookNothingIsDroppedAndDNumbersCloseUp(testCase)
 % The MinMax took none of its outcomes, so it leaves the row; the Switch
 % after it becomes D1, in the cell and in the details.

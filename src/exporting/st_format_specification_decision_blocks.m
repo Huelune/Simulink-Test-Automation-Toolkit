@@ -314,7 +314,12 @@ if ~isscalar(items)
     problem = "MISMATCH";
     return;
 end
-texts = unique(st_short_outcome_text(taken.OutcomeText(taken.Count > 0)), 'stable');
+% Two outcomes per decision (a two-input MinMax) read as T and F.
+perDecision = accumarray(double(taken.DecisionIndex(:)), 1);
+inputCount = 0;
+if all(perDecision(perDecision > 0) == 2), inputCount = 2; end
+texts = unique(st_short_outcome_text(taken.OutcomeText(taken.Count > 0), inputCount), 'stable');
+if all(ismember(texts, ["T", "F"])), texts = intersect(["T", "F"], texts, 'stable'); end
 if isempty(texts)
     labels(items) = string(missing);
 else

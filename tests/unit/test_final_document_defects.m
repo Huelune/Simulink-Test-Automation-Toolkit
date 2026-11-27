@@ -87,6 +87,17 @@ verifyEqual(testCase, st_short_outcome_text("input 2"), "u2");
 verifyEqual(testCase, st_short_outcome_text("Logic to determine output: case [1]"), "case [1]");
 end
 
+function testTwoInputMinMaxDefectReadsAsF(testCase)
+% The D line says the MinMax has two inputs, so input 2 reads as F.
+specification = defect_specification();
+specification.DecisionBlocks = replace(specification.DecisionBlocks, ...
+    "D2 [T/F]Max", "D2 [T]MinMax (max; Inputs=2)");
+specification = st_final_document_defect_rows(specification, sample_details(), ...
+    defect_list("Secret_Max", "MinMax", "Logic to determine output input 2 is the maximum", false), ...
+    no_reasons(), base_config());
+verifyTrue(testCase, endsWith(specification.DecisionBlocks(2), "D2 [F]MinMax (max; Inputs=2)"));
+end
+
 function testExpectedAndOutputCells(testCase)
 % The workbook has no reason sheet, so the fixed sentences are used.
 cfg = reason_config(testCase, "", strings(1,0), strings(0,1), strings(0,1));
