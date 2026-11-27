@@ -9,9 +9,8 @@ function st_run_model_first()
 %      stops it before the model is touched.
 %   2. Stops on unsaved models; otherwise closes every model and clears
 %      Test Manager.
-%   3. st_pre_validate_targets: any target whose CUTPath is not a Subsystem
-%      of the model stops it, with the kind of each failure, since step 1
-%      would make Harnesses on the wrong block.
+%   3. st_check_targets_before_run: a target with an empty name column or a
+%      CUTPath that is not a Subsystem stops it, with the kind of failure.
 %   4. st_rebuild_harnesses_and_tests(lines, false): step 1 with PER_CUT and
 %      the result collection, scenario alignment as a count.
 %   5. When step 1 finished, st_rebuild_standalone_and_document: steps 3, 5
@@ -27,10 +26,10 @@ lines = {};
 passed = false;
 % Variables that evalc assigns are named first, or MATLAB may take them for functions.
 results = [];
-checked = table();
 files = fullfile(st_project_root(), 'tests', 'unit', {'test_defect_criteria.m', ...
     'test_open_standalone_test_manager.m', 'test_rebase_standalone_manifest.m', ...
-    'test_classify_standalone_results.m', 'test_final_document_defects.m'});
+    'test_classify_standalone_results.m', 'test_final_document_defects.m', ...
+    'test_target_failure_lines.m'});
 try
     evalc('results = runtests(files);');
     lines{end+1} = sprintf('단위 테스트 | %d | 통과 %d | 실패 %d | 미완료 %d', numel(results), ...
@@ -60,29 +59,10 @@ try
 catch
 end
 
-try
-    evalc('checked = st_pre_validate_targets();');
-catch ME
-    show(title, [lines, {sprintf('Excel 검사 실패 | %s | 모델 고르기와 TestManagement.xlsx를 확인하세요', ...
-        id_of(ME)), write_report(ME, 'Excel 검사')}]);
-    st_log(cfg, 'WARN', 'Model first run stopped | pre-validation error');
-    return;
-end
-bad = [];
-if height(checked) > 0, bad = find(string(checked.Status) ~= "OK"); end
-lines{end+1} = sprintf('Excel 검사 | 대상 %d | OK %d | 실패 %d', height(checked), ...
-    height(checked) - numel(bad), numel(bad));
-for k = reshape(bad, 1, [])
-    lines{end+1} = sprintf('  대상 %d | %s', double(checked.No(k)), reason_kind(checked.Message(k))); %#ok<AGROW>
-end
-if height(checked) == 0
-    show(title, [lines, {'돌릴 대상이 없습니다. TestManagement.xlsx의 Targets 시트와 Enabled 칸을 확인하세요'}]);
-    st_log(cfg, 'WARN', 'Model first run stopped | no targets');
-    return;
-end
-if ~isempty(bad)
-    show(title, [lines, {'Excel의 CUTPath를 고친 뒤 다시 돌려 주세요. 이대로면 Harness를 엉뚱한 블록에 만듭니다'}]);
-    st_log(cfg, 'WARN', 'Model first run stopped | pre-validation %d failed of %d', numel(bad), height(checked));
+[lines, ok] = st_check_targets_before_run(lines);
+if ~ok
+    show(title, lines);
+    st_log(cfg, 'WARN', 'Model first run stopped | Excel check');
     return;
 end
 
@@ -95,35 +75,6 @@ end
 st_log(cfg, 'INFO', 'Model first run | step 1 done, standalone next');
 st_rebuild_standalone_and_document(lines, title);
 st_log(cfg, 'INFO', 'Model first run complete');
-end
-
-
-function text = reason_kind(message)
-% st_pre_validate_targets' messages carry the path; only their kind is shown.
-message = string(message);
-if startsWith(message, 'CUTPath is empty')
-    text = 'CUTPath 빈 칸';
-elseif startsWith(message, 'CUT block not found')
-    text = '블록 없음(경로 오타나 빠진 중간 Subsystem)';
-elseif startsWith(message, 'Target exists but is not a Subsystem')
-    text = ['Subsystem 아님(블록 종류 ' char(strtrim(extractAfter(message, 'BlockType='))) ')'];
-else
-    text = '기타 | 전문 st_todo_check.txt (임시 폴더)';
-    fid = fopen(fullfile(tempdir, 'st_todo_check.txt'), 'a');
-    if fid >= 0
-        fprintf(fid, '[Excel 검사]\n%s\n\n', message);
-        fclose(fid);
-    end
-end
-end
-
-
-function line = write_report(ME, stage)
-line = sprintf('  %s 오류 전문: st_todo_check.txt (임시 폴더)', stage);
-fid = fopen(fullfile(tempdir, 'st_todo_check.txt'), 'a');
-if fid < 0, line = sprintf('  %s 오류 전문을 쓰지 못함', stage); return; end
-fprintf(fid, '[%s]\n%s\n\n', stage, getReport(ME, 'extended', 'hyperlinks', 'off'));
-fclose(fid);
 end
 
 

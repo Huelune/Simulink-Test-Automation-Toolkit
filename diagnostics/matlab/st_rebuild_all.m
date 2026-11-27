@@ -7,7 +7,8 @@ function st_rebuild_all()
 %   1. Runs the unit tests of the code this run goes through. Any failure
 %      stops it before anything is deleted.
 %   2. Stops on unsaved models; otherwise closes every model and clears
-%      Test Manager, then st_delete_old_results deletes the earlier runs'
+%      Test Manager. st_check_targets_before_run stops on an Excel step 1
+%      cannot run. Then st_delete_old_results deletes the earlier runs'
 %      results (the user asked for it; it cannot be undone).
 %   3. st_rebuild_harnesses_and_tests: deletes the Harness each Excel target
 %      names and the Test File, runs step 1 with FORCE, PER_CUT and the
@@ -30,7 +31,8 @@ results = [];
 files = fullfile(st_project_root(), 'tests', 'unit', {'test_defect_criteria.m', ...
     'test_open_standalone_test_manager.m', 'test_rebase_standalone_manifest.m', ...
     'test_standalone_run_folder.m', 'test_classify_standalone_results.m', ...
-    'test_old_standalone_items.m', 'test_remove_moved_check_copy.m'});
+    'test_old_standalone_items.m', 'test_remove_moved_check_copy.m', ...
+    'test_target_failure_lines.m', 'test_error_place.m', 'test_other_toolkit_path_entries.m'});
 try
     evalc('results = runtests(files);');
     lines{end+1} = sprintf('단위 테스트 | %d | 통과 %d | 실패 %d | 미완료 %d', numel(results), ...
@@ -59,6 +61,14 @@ try
     sltest.testmanager.clearResults;
     sltest.testmanager.clear;
 catch
+end
+% An Excel step 1 cannot run (an empty HarnessName, a CUTPath that is no
+% Subsystem) must stop it before the earlier results are deleted.
+[lines, ok] = st_check_targets_before_run(lines);
+if ~ok
+    show(title, lines);
+    st_log(cfg, 'WARN', 'Rebuild all stopped | Excel check');
+    return;
 end
 lines = [lines, st_delete_old_results()];
 
