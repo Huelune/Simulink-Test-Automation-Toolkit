@@ -14,6 +14,8 @@ function st_todo_check(section)
 % 25: read-only, for each target the latest step 1 run marked EXCEPT, the C
 % build blocks of its CUT and the custom code settings of the Top Model,
 % its Harness and library (st_inspect_custom_code).
+% 29: the final document and team tree again from the latest standalone run
+% (st_redo_final_document), for the D line display; nothing is rerun.
 % 28: rebuild all (st_rebuild_all): earlier results, the targets' Harnesses
 % with their Signal Editor inputs and the Test File deleted, then step 1 to
 % the team tree, so the final document gets the outcomes of every block.
@@ -50,6 +52,9 @@ switch section
     case 19
         st_log(cfg, 'INFO', 'todo check start | apply CUT input ranges');
         if unit_passed(cfg, 'test_apply_input_ranges.m'), st_apply_input_ranges(); end
+    case 29
+        st_log(cfg, 'INFO', 'todo check start | final document and tree again');
+        st_redo_final_document();
     case 28
         st_log(cfg, 'INFO', 'todo check start | rebuild all with Harness inputs');
         st_rebuild_all();
