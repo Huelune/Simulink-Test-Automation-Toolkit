@@ -121,18 +121,18 @@ for i = 1:height(targets)
     savedRow = [];
     if height(saved) > 0, savedRow = find(saved.TestCaseName == caseName, 1); end
     if ~isempty(savedRow) && saved.Status(savedRow) == "OK"
-        coverageText = sprintf('저장 Coverage CUT 결정 %d/%d 실행 %d/%d', ...
+        coverageText = sprintf('CUT 결정 %d/%d 실행 %d/%d', ...
             saved.DecisionCovered(savedRow), saved.DecisionTotal(savedRow), ...
             saved.ExecutionCovered(savedRow), saved.ExecutionTotal(savedRow));
     elseif ~isempty(savedRow)
         coverageText = sprintf('저장 Coverage 실패 %s', saved.ErrorId(savedRow));
     end
     if includeStandalone
-        lines{end+1} = sprintf('대상 %d | 결함 TC %d | %s', no, numel(names), coverageText); %#ok<AGROW>
+        % One line per target and run, so a model with many targets still fits one screen.
         [kinds, details, caseText] = read_defects(standaloneSets, caseName, names);
         totals(1) = totals(1) + sum(kinds == "verify 실패");
-        lines{end+1} = sprintf('대상 %d | standalone | %s | %s', no, caseText, kind_summary(kinds, details, ...
-            ~isempty(standaloneSets))); %#ok<AGROW>
+        lines{end+1} = sprintf('대상 %d | standalone %s | %s | 결함 %d: %s', no, caseText, coverageText, ...
+            numel(names), kind_summary(kinds, details, ~isempty(standaloneSets))); %#ok<AGROW>
     end
     [kinds, details, caseText] = read_defects(perCutSets{i}, caseName, names);
     totals(2) = totals(2) + sum(kinds == "verify 실패");
