@@ -53,6 +53,7 @@ verifyFalse(testCase, contains(printed, 'Secret'));
 T = readtable(fullfile(tempdir, 'st_input_ranges.csv'), 'TextType', 'string', 'Delimiter', ',');
 verifyEqual(testCase, height(T), 5);
 verifyTrue(testCase, any(T.Element == "Secret_A"));
+verifyEqual(testCase, T.Bus(T.Element == "Secret_A"), "Secret_Bus");
 end
 
 function remove_model(model)

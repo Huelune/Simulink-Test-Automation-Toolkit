@@ -9,6 +9,7 @@ function lines = st_show_input_ranges(cutPaths)
 % A Bus input is expanded to its leaf elements with their DataType/Min/Max.
 % The full table, names included, goes to tempdir/st_input_ranges.csv for
 % the user's own PC; the screen carries only counts and standard type names.
+% Fill its Min/Max and give it to st_apply_input_ranges to set them in the model.
 % Never saves the model. A range set only on a Simulink.Signal object or
 % upstream of the CUT is not read (counted as 없음).
 title = '입력 범위·형식';
@@ -61,7 +62,7 @@ end
 compiled = numel(compiledModels) == numel(models) && ~isempty(models);
 cleanup = onCleanup(@() terminate(compiledModels)); %#ok<NASGU>
 
-rows = cell(0, 10);
+rows = cell(0, 11);
 for t = 1:numel(cutPaths)
     try
         rows = [rows; collect_cut(targetNo(t), cutPaths{t})]; %#ok<AGROW>
@@ -76,7 +77,7 @@ if isempty(rows)
     st_log(cfg, 'WARN', 'Input range check found no inputs | targets=%d', numel(cutPaths));
     return;
 end
-T = cell2table(rows, 'VariableNames', {'Target', 'CUT', 'Port', 'Input', 'Element', ...
+T = cell2table(rows, 'VariableNames', {'Target', 'CUT', 'Port', 'Input', 'Bus', 'Element', ...
     'DeclaredType', 'CompiledType', 'Dimensions', 'Min', 'Max'});
 try
     writetable(T, csvFile, 'Encoding', 'UTF-8');
@@ -109,7 +110,7 @@ end
 
 function rows = collect_cut(no, cutPath)
 % One row per Inport, or per leaf element when the input is a Bus.
-rows = cell(0, 10);
+rows = cell(0, 11);
 ports = find_system(cutPath, 'SearchDepth', 1, 'LookUnderMasks', 'all', ...
     'FollowLinks', 'on', 'BlockType', 'Inport');
 handles = get_param(cutPath, 'PortHandles');
@@ -136,22 +137,22 @@ for k = 1:numel(ports)
         end
     end
     if isa(bus, 'Simulink.Bus')
-        leaves = bus_leaves(bus, '', cutPath);
+        leaves = bus_leaves(bus, busName, '', cutPath);
         for e = 1:size(leaves, 1)
-            rows(end+1, :) = {no, cutPath, portNo, name, leaves{e, 1}, leaves{e, 2}, '', ...
+            rows(end+1, :) = {no, cutPath, portNo, name, leaves{e, 6}, leaves{e, 1}, leaves{e, 2}, '', ...
                 leaves{e, 3}, leaves{e, 4}, leaves{e, 5}}; %#ok<AGROW>
         end
     else
-        rows(end+1, :) = {no, cutPath, portNo, name, '', declared, compiledType, dims, ...
+        rows(end+1, :) = {no, cutPath, portNo, name, '', '', declared, compiledType, dims, ...
             get_param(p, 'OutMin'), get_param(p, 'OutMax')}; %#ok<AGROW>
     end
 end
 end
 
 
-function leaves = bus_leaves(bus, prefix, context)
-% {element path, DataType, Dimensions, Min, Max}; nested buses are walked.
-leaves = cell(0, 5);
+function leaves = bus_leaves(bus, busName, prefix, context)
+% {element path, DataType, Dimensions, Min, Max, owning Bus object}; nested buses are walked.
+leaves = cell(0, 6);
 for e = 1:numel(bus.Elements)
     el = bus.Elements(e);
     path = el.Name;
@@ -166,10 +167,10 @@ for e = 1:numel(bus.Elements)
         end
     end
     if isa(inner, 'Simulink.Bus')
-        leaves = [leaves; bus_leaves(inner, path, context)]; %#ok<AGROW>
+        leaves = [leaves; bus_leaves(inner, name, path, context)]; %#ok<AGROW>
     else
         leaves(end+1, :) = {path, char(el.DataType), mat2str(el.Dimensions), ...
-            num_text(el.Min), num_text(el.Max)}; %#ok<AGROW>
+            num_text(el.Min), num_text(el.Max), busName}; %#ok<AGROW>
     end
 end
 end
