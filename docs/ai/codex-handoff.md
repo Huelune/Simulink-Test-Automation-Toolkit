@@ -169,6 +169,10 @@
   `simtest:StandalonePipelineExecuteTargetException`. 같은 시각 식별자 없는 ERROR 3번은 `SLDV verify validation failed` 줄로
   보인다. `st_error_log_lines`가 그 고정 문구(Untested 수·Tmax, verify 결과 없음, gate FAIL 수)를 종류로 찍게 하고 23절을
   다시 둔다. 대상 2(PASS, 처음 PASSED), 대상 3(처음 FAILED → 기대값 갱신 → 끝 PASSED, 실행 2번)은 정상.
+  23절 둘째 결과: 대상 1의 ERROR는 `verify 결과 없음(Tmax=0.04)`(1단계 2번, 번들 2번). SLDV 모드에서 StopTime=Tmax,
+  step1→step2 `after(Tmax, sec)`라 verify는 t=Tmax에 한 번만 돈다. Test Assessment가 그 시각에 실행되지 않는다고 보고,
+  `st_inspect_verify_timing`(EXCEPT 대상의 Tmax, Harness StopTime·솔버·FixedStep, Test Assessment·Signal Editor 컴파일
+  샘플 시간, t=Tmax 실행 여부, step1 전이 시각, step2 verify 수)으로 `todo.md` 24절. 확인 전이다.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
