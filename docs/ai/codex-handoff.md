@@ -108,8 +108,11 @@
   하기(11절, `st_rebuild_all`)를 먼저 둔다. 10절 확인은 그 다음 새 실행 폴더로 다시 둔다.
   11절(예전 결과 지우기 포함, 최종 문서를 팀 제출 트리 `테스트 보고서`에 넣기)은 사용자가 말로 "다 잘되었다"고 알렸다(화면
   캡처는 받지 않음, 2026-11-26). 그 뒤 사용자 요청: 최종 문서 결함 행 `Description`은 팀 양식대로 도달 불가 결과가 실행됐다고
-  보고 D 목록 전체를 적고 결함 D 줄 대괄호만 그 결과로 적는다(판정은 실행 결과 FAIL). 확인은 `todo.md` 12절
-  (`st_redo_final_document`). MinMax 같은 T/F가 아닌 블록은 대괄호에 Coverage 결과 문구(`input 1`)를 그대로 쓴다.
+  보고 D 목록 전체를 적고 결함 D 줄 대괄호만 그 결과로 적는다(판정은 실행 결과 FAIL). MinMax 같은 T/F가 아닌 블록은
+  대괄호에 Coverage 결과 문구(`input 1`)를 그대로 쓴다. 12절 결과(2026-11-27): 단위 테스트 28 통과, 5단계·4단계 OK(CUT 3,
+  최종 문서 넣음), 대상 3개 모두 행 5(PASS 3, FAIL 2), D 줄 수 PASS 11 = FAIL 11, 11. PASS 행과 다른 줄은 6, 5였는데, 점검이
+  첫 PASS 행과 비교한 탓이다. 결함 Iteration은 원본 시나리오(기본은 마지막)를 복사하므로 가장 가까운 PASS 행과 비교하게
+  고쳤고, 확인은 `todo.md` 13절(`st_redo_final_document`).
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
