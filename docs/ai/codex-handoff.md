@@ -121,7 +121,9 @@
   열렸다(복사본 확인 아님). 손 복사와 폴더 고르기를 빼고 `st_check_moved_run_folder`가 결과 루트 옆 `_moved_check`에
   복사해 열며 기록 경로가 복사본을 가리키는 수를 센다. 14절에 그대로 다시 둔다. 셋째 결과(2026-11-27): 둘째 줄
   `실행 폴더 (옮긴 폴더, 지금 위치에서 엶)`, 결과 IMPORTED, 보고서 OK 3, 대상 값 같음, 기록 경로 복사본 아래 54·원래 자리 0,
-  단위 테스트 14 통과. 옮긴·복사한 실행 폴더 열기 실기 확인 끝. 지금 `todo.md`에 돌릴 절이 없다.
+  단위 테스트 14 통과. 옮긴·복사한 실행 폴더 열기 실기 확인 끝. 그 뒤 사용자 요청: `_moved_check` 복사본도 점검이 지운다.
+  `st_remove_moved_check_copy`가 복사본 모델을 닫고 경로를 빼고 지운다. 복사 점검은 끝에(Test Manager를 비운 뒤), 예전 결과
+  지우기(`st_delete_old_results`)는 남은 복사본을 지운다. 보고서는 tempdir에 있어 남는다. 확인은 `todo.md` 15절.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
