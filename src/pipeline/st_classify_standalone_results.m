@@ -16,6 +16,9 @@ function varargout = st_classify_standalone_results(varargin)
 %   ├── 테스트 케이스/{CUT 폴더}/       *.mat
 %   ├── 테스트 보고서/{TopModel}.mldatx
 %   ├── 테스트 보고서/{최종 문서}.xlsx   only with SpecificationFile
+%   ├── 테스트 보고서/StandaloneCoverageResults.mldatx  the saved Test
+%   │                                   Manager result, when the run saved
+%   │                                   one (st_show_team_tree_results opens it)
 %   ├── 테스트 보고서/{CUT 폴더}/       *.cvf *.cvt *.html + asset folders
 %   └── 프로젝트/{CUT 폴더}/            *.slx
 %
@@ -94,6 +97,7 @@ info = struct( ...
     'Empty', {plan.Empty}, ...
     'Skipped', {plan.Skipped}, ...
     'SpecificationFile', plan.SpecificationFile, ...
+    'ResultFile', plan.ResultFile, ...
     'DryRun', p.Results.DryRun);
 log_summary(info, cfg);
 for i = 1:size(plan.Empty, 1)
@@ -137,6 +141,7 @@ plan.Empty = cell(0, 2);
 plan.Files(end+1, :) = {testFile, fullfile(outputRoot, reportDir, ...
     [modelName '.mldatx'])};
 plan.SpecificationFile = '';
+plan.ResultFile = '';
 if ~isempty(specFile)
     [~, specName, specExtension] = fileparts(specFile);
     plan.SpecificationFile = fullfile(outputRoot, reportDir, [specName specExtension]);
@@ -150,6 +155,11 @@ for i = 1:numel(entries)
     source = fullfile(pipelineRoot, entry.name);
     if entry.isdir && ~isempty(regexp(entry.name, '^\d{3}_UT_REQ_', 'once'))
         plan = add_cut_folder(plan, source, entry.name);
+    elseif ~entry.isdir && strcmp(entry.name, 'StandaloneCoverageResults.mldatx')
+        % The saved Test Manager result, so the tree opens in Test Manager
+        % wherever it is moved (st_show_team_tree_results).
+        plan.ResultFile = fullfile(outputRoot, reportDir, entry.name);
+        plan.Files(end+1, :) = {source, plan.ResultFile};
     elseif entry.isdir && strcmp(source, testManagerDir)
         children = sorted_entries(source);
         for j = 1:numel(children)

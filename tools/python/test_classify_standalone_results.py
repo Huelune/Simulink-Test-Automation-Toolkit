@@ -89,6 +89,7 @@ class ClassifyStandaloneResultsTest(unittest.TestCase):
             f'{csr.TEST_CASE_DIR}/{CUT_A}/TOP_Controller_Harness_HarnessInputs.mat',
             f'{csr.TEST_CASE_DIR}/{CUT_B}/TOP_Motor_Harness_HarnessInputs.mat',
             f'{csr.REPORT_DIR}/TOP.mldatx',
+            f'{csr.REPORT_DIR}/StandaloneCoverageResults.mldatx',
             f'{csr.REPORT_DIR}/{CUT_A}/UT_REQ_Controller_12345.cvf',
             f'{csr.REPORT_DIR}/{CUT_A}/UT_REQ_Controller_12345.cvt',
             f'{csr.REPORT_DIR}/{CUT_A}/UT_REQ_Controller_12345.html',
@@ -112,7 +113,7 @@ class ClassifyStandaloneResultsTest(unittest.TestCase):
         skipped = set(plan.skipped)
         for item in (
             'pipeline-manifest.json', 'pipeline-manifest.sha256', 'CoverageSummary.xlsx',
-            'StandaloneCoverageResults.mldatx', 'logs', '.work',
+            'logs', '.work',
             'TestManager/open_standalone_coverage_test_manager.m',
             f'{CUT_A}/target-manifest.json', f'{CUT_B}/target-manifest.json',
             f'{CUT_A}/scv_images',
@@ -120,8 +121,10 @@ class ClassifyStandaloneResultsTest(unittest.TestCase):
             self.assertIn(item, skipped)
         self.assertNotIn(f'{CUT_A}/scv_images', {src.relative_to(pipeline).as_posix() for src, _ in plan.trees})
         self.assertNotIn('TestManager/TOP.mldatx', skipped)
+        self.assertNotIn('StandaloneCoverageResults.mldatx', skipped)
+        self.assertEqual(plan.result, plan.output_root / csr.REPORT_DIR / 'StandaloneCoverageResults.mldatx')
         self.assertEqual(plan.count(csr.TEST_CASE_DIR), 2)
-        self.assertEqual(plan.count(csr.REPORT_DIR), 4)  # cvf, cvt, html, mldatx
+        self.assertEqual(plan.count(csr.REPORT_DIR), 5)  # cvf, cvt, html, Test File, 결과 mldatx
         self.assertEqual(plan.count(csr.PROJECT_DIR), 2)
 
     def test_rejects_missing_or_ambiguous_mldatx(self) -> None:
@@ -152,7 +155,7 @@ class ClassifyStandaloneResultsTest(unittest.TestCase):
         self.assertTrue(spec.is_file())
         self.assertIn(f'사양서        : {spec.name}', out)
         plan = csr.build_plan(pipeline, self.root / 'other', overwrite=False, spec=spec)
-        self.assertEqual(plan.count(csr.REPORT_DIR), 5)  # cvf, cvt, html, mldatx, 사양서
+        self.assertEqual(plan.count(csr.REPORT_DIR), 6)  # cvf, cvt, html, Test File, 결과 mldatx, 사양서
 
     def test_missing_spec_is_rejected_before_copying(self) -> None:
         pipeline = _build_pipeline(self.root)

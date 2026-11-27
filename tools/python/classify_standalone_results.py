@@ -45,6 +45,8 @@ EXCLUDED_DIR_NAMES = frozenset({'scv_images'})
 
 TEST_CASE_DIR = '테스트 케이스'
 REPORT_DIR = '테스트 보고서'
+# 파이프라인이 저장한 Test Manager 결과. 트리를 옮겨도 Test Manager에서 열 수 있게 보고서 갈래에 넣는다.
+RESULT_FILE_NAME = 'StandaloneCoverageResults.mldatx'
 PROJECT_DIR = '프로젝트'
 CATEGORIES = (TEST_CASE_DIR, REPORT_DIR, PROJECT_DIR)
 CATEGORY_BY_SUFFIX = {
@@ -82,6 +84,8 @@ class Plan:
     empty: list[tuple[str, str]] = field(default_factory=list)
     # 사양서 복사본 위치. --spec 을 주지 않으면 None
     specification: Path | None = None
+    # Test Manager 결과 복사본 위치. 실행이 결과를 저장하지 않았으면 None
+    result: Path | None = None
 
     def count(self, category: str) -> int:
         marker = self.output_root / category
@@ -162,6 +166,9 @@ def build_plan(pipeline_root: Path, output_root: Path | None, overwrite: bool,
             for child in sorted(other.iterdir()):
                 if child != test_file:
                     plan.skipped.append(_relative(child, pipeline_root))
+        elif other.is_file() and other.name == RESULT_FILE_NAME:
+            plan.result = output_root / REPORT_DIR / other.name
+            plan.files.append((other, plan.result))
         else:
             plan.skipped.append(_relative(other, pipeline_root))
 
@@ -213,6 +220,7 @@ def print_summary(plan: Plan, dry_run: bool) -> None:
         f'{REPORT_DIR} : {plan.count(REPORT_DIR)}개 파일 (asset 폴더 {len(plan.trees)}개 포함 안 함)',
         f'{PROJECT_DIR}      : {plan.count(PROJECT_DIR)}개 파일',
         f'사양서        : {plan.specification.name if plan.specification else "넣지 않음"}',
+        f'Test 결과     : {plan.result.name if plan.result else "없음"}',
     ]
     if plan.empty:
         lines.append(f'WARN 비어 있는 갈래 {len(plan.empty)}개:')

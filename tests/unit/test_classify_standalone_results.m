@@ -32,6 +32,9 @@ end
 verifyTrue(testCase, isfile(fullfile(out, '테스트 보고서', cutA, ...
     'UT_REQ_Controller_12345_files', 'img', 'a.png')));
 verifyTrue(testCase, isfile(fullfile(out, '테스트 보고서', 'TOP.mldatx')));
+verifyTrue(testCase, isfile(fullfile(out, '테스트 보고서', 'StandaloneCoverageResults.mldatx')));
+verifyEqual(testCase, info.ResultFile, fullfile(out, '테스트 보고서', 'StandaloneCoverageResults.mldatx'));
+verifyFalse(testCase, ismember('StandaloneCoverageResults.mldatx', info.Skipped));
 verifyFalse(testCase, isfolder(fullfile(out, '테스트 보고서', cutA, 'scv_images')));
 verifyTrue(testCase, ismember([cutA '/scv_images'], info.Skipped));
 verifyTrue(testCase, ismember('CoverageSummary.xlsx', info.Skipped));
@@ -146,6 +149,7 @@ function pipeline = build_pipeline(root)
 pipeline = fullfile(root, '20250921_143312_871_3f9a2c1b');
 write_file(fullfile(pipeline, 'pipeline-manifest.json'));
 write_file(fullfile(pipeline, 'CoverageSummary.xlsx'));
+write_file(fullfile(pipeline, 'StandaloneCoverageResults.mldatx'));
 write_file(fullfile(pipeline, 'logs', 'execution.log'));
 write_file(fullfile(pipeline, '.work', 'bundle', 'x.txt'));
 write_file(fullfile(pipeline, 'TestManager', 'TOP.mldatx'));
