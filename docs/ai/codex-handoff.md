@@ -192,6 +192,10 @@
   같은 오류(Harness는 만들 때 Top Model 설정을 복사). 26절(헤더 폴더 고르기 → 처음부터 다시)을 돌려 "잘 된다"고 말로 알렸다
   (화면 캡처는 받지 않음). 두 번째 모델 3개 대상 모두 끝까지 된 것으로 본다. `todo.md`에 돌릴 절이 없고 `st_todo_check`는 인자
   없이 부르면 돌릴 점검이 없다고만 찍는다(번호를 주면 그 절의 점검).
+  사용자 요청(2026-11-27): 옮긴 팀 제출 트리를 골라 Test Manager에서 결과 보기. 분류가 `StandaloneCoverageResults.mldatx`를
+  `테스트 보고서`에 넣게 했다(MATLAB·Python, info.ResultFile/plan.result). `st_show_team_tree_results`(트리만 읽음: 결과 가져오기,
+  CUT별 프로젝트 모델 load 후 CVT+CVF 보고서와 색 표시), `st_redo_team_tree`(최근 실행 트리를 최근 최종 문서와 다시 분류).
+  확인은 `todo.md` 31절(`st_todo_check(31)`). 다른 세션의 30절과 함께 있다.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
