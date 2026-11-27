@@ -158,6 +158,12 @@
   두 번째 모델의 Excel에 `HarnessName`이 빈 대상이 있다. `st_check_targets_before_run`(이름 세 칸 빈 칸 +
   `st_pre_validate_targets`, 화면 줄은 `st_target_failure_lines`)을 `st_rebuild_all`과 `st_run_model_first`에서 지우기 전에
   부른다. `st_pre_validate_targets` 자체는 CUTPath만 보는 계약이라 바꾸지 않았다(범위 점검이 OK 행만 쓴다).
+  22절 결과(두 번째 모델, 2026-11-27): 단위 테스트 66 통과, Excel 3 OK, Harness 지움 0/3, 1단계 FORCE OK, 시나리오 맞춤 3/3,
+  standalone PARTIAL(점검 코드 1111111111), 5·4단계 OK, 저장 Coverage 보고서 OK 2 실패 1, 1단계 결과 가져옴 2/3. 대상 1: 1단계
+  없음, standalone Iteration 1 실패, `simtest:StandaloneSavedCoverageMissing`. 대상 2: CUT 결정 0/0 실행 0/0(사용자: Coverage 셀
+  블록이 없어 맞음). 대상 3: Iteration 4 통과, 결정 6/6 실행 14/14. 대상 1 이유는 `st_show_target_errors`(PER_CUT 기록과
+  로그 ERROR의 식별자만)로 `todo.md` 23절. `st_todo_check` 기본값 23(읽기만), 다시 만들기는 `st_todo_check(22)`, 모르는 번호는
+  아무것도 하지 않는다.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
