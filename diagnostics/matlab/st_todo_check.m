@@ -14,6 +14,9 @@ function st_todo_check(section)
 % 25: read-only, for each target the latest step 1 run marked EXCEPT, the C
 % build blocks of its CUT and the custom code settings of the Top Model,
 % its Harness and library (st_inspect_custom_code).
+% 32: rebuild all from nothing (st_rebuild_all), then open the new team
+% tree's results in Test Manager (st_show_team_tree_results('LATEST')),
+% their lines under the rebuild's screen.
 % 31: unit test, then the team tree of the latest standalone run again with
 % the saved Test Manager result in it (st_redo_team_tree), then choose a
 % tree (moved or not) and open its results in Test Manager
@@ -52,6 +55,11 @@ if nargin < 1
     return;
 end
 switch section
+    case 32
+        st_log(cfg, 'INFO', 'todo check start | rebuild all, then the team tree results');
+        if st_rebuild_all()
+            st_show_team_tree_results('LATEST', {}, true);
+        end
     case 31
         st_log(cfg, 'INFO', 'todo check start | team tree again, then its results in Test Manager');
         if unit_passed(cfg, 'test_classify_standalone_results.m')
