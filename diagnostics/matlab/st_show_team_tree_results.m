@@ -10,6 +10,9 @@ function st_show_team_tree_results(folder, extraLines, underScreen)
 % The tree (st_classify_standalone_results) holds 테스트 케이스, 테스트 보고서
 % and 프로젝트. Everything below is read from the tree itself, so a tree
 % moved or copied elsewhere opens the same; nothing in it is changed.
+%   - Every CUT folder of the three kinds goes on the path and the tree's
+%     Test File (테스트 보고서/<TopModel>.mldatx) opens, so the Test Browser
+%     shows the Test Cases and resolves their models, inputs and CVFs.
 %   - 테스트 보고서/StandaloneCoverageResults.mldatx is the run's saved Test
 %     Manager result: Test Manager is cleared, the result imported and shown.
 %     Its coverage values carry no CVF, as in step 6.
@@ -69,10 +72,30 @@ if ~isempty(loaded) && any(strcmp(get_param(loaded, 'Dirty'), 'on'))
 end
 if ~isempty(loaded), bdclose('all'); end
 
+% Test Manager finds each Test Case's standalone model, input MAT and CVF by
+% name; in the tree they sit in the three kinds of CUT folder, so all go on
+% the path before the tree's Test File opens beside the imported result.
+for k = 1:numel(cuts)
+    for kind = {'테스트 케이스', '테스트 보고서', '프로젝트'}
+        cutFolder = fullfile(root, kind{1}, cuts(k).name);
+        if isfolder(cutFolder), addpath(cutFolder, '-begin'); end
+    end
+end
+
 % Variables that evalc assigns are named first, or MATLAB may take them for functions.
 imported = [];
+testFile = [];
 try
     evalc('sltest.testmanager.clearResults; sltest.testmanager.clear;');
+    testFiles = dir(fullfile(reportDir, '*.mldatx'));
+    testFiles = testFiles(~strcmpi({testFiles.name}, 'StandaloneCoverageResults.mldatx'));
+    if isempty(testFiles)
+        lines{end+1} = 'Test File 없음 | 트리의 테스트 보고서에 Test File(.mldatx)이 없습니다';
+    else
+        testFilePath = fullfile(reportDir, testFiles(1).name);
+        evalc('testFile = sltest.testmanager.TestFile(testFilePath);');
+        lines{end+1} = sprintf('Test File 열림 | Test Case %d', numel(getAllTestCases(testFile)));
+    end
     evalc('imported = sltest.testmanager.importResults(resultFile);');
     sltest.testmanager.view;
     caseResults = st_collect_test_case_results(imported);
