@@ -130,8 +130,10 @@
   클론을 하나씩 둔다. `st_make_model_clone`이 지금 클론 옆에 디스크 복제로 새 클론을 만들고 원격을 맞추고 `st_setup`, 모델
   고르기, 결과 루트(지금 클론과 같은 방식)까지 한다. `st_setup`은 다른 툴킷 클론(st_setup.m·VERSION.txt·src가 있는 폴더)의
   경로를 뺀다(`st_other_toolkit_path_entries`). `st_project_root`는 현재 폴더의 `st_setup.m`을 먼저 보므로(통합 테스트가
-  이 동작에 기대 바꾸지 않음) todo 블록은 이제 툴킷 폴더로 옮긴 채 둔다. 확인은 `todo.md` 16절. 두 모델이 라이브러리나
-  데이터 사전을 함께 쓰는지는 모른다.
+  이 동작에 기대 바꾸지 않음) todo 블록은 이제 툴킷 폴더로 옮긴 채 둔다. 두 모델이 라이브러리나 데이터 사전을 함께 쓰는지는
+  모른다. 16절 결과(2026-11-27): 새 클론 만듦, 원격 연결 OK, 브랜치 main, 지금 클론 경로 항목 21개 뺌, 다른 모델 고름,
+  결과 루트는 지금 클론의 결과 루트 옆 모델 이름 폴더, `TestManagement.xlsx` 없음(사용자가 두 번째 모델의 것을 넣어야 함),
+  단위 테스트 3 통과. 두 번째 클론에서의 실제 실행은 아직 없다. 지금 `todo.md`에 돌릴 절이 없다.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
