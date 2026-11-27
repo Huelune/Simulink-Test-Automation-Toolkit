@@ -32,7 +32,8 @@ files = fullfile(st_project_root(), 'tests', 'unit', {'test_defect_criteria.m', 
     'test_open_standalone_test_manager.m', 'test_rebase_standalone_manifest.m', ...
     'test_standalone_run_folder.m', 'test_classify_standalone_results.m', ...
     'test_old_standalone_items.m', 'test_remove_moved_check_copy.m', ...
-    'test_target_failure_lines.m', 'test_error_place.m', 'test_other_toolkit_path_entries.m'});
+    'test_target_failure_lines.m', 'test_error_place.m', 'test_other_toolkit_path_entries.m', ...
+    'test_merge_include_dirs.m'});
 try
     evalc('results = runtests(files);');
     lines{end+1} = sprintf('단위 테스트 | %d | 통과 %d | 실패 %d | 미완료 %d', numel(results), ...
@@ -42,6 +43,11 @@ try
     passed = isempty(failed) && ~isempty(results);
 catch ME
     lines{end+1} = sprintf('단위 테스트 | 실행 오류 | %s', id_of(ME));
+end
+includeDirs = cellstr(string(cfg.CustomCodeIncludeDirs));
+if ~isempty(includeDirs)
+    lines{end+1} = sprintf('C 헤더 폴더 | %d개 | 없는 폴더 %d개 | Harness와 standalone 사본에 넣음', ...
+        numel(includeDirs), sum(~cellfun(@isfolder, includeDirs)));
 end
 if ~passed
     show(title, [lines, {'단위 테스트가 통과하지 않아 아무것도 지우지 않았습니다. 이 화면을 보내 주세요'}]);

@@ -13,6 +13,9 @@ function st_todo_check(section)
 % No argument: section 25. Read-only: for each target the latest step 1 run
 % marked EXCEPT, the C build blocks of its CUT and the custom code settings
 % of the Top Model, its Harness and library (st_inspect_custom_code).
+% 26: choose the folder of the C headers in a dialog
+% (st_set_custom_code_include_dirs), then rebuild all (st_rebuild_all), so
+% every new Harness and standalone copy gets it in Include directories.
 % 24: read-only, when the Test Assessment of those targets runs against
 % Tmax (st_inspect_verify_timing).
 % 23: read-only, why targets failed: each target's step 1 record and the
@@ -36,6 +39,15 @@ switch section
     case 19
         st_log(cfg, 'INFO', 'todo check start | apply CUT input ranges');
         if unit_passed(cfg, 'test_apply_input_ranges.m'), st_apply_input_ranges(); end
+    case 26
+        st_log(cfg, 'INFO', 'todo check start | C header folder, then rebuild all');
+        if unit_passed(cfg, 'test_merge_include_dirs.m')
+            if isempty(st_set_custom_code_include_dirs())
+                fprintf('C 헤더 폴더가 없어 다시 만들기를 하지 않았습니다\n');
+            else
+                st_rebuild_all();
+            end
+        end
     case 25
         st_log(cfg, 'INFO', 'todo check start | custom code of failed targets');
         if unit_passed(cfg, 'test_build_error_kind.m'), st_inspect_custom_code(); end
