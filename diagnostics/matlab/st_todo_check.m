@@ -6,9 +6,10 @@ function st_todo_check()
 % was first written for. Point it at the current section's check whenever
 % todo.md changes.
 %
-% Now: section 12. Make the final document and team tree again from the
-% latest standalone run, with defect rows keeping the whole D list
-% (st_redo_final_document). Its unit tests run first and must all pass.
+% Now: section 13. Make the final document and team tree again from the
+% latest standalone run and compare each defect row with the PASS row
+% nearest to it (st_redo_final_document). Its unit tests run first and
+% must all pass.
 cfg = st_config();
 st_log(cfg, 'INFO', 'todo check start | redo final document');
 st_redo_final_document();
