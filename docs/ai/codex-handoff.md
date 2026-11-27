@@ -147,7 +147,10 @@
   st_setup이 다른 툴킷 사본 경로를 빼며 클론까지 뺀 것이 원인. `st_other_toolkit_path_entries`는 이제 rootDir에 `.git`이
   있을 때(클론, worktree)만 뺀다. 깨끗한 PC에서 번들을 돌리면 같은 곳에서 멈출 수 있다(작업 폴더를 지운 뒤 툴킷 함수
   호출) — 고치지 않았다. 실패 줄에 `st_error_place`(툴킷 함수 이름과 줄, 없는 st_ 함수 이름)를 붙였다. 확인은 `todo.md`
-  21절(standalone부터 다시, `st_todo_check` 기본값 21).
+  21절(standalone부터 다시, `st_todo_check` 기본값 21). 21절은 사용자가 말로 "잘 된다"고 알렸다(화면 캡처는 받지 않음,
+  2026-11-27). 사용자 요청으로 모델마다 처음부터 다시 돌리기를 `todo.md` 22절(`st_rebuild_all`, `st_todo_check` 기본값
+  22, 21은 인자로 남김)로 두었다. 첫 번째 모델의 클론은 16절 뒤로 pull하지 않았다면 점검이 16절(클론 만들기)을 가리키므로
+  먼저 pull하라고 적었다.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
