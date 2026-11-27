@@ -6,15 +6,15 @@ function st_todo_check(section)
 % was first written for. Point it at the current section's check whenever
 % todo.md changes.
 %
-% No argument: section 17. Run the second model's clone through the manual
-% for the first time, Excel check to team tree, keeping its Harnesses
-% (st_run_model_first).
+% No argument: section 20. Delete the Harnesses, Test File and earlier
+% results, then run the manual from step 1 to the team tree (st_rebuild_all),
+% now that the CUT inputs have Min/Max.
 % 18: unit test, then the range and format of every CUT input
 % (st_show_input_ranges). Read-only.
 % 19: unit test, then set the Min/Max filled in the range table on the
 % model (st_apply_input_ranges). Saves the model.
 cfg = st_config();
-if nargin < 1, section = 17; end
+if nargin < 1, section = 20; end
 switch section
     case 18
         st_log(cfg, 'INFO', 'todo check start | CUT input ranges');
@@ -23,8 +23,8 @@ switch section
         st_log(cfg, 'INFO', 'todo check start | apply CUT input ranges');
         if unit_passed(cfg, 'test_apply_input_ranges.m'), st_apply_input_ranges(); end
     otherwise
-        st_log(cfg, 'INFO', 'todo check start | first run of this clone''s model');
-        st_run_model_first();
+        st_log(cfg, 'INFO', 'todo check start | rebuild all from step 1');
+        st_rebuild_all();
 end
 end
 
