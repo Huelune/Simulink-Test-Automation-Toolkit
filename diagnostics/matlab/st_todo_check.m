@@ -14,6 +14,10 @@ function st_todo_check(section)
 % 25: read-only, for each target the latest step 1 run marked EXCEPT, the C
 % build blocks of its CUT and the custom code settings of the Top Model,
 % its Harness and library (st_inspect_custom_code).
+% 31: unit test, then the team tree of the latest standalone run again with
+% the saved Test Manager result in it (st_redo_team_tree), then choose a
+% tree (moved or not) and open its results in Test Manager
+% (st_show_team_tree_results).
 % 30: unit test, then for each defect block the logic feeding it, name-free,
 % with the CUT inputs' type and Min/Max (st_explain_defect_blocks). Read-only.
 % 29: the final document and team tree again from the latest standalone run
@@ -48,6 +52,11 @@ if nargin < 1
     return;
 end
 switch section
+    case 31
+        st_log(cfg, 'INFO', 'todo check start | team tree again, then its results in Test Manager');
+        if unit_passed(cfg, 'test_classify_standalone_results.m')
+            st_show_team_tree_results('', {st_redo_team_tree()});
+        end
     case 18
         st_log(cfg, 'INFO', 'todo check start | CUT input ranges');
         if unit_passed(cfg, 'test_show_input_ranges.m'), st_show_input_ranges(); end
