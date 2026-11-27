@@ -71,7 +71,19 @@ specification = st_final_document_defect_rows(defect_specification(), ...
     no_reasons(), base_config());
 % Its own line goes after the whole list.
 verifyEqual(testCase, specification.DecisionBlocks(2), ...
-    rendered_description() + newline + "Switch [false] (Sub/Secret_Switch)");
+    rendered_description() + newline + "Switch [F] (Sub/Secret_Switch)");
+end
+
+function testSldvObjectiveTextIsShortened(testCase)
+% SLDV puts the decision name before the outcome; the bracket keeps only
+% the outcome, and a MinMax input reads as u<N> max.
+specification = st_final_document_defect_rows(defect_specification(), ...
+    sample_details(), defect_list("Secret_Max", "MinMax", ...
+    "Logic to determine output input 2 is the maximum", false), ...
+    no_reasons(), base_config());
+verifyEqual(testCase, specification.DecisionBlocks(2), max_description("u2 max"));
+verifyEqual(testCase, st_short_outcome_text("input 1 is the minimum"), "u1 min");
+verifyEqual(testCase, st_short_outcome_text("Logic to determine output: case [1]"), "case [1]");
 end
 
 function testExpectedAndOutputCells(testCase)

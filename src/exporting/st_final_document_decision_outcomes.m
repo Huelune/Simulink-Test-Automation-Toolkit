@@ -9,7 +9,9 @@ function outcomes = st_final_document_decision_outcomes(cfg, source)
 % decision order, and is empty for a block with no two-way decision.
 % Texts holds the recorded decision text for each row of Counts, with
 % whitespace runs collapsed, so a D line that names its coverage decision
-% can be paired by text rather than by position. A row
+% can be paired by text rather than by position. Taken lists, for a block
+% whose outcomes are not true/false (Kind="OUTCOME" rows), each outcome
+% with its DecisionIndex, OutcomeText and Count. A row
 % whose iteration name is a placeholder is looked up at the Test Case
 % level, as its verdict is. Lookup is [] when no workbook was resolved, so
 % a document made before any run carries no outcome reasons at all.
@@ -22,6 +24,7 @@ st_log(cfg, 'INFO', 'Final document decision outcomes start | Workbooks=%d', ...
 units = containers.Map('KeyType', 'char', 'ValueType', 'logical');
 decisions = containers.Map('KeyType', 'char', 'ValueType', 'any');
 texts = containers.Map('KeyType', 'char', 'ValueType', 'any');
+taken = containers.Map('KeyType', 'char', 'ValueType', 'any');
 conflicts = strings(0,1);
 for i = 1:height(source.Workbooks)
     entry = source.Workbooks(i,:);
@@ -49,6 +52,19 @@ for i = 1:height(source.Workbooks)
             continue;
         end
         key = char(entries.Key(r));
+        if entries.IsOutcome(r)
+            % Several workbooks may list the same outcome; differing counts are ambiguous.
+            current = empty_taken();
+            if isKey(taken, key), current = taken(key); end
+            same = current.DecisionIndex == entries.Index(r) & current.OutcomeText == entries.Outcome(r);
+            if any(same) && any(current.Count(same) ~= entries.Count(r))
+                conflicts(end+1,1) = string(key); %#ok<AGROW>
+            elseif ~any(same)
+                current(end+1,:) = {entries.Index(r), entries.Outcome(r), entries.Count(r)};
+            end
+            taken(key) = current;
+            continue;
+        end
         index = entries.Index(r);
         value = entries.Value(r,:);
         current = nan(0,2);
@@ -68,8 +84,9 @@ for i = 1:height(source.Workbooks)
     end
 end
 for key = unique(conflicts).'
-    remove(decisions, char(key));
-    remove(texts, char(key));
+    if isKey(decisions, char(key)), remove(decisions, char(key)); end
+    if isKey(texts, char(key)), remove(texts, char(key)); end
+    if isKey(taken, char(key)), remove(taken, char(key)); end
     outcomes.Notes = [outcomes.Notes; table(NaN, extractBefore(key, "|"), ...
         "DECISION_OUTCOME_AMBIGUOUS", "Different counts recorded for " + key, ...
         'VariableNames', {'No','TestCaseName','Reason','Message'})];
@@ -86,25 +103,34 @@ end
 % containers.Map counts are uint64; Units is reported as a plain number.
 outcomes.Units = double(units.Count);
 outcomes.Lookup = @(testCaseName, iterationName, relativePath) ...
-    lookup(units, decisions, texts, testCaseName, iterationName, relativePath);
+    lookup(units, decisions, texts, taken, testCaseName, iterationName, relativePath);
 st_log(cfg, 'INFO', ...
     'Final document decision outcomes end | Units=%d | Blocks=%d | Notes=%d', ...
     units.Count, decisions.Count, height(outcomes.Notes));
 end
 
 
-function result = lookup(units, decisions, texts, testCaseName, iterationName, relativePath)
+function result = lookup(units, decisions, texts, taken, testCaseName, iterationName, relativePath)
 if ~st_is_real_iteration_name(iterationName)
     iterationName = "";
 end
 unit = unit_key(testCaseName, iterationName);
 result = struct('UnitFound', isKey(units, char(unit)), 'Counts', zeros(0,2), ...
-    'Texts', strings(0,1));
+    'Texts', strings(0,1), 'Taken', empty_taken());
 key = char(unit + "|" + squash(relativePath));
 if isKey(decisions, key)
     result.Counts = decisions(key);
     result.Texts = texts(key);
 end
+if isKey(taken, key)
+    result.Taken = sortrows(taken(key), 'DecisionIndex');
+end
+end
+
+
+function T = empty_taken()
+T = table(zeros(0,1), strings(0,1), zeros(0,1), ...
+    'VariableNames', {'DecisionIndex','OutcomeText','Count'});
 end
 
 
@@ -113,9 +139,12 @@ function entries = workbook_entries(rows)
 % workbook instead of leaving half of it behind.
 count = height(rows);
 entries = struct('Unit', strings(count,1), 'IsUnit', false(count,1), ...
-    'Key', strings(count,1), 'Index', zeros(count,1), 'Value', zeros(count,2), ...
-    'Text', strings(count,1));
+    'IsOutcome', false(count,1), 'Key', strings(count,1), 'Index', zeros(count,1), ...
+    'Value', zeros(count,2), 'Text', strings(count,1), 'Outcome', strings(count,1), ...
+    'Count', zeros(count,1));
 hasText = ismember("DecisionText", string(rows.Properties.VariableNames));
+% A workbook written before OUTCOME rows existed has neither column.
+hasOutcome = all(ismember(["OutcomeText","OutcomeCount"], string(rows.Properties.VariableNames)));
 for r = 1:count
     entries.Unit(r) = unit_key(rows.TestCaseName(r), rows.IterationName(r));
     entries.IsUnit(r) = rows.Kind(r) == "UNIT";
@@ -128,6 +157,19 @@ for r = 1:count
     end
     entries.Key(r) = entries.Unit(r) + "|" + squash(rows.RelativePath(r));
     entries.Index(r) = index;
+    if rows.Kind(r) == "OUTCOME"
+        if ~hasOutcome
+            error('simtest:DecisionOutcomeColumns', 'OUTCOME row without OutcomeText/OutcomeCount');
+        end
+        entries.IsOutcome(r) = true;
+        entries.Outcome(r) = squash(rows.OutcomeText(r));
+        entries.Count(r) = double(rows.OutcomeCount(r));
+        if ~isfinite(entries.Count(r))
+            error('simtest:DecisionOutcomeCount', 'OutcomeCount must be a number | TestCase=%s | Path=%s', ...
+                rows.TestCaseName(r), rows.RelativePath(r));
+        end
+        continue;
+    end
     entries.Value(r,:) = double([rows.TrueCount(r) rows.FalseCount(r)]);
     if hasText
         entries.Text(r) = squash(rows.DecisionText(r));
@@ -139,7 +181,7 @@ end
 function rows = read_rows(cfg, file)
 % A workbook written before this sheet existed simply has none.
 rows = [];
-text = ["Run","CUTName","TestCaseName","IterationName","Kind","RelativePath","DecisionText"];
+text = ["Run","CUTName","TestCaseName","IterationName","Kind","RelativePath","DecisionText","OutcomeText"];
 try
     if ~any(string(sheetnames(file)) == "DecisionOutcomes"), return; end
     options = detectImportOptions(file, 'Sheet', 'DecisionOutcomes', ...

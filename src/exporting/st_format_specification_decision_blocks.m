@@ -11,7 +11,11 @@ function [specification, details, outcomeReasons] = st_format_specification_deci
 % A two-way branch then shows what the row's test actually took: [T], [F],
 % [T/F] or [-]. Which blocks are two-way is the catalog TwoWay column, so a
 % block of any other type keeps [T/F] and is never looked up.
-% OUTCOMEREASONS says, per row, why a two-way block's [T/F] was left in place.
+% A block whose outcomes are not true/false (catalog TwoWay NO: MinMax,
+% MultiPortSwitch, ...) shows the outcomes the row's test took, shortened
+% by st_short_outcome_text ("u1 max"). A block that took none of its
+% outcomes is dropped from the row, and the D numbers close up.
+% OUTCOMEREASONS says, per row, why a block's [T/F] was left in place.
 % The specification export passes no lookup and its output is unchanged.
 if nargin < 2, cfg = []; end
 if nargin < 3, outcomeLookup = []; end
@@ -87,8 +91,16 @@ for row = 1:height(specification)
     end
     lines = strings(0,1);
     previousPath = string(missing);
+    shown = 0;
     for k = 1:numel(decoded)
-        decision = "D" + string(k);
+        if ismissing(labels(k))
+            % The row's test took none of this block's outcomes.
+            log_message(cfg, 'DEBUG', 'Decision line dropped, no outcome taken | Row=%d | Case=%s | BlockType=%s', ...
+                row + 1, testCaseName, json_optional_text(decoded(k), 'BlockType'));
+            continue;
+        end
+        shown = shown + 1;
+        decision = "D" + string(shown);
         itemJson = string(jsonencode(decoded(k)));
         try
             blockType = json_text(decoded(k), 'BlockType');
@@ -205,12 +217,14 @@ for k = 1:numel(decoded)
     covered(k) = json_optional_text(decoded(k), 'CoverageText');
 end
 twoWayTypes = string(displayCatalog.BlockType(string(displayCatalog.TwoWay) == "YES"));
+otherTypes = string(displayCatalog.BlockType(string(displayCatalog.TwoWay) == "NO"));
 unavailable = false;
 mismatch = false;
 unitLogged = false;
 for path = unique(paths(strlength(paths) > 0), 'stable').'
     items = find(paths == path);
-    if ~all(ismember(types(items), twoWayTypes))
+    isOther = all(ismember(types(items), otherTypes));
+    if ~isOther && ~all(ismember(types(items), twoWayTypes))
         continue;
     end
     try
@@ -220,6 +234,13 @@ for path = unique(paths(strlength(paths) > 0), 'stable').'
         log_message(cfg, 'WARN', ...
             'Decision outcome lookup failed | Case=%s | Path=%s | %s', ...
             testCaseName, path, ME.message);
+        continue;
+    end
+    % A block of such a type that coverage did record as true/false reads as two-way.
+    if isOther && ~(isempty(taken_of(found)) && ~isempty(found.Counts))
+        [labels, gone] = taken_labels(found, items, labels);
+        unavailable = unavailable || gone == "UNAVAILABLE";
+        mismatch = mismatch || gone == "MISMATCH";
         continue;
     end
     if ~found.UnitFound
@@ -274,6 +295,37 @@ elseif unavailable
 elseif mismatch
     reason = codes(2);
 end
+end
+
+
+function [labels, problem] = taken_labels(found, items, labels)
+% The outcomes the row's test took, for a block whose outcomes are not
+% true/false. Such a block has one D line. A block that took none gets a
+% missing label, and its line is dropped. PROBLEM is UNAVAILABLE when the
+% row or block was not recorded, MISMATCH when the block has several lines.
+problem = "";
+taken = taken_of(found);
+if ~found.UnitFound || isempty(taken)
+    problem = "UNAVAILABLE";
+    return;
+end
+if ~isscalar(items)
+    problem = "MISMATCH";
+    return;
+end
+texts = unique(st_short_outcome_text(taken.OutcomeText(taken.Count > 0)), 'stable');
+if isempty(texts)
+    labels(items) = string(missing);
+else
+    labels(items) = strjoin(reshape(texts, 1, []), "/");
+end
+end
+
+
+function taken = taken_of(found)
+% Empty when the lookup has no Taken field (an older caller) or no rows.
+taken = [];
+if isfield(found, 'Taken') && height(found.Taken) > 0, taken = found.Taken; end
 end
 
 

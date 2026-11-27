@@ -233,15 +233,14 @@ verifyEqual(testCase, count(formatted.DecisionBlocks(1), "[T/F]"), 2);
 verifyEqual(testCase, reasons(1), "DECISION_OUTCOME_MISMATCH");
 end
 
-function testBlockWithoutTwoWayDecisionsKeepsTheStaticMarkSilently(testCase)
-% MinMax selects among inputs, so its outcomes are not true/false.
-item = struct('BlockType', 'MinMax', 'Name', 'Mx', 'Path', 'TOP/CUT/Mx', ...
-    'Outcome', 'SELECT', 'Expression', 'max; Inputs=3', 'ExpressionStatus', 'OK', 'Message', '');
+function testOtherBlockWithoutRecordedOutcomesSaysUnavailable(testCase)
+% MinMax selects among inputs. Scanned but nothing recorded (an older
+% workbook) keeps the static mark and says why.
 lookup = fake_lookup(struct());
 [formatted, ~, reasons] = st_format_specification_decision_blocks( ...
-    one_row_specification(item), base_config(), lookup);
+    one_row_specification(minmax_item()), base_config(), lookup);
 verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T/F]MinMax"));
-verifyEqual(testCase, reasons(1), "");
+verifyEqual(testCase, reasons(1), "DECISION_OUTCOME_UNAVAILABLE");
 end
 
 function testTwoWayBlockScannedWithoutCountsSaysUnavailable(testCase)
@@ -254,22 +253,90 @@ verifyEqual(testCase, formatted.DecisionBlocks(1), "Sw" + newline + "D1 [T/F]Swi
 verifyEqual(testCase, reasons(1), "DECISION_OUTCOME_UNAVAILABLE");
 end
 
-function testBlockTypeOutsideTheTwoWaySetIsNeverLookedUp(testCase)
-% MinMax outcomes are inputs, not true/false, so nothing is recorded for
-% it and asking would mark every row unavailable. The type alone keeps it out.
+function testOtherBlockShowsOnlyTheOutcomesTaken(testCase)
+lookup = fake_taken_lookup("Mx", [1; 1; 1], ["input 1 is the maximum"; ...
+    "input 2 is the maximum"; "input 3 is the maximum"], [4; 0; 2]);
+[formatted, ~, reasons] = st_format_specification_decision_blocks( ...
+    one_row_specification(minmax_item()), base_config(), lookup);
+verifyEqual(testCase, formatted.DecisionBlocks(1), ...
+    "Mx" + newline + "D1 [u1 max/u3 max]MinMax (max; Inputs=3)");
+verifyEqual(testCase, reasons(1), "");
+end
+
+function testOtherBlockThatTookNothingIsDroppedAndDNumbersCloseUp(testCase)
+% The MinMax took none of its outcomes, so it leaves the row; the Switch
+% after it becomes D1, in the cell and in the details.
+items = [minmax_item(); switch_item("TOP/CUT/Sw")];
+lookup = @(~, ~, asked) struct('UnitFound', true, ...
+    'Counts', counts_for(asked), 'Texts', strings(0,1), 'Taken', taken_for(asked));
+[formatted, details] = st_format_specification_decision_blocks( ...
+    one_row_specification(items), base_config(), lookup);
+verifyEqual(testCase, formatted.DecisionBlocks(1), "Sw" + newline + "D1 [T]Switch (u > 0)");
+verifyEqual(testCase, details.Decision, "D1");
+verifyEqual(testCase, details.BlockType, "Switch");
+
+    function counts = counts_for(asked)
+        counts = zeros(0,2);
+        if string(asked) == "Sw", counts = [3 0]; end
+    end
+    function taken = taken_for(asked)
+        taken = taken_table([], [], []);
+        if string(asked) == "Mx"
+            taken = taken_table([1; 1], ["input 1 is the maximum"; "input 2 is the maximum"], [0; 0]);
+        end
+    end
+end
+
+function testTakenListsEveryOutcomeOfEveryDecision(testCase)
+description = struct('decision', [ ...
+    fake_decision('Logic to determine output', ["input 1 is the maximum", "input 2 is the maximum"], [3 0]), ...
+    fake_decision('Logic to determine output', ["input 1 is the maximum", "input 2 is the maximum"], [1 2])]);
+taken = st_decision_outcome_taken(description);
+verifyEqual(testCase, taken.DecisionIndex, [1; 1; 2; 2]);
+verifyEqual(testCase, taken.OutcomeText(2), "input 2 is the maximum");
+verifyEqual(testCase, taken.Count, [3; 0; 1; 2]);
+verifyEqual(testCase, height(st_decision_outcome_taken(struct())), 0);
+end
+
+function testLookupReadsTakenOutcomes(testCase)
+% OUTCOME rows sit beside DECISION rows in the same sheet.
+folder = tempname; mkdir(folder);
+testCase.addTeardown(@() rmdir(folder, 's'));
+file = fullfile(folder, 'TestSummary.xlsx');
+n = 3;
+writetable(table(repmat("FINAL", n, 1), repmat("CUT", n, 1), repmat("Case1", n, 1), ...
+    repmat("Iteration 1", n, 1), ["UNIT"; "OUTCOME"; "OUTCOME"], ["", "Mx", "Mx"]', ...
+    [0; 1; 1], ["", "Logic to determine output", "Logic to determine output"]', ...
+    zeros(n,1), zeros(n,1), ["", "input 1 is the maximum", "input 2 is the maximum"]', ...
+    [0; 5; 0], 'VariableNames', {'Run','CUTName','TestCaseName','IterationName', ...
+    'Kind','RelativePath','DecisionIndex','DecisionText','TrueCount','FalseCount', ...
+    'OutcomeText','OutcomeCount'}), file, 'Sheet', 'DecisionOutcomes', 'UseExcel', false);
+outcomes = st_final_document_decision_outcomes(base_config(), source_with(file, "ANY"));
+found = outcomes.Lookup("Case1", "Iteration 1", "Mx");
+verifyTrue(testCase, found.UnitFound);
+verifyEmpty(testCase, found.Counts);
+verifyEqual(testCase, found.Taken.OutcomeText, ["input 1 is the maximum"; "input 2 is the maximum"]);
+verifyEqual(testCase, found.Taken.Count, [5; 0]);
+end
+
+function item = minmax_item()
 item = struct('BlockType', 'MinMax', 'Name', 'Mx', 'Path', 'TOP/CUT/Mx', ...
     'Outcome', 'SELECT', 'Expression', 'max; Inputs=3', 'ExpressionStatus', 'OK', 'Message', '');
-calls = 0;
-[formatted, ~, reasons] = st_format_specification_decision_blocks( ...
-    one_row_specification(item), base_config(), @counting_lookup);
-verifyEqual(testCase, calls, 0);
-verifyTrue(testCase, contains(formatted.DecisionBlocks(1), "D1 [T/F]MinMax"));
-verifyEqual(testCase, reasons(1), "");
+end
 
-    function found = counting_lookup(~, ~, ~)
-        calls = calls + 1;
-        found = struct('UnitFound', true, 'Counts', [1 0; 0 1]);
-    end
+function T = taken_table(index, texts, counts)
+T = table(double(index(:)), string(texts(:)), double(counts(:)), ...
+    'VariableNames', {'DecisionIndex','OutcomeText','Count'});
+end
+
+function lookup = fake_taken_lookup(relative, index, texts, counts)
+lookup = @(~, ~, asked) struct('UnitFound', true, 'Counts', zeros(0,2), ...
+    'Texts', strings(0,1), 'Taken', taken_or_empty(string(asked) == string(relative), index, texts, counts));
+end
+
+function T = taken_or_empty(matches, index, texts, counts)
+T = taken_table([], [], []);
+if matches, T = taken_table(index, texts, counts); end
 end
 
 function testConditionalCutIsLookedUpAsDot(testCase)

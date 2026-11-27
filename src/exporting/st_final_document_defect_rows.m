@@ -101,8 +101,8 @@ if isscalar(decision)
     end
 end
 % The folded path keeps the line on one line.
-line = defect.BlockType + " [" + strjoin(reshape(texts, 1, []), "/") + "] (" + ...
-    target + ")";
+line = defect.BlockType + " [" + outcome_label(texts, any(twoWayTypes == defect.BlockType)) + ...
+    "] (" + target + ")";
 if strlength(description) > 0
     description = description + newline + line;
 else
@@ -113,8 +113,8 @@ end
 
 function label = outcome_label(texts, twoWay)
 % A true/false block reads like the rest of the D list ([T], [F]); any
-% other block keeps the coverage outcome text (input 1).
-labels = texts;
+% other block gets the short outcome text the D list uses ("u2 max").
+labels = st_short_outcome_text(texts);
 if twoWay
     lowered = lower(texts);
     labels(contains(lowered, "true")) = "T";

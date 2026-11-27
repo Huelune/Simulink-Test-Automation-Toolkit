@@ -6,6 +6,10 @@ function rows = st_collect_decision_outcomes(resultObj, targetConfig, runLabel, 
 % document turns these counts into [T], [F], [T/F] or [-] on the matching
 % specification row.
 %
+% A block whose outcomes are not true/false (MinMax, MultiPortSwitch, ...)
+% gets one Kind="OUTCOME" row per outcome instead, with OutcomeText and
+% OutcomeCount, so the final document can list the outcomes a row took.
+%
 % Every scanned unit also gets one Kind="UNIT" row, so the reader can tell
 % "this row has no two-way branch" from "this row was never scanned". A
 % unit without coverage of its own gets no UNIT row and is logged.
@@ -61,7 +65,7 @@ for u = 1:numel(units)
     end
     scanned = scanned + 1;
     rows = [rows; outcome_row(label, cutName, caseName, names(u), ...
-        "UNIT", "", 0, "", 0, 0)]; %#ok<AGROW>
+        "UNIT", "", 0, "", 0, 0, "", 0)]; %#ok<AGROW>
     for b = 1:numel(blocks)
         rows = [rows; block_rows(cvd, blocks(b), root, label, cutName, ...
             caseName, names(u), cfg)]; %#ok<AGROW>
@@ -143,16 +147,25 @@ description = block_description(cvd, objectPath, char(blockPath), ...
     caseName, iterationName, cfg);
 if isempty(description), return; end
 [counts, texts] = st_decision_outcome_counts(description);
+relative = st_cut_relative_path(blockPath, root);
 if isempty(counts)
-    st_log(cfg, 'DEBUG', ...
-        'Decision outcome scan skipped a block without two-way decisions | Path=%s | BlockType=%s | Outcomes=%s', ...
-        blockPath, blockType, outcome_texts(description));
+    taken = st_decision_outcome_taken(description);
+    if height(taken) == 0
+        st_log(cfg, 'DEBUG', ...
+            'Decision outcome scan skipped a block with unreadable outcomes | Path=%s | BlockType=%s | Outcomes=%s', ...
+            blockPath, blockType, outcome_texts(description));
+        return;
+    end
+    for k = 1:height(taken)
+        rows = [rows; outcome_row(label, cutName, caseName, iterationName, ...
+            "OUTCOME", relative, taken.DecisionIndex(k), taken.DecisionText(k), 0, 0, ...
+            taken.OutcomeText(k), taken.Count(k))]; %#ok<AGROW>
+    end
     return;
 end
-relative = st_cut_relative_path(blockPath, root);
 for k = 1:size(counts, 1)
     rows = [rows; outcome_row(label, cutName, caseName, iterationName, ...
-        "DECISION", relative, k, texts(k), counts(k,1), counts(k,2))]; %#ok<AGROW>
+        "DECISION", relative, k, texts(k), counts(k,1), counts(k,2), "", 0)]; %#ok<AGROW>
 end
 end
 
@@ -217,22 +230,23 @@ end
 function T = empty_rows()
 T = table(strings(0,1), strings(0,1), strings(0,1), strings(0,1), ...
     strings(0,1), strings(0,1), zeros(0,1), strings(0,1), zeros(0,1), ...
-    zeros(0,1), 'VariableNames', column_names());
+    zeros(0,1), strings(0,1), zeros(0,1), 'VariableNames', column_names());
 end
 
 
 function T = outcome_row(label, cutName, caseName, iterationName, kind, ...
-        relative, index, text, trueCount, falseCount)
+        relative, index, text, trueCount, falseCount, outcomeText, outcomeCount)
 T = table(string(label), string(cutName), string(caseName), ...
     string(iterationName), string(kind), string(relative), double(index), ...
-    string(text), double(trueCount), double(falseCount), ...
-    'VariableNames', column_names());
+    string(text), double(trueCount), double(falseCount), string(outcomeText), ...
+    double(outcomeCount), 'VariableNames', column_names());
 end
 
 
 function names = column_names()
 names = {'Run','CUTName','TestCaseName','IterationName','Kind', ...
-    'RelativePath','DecisionIndex','DecisionText','TrueCount','FalseCount'};
+    'RelativePath','DecisionIndex','DecisionText','TrueCount','FalseCount', ...
+    'OutcomeText','OutcomeCount'};
 end
 
 
