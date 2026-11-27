@@ -173,6 +173,10 @@
   step1→step2 `after(Tmax, sec)`라 verify는 t=Tmax에 한 번만 돈다. Test Assessment가 그 시각에 실행되지 않는다고 보고,
   `st_inspect_verify_timing`(EXCEPT 대상의 Tmax, Harness StopTime·솔버·FixedStep, Test Assessment·Signal Editor 컴파일
   샘플 시간, t=Tmax 실행 여부, step1 전이 시각, step2 verify 수)으로 `todo.md` 24절. 확인 전이다.
+  24절 첫 결과: SLDV GENERATE, 시나리오 1, Tmax 0.04, StopTime 0.04, Fixed-step 0.01, after(0.04, sec), step2 verify 3개.
+  시점은 맞다. 컴파일이 `Simulink:cgxe:BuildError`. 점검이 클론 폴더에서 컴파일했으므로 경로 길이일 수 있어,
+  `st_enter_short_build_directory`에서 컴파일하고 `st_build_error_kind`(원인 식별자와 종류만)를 찍게 했다. 빌드가 1단계에서도
+  실패한다면 그것이 verify 결과 없음의 원인이다(아직 확인 전).
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
