@@ -6,7 +6,8 @@ function st_show_standalone_results(folder)
 %
 % folder is a standalone pipeline run folder (it holds
 % pipeline-manifest.json), or the standalone root (it holds latest.json)
-% for its latest run. The dialog keeps the path off the command line, so a
+% for its latest run. A folder inside a run folder, or one holding a
+% single run folder, opens that run (st_standalone_run_folder). The dialog keeps the path off the command line, so a
 % screenshot of the command window shows none.
 %
 % Calls st_open_standalone_test_manager the way the manual's step 6 does,
@@ -44,17 +45,23 @@ if strlength(string(folder)) == 0
 end
 
 try
-    [outputRoot, chosenId] = st_standalone_run_folder(folder);
+    [outputRoot, chosenId, how] = st_standalone_run_folder(folder);
     manifest = st_load_standalone_pipeline_manifest(outputRoot, chosenId);
 catch ME
-    lines{end+1} = sprintf('폴더 읽기 실패 | %s%s', id_of(ME), folder_hint(ME));
+    lines{end+1} = sprintf('폴더 읽기 실패 | %s', id_of(ME));
+    hint = folder_hint(ME);
+    if ~isempty(hint), lines{end+1} = hint; end
     show(lines);
     st_log(cfg, 'WARN', 'Show standalone results stopped | folder | %s', id_of(ME));
     return;
 end
 pipelineId = char(string(manifest.PipelineId));
-kind = '실행 폴더';
-if strcmp(chosenId, 'LATEST'), kind = '결과 루트의 최근 실행'; end
+switch how
+    case 'ROOT', kind = '결과 루트의 최근 실행';
+    case 'INSIDE', kind = '실행 폴더의 하위 폴더 → 실행 폴더';
+    case 'HOLDS', kind = '실행 폴더를 담은 폴더 → 실행 폴더';
+    otherwise, kind = '실행 폴더';
+end
 [~, movedFrom] = st_rebase_standalone_manifest(manifest, fullfile(outputRoot, pipelineId));
 if ~isempty(movedFrom), kind = [kind ' (옮긴 폴더, 지금 위치에서 엶)']; end
 lines{end+1} = sprintf('고른 폴더 | %s | 실행 %s', kind, pipelineId);
@@ -117,9 +124,14 @@ end
 function text = folder_hint(ME)
 switch ME.identifier
     case 'simtest:StandaloneFolderMissing'
-        text = ' | 폴더가 없습니다';
+        text = '폴더가 없습니다';
     case 'simtest:StandaloneFolderUnknown'
-        text = ' | 실행 폴더(pipeline-manifest.json이 있는 곳)나 결과 루트(latest.json이 있는 곳)를 고르세요';
+        text = ['고른 폴더와 그 위·바로 아래에 실행 폴더가 없습니다. 실행 폴더(pipeline-manifest.json이 있는 곳)나 ' ...
+            '결과 루트를 고르세요'];
+    case 'simtest:StandaloneFolderTeamTree'
+        text = '팀 제출 트리는 실행 기록(manifest)이 없어 열 수 없습니다. 결과 루트 안의 실행 시각 이름 폴더를 고르세요';
+    case 'simtest:StandaloneFolderSeveralRuns'
+        text = '고른 폴더에 실행 폴더가 여러 개 있습니다. 그중 하나를 고르세요';
     otherwise
         text = '';
 end
