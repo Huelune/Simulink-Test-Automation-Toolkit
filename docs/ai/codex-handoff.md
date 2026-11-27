@@ -150,7 +150,10 @@
   21절(standalone부터 다시, `st_todo_check` 기본값 21). 21절은 사용자가 말로 "잘 된다"고 알렸다(화면 캡처는 받지 않음,
   2026-11-27). 사용자 요청으로 모델마다 처음부터 다시 돌리기를 `todo.md` 22절(`st_rebuild_all`, `st_todo_check` 기본값
   22, 21은 인자로 남김)로 두었다. 첫 번째 모델의 클론은 16절 뒤로 pull하지 않았다면 점검이 16절(클론 만들기)을 가리키므로
-  먼저 pull하라고 적었다.
+  먼저 pull하라고 적었다. 정정: Min/Max(18~21절)는 원래 클론에서 했다. 두 번째 클론(`_2`)에서 22절을 돌리자 cmd에서
+  pull했다는데도 클론 만들기 창이 떴다(그 클론의 점검이 16절). pull이 닿지 않았거나 MATLAB이 먼저 읽어 둔 예전 함수를 썼다고
+  보고, 블록이 고른 클론에서 직접 `git pull --ff-only`, `rehash`, `clear st_setup st_todo_check` 뒤에 점검을 부르게 바꿨다
+  (AGENTS.md). 어느 쪽이 원인이었는지는 확인하지 못했다.
   설계 전 실험 결과(2026-11-24, R2025b, 임시 소형 모델과 실제 SLDV 데이터):
   1. Custom Criteria 안에서 `getCoverageResults(test.TestResult)`로 그 Iteration의 커버리지를 읽었다. 도달 불가 결과의
      실행 횟수는 0, Iteration은 Failed였고 실행 뒤 같은 Iteration 커버리지와 일치했다.
