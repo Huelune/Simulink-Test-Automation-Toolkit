@@ -6,6 +6,10 @@ function st_todo_check(section)
 % was first written for. Point it at the current section's check whenever
 % todo.md changes.
 %
+% It starts with st_todo_up_to_date: each model has its own clone, and one
+% that has not pulled would run an earlier section's check. Keep that line
+% when pointing this at another section.
+%
 % No argument: section 20. Delete the Harnesses, Test File and earlier
 % results, then run the manual from step 1 to the team tree (st_rebuild_all),
 % now that the CUT inputs have Min/Max.
@@ -13,6 +17,7 @@ function st_todo_check(section)
 % (st_show_input_ranges). Read-only.
 % 19: unit test, then set the Min/Max filled in the range table on the
 % model (st_apply_input_ranges). Saves the model.
+if ~st_todo_up_to_date(), return; end
 cfg = st_config();
 if nargin < 1, section = 20; end
 switch section
